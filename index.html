@@ -4,180 +4,222 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TA Monitoring Schneider (Hyper-Detail)</title>
-    <!-- Auto-refresh setiap 10 detik -->
-    <meta http-equiv="refresh" content="10">
+    
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f4f9; padding: 10px; font-size: 0.8rem; }
-        /* Kontainer dibuat responsif dan bisa di-scroll horizontal */
-        .container { max-width: 98%; margin: auto; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow-x: auto; }
-        /* 🔥 JUDUL BARU (Lebih formal) */
-        h1 { color: #00529B; /* Warna korporat (biru tua) */ margin-top: 0; font-size: 1.8rem; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        /* Pastikan kolom tidak terpotong (nowrap) */
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; white-space: nowrap; }
-        /* Header tabel tetap di atas saat di-scroll */
-        th { background-color: #00529B; color: white; position: sticky; top: 0; z-index: 10; }
+        /* (CSS Anda dari file sebelumnya...) */
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f4f9; padding: 20px; margin: 0; }
+        .container { max-width: 95%; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h1 { color: #00529B; border-bottom: 2px solid #00529B; padding-bottom: 10px; font-size: 1.8rem; }
+        h2 { font-size: 1.1rem; color: #333; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.85rem; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background-color: #00529B; color: white; position: sticky; top: 0; }
         tr:nth-child(even) { background-color: #f9f9f9; }
-        /* Baris data 'offline' (V=0) akan berwarna merah muda */
-        tr.offline { background-color: #ffebee !important; color: #b71c1c; }
         .status { font-size: 0.9em; color: #555; }
+        
+        /* Style untuk baris meter yang offline */
+        .meter-offline { background-color: #ffebee !important; color: #c62828; }
+        .meter-offline td:first-child { font-weight: bold; }
+
+        /* Style untuk tombol Logout */
+        #logout-button {
+            background-color: #d32f2f; color: white; padding: 0.5rem 1rem;
+            border: none; border-radius: 4px; font-size: 0.9rem;
+            font-weight: bold; cursor: pointer; float: right; margin-top: -55px;
+        }
+        #logout-button:hover { background-color: #b71c1c; }
     </style>
     <!-- Import Supabase Client Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
     <div class="container">
-        <!-- 🔥 JUDUL DIPERBARUI SESUAI PERMINTAAN -->
-        <h1>Dashboard monitoring PT.Amarilys Karisma Gemilang</h1>
-        <!-- 🔥 SUB-JUDUL DIPERBARUI UNTUK 18 METER -->
-        <p class="status">Menampilkan data Kualitas Daya (Hyper-Detail) dari 18 Meter Schneider. Data diperbarui otomatis... <span id="last-update"></span></p>
+        <!-- Tombol Logout akan muncul di sini -->
+        <button id="logout-button">Logout</button>
         
-        <table>
-            <thead>
-                <tr>
-                    <!-- Kolom Identifikasi -->
-                    <th>ID</th>
-                    <th>Update Terakhir (Timestamp)</th>
-                    
-                    <!-- Kolom Total/Ringkasan (Sesuai Skema DB Baru) -->
-                    <th>Frekuensi (Hz)</th>
-                    <th>PF Total</th>
-                    <th>P Total (W)</th>
-                    <th>Q Total (VAR)</th>
-                    <th>S Total (VA)</th>
-                    <th>Energi (kWh)</th>
-                    <th>Biaya (Rp)</th>
-
-                    <!-- Kolom Fasa 1 -->
-                    <th>V1 (V)</th>
-                    <th>A1 (A)</th>
-                    <th>P1 (W)</th>
-                    <th>PF1</th>
-                    
-                    <!-- Kolom Fasa 2 -->
-                    <th>V2 (V)</th>
-                    <th>A2 (A)</th>
-                    <th>P2 (W)</th>
-                    <th>PF2</th>
-
-                    <!-- Kolom Fasa 3 -->
-                    <th>V3 (V)</th>
-                    <th>A3 (A)</th>
-                    <th>P3 (W)</th>
-                    <th>PF3</th>
-                </tr>
-            </thead>
-            <tbody id="meter-table-body">
-                <!-- Data akan diisi oleh JavaScript -->
-            </tbody>
-        </table>
+        <h1>⚡ Dashboard Monitoring PT.Amarilys Karisma Gemilang</h1>
+        <h2 id="user-email-display">Loading...</h2>
+        <p class="status" id="status-message">Menghubungkan ke Supabase...</p>
+        
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID Meter</th>
+                        <th>Timestamp (DB)</th>
+                        <th>Frekuensi (Hz)</th>
+                        <th>PF Total</th>
+                        <th>Daya Aktif (P) Total (W)</th>
+                        <th>Daya Reaktif (Q) Total (VAR)</th>
+                        <th>Daya Semu (S) Total (VA)</th>
+                        <th>Energi (E) Total (kWh)</th>
+                        <th>Biaya (Rp)</th>
+                        <th>V1 (V)</th>
+                        <th>A1 (A)</th>
+                        <th>P1 (W)</th>
+                        <th>PF1</th>
+                        <th>V2 (V)</th>
+                        <th>A2 (A)</th>
+                        <th>P2 (W)</th>
+                        <th>PF2</th>
+                        <th>V3 (V)</th>
+                        <th>A3 (A)</th>
+                        <th>P3 (W)</th>
+                        <th>PF3</th>
+                    </tr>
+                </thead>
+                <tbody id="meter-table-body">
+                    <!-- Data akan dimasukkan di sini oleh JavaScript -->
+                </tbody>
+            </table>
+        </div>
     </div>
 
     <script>
-        // --- 🔥 KONFIGURASI (WAJIB DIISI!) ---
-        // Ganti dengan URL Proyek Anda (dari Supabase API Settings)
-        const SUPABASE_URL = 'https://rojhcadtqfynlqzubftx.supabase.co';
-        // GANTI INI dengan "anon" (PUBLIC KEY) dari Supabase API Settings
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs'; 
-        // -----------------------------------
+        // --- 🔥 WAJIB DIISI! (Ganti dengan Kredensial Supabase Anda) ---
+        const SUPABASE_URL = ' https://rojhcadtqfynlqzubftx.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs';
+        // --------------------------------------------------------
 
-        // Inisialisasi Supabase Client
+        const REFRESH_INTERVAL_MS = 5000; // 5 Detik
+
         let supabase;
+        const statusMessage = document.getElementById('status-message');
+        const tableBody = document.getElementById('meter-table-body');
+        const userEmailDisplay = document.getElementById('user-email-display');
+        const logoutButton = document.getElementById('logout-button');
+
+        // --- 1. INISIALISASI SUPABASE ---
         try {
-             supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         } catch (e) {
             console.error("Gagal inisialisasi Supabase. Cek URL/Key.", e);
+            statusMessage.textContent = "Gagal inisialisasi Supabase. Cek URL/Key.";
         }
-        
-        const tableBody = document.getElementById('meter-table-body');
-        const lastUpdateSpan = document.getElementById('last-update');
 
-        // Fungsi untuk mengambil data terbaru
-        async function fetchData() {
-            if (!supabase) {
-                lastUpdateSpan.textContent = "❌ Supabase URL/Key belum diisi.";
+        // --- 2. FUNGSI PROTEKSI HALAMAN (WAJIB) ---
+        async function checkLoginStatus() {
+            if (!supabase) return; // Jangan lakukan apa-apa jika Supabase gagal load
+
+            const { data: { session }, error } = await supabase.auth.getSession();
+            
+            if (error) {
+                console.error("Error fetching session:", error.message);
+                redirectToLogin(); // Gagal = lempar ke login
                 return;
             }
+            
+            if (!session) {
+                console.log("Tidak ada sesi. Mengarahkan ke login...");
+                redirectToLogin(); // Tidak ada sesi = lempar ke login
+            } else {
+                console.log("Sesi ditemukan. Memuat data dashboard...");
+                userEmailDisplay.textContent = `User: ${session.user.email}`;
+                
+                // (Jika login, baru ambil data)
+                fetchData(); 
+                setInterval(fetchData, REFRESH_INTERVAL_MS);
+            }
+        }
 
-            console.log("Mengambil data dari Supabase...");
-            lastUpdateSpan.textContent = "Memuat...";
+        function redirectToLogin() {
+            window.location.href = './login.html';
+        }
 
+        // --- 3. FUNGSI LOGOUT ---
+        logoutButton.addEventListener('click', async () => {
+            const { error } = await supabase.auth.signOut();
+            if (error) {
+                console.error("Error logging out:", error.message);
+            } else {
+                console.log("Logout sukses.");
+                redirectToLogin(); // Arahkan kembali ke login setelah logout
+            }
+        });
+
+        // --- 4. FUNGSI PENGAMBILAN DATA (Fetch Data) ---
+        async function fetchData() {
+            if (!supabase) return;
+
+            statusMessage.textContent = "Mengambil data terbaru dari Supabase...";
+            
             try {
-                // Panggil fungsi 'get_latest_meter_data' yang kita buat di Supabase
-                // (Ini mengambil 1 data terbaru per meter_id)
-                const { data, error } = await supabase.rpc('get_latest_meter_data');
+                // Memanggil fungsi 'get_latest_meter_data' di database Supabase
+                const { data, error } = await supabase
+                    .rpc('get_latest_meter_data'); 
 
                 if (error) {
                     throw error;
                 }
-
-                if (data) {
-                    console.log("Data diterima:", data);
-                    renderTable(data);
-                    lastUpdateSpan.textContent = "Data berhasil diperbarui: " + new Date().toLocaleTimeString();
-                }
+                
+                console.log("Data diterima:", data);
+                renderTable(data);
+                statusMessage.textContent = "Data berhasil diperbarui: " + new Date().toLocaleTimeString();
 
             } catch (error) {
                 console.error("Fetch Error:", error);
-                lastUpdateSpan.textContent = `❌ GAGAL mengambil data: ${error.message}`;
+                statusMessage.textContent = `❌ GAGAL mengambil data: ${error.message}`;
             }
         }
 
-        // Fungsi untuk menampilkan data di tabel
-        function renderTable(meters) {
-            tableBody.innerHTML = ''; // Kosongkan tabel lama
-            
-            // Buat array 18 slot (untuk memastikan 18 baris selalu ada)
-            const meterMap = new Map();
-            meters.forEach(m => meterMap.set(m.meter_id, m));
+        // --- 5. FUNGSI TAMPILKAN DATA (Render Table) ---
+        function renderTable(data) {
+            tableBody.innerHTML = ''; // Kosongkan tabel
 
-            // Tampilkan 18 baris (ID 1 s/d 18)
-            for (let id = 1; id <= 18; id++) {
-                const meter = meterMap.get(id) || { meter_id: id }; // Data dari DB atau objek kosong
+            if (!data || data.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="21" style="text-align:center; font-weight:bold;">Tidak ada data meter yang ditemukan.</td></tr>';
+                return;
+            }
+            
+            // Loop data (yang sudah diurutkan dari RPC)
+            for (let i = 1; i <= 18; i++) {
+                const meter = data.find(d => d.meter_id === i);
+                
                 const row = tableBody.insertRow();
                 
-                // Cek apakah meter offline
-                const isOffline = !meter.v1 && !meter.v2 && !meter.v3;
-                if(isOffline) {
-                    row.classList.add('offline');
+                if (meter) {
+                    // Cek jika meter offline (V1 dan V2 = 0)
+                    const isOffline = meter.v1 === 0 && meter.v2 === 0;
+                    if (isOffline) {
+                        row.className = 'meter-offline';
+                    }
+
+                    // Isi 18+ Kolom
+                    row.insertCell().textContent = meter.meter_id;
+                    row.insertCell().textContent = new Date(meter.timestamp).toLocaleTimeString('id-ID');
+                    row.insertCell().textContent = meter.frequency.toFixed(2) + " Hz";
+                    row.insertCell().textContent = meter.pf_total.toFixed(3);
+                    row.insertCell().textContent = meter.p_total.toFixed(2) + " W";
+                    row.insertCell().textContent = meter.q_total.toFixed(2) + " VAR";
+                    row.insertCell().textContent = meter.s_total.toFixed(2) + " VA";
+                    row.insertCell().textContent = meter.energy_total.toFixed(3) + " kWh";
+                    row.insertCell().textContent = "Rp " + meter.cost.toFixed(2);
+                    row.insertCell().textContent = meter.v1.toFixed(2) + " V";
+                    row.insertCell().textContent = meter.a1.toFixed(3) + " A";
+                    row.insertCell().textContent = meter.p1.toFixed(2) + " W";
+                    row.insertCell().textContent = meter.pf1.toFixed(3);
+                    row.insertCell().textContent = meter.v2.toFixed(2) + " V";
+                    row.insertCell().textContent = meter.a2.toFixed(3) + " A";
+                    row.insertCell().textContent = meter.p2.toFixed(2) + " W";
+                    row.insertCell().textContent = meter.pf2.toFixed(3);
+                    row.insertCell().textContent = meter.v3.toFixed(2) + " V";
+                    row.insertCell().textContent = meter.a3.toFixed(3) + " A";
+                    row.insertCell().textContent = meter.p3.toFixed(2) + " W";
+                    row.insertCell().textContent = meter.pf3.toFixed(3);
+                } else {
+                    // Jika data meter ID (1-18) tidak ditemukan di database
+                    row.className = 'meter-offline';
+                    row.insertCell().textContent = i;
+                    row.insertCell().textContent = "N/A";
+                    row.insertCell().colSpan = 19;
+                    row.cells[1].textContent = "Data untuk ID meter ini belum masuk ke database.";
                 }
-                
-                // Fungsi helper untuk memformat angka (2 desimal)
-                const f = (num) => (num || 0).toFixed(2);
-                // Fungsi helper untuk memformat angka (3 desimal, untuk Arus/PF)
-                const f3 = (num) => (num || 0).toFixed(3);
-
-                // Format timestamp
-                const ts = meter.timestamp ? new Date(meter.timestamp).toLocaleTimeString() : 'N/A';
-
-                // Masukkan data (HARUS URUT SESUAI <thead>)
-                row.insertCell().textContent = meter.meter_id;
-                row.insertCell().textContent = ts;
-                row.insertCell().textContent = f(meter.frequency);
-                row.insertCell().textContent = f3(meter.pf_total);
-                row.insertCell().textContent = f(meter.p_total);
-                row.insertCell().textContent = f(meter.q_total);
-                row.insertCell().textContent = f(meter.s_total);
-                row.insertCell().textContent = f(meter.energy_total);
-                row.insertCell().textContent = "Rp " + f(meter.cost);
-                row.insertCell().textContent = f(meter.v1);
-                row.insertCell().textContent = f3(meter.a1);
-                row.insertCell().textContent = f(meter.p1);
-                row.insertCell().textContent = f3(meter.pf1);
-                row.insertCell().textContent = f(meter.v2);
-                row.insertCell().textContent = f3(meter.a2);
-                row.insertCell().textContent = f(meter.p2);
-                row.insertCell().textContent = f3(meter.pf2);
-                row.insertCell().textContent = f(meter.v3);
-                row.insertCell().textContent = f3(meter.a3);
-                row.insertCell().textContent = f(meter.p3);
-                row.insertCell().textContent = f3(meter.pf3);
             }
         }
 
-        // Panggil fungsi saat halaman dimuat
-        fetchData();
-        
+        // --- 6. JALANKAN PROTEKSI SAAT HALAMAN DIMUAT ---
+        checkLoginStatus();
+
     </script>
 </body>
 </html>
