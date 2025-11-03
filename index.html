@@ -4,18 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard monitoring PT.Amarilys Karisma Gemilang</title>
-    <!-- 1. Impor Supabase Client Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
-        /* (CSS disembunyikan untuk keringkasan, Anda bisa menggunakan styling sebelumnya) */
+        /* (CSS Anda dari file sebelumnya) */
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: #f4f7f6; color: #333; }
         .container { width: 95%; max-width: 1400px; margin: 20px; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 6px 18px rgba(0,0,0,0.07); }
-        h1 { color: #007bff; border-bottom: 2px solid #007bff; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        h1 { color: #00529B; border-bottom: 2px solid #00529B; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
         h2 { color: #333; border-bottom: 1px solid #eee; padding-bottom: 5px; margin-top: 30px; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.85rem; }
         th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-        th { background-color: #007bff; color: white; position: sticky; top: 0; }
+        th { background-color: #00529B; color: white; position: sticky; top: 0; }
         tbody tr:nth-child(even) { background-color: #f9f9f9; }
         .table-container { max-height: 400px; overflow-y: auto; }
         .status { font-size: 0.9em; color: #555; }
@@ -34,29 +33,24 @@
         </h1>
         <p class="status">Memuat data pengguna dan meter...</p>
 
-        <!-- 1. Konten untuk Pengguna 'Pending' -->
         <div id="pendingContainer" class="pending-box" style="display: none;">
             <h2>Menunggu Persetujuan</h2>
             <p>Akun Anda (<span id="pendingUserEmail"></span>) berhasil dibuat tetapi masih menunggu persetujuan dari Admin. Silakan hubungi Admin untuk mengaktifkan akun Anda.</p>
         </div>
 
-        <!-- 2. Konten untuk Pengguna 'User' dan 'Admin' -->
         <div id="dataContainer" style="display: none;">
             <h2>Data Kualitas Daya (18 Meter)</h2>
             <p class="status" id="status-message">Mengambil data terbaru dari database...</p>
             <div class="table-container">
                 <table>
                     <thead id="data-table-head">
-                        <!-- Header Tabel (18 Kolom) akan di-generate oleh JS -->
-                    </thead>
+                        </thead>
                     <tbody id="data-table-body">
-                        <!-- Data Meter (18 Baris) akan di-generate oleh JS -->
-                    </tbody>
+                        </tbody>
                 </table>
             </div>
         </div>
 
-        <!-- 3. Konten KHUSUS 'Admin' -->
         <div id="adminContainer" class="admin-panel" style="display: none;">
             <h2>Panel Admin: Persetujuan Pengguna</h2>
             <p>Pengguna berikut sedang menunggu persetujuan Anda (Role: 'pending').</p>
@@ -71,15 +65,14 @@
                         </tr>
                     </thead>
                     <tbody id="admin-table-body">
-                        <!-- Daftar user 'pending' akan di-generate oleh JS -->
-                    </tbody>
+                        </tbody>
                 </table>
             </div>
         </div>
 
     </div>
 
-    <script type="module">
+    <script typeWhat="module">
         // --- FASE 1: KONFIGURASI SUPABASE (WAJIB DIISI) ---
         const SUPABASE_URL = 'https://rojhcadtqfynlqzubftx.supabase.co'; // Ganti ini
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs'; // Ganti ini (Anon, Public Key)
@@ -99,7 +92,7 @@
 
         // --- FASE 2: Inisialisasi Klien Supabase ---
         try {
-            supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         } catch (error) {
             console.error("Gagal inisialisasi Supabase. Cek URL/Key.", error);
             document.body.innerHTML = "<h1>Error Konfigurasi Supabase. Cek Konsol (F12).</h1>";
@@ -203,7 +196,7 @@
         async function fetchAdminPanelData() {
             const { data: pendingUsers, error } = await supabase
                 .from('profiles')
-                .select('id, full_name, email, role')
+                .select('id, full_name, email, role') // Ambil email dari tabel 'profiles'
                 .eq('role', 'pending'); // Hanya ambil user 'pending'
 
             if (error) {
@@ -225,7 +218,7 @@
             tBody.innerHTML = ''; // Kosongkan body
 
             if (data.length === 0) {
-                tBody.innerHTML = '<tr><td colspan="19">Belum ada data meter yang masuk dari ESP32.</td></tr>';
+                tBody.innerHTML = '<tr><td colspan="21">Belum ada data meter yang masuk dari ESP32.</td></tr>';
                 return;
             }
 
@@ -378,12 +371,11 @@
         
         // Set interval untuk refresh data meter (hanya jika login berhasil)
         setInterval(() => {
-            const userRole = (supabase.auth.getSession())?.data?.session?.user?.role;
-            // Hanya refresh data jika role 'admin' atau 'user'
+            // Cek apakah data container terlihat, baru refresh
             if (dataContainer.style.display === 'block') {
                 fetchMeterData();
             }
-            // Juga refresh panel admin jika role 'admin'
+            // Juga refresh panel admin jika terlihat
             if (adminContainer.style.display === 'block') {
                 fetchAdminPanelData();
             }
@@ -392,5 +384,3 @@
     </script>
 </body>
 </html>
-
-
