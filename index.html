@@ -10,12 +10,13 @@
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f4f9; padding: 10px; font-size: 0.8rem; }
         /* Kontainer dibuat responsif dan bisa di-scroll horizontal */
         .container { max-width: 98%; margin: auto; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow-x: auto; }
-        h1 { color: #007bff; margin-top: 0; }
+        /* 🔥 JUDUL BARU (Lebih formal) */
+        h1 { color: #00529B; /* Warna korporat (biru tua) */ margin-top: 0; font-size: 1.8rem; }
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
         /* Pastikan kolom tidak terpotong (nowrap) */
         th, td { border: 1px solid #ddd; padding: 8px; text-align: left; white-space: nowrap; }
         /* Header tabel tetap di atas saat di-scroll */
-        th { background-color: #007bff; color: white; position: sticky; top: 0; z-index: 10; }
+        th { background-color: #00529B; color: white; position: sticky; top: 0; z-index: 10; }
         tr:nth-child(even) { background-color: #f9f9f9; }
         /* Baris data 'offline' (V=0) akan berwarna merah muda */
         tr.offline { background-color: #ffebee !important; color: #b71c1c; }
@@ -26,8 +27,10 @@
 </head>
 <body>
     <div class="container">
-        <h1>⚡ Dashboard Kualitas Daya (iEM3255 Hyper-Detail)</h1>
-        <p class="status">Data diperbarui otomatis... <span id="last-update"></span></p>
+        <!-- 🔥 JUDUL DIPERBARUI SESUAI PERMINTAAN -->
+        <h1>Dashboard monitoring PT.Amarilys Karisma Gemilang</h1>
+        <!-- 🔥 SUB-JUDUL DIPERBARUI UNTUK 18 METER -->
+        <p class="status">Menampilkan data Kualitas Daya (Hyper-Detail) dari 18 Meter Schneider. Data diperbarui otomatis... <span id="last-update"></span></p>
         
         <table>
             <thead>
@@ -73,9 +76,9 @@
     <script>
         // --- 🔥 KONFIGURASI (WAJIB DIISI!) ---
         // Ganti dengan URL Proyek Anda (dari Supabase API Settings)
-        const SUPABASE_URL = 'httpsa://URL_PROYEK_SUPABASE_ANDA.supabase.co';
+        const SUPABASE_URL = 'https://rojhcadtqfynlqzubftx.supabase.co';
         // GANTI INI dengan "anon" (PUBLIC KEY) dari Supabase API Settings
-        const SUPABASE_KEY = 'ANON_PUBLIC_KEY_ANDA'; 
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs'; 
         // -----------------------------------
 
         // Inisialisasi Supabase Client
@@ -124,14 +127,17 @@
         function renderTable(meters) {
             tableBody.innerHTML = ''; // Kosongkan tabel lama
             
-            // Urutkan data berdasarkan meter_id
-            meters.sort((a, b) => a.meter_id - b.meter_id);
+            // Buat array 18 slot (untuk memastikan 18 baris selalu ada)
+            const meterMap = new Map();
+            meters.forEach(m => meterMap.set(m.meter_id, m));
 
-            meters.forEach(meter => {
+            // Tampilkan 18 baris (ID 1 s/d 18)
+            for (let id = 1; id <= 18; id++) {
+                const meter = meterMap.get(id) || { meter_id: id }; // Data dari DB atau objek kosong
                 const row = tableBody.insertRow();
                 
-                // Cek apakah meter offline (V=0)
-                const isOffline = meter.v1 === 0 && meter.v2 === 0 && meter.v3 === 0;
+                // Cek apakah meter offline
+                const isOffline = !meter.v1 && !meter.v2 && !meter.v3;
                 if(isOffline) {
                     row.classList.add('offline');
                 }
@@ -142,7 +148,7 @@
                 const f3 = (num) => (num || 0).toFixed(3);
 
                 // Format timestamp
-                const ts = new Date(meter.timestamp).toLocaleTimeString();
+                const ts = meter.timestamp ? new Date(meter.timestamp).toLocaleTimeString() : 'N/A';
 
                 // Masukkan data (HARUS URUT SESUAI <thead>)
                 row.insertCell().textContent = meter.meter_id;
@@ -166,7 +172,7 @@
                 row.insertCell().textContent = f3(meter.a3);
                 row.insertCell().textContent = f(meter.p3);
                 row.insertCell().textContent = f3(meter.pf3);
-            });
+            }
         }
 
         // Panggil fungsi saat halaman dimuat
