@@ -4,97 +4,116 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Daftar Akun - TA Monitoring</title>
-    <style>
-        /* Menggunakan style yang sama persis dengan login.html untuk konsistensi */
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f4f9; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        .signup-container { background: white; padding: 2.5rem; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-align: center; width: 350px; }
-        h1 { color: #00529B; margin-top: 0; font-size: 1.8rem; }
-        form { display: flex; flex-direction: column; }
-        label { text-align: left; font-weight: bold; color: #333; margin-top: 1rem; }
-        input[type="email"], input[type="password"] { padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; margin-top: 0.5rem; font-size: 1rem; }
-        button { background-color: #00529B; color: white; padding: 0.75rem; border: none; border-radius: 4px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-top: 1.5rem; }
-        button:hover { background-color: #003e75; }
-        #message { margin-top: 1rem; font-weight: bold; }
-        .success { color: green; }
-        .error { color: #b71c1c; }
-        .login-link { margin-top: 1.5rem; font-size: 0.9rem; }
-        .login-link a { color: #00529B; text-decoration: none; font-weight: bold; }
-    </style>
-    <!-- Import Supabase Client Library -->
+    <!-- 1. Impor Supabase Client Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: #f4f7f6; }
+        .login-container { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 6px 18px rgba(0,0,0,0.07); width: 100%; max-width: 400px; text-align: center; }
+        h2 { color: #333; margin-bottom: 20px; }
+        p { color: #666; margin-bottom: 25px; font-size: 0.9em; }
+        .form-group { margin-bottom: 20px; text-align: left; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; color: #444; }
+        .form-group input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; } /* Fix padding */
+        .login-btn { width: 100%; padding: 12px; background-color: #007bff; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1em; font-weight: 600; }
+        .login-btn:hover { background-color: #0056b3; }
+        .error-msg { color: #dc3545; background-color: #f8d7da; border: 1px solid #f5c6cb; padding: 10px; border-radius: 8px; margin-bottom: 20px; display: none; }
+        .success-msg { color: #155724; background-color: #d4edda; border: 1px solid #c3e6cb; padding: 10px; border-radius: 8px; margin-bottom: 20px; display: none; }
+        .bottom-link { margin-top: 20px; font-size: 0.9em; }
+    </style>
 </head>
 <body>
-    <div class="signup-container">
-        <h1>Daftar Akun Baru</h1>
-        <p>Semua akun baru akan didaftarkan sebagai 'User'.</p>
-        <form id="signup-form">
-            <label for="email">Email</label>
-            <input type="email" id="email" required>
-            
-            <label for="password">Password (Min. 6 karakter)</label>
-            <input type="password" id="password" required minlength="6">
-            
-            <button type="submit">Daftar</button>
+
+    <div class="login-container">
+        <h2>Daftar Akun Baru</h2>
+        <p>Semua akun baru akan didaftarkan sebagai 'Pending' (Menunggu Persetujuan Admin).</p>
+
+        <div id="errorMessage" class="error-msg"></div>
+        <div id="successMessage" class="success-msg"></div>
+
+        <form id="signupForm">
+            <!-- Form 'Nama Lengkap' (Sesuai v2) -->
+            <div class="form-group">
+                <label for="fullName">Nama Lengkap</label>
+                <input type="text" id="fullName" placeholder="Masukkan nama lengkap Anda" required>
+            </div>
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" placeholder="email@anda.com" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password (Min. 6 karakter)</label>
+                <input type="password" id="password" placeholder="••••••••" required>
+            </div>
+            <button type="submit" class="login-btn" id="signupButton">Daftar</button>
         </form>
-        <p id="message"></p>
-        
-        <p class="login-link">
-            Sudah punya akun? <a href="./login.html">Login di sini</a>
-        </p>
+
+        <p class="bottom-link">Sudah punya akun? <a href="login.html">Login di sini</a></p>
     </div>
 
-    <script>
-        // --- 🔥 WAJIB DIISI! (Ganti dengan Kredensial Supabase Anda) ---
-        const SUPABASE_URL = 'https://rojhcadtqfynlqzubftx.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs';
-        // --------------------------------------------------------
-
+    <script type="module">
+        // --- FASE 1: KONFIGURASI SUPABASE (WAJIB DIISI) ---
+        const SUPABASE_URL = 'https://rojhcadtqfynlqzubftx.supabase.co'; // Ganti ini
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs'; // Ganti ini (Anon, Public Key)
+        
+        // --- Variabel Global ---
         let supabase;
+        const signupForm = document.getElementById('signupForm');
+        const signupButton = document.getElementById('signupButton');
+        const errorMessage = document.getElementById('errorMessage');
+        const successMessage = document.getElementById('successMessage');
+
+        // --- FASE 2: Inisialisasi Klien Supabase ---
         try {
             supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        } catch (e) {
-            console.error("Gagal inisialisasi Supabase:", e);
-            alert("Gagal memuat Supabase. Cek URL/Key.");
+        } catch (error) {
+            console.error("Gagal inisialisasi Supabase. Cek URL/Key.", error);
+            errorMessage.textContent = "Error Konfigurasi Supabase. Cek Konsol (F12).";
+            errorMessage.style.display = 'block';
         }
 
-        const signupForm = document.getElementById('signup-form');
-        const message = document.getElementById('message');
-
+        // --- FASE 3: Event Listener untuk Pendaftaran ---
         signupForm.addEventListener('submit', async (e) => {
-            e.preventDefault(); 
-            message.textContent = ''; 
-            
+            e.preventDefault(); // Mencegah form submit default
+
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
+            const fullName = document.getElementById('fullName').value; // Ambil Nama Lengkap
 
-            try {
-                // Coba daftar menggunakan Supabase Auth
-                const { data, error } = await supabase.auth.signUp({
-                    email: email,
-                    password: password,
-                    // Kita tidak perlu mengirim 'role' di sini, 
-                    // karena Trigger di database (setup_auth_triggers.sql) 
-                    // akan otomatis mengisi 'role' sebagai 'user'.
-                });
+            // Reset pesan
+            errorMessage.style.display = 'none';
+            successMessage.style.display = 'none';
+            signupButton.disabled = true;
+            signupButton.textContent = 'Mendaftarkan...';
 
-                if (error) {
-                    throw error; 
+            // Kirim 'full_name' di dalam options.data
+            // Ini akan dibaca oleh trigger 'handle_new_user' (v4) di Supabase
+            const { data, error } = await supabase.auth.signUp({
+                email: email,
+                password: password,
+                options: {
+                    data: {
+                        full_name: fullName 
+                    }
                 }
+            });
 
-                // Jika sukses, Supabase akan mengirim email verifikasi
-                console.log('Daftar sukses!', data);
-                message.textContent = 'Sukses! Cek email Anda untuk verifikasi.';
-                message.className = 'success';
+            if (error) {
+                console.error("Error saat Sign Up:", error);
+                errorMessage.textContent = error.message;
+                errorMessage.style.display = 'block';
+            } else {
+                console.log("Pendaftaran berhasil:", data);
+                // Tampilkan pesan sukses dan minta cek email
+                successMessage.textContent = "Pendaftaran berhasil! Silakan cek email Anda (termasuk folder Spam) untuk link verifikasi.";
+                successMessage.style.display = 'block';
                 signupForm.reset();
-
-            } catch (error) {
-                console.error('Error daftar:', error.message);
-                message.textContent = 'Daftar Gagal: ' + error.message;
-                message.className = 'error';
             }
+            
+            signupButton.disabled = false;
+            signupButton.textContent = 'Daftar';
         });
+
     </script>
 </body>
 </html>
-
 
