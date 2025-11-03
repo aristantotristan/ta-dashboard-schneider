@@ -3,38 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TA Monitoring Schneider (Supabase)</title>
-    <!-- Kita akan menggunakan 'Supabase.js' untuk mempermudah koneksi -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <title>TA Monitoring Schneider (Hyper-Detail)</title>
+    <!-- Auto-refresh setiap 10 detik -->
+    <meta http-equiv="refresh" content="10">
     <style>
-        body { font-family: sans-serif; padding: 20px; background-color: #f4f4f9; }
-        .container { max-width: 1200px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        h1 { color: #3ecf8e; border-bottom: 2px solid #3ecf8e; padding-bottom: 10px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-        th { background-color: #3ecf8e; color: white; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f4f9; padding: 10px; font-size: 0.8rem; }
+        /* Kontainer dibuat responsif dan bisa di-scroll horizontal */
+        .container { max-width: 98%; margin: auto; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow-x: auto; }
+        h1 { color: #007bff; margin-top: 0; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        /* Pastikan kolom tidak terpotong (nowrap) */
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; white-space: nowrap; }
+        /* Header tabel tetap di atas saat di-scroll */
+        th { background-color: #007bff; color: white; position: sticky; top: 0; z-index: 10; }
         tr:nth-child(even) { background-color: #f9f9f9; }
+        /* Baris data 'offline' (V=0) akan berwarna merah muda */
+        tr.offline { background-color: #ffebee !important; color: #b71c1c; }
         .status { font-size: 0.9em; color: #555; }
     </style>
+    <!-- Import Supabase Client Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
     <div class="container">
-        <h1>⚡ Dashboard Monitoring Schneider iEM3255 (Supabase + Vercel)</h1>
-        <p class="status" id="status-message">Menghubungkan ke Database Supabase...</p>
+        <h1>⚡ Dashboard Kualitas Daya (iEM3255 Hyper-Detail)</h1>
+        <p class="status">Data diperbarui otomatis... <span id="last-update"></span></p>
+        
         <table>
             <thead>
                 <tr>
-                    <th>ID Meter</th>
-                    <th>Tegangan (V)</th>
-                    <th>Arus (A)</th>
-                    <th>Daya Aktif (W)</th>
+                    <!-- Kolom Identifikasi -->
+                    <th>ID</th>
+                    <th>Update Terakhir (Timestamp)</th>
+                    
+                    <!-- Kolom Total/Ringkasan (Sesuai Skema DB Baru) -->
                     <th>Frekuensi (Hz)</th>
+                    <th>PF Total</th>
+                    <th>P Total (W)</th>
+                    <th>Q Total (VAR)</th>
+                    <th>S Total (VA)</th>
                     <th>Energi (kWh)</th>
                     <th>Biaya (Rp)</th>
-                    <th>Update Terakhir</th>
+
+                    <!-- Kolom Fasa 1 -->
+                    <th>V1 (V)</th>
+                    <th>A1 (A)</th>
+                    <th>P1 (W)</th>
+                    <th>PF1</th>
+                    
+                    <!-- Kolom Fasa 2 -->
+                    <th>V2 (V)</th>
+                    <th>A2 (A)</th>
+                    <th>P2 (W)</th>
+                    <th>PF2</th>
+
+                    <!-- Kolom Fasa 3 -->
+                    <th>V3 (V)</th>
+                    <th>A3 (A)</th>
+                    <th>P3 (W)</th>
+                    <th>PF3</th>
                 </tr>
             </thead>
-            <tbody id="table-body">
+            <tbody id="meter-table-body">
                 <!-- Data akan diisi oleh JavaScript -->
             </tbody>
         </table>
@@ -42,123 +72,106 @@
 
     <script>
         // --- 🔥 KONFIGURASI (WAJIB DIISI!) ---
-        // Ganti dengan nilai dari FASE 1, Langkah 4 (Supabase API Settings)
-        
-        const SUPABASE_URL = "https://rojhcadtqfynlqzubftx.supabase.co";     // <-- GANTI INI
-        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs"; // <-- GANTI INI
+        // Ganti dengan URL Proyek Anda (dari Supabase API Settings)
+        const SUPABASE_URL = 'httpsa://URL_PROYEK_SUPABASE_ANDA.supabase.co';
+        // GANTI INI dengan "anon" (PUBLIC KEY) dari Supabase API Settings
+        const SUPABASE_KEY = 'ANON_PUBLIC_KEY_ANDA'; 
+        // -----------------------------------
 
-        // --- Inisialisasi Supabase Client ---
-        let _supabase;
+        // Inisialisasi Supabase Client
+        let supabase;
         try {
-             _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-             console.log("Supabase client initialized.");
+             supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         } catch (e) {
-            console.error("Gagal inisialisasi Supabase. Cek URL dan Key.");
-            document.getElementById('status-message').textContent = "ERROR: Gagal inisialisasi Supabase. Cek URL dan Key.";
+            console.error("Gagal inisialisasi Supabase. Cek URL/Key.", e);
         }
+        
+        const tableBody = document.getElementById('meter-table-body');
+        const lastUpdateSpan = document.getElementById('last-update');
 
-
-        const tableBody = document.getElementById('table-body');
-        const statusMessage = document.getElementById('status-message');
-        const MAX_METERS = 18;
-
-        // Inisialisasi tabel dengan 18 baris kosong
-        function initializeTable() {
-            tableBody.innerHTML = ''; // Kosongkan dulu
-            for (let i = 1; i <= MAX_METERS; i++) {
-                const row = tableBody.insertRow();
-                row.id = `meter-${i}`; // Beri ID unik untuk setiap baris
-                row.innerHTML = `
-                    <td>${i}</td>
-                    <td>0.00 V</td>
-                    <td>0.000 A</td>
-                    <td>0.00 W</td>
-                    <td>0.00 Hz</td>
-                    <td>0.00 kWh</td>
-                    <td>Rp 0.00</td>
-                    <td>Menunggu data...</td>
-                `;
-                row.style.backgroundColor = '#ffdddd'; // Tandai sebagai offline
-            }
-        }
-
-        // Fungsi untuk mengambil data terbaru dari Supabase
+        // Fungsi untuk mengambil data terbaru
         async function fetchData() {
-            if (!_supabase) return; // Jangan jalankan jika Supabase gagal inisialisasi
+            if (!supabase) {
+                lastUpdateSpan.textContent = "❌ Supabase URL/Key belum diisi.";
+                return;
+            }
+
+            console.log("Mengambil data dari Supabase...");
+            lastUpdateSpan.textContent = "Memuat...";
 
             try {
-                statusMessage.textContent = "Mengambil data terbaru dari Supabase...";
-                
-                // --- 🔥 PERBAIKAN: Menggunakan query SELECT sederhana ---
-                // Mengambil 100 data terbaru (mencakup semua 18 meter)
-                let { data, error } = await _supabase
-                    .from('meter_data')
-                    .select('*')
-                    .order('timestamp', { ascending: false })
-                    .limit(100); // Ambil 100 data terbaru
+                // Panggil fungsi 'get_latest_meter_data' yang kita buat di Supabase
+                // (Ini mengambil 1 data terbaru per meter_id)
+                const { data, error } = await supabase.rpc('get_latest_meter_data');
 
                 if (error) {
-                    statusMessage.textContent = `❌ GAGAL query data: ${error.message}.`;
-                    console.error("Fetch Error:", error.message);
-                    return; 
+                    throw error;
                 }
 
                 if (data) {
-                    // Filter data di JavaScript untuk mendapatkan data unik terbaru per meter
-                    const latestDataMap = new Map();
-                    data.forEach(row => {
-                        if (!latestDataMap.has(row.meter_id)) {
-                            latestDataMap.set(row.meter_id, row);
-                        }
-                    });
-                    
-                    updateTable(Array.from(latestDataMap.values()));
-                    statusMessage.textContent = "Data berhasil diperbarui: " + new Date().toLocaleTimeString();
+                    console.log("Data diterima:", data);
+                    renderTable(data);
+                    lastUpdateSpan.textContent = "Data berhasil diperbarui: " + new Date().toLocaleTimeString();
                 }
 
             } catch (error) {
-                console.error("Error fetching data:", error.message);
-                statusMessage.textContent = `❌ GAGAL mengambil data: ${error.message}`;
+                console.error("Fetch Error:", error);
+                lastUpdateSpan.textContent = `❌ GAGAL mengambil data: ${error.message}`;
             }
         }
 
-        // Fungsi untuk memperbarui tabel HTML
-        function updateTable(meters) {
-            // Reset semua baris ke offline dulu
-            for (let i = 1; i <= MAX_METERS; i++) {
-                 const row = document.getElementById(`meter-${i}`);
-                 if (row) {
-                    row.style.backgroundColor = '#ffdddd'; // Offline
-                    // Jangan reset innerHTML agar data lama tetap terlihat jika 1 meter offline
-                 }
-            }
+        // Fungsi untuk menampilkan data di tabel
+        function renderTable(meters) {
+            tableBody.innerHTML = ''; // Kosongkan tabel lama
             
-            // Update baris yang datanya masuk
+            // Urutkan data berdasarkan meter_id
+            meters.sort((a, b) => a.meter_id - b.meter_id);
+
             meters.forEach(meter => {
-                const row = document.getElementById(`meter-${meter.meter_id}`);
-                if (row) {
-                    row.innerHTML = `
-                        <td>${meter.meter_id}</td>
-                        <td>${meter.voltage.toFixed(2)} V</td>
-                        <td>${meter.current.toFixed(3)} A</td>
-                        <td>${meter.power.toFixed(2)} W</td>
-                        <td>${meter.frequency.toFixed(2)} Hz</td>
-                        <td>${meter.energy.toFixed(2)} kWh</td>
-                        <td>Rp ${meter.cost.toFixed(2)}</td>
-                        <td>${new Date(meter.timestamp).toLocaleTimeString()}</td>
-                    `;
-                    // Tandai sebagai online jika data valid (V > 0)
-                    if (meter.voltage > 0) {
-                        row.style.backgroundColor = 'transparent'; 
-                    }
+                const row = tableBody.insertRow();
+                
+                // Cek apakah meter offline (V=0)
+                const isOffline = meter.v1 === 0 && meter.v2 === 0 && meter.v3 === 0;
+                if(isOffline) {
+                    row.classList.add('offline');
                 }
+                
+                // Fungsi helper untuk memformat angka (2 desimal)
+                const f = (num) => (num || 0).toFixed(2);
+                // Fungsi helper untuk memformat angka (3 desimal, untuk Arus/PF)
+                const f3 = (num) => (num || 0).toFixed(3);
+
+                // Format timestamp
+                const ts = new Date(meter.timestamp).toLocaleTimeString();
+
+                // Masukkan data (HARUS URUT SESUAI <thead>)
+                row.insertCell().textContent = meter.meter_id;
+                row.insertCell().textContent = ts;
+                row.insertCell().textContent = f(meter.frequency);
+                row.insertCell().textContent = f3(meter.pf_total);
+                row.insertCell().textContent = f(meter.p_total);
+                row.insertCell().textContent = f(meter.q_total);
+                row.insertCell().textContent = f(meter.s_total);
+                row.insertCell().textContent = f(meter.energy_total);
+                row.insertCell().textContent = "Rp " + f(meter.cost);
+                row.insertCell().textContent = f(meter.v1);
+                row.insertCell().textContent = f3(meter.a1);
+                row.insertCell().textContent = f(meter.p1);
+                row.insertCell().textContent = f3(meter.pf1);
+                row.insertCell().textContent = f(meter.v2);
+                row.insertCell().textContent = f3(meter.a2);
+                row.insertCell().textContent = f(meter.p2);
+                row.insertCell().textContent = f3(meter.pf2);
+                row.insertCell().textContent = f(meter.v3);
+                row.insertCell().textContent = f3(meter.a3);
+                row.insertCell().textContent = f(meter.p3);
+                row.insertCell().textContent = f3(meter.pf3);
             });
         }
 
-        // --- Inisialisasi ---
-        initializeTable(); // Buat tabel kosong
-        fetchData(); // Ambil data pertama kali
-        setInterval(fetchData, 5000); // Refresh data setiap 5 detik
+        // Panggil fungsi saat halaman dimuat
+        fetchData();
+        
     </script>
 </body>
 </html>
