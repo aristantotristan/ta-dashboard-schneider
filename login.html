@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - TA Monitoring Schneider</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f4f9; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .login-container { background: white; padding: 2.5rem; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-align: center; width: 350px; }
+        h1 { color: #00529B; margin-top: 0; font-size: 1.8rem; }
+        form { display: flex; flex-direction: column; }
+        label { text-align: left; font-weight: bold; color: #333; margin-top: 1rem; }
+        input[type="email"], input[type="password"] { padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; margin-top: 0.5rem; font-size: 1rem; }
+        button { background-color: #00529B; color: white; padding: 0.75rem; border: none; border-radius: 4px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-top: 1.5rem; }
+        button:hover { background-color: #003e75; }
+        #error-message { color: #b71c1c; margin-top: 1rem; font-weight: bold; }
+        
+        /* CSS BARU: Link untuk Sign Up */
+        .signup-link { margin-top: 1.5rem; font-size: 0.9rem; }
+        .signup-link a { color: #00529B; text-decoration: none; font-weight: bold; }
+    </style>
+    <!-- Import Supabase Client Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <div class="login-container">
+        <h1>Login Dashboard</h1>
+        <p>PT.Amarilys Karisma Gemilang</p>
+        <form id="login-form">
+            <label for="email">Email</label>
+            <input type="email" id="email" required>
+            
+            <label for="password">Password</label>
+            <input type="password" id="password" required>
+            
+            <button type="submit">Login</button>
+        </form>
+        <p id="error-message"></p>
+
+        <!-- LINK BARU: Ke halaman Sign Up -->
+        <p class="signup-link">
+            Belum punya akun? <a href="./signup.html">Daftar di sini</a>
+        </p>
+    </div>
+
+    <script>
+        // --- 🔥 WAJIB DIISI! (Ganti dengan Kredensial Supabase Anda) ---
+        const SUPABASE_URL = 'URL_PROYEK_SUPABASE_ANDA';
+        const SUPABASE_KEY = 'ANON_PUBLIC_KEY_ANDA';
+        // --------------------------------------------------------
+
+        let supabase;
+        try {
+            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        } catch (e) {
+            console.error("Gagal inisialisasi Supabase:", e);
+            alert("Gagal memuat Supabase. Cek URL/Key.");
+        }
+
+        const loginForm = document.getElementById('login-form');
+        const errorMessage = document.getElementById('error-message');
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault(); 
+            errorMessage.textContent = ''; 
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                // Coba login menggunakan Supabase Auth
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password,
+                });
+
+                if (error) {
+                    throw error; // Lempar error jika ada
+                }
+
+                // Jika login sukses, arahkan ke dashboard utama
+                console.log('Login sukses!', data);
+                window.location.href = './index.html'; // Arahkan ke dashboard
+
+            } catch (error) {
+                console.error('Error login:', error.message);
+                errorMessage.textContent = 'Login Gagal: ' + error.message;
+            }
+        });
+    </script>
+</body>
+</html>
+
