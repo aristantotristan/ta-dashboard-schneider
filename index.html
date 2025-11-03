@@ -3,222 +3,391 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TA Monitoring Schneider (Hyper-Detail)</title>
+    <title>Dashboard monitoring PT.Amarilys Karisma Gemilang</title>
+    <!-- 1. Impor Supabase Client Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
-        /* (CSS Anda dari file sebelumnya...) */
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f4f9; padding: 20px; margin: 0; }
-        .container { max-width: 95%; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        h1 { color: #00529B; border-bottom: 2px solid #00529B; padding-bottom: 10px; font-size: 1.8rem; }
-        h2 { font-size: 1.1rem; color: #333; }
+        /* (CSS disembunyikan untuk keringkasan, Anda bisa menggunakan styling sebelumnya) */
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: #f4f7f6; color: #333; }
+        .container { width: 95%; max-width: 1400px; margin: 20px; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 6px 18px rgba(0,0,0,0.07); }
+        h1 { color: #007bff; border-bottom: 2px solid #007bff; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        h2 { color: #333; border-bottom: 1px solid #eee; padding-bottom: 5px; margin-top: 30px; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.85rem; }
         th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-        th { background-color: #00529B; color: white; position: sticky; top: 0; }
-        tr:nth-child(even) { background-color: #f9f9f9; }
+        th { background-color: #007bff; color: white; position: sticky; top: 0; }
+        tbody tr:nth-child(even) { background-color: #f9f9f9; }
+        .table-container { max-height: 400px; overflow-y: auto; }
         .status { font-size: 0.9em; color: #555; }
-        
-        /* Style untuk baris meter yang offline */
-        .meter-offline { background-color: #ffebee !important; color: #c62828; }
-        .meter-offline td:first-child { font-weight: bold; }
-
-        /* Style untuk tombol Logout */
-        #logout-button {
-            background-color: #d32f2f; color: white; padding: 0.5rem 1rem;
-            border: none; border-radius: 4px; font-size: 0.9rem;
-            font-weight: bold; cursor: pointer; float: right; margin-top: -55px;
-        }
-        #logout-button:hover { background-color: #b71c1c; }
+        .pending-box, .admin-panel { padding: 20px; background-color: #fff3cd; border: 1px solid #ffeeba; border-radius: 8px; text-align: center; font-size: 1.1em; }
+        .admin-panel { background-color: #e2e3e5; border-color: #d6d8db; }
+        .logout-btn { background-color: #dc3545; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-size: 0.9em; }
+        .approve-btn { background-color: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; }
     </style>
-    <!-- Import Supabase Client Library -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-    <div class="container">
-        <!-- Tombol Logout akan muncul di sini -->
-        <button id="logout-button">Logout</button>
-        
-        <h1>⚡ Dashboard Monitoring PT.Amarilys Karisma Gemilang</h1>
-        <h2 id="user-email-display">Loading...</h2>
-        <p class="status" id="status-message">Menghubungkan ke Supabase...</p>
-        
-        <div style="overflow-x: auto;">
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID Meter</th>
-                        <th>Timestamp (DB)</th>
-                        <th>Frekuensi (Hz)</th>
-                        <th>PF Total</th>
-                        <th>Daya Aktif (P) Total (W)</th>
-                        <th>Daya Reaktif (Q) Total (VAR)</th>
-                        <th>Daya Semu (S) Total (VA)</th>
-                        <th>Energi (E) Total (kWh)</th>
-                        <th>Biaya (Rp)</th>
-                        <th>V1 (V)</th>
-                        <th>A1 (A)</th>
-                        <th>P1 (W)</th>
-                        <th>PF1</th>
-                        <th>V2 (V)</th>
-                        <th>A2 (A)</th>
-                        <th>P2 (W)</th>
-                        <th>PF2</th>
-                        <th>V3 (V)</th>
-                        <th>A3 (A)</th>
-                        <th>P3 (W)</th>
-                        <th>PF3</th>
-                    </tr>
-                </thead>
-                <tbody id="meter-table-body">
-                    <!-- Data akan dimasukkan di sini oleh JavaScript -->
-                </tbody>
-            </table>
+
+    <div class="container" id="app-container">
+        <h1>
+            <span>Dashboard monitoring PT.Amarilys Karisma Gemilang</span>
+            <button id="logoutButton" class="logout-btn">Logout</button>
+        </h1>
+        <p class="status">Memuat data pengguna dan meter...</p>
+
+        <!-- 1. Konten untuk Pengguna 'Pending' -->
+        <div id="pendingContainer" class="pending-box" style="display: none;">
+            <h2>Menunggu Persetujuan</h2>
+            <p>Akun Anda (<span id="pendingUserEmail"></span>) berhasil dibuat tetapi masih menunggu persetujuan dari Admin. Silakan hubungi Admin untuk mengaktifkan akun Anda.</p>
         </div>
+
+        <!-- 2. Konten untuk Pengguna 'User' dan 'Admin' -->
+        <div id="dataContainer" style="display: none;">
+            <h2>Data Kualitas Daya (18 Meter)</h2>
+            <p class="status" id="status-message">Mengambil data terbaru dari database...</p>
+            <div class="table-container">
+                <table>
+                    <thead id="data-table-head">
+                        <!-- Header Tabel (18 Kolom) akan di-generate oleh JS -->
+                    </thead>
+                    <tbody id="data-table-body">
+                        <!-- Data Meter (18 Baris) akan di-generate oleh JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 3. Konten KHUSUS 'Admin' -->
+        <div id="adminContainer" class="admin-panel" style="display: none;">
+            <h2>Panel Admin: Persetujuan Pengguna</h2>
+            <p>Pengguna berikut sedang menunggu persetujuan Anda (Role: 'pending').</p>
+            <div class="table-container" style="max-height: 200px;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Email Pengguna</th>
+                            <th>Nama Lengkap</th>
+                            <th>Role Saat Ini</th>
+                            <th>Tindakan</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admin-table-body">
+                        <!-- Daftar user 'pending' akan di-generate oleh JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
     </div>
 
-    <script>
-        // --- 🔥 WAJIB DIISI! (Ganti dengan Kredensial Supabase Anda) ---
-        const SUPABASE_URL = ' https://rojhcadtqfynlqzubftx.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs';
-        // --------------------------------------------------------
-
-        const REFRESH_INTERVAL_MS = 5000; // 5 Detik
-
+    <script type="module">
+        // --- FASE 1: KONFIGURASI SUPABASE (WAJIB DIISI) ---
+        const SUPABASE_URL = 'https://rojhcadtqfynlqzubftx.supabase.co'; // Ganti ini
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs'; // Ganti ini (Anon, Public Key)
+        
+        // --- Variabel Global ---
         let supabase;
+        const REFRESH_INTERVAL = 5000; // Refresh data setiap 5 detik
+        
+        // --- Elemen DOM ---
+        const appContainer = document.getElementById('app-container');
+        const pendingContainer = document.getElementById('pendingContainer');
+        const dataContainer = document.getElementById('dataContainer');
+        const adminContainer = document.getElementById('adminContainer');
         const statusMessage = document.getElementById('status-message');
-        const tableBody = document.getElementById('meter-table-body');
-        const userEmailDisplay = document.getElementById('user-email-display');
-        const logoutButton = document.getElementById('logout-button');
+        const logoutButton = document.getElementById('logoutButton');
+        const pendingUserEmail = document.getElementById('pendingUserEmail');
 
-        // --- 1. INISIALISASI SUPABASE ---
+        // --- FASE 2: Inisialisasi Klien Supabase ---
         try {
-            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        } catch (e) {
-            console.error("Gagal inisialisasi Supabase. Cek URL/Key.", e);
-            statusMessage.textContent = "Gagal inisialisasi Supabase. Cek URL/Key.";
+            supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        } catch (error) {
+            console.error("Gagal inisialisasi Supabase. Cek URL/Key.", error);
+            document.body.innerHTML = "<h1>Error Konfigurasi Supabase. Cek Konsol (F12).</h1>";
         }
 
-        // --- 2. FUNGSI PROTEKSI HALAMAN (WAJIB) ---
-        async function checkLoginStatus() {
-            if (!supabase) return; // Jangan lakukan apa-apa jika Supabase gagal load
-
-            const { data: { session }, error } = await supabase.auth.getSession();
+        // --- FASE 3: Fungsi Utama (Pengecekan Login & Role) ---
+        async function checkLoginAndFetchData() {
+            // 1. Cek Sesi Login
+            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
             
+            if (sessionError) {
+                console.error("Error mengambil sesi:", sessionError);
+                redirectToLogin();
+                return;
+            }
+
+            if (!session) {
+                // Jika tidak ada sesi (belum login), lempar ke login.html
+                redirectToLogin();
+                return;
+            }
+
+            // 2. Jika Login Sukses, Cek Role (Peran) di tabel 'profiles'
+            const user = session.user;
+            // console.log("User terdeteksi:", user.email);
+
+            const { data: profile, error: profileError } = await supabase
+                .from('profiles')
+                .select('role, full_name')
+                .eq('id', user.id)
+                .single(); // Ambil satu baris saja
+
+            if (profileError) {
+                console.error("Error mengambil profile (Mungkin RLS aktif?):", profileError);
+                // Jika profile tidak ditemukan (mungkin trigger gagal?), logout
+                await handleLogout(); 
+                return;
+            }
+
+            if (!profile) {
+                // Kasus aneh jika user ada di auth tapi tidak ada di profiles
+                console.warn("Profile tidak ditemukan untuk user:", user.id);
+                pendingUserEmail.textContent = user.email || "Email Anda";
+                showView('pending'); // Tampilkan halaman pending
+                return;
+            }
+
+            // 3. Tentukan Tampilan Berdasarkan Role (RBAC)
+            const userRole = profile.role;
+            // console.log("Role Pengguna:", userRole);
+
+            if (userRole === 'admin') {
+                showView('admin'); // Tampilkan data + panel admin
+                await fetchMeterData(); // Ambil data meter
+                await fetchAdminPanelData(); // Ambil data user 'pending'
+            
+            } else if (userRole === 'user') {
+                showView('user'); // Tampilkan data saja
+                await fetchMeterData(); // Ambil data meter
+            
+            } else if (userRole === 'pending') {
+                pendingUserEmail.textContent = user.email || "Email Anda";
+                showView('pending'); // Tampilkan halaman "Menunggu Approval"
+            
+            } else {
+                // Jika role tidak dikenal, logout
+                console.error("Role tidak dikenal:", userRole);
+                await handleLogout();
+            }
+        }
+
+        // --- FASE 4: Fungsi Pengambilan Data ---
+
+        // Mengambil data meter (untuk 'admin' dan 'user')
+        async function fetchMeterData() {
+            statusMessage.textContent = "Mengambil data meter...";
+            
+            // Memanggil fungsi 'get_latest_meter_data' yang kita buat di Supabase (SQL FASE 1.5)
+            const { data, error } = await supabase.rpc('get_latest_meter_data');
+
             if (error) {
-                console.error("Error fetching session:", error.message);
-                redirectToLogin(); // Gagal = lempar ke login
+                console.error("Error mengambil data meter (Cek RLS/Fungsi RPC):", error);
+                statusMessage.innerHTML = `❌ Error mengambil data meter: ${error.message}`;
+                // Cek jika error karena RLS (Keamanan)
+                if (error.code === '42501' || error.code === '42P01') { 
+                     statusMessage.innerHTML += "<br>Pastikan Anda sudah menjalankan script SQL 'setup_rls_policies.sql'.";
+                }
+                // Jika error karena auth (sesi habis), lempar ke login
+                if (error.code === '401' || error.code === '403') {
+                    await handleLogout();
+                }
+                return;
+            }
+
+            // console.log("Data meter diterima:", data);
+            renderDataTable(data);
+            statusMessage.textContent = "Data berhasil diperbarui: " + new Date().toLocaleTimeString();
+        }
+
+        // Mengambil data user 'pending' (KHUSUS 'admin')
+        async function fetchAdminPanelData() {
+            const { data: pendingUsers, error } = await supabase
+                .from('profiles')
+                .select('id, full_name, email, role')
+                .eq('role', 'pending'); // Hanya ambil user 'pending'
+
+            if (error) {
+                console.error("Error mengambil data user pending (Hanya Admin yang bisa):", error);
+                adminContainer.innerHTML = "<p>Gagal memuat data admin. Pastikan RLS di tabel 'profiles' mengizinkan Admin.</p>";
                 return;
             }
             
-            if (!session) {
-                console.log("Tidak ada sesi. Mengarahkan ke login...");
-                redirectToLogin(); // Tidak ada sesi = lempar ke login
-            } else {
-                console.log("Sesi ditemukan. Memuat data dashboard...");
-                userEmailDisplay.textContent = `User: ${session.user.email}`;
+            renderAdminTable(pendingUsers);
+        }
+
+        // --- FASE 5: Fungsi Tampilan (Render) ---
+
+        // Menampilkan tabel data meter (18+ kolom)
+        function renderDataTable(data) {
+            const tHead = document.getElementById('data-table-head');
+            const tBody = document.getElementById('data-table-body');
+            tHead.innerHTML = ''; // Kosongkan header
+            tBody.innerHTML = ''; // Kosongkan body
+
+            if (data.length === 0) {
+                tBody.innerHTML = '<tr><td colspan="19">Belum ada data meter yang masuk dari ESP32.</td></tr>';
+                return;
+            }
+
+            // Buat Header (Ambil keys dari data pertama)
+            const headers = Object.keys(data[0]);
+            const headerRow = document.createElement('tr');
+            
+            // Mapping nama kolom (Opsional, untuk mempercantik)
+            const headerNames = {
+                meter_id: "ID", v1: "V1", v2: "V2", v3: "V3",
+                a1: "A1 (A)", a2: "A2 (A)", a3: "A3 (A)",
+                p1: "P1 (W)", p2: "P2 (W)", p3: "P3 (W)",
+                pf1: "PF1", pf2: "PF2", pf3: "PF3",
+                p_total: "P Total (W)", q_total: "Q Total (VAR)", s_total: "S Total (VA)",
+                pf_total: "PF Total", frequency: "Freq (Hz)",
+                energy_total: "Energi (kWh)", cost: "Biaya (Rp)",
+                timestamp: "Update Terakhir"
+            };
+
+            headers.forEach(key => {
+                const th = document.createElement('th');
+                th.textContent = headerNames[key] || key; // Gunakan nama cantik jika ada
+                headerRow.appendChild(th);
+            });
+            tHead.appendChild(headerRow);
+
+            // Buat Body (Isi data)
+            data.forEach(rowData => {
+                const row = document.createElement('tr');
+                // Tentukan style jika offline (V=0)
+                if (rowData.v1 === 0 && rowData.v2 === 0 && rowData.v3 === 0) {
+                    row.style.backgroundColor = "#ffebee"; // Merah muda
+                    row.style.color = "#c62828";
+                }
                 
-                // (Jika login, baru ambil data)
-                fetchData(); 
-                setInterval(fetchData, REFRESH_INTERVAL_MS);
+                headers.forEach(key => {
+                    const td = document.createElement('td');
+                    let value = rowData[key];
+                    
+                    // Format Angka (float)
+                    if (typeof value === 'number' && key !== 'meter_id' && key !== 'frequency') {
+                        value = value.toFixed(2);
+                    }
+                    // Format Waktu (timestamp)
+                    if (key === 'timestamp') {
+                        value = new Date(value).toLocaleTimeString('id-ID');
+                    }
+                    
+                    td.textContent = value;
+                    row.appendChild(td);
+                });
+                tBody.appendChild(row);
+            });
+        }
+
+        // Menampilkan tabel admin (untuk approve user)
+        function renderAdminTable(users) {
+            const tBody = document.getElementById('admin-table-body');
+            tBody.innerHTML = '';
+
+            if (users.length === 0) {
+                tBody.innerHTML = '<tr><td colspan="4">Tidak ada pengguna yang menunggu persetujuan.</td></tr>';
+                return;
             }
+
+            users.forEach(user => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${user.email || 'N/A'}</td>
+                    <td>${user.full_name || 'Belum diisi'}</td>
+                    <td>${user.role}</td>
+                    <td><button class="approve-btn" data-id="${user.id}">Approve (Jadikan 'user')</button></td>
+                `;
+                tBody.appendChild(row);
+            });
         }
 
-        function redirectToLogin() {
-            window.location.href = './login.html';
-        }
+        // --- FASE 6: Fungsi Interaksi (Event Listeners) ---
 
-        // --- 3. FUNGSI LOGOUT ---
+        // Tombol Logout
         logoutButton.addEventListener('click', async () => {
-            const { error } = await supabase.auth.signOut();
-            if (error) {
-                console.error("Error logging out:", error.message);
-            } else {
-                console.log("Logout sukses.");
-                redirectToLogin(); // Arahkan kembali ke login setelah logout
-            }
+            await handleLogout();
         });
 
-        // --- 4. FUNGSI PENGAMBILAN DATA (Fetch Data) ---
-        async function fetchData() {
-            if (!supabase) return;
-
-            statusMessage.textContent = "Mengambil data terbaru dari Supabase...";
-            
-            try {
-                // Memanggil fungsi 'get_latest_meter_data' di database Supabase
-                const { data, error } = await supabase
-                    .rpc('get_latest_meter_data'); 
-
-                if (error) {
-                    throw error;
+        // Tombol Approve (di Panel Admin)
+        adminContainer.addEventListener('click', async (e) => {
+            if (e.target.classList.contains('approve-btn')) {
+                const userId = e.target.getAttribute('data-id');
+                if (confirm(`Anda yakin ingin menyetujui (approve) pengguna ini? Role akan diubah menjadi 'user'.`)) {
+                    await approveUser(userId);
                 }
-                
-                console.log("Data diterima:", data);
-                renderTable(data);
-                statusMessage.textContent = "Data berhasil diperbarui: " + new Date().toLocaleTimeString();
+            }
+        });
+        
+        // Fungsi Approve User
+        async function approveUser(userId) {
+            // Kita memanggil 'rpc' (fungsi database) 'update_user_role' 
+            // yang kita buat di 'setup_rls_policies.sql' (FASE 2)
+            const { error } = await supabase.rpc('update_user_role', {
+                target_user_id: userId,
+                new_role: 'user'
+            });
 
-            } catch (error) {
-                console.error("Fetch Error:", error);
-                statusMessage.textContent = `❌ GAGAL mengambil data: ${error.message}`;
+            if (error) {
+                console.error("Gagal approve user:", error);
+                alert("Gagal approve user: " + error.message);
+            } else {
+                alert("Pengguna berhasil di-approve! Role diubah menjadi 'user'.");
+                // Muat ulang data panel admin
+                await fetchAdminPanelData();
             }
         }
 
-        // --- 5. FUNGSI TAMPILKAN DATA (Render Table) ---
-        function renderTable(data) {
-            tableBody.innerHTML = ''; // Kosongkan tabel
+        // --- FUNGSI HELPER ---
 
-            if (!data || data.length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="21" style="text-align:center; font-weight:bold;">Tidak ada data meter yang ditemukan.</td></tr>';
-                return;
+        // Fungsi Logout
+        async function handleLogout() {
+            const { error } = await supabase.auth.signOut();
+            if (error) {
+                console.error("Error saat logout:", error);
             }
-            
-            // Loop data (yang sudah diurutkan dari RPC)
-            for (let i = 1; i <= 18; i++) {
-                const meter = data.find(d => d.meter_id === i);
-                
-                const row = tableBody.insertRow();
-                
-                if (meter) {
-                    // Cek jika meter offline (V1 dan V2 = 0)
-                    const isOffline = meter.v1 === 0 && meter.v2 === 0;
-                    if (isOffline) {
-                        row.className = 'meter-offline';
-                    }
+            redirectToLogin();
+        }
 
-                    // Isi 18+ Kolom
-                    row.insertCell().textContent = meter.meter_id;
-                    row.insertCell().textContent = new Date(meter.timestamp).toLocaleTimeString('id-ID');
-                    row.insertCell().textContent = meter.frequency.toFixed(2) + " Hz";
-                    row.insertCell().textContent = meter.pf_total.toFixed(3);
-                    row.insertCell().textContent = meter.p_total.toFixed(2) + " W";
-                    row.insertCell().textContent = meter.q_total.toFixed(2) + " VAR";
-                    row.insertCell().textContent = meter.s_total.toFixed(2) + " VA";
-                    row.insertCell().textContent = meter.energy_total.toFixed(3) + " kWh";
-                    row.insertCell().textContent = "Rp " + meter.cost.toFixed(2);
-                    row.insertCell().textContent = meter.v1.toFixed(2) + " V";
-                    row.insertCell().textContent = meter.a1.toFixed(3) + " A";
-                    row.insertCell().textContent = meter.p1.toFixed(2) + " W";
-                    row.insertCell().textContent = meter.pf1.toFixed(3);
-                    row.insertCell().textContent = meter.v2.toFixed(2) + " V";
-                    row.insertCell().textContent = meter.a2.toFixed(3) + " A";
-                    row.insertCell().textContent = meter.p2.toFixed(2) + " W";
-                    row.insertCell().textContent = meter.pf2.toFixed(3);
-                    row.insertCell().textContent = meter.v3.toFixed(2) + " V";
-                    row.insertCell().textContent = meter.a3.toFixed(3) + " A";
-                    row.insertCell().textContent = meter.p3.toFixed(2) + " W";
-                    row.insertCell().textContent = meter.pf3.toFixed(3);
-                } else {
-                    // Jika data meter ID (1-18) tidak ditemukan di database
-                    row.className = 'meter-offline';
-                    row.insertCell().textContent = i;
-                    row.insertCell().textContent = "N/A";
-                    row.insertCell().colSpan = 19;
-                    row.cells[1].textContent = "Data untuk ID meter ini belum masuk ke database.";
-                }
+        // Fungsi pindah halaman ke Login
+        function redirectToLogin() {
+            window.location.href = 'login.html';
+        }
+
+        // Fungsi untuk menampilkan view yang sesuai (admin/user/pending)
+        function showView(role) {
+            // Sembunyikan semua
+            pendingContainer.style.display = 'none';
+            dataContainer.style.display = 'none';
+            adminContainer.style.display = 'none';
+
+            // Tampilkan yang sesuai
+            if (role === 'admin') {
+                dataContainer.style.display = 'block';
+                adminContainer.style.display = 'block';
+            } else if (role === 'user') {
+                dataContainer.style.display = 'block';
+            } else if (role === 'pending') {
+                pendingContainer.style.display = 'block';
             }
         }
 
-        // --- 6. JALANKAN PROTEKSI SAAT HALAMAN DIMUAT ---
-        checkLoginStatus();
+        // --- FASE 7: Jalankan Aplikasi ---
+        checkLoginAndFetchData(); // Cek login saat halaman dimuat
+        
+        // Set interval untuk refresh data meter (hanya jika login berhasil)
+        setInterval(() => {
+            const userRole = (supabase.auth.getSession())?.data?.session?.user?.role;
+            // Hanya refresh data jika role 'admin' atau 'user'
+            if (dataContainer.style.display === 'block') {
+                fetchMeterData();
+            }
+            // Juga refresh panel admin jika role 'admin'
+            if (adminContainer.style.display === 'block') {
+                fetchAdminPanelData();
+            }
+        }, REFRESH_INTERVAL);
 
     </script>
 </body>
