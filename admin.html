@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Admin - TA Monitoring</title>
+    <!-- 1. Impor Supabase Client Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* (Gunakan CSS yang sama persis seperti di index.html (Halaman Home)) */
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: #f4f7f6; color: #333; }
+        .container { width: 95%; max-width: 1400px; margin: 20px; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 6px 18px rgba(0,0,0,0.07); }
+        h1 { color: #00529B; border-bottom: 2px solid #00529B; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        h2 { color: #333; border-bottom: 1px solid #eee; padding-bottom: 5px; margin-top: 30px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.85rem; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background-color: #00529B; color: white; position: sticky; top: 0; }
+        tbody tr:nth-child(even) { background-color: #f9f9f9; }
+        .table-container { max-height: 400px; overflow-y: auto; }
+        .status { font-size: 0.9em; color: #555; }
+        /* Box Peringatan/Info */
+        .info-box { padding: 20px; background-color: #fff3cd; border: 1px solid #ffeeba; border-radius: 8px; text-align: center; font-size: 1.1em; }
+        .admin-panel { background-color: #e2e3e5; border-color: #d6d8db; }
+        .error-box { background-color: #f8d7da; border-color: #f5c6cb; color: #721c24; } /* Box Error (Akses Ditolak) */
+        
+        .logout-btn { background-color: #dc3545; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-size: 0.9em; }
+        .approve-btn { background-color: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; }
+        .back-btn { background-color: #6c757d; color: white; padding: 8px 12px; text-decoration: none; border-radius: 5px; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+
+    <div class="container" id="app-container">
+        <h1>
+            <span>Menu 4: PANEL ADMIN (PERSETUJUAN)</span>
+            <div>
+                <a href="index.html" class="back-btn" style="margin-right: 10px;">Kembali ke Home</a>
+                <button id="logoutButton" class="logout-btn">Logout</button>
+            </div>
+        </h1>
+        <p class="status">Memuat data pengguna...</p>
+
+        <!-- 1. Konten untuk Pengguna 'Pending' atau 'User' (Tidak Boleh Akses) -->
+        <div id="deniedContainer" class="info-box error-box" style="display: none;">
+            <h2>Akses Ditolak</h2>
+            <p>Hanya Admin yang dapat mengakses halaman ini.</p>
+        </div>
+
+        <!-- 2. Konten KHUSUS 'Admin' -->
+        <div id="adminContainer" class="admin-panel" style="display: none;">
+            <h2>Persetujuan Pengguna</h2>
+            <p>Pengguna berikut sedang menunggu persetujuan Anda (Role: 'pending').</p>
+            <div class="table-container" style="max-height: 400px;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Email Pengguna</th>
+                            <th>Nama Lengkap</th>
+                            <th>Role Saat Ini</th>
+                            <th>Tindakan</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admin-table-body">
+                        <!-- Daftar user 'pending' akan di-generate oleh JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <script type="module">
+        // --- FASE 1: KONFIGURASI SUPABASE (WAJIB DIISI) ---
+        const SUPABASE_URL = 'https://rojhcadtqfynlqzubftx.supabase.co'; // Ganti ini
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs'; // Ganti ini (Anon, Public Key)
+        
+        // --- Variabel Global ---
+        let supabase;
+        const REFRESH_INTERVAL_ADMIN = 15000; // Refresh panel admin setiap 15 detik
+        
+        // --- Elemen DOM ---
+        const deniedContainer = document.getElementById('deniedContainer');
+        const adminContainer = document.getElementById('adminContainer');
+        const logoutButton = document.getElementById('logoutButton');
+
+        // --- FASE 2: Inisialisasi Klien Supabase ---
+        try {
+            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        } catch (error) {
+            console.error("Gagal inisialisasi Supabase. Cek URL/Key.", error);
+            document.body.innerHTML = "<h1>Error Konfigurasi Supabase. Cek Konsol (F12).</h1>";
+        }
+
+        // --- FASE 3: Fungsi Utama (Pengecekan Login & Role) ---
+        async function checkLoginAndFetchData() {
+            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+            
+            if (sessionError || !session) {
+                redirectToLogin(); return;
+            }
+
+            const user = session.user;
+            const { data: profile, error: profileError } = await supabase
+                .from('profiles')
+                .select('role')
+                .eq('id', user.id)
+                .single();
+
+            if (profileError || !profile) {
+                console.error("Error mengambil profile:", profileError);
+                await handleLogout(); return;
+            }
+
+            const userRole = profile.role;
+
+            if (userRole === 'admin') {
+                showView('admin'); 
+                await fetchAdminPanelData(); // Muat data user 'pending'
+            
+            } else if (userRole === 'user' || userRole === 'pending') {
+                showView('denied'); // User/Pending tidak boleh lihat halaman ini
+            
+            } else {
+                await handleLogout();
+            }
+        }
+
+        // --- FASE 4: Fungsi Pengambilan Data ---
+
+        // Mengambil data user 'pending' (KHUSUS 'admin')
+        async function fetchAdminPanelData() {
+            const { data: pendingUsers, error } = await supabase
+                .from('profiles')
+                .select('id, full_name, email, role') 
+                .eq('role', 'pending'); 
+
+            if (error) {
+                console.error("Error mengambil data user pending (Hanya Admin yang bisa):", error);
+                adminContainer.innerHTML = "<p>Gagal memuat data admin. Pastikan RLS di tabel 'profiles' mengizinkan Admin.</p>";
+                return;
+            }
+            renderAdminTable(pendingUsers);
+        }
+
+        // --- FASE 5: Fungsi Tampilan (Render) ---
+
+        // Menampilkan tabel admin (untuk approve user)
+        function renderAdminTable(users) {
+            const tBody = document.getElementById('admin-table-body');
+            tBody.innerHTML = '';
+
+            if (users.length === 0) {
+                tBody.innerHTML = '<tr><td colspan="4">Tidak ada pengguna yang menunggu persetujuan.</td></tr>';
+                return;
+            }
+
+            users.forEach(user => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${user.email || 'N/A'}</td>
+                    <td>${user.full_name || 'Belum diisi'}</td>
+                    <td>${user.role}</td>
+                    <td><button class="approve-btn" data-id="${user.id}">Approve (Jadikan 'user')</button></td>
+                `;
+                tBody.appendChild(row);
+            });
+        }
+
+        // --- FASE 6: Fungsi Interaksi (Event Listeners) ---
+        logoutButton.addEventListener('click', async () => {
+            await handleLogout();
+        });
+
+        // Tombol Approve (di Panel Admin)
+        adminContainer.addEventListener('click', async (e) => {
+            if (e.target.classList.contains('approve-btn')) {
+                const userId = e.target.getAttribute('data-id');
+                if (confirm(`Anda yakin ingin menyetujui (approve) pengguna ini? Role akan diubah menjadi 'user'.`)) {
+                    await approveUser(userId);
+                }
+            }
+        });
+        
+        async function approveUser(userId) {
+            // Memanggil 'rpc' 'update_user_role' (dari 'setup_rls_policies.sql')
+            const { error } = await supabase.rpc('update_user_role', {
+                target_user_id: userId,
+                new_role: 'user'
+            });
+
+            if (error) {
+                console.error("Gagal approve user:", error);
+                alert("Gagal approve user: " + error.message);
+            } else {
+                alert("Pengguna berhasil di-approve! Role diubah menjadi 'user'.");
+                await fetchAdminPanelData(); // Refresh tabel admin
+            }
+        }
+
+        // --- FUNGSI HELPER ---
+        async function handleLogout() {
+            await supabase.auth.signOut();
+            redirectToLogin();
+        }
+
+        function redirectToLogin() {
+            window.location.href = 'login.html';
+        }
+
+        function showView(role) {
+            deniedContainer.style.display = 'none';
+            adminContainer.style.display = 'none';
+
+            if (role === 'admin') {
+                adminContainer.style.display = 'block';
+            } else if (role === 'denied') {
+                deniedContainer.style.display = 'block';
+            }
+        }
+
+        // --- FASE 7: Jalankan Aplikasi ---
+        checkLoginAndFetchData(); // Cek login saat halaman dimuat
+
+        setInterval(() => {
+            if (adminContainer.style.display === 'block') {
+                fetchAdminPanelData();
+            }
+        }, REFRESH_INTERVAL_ADMIN);
+
+    </script>
+</body>
+</html>
+
