@@ -41,8 +41,9 @@
             display: flex;
             align-items: center;
         }
+        /* 🔥 PERUBAHAN 1: Logo diperbesar */
         .logo {
-            width: 60px; /* Ukuran logo */
+            width: 80px; /* Ukuran logo (diperbesar dari 60px) */
             height: auto;
             margin-right: 20px;
         }
@@ -50,18 +51,19 @@
             display: flex;
             flex-direction: column;
         }
+        /* 🔥 PERUBAHAN 3: Judul Header diubah */
         .title-main {
-            font-size: 1.5em; /* (Dashboard monitoring) */
+            font-size: 1.5em; /* (PT.Amarilys Karisma Gemilang) */
             font-weight: 600;
             color: #00529B;
         }
         .title-sub {
-            font-size: 1.1em; /* (PT.Amarilys Karisma Gemilang) */
+            font-size: 1.1em; /* (Dashboard monitoring) */
             color: #333;
             font-weight: 500;
         }
 
-        /* 🔥 PERUBAHAN: Judul "HOME" */
+        /* (H2 "HOME" sudah dihapus dari HTML) */
         h2 { 
             color: #333; 
             text-align: center; 
@@ -70,7 +72,7 @@
             font-weight: 600;
         }
         
-        /* 🔥 PERUBAHAN: Tombol Logout (Ukuran Sedang) */
+        /* Tombol Logout (Ukuran Sedang) */
         .logout-btn-medium { 
             background-color: #dc3545; 
             color: white; 
@@ -85,7 +87,7 @@
             background-color: #c82333;
         }
 
-        /* 🔥 PERUBAHAN: Teks Welcome dipindah ke Bawah (Footer) */
+        /* Teks Welcome dipindah ke Bawah (Footer) */
         .footer-status {
             text-align: center;
             margin-top: 30px;
@@ -151,9 +153,10 @@
         <h1>
             <div class="header-left">
                 <img src="https://amarilyskg.co.id/template/images/logo_AKG.png" alt="Logo PT. Amarilys Karisma Gemilang" class="logo">
+                <!-- 🔥 PERUBAHAN 3: Judul Header diubah -->
                 <div class="title-block">
-                    <span class="title-main">Dashboard monitoring</span>
-                    <span class="title-sub">PT.Amarilys Karisma Gemilang</span>
+                    <span class="title-main">PT.Amarilys Karisma Gemilang</span>
+                    <span class="title-sub">Dashboard Monitoring</span>
                 </div>
             </div>
             <button id="logoutButton" class="logout-btn-medium" style="display: none;">Logout</button>
@@ -170,42 +173,42 @@
         <!-- 2. Konten untuk Pengguna 'User' dan 'Admin' (Menu Pilihan) -->
         <div id="menuContainer" style="display: none;">
             
-            <!-- 🔥 PERUBAHAN: Judul "HOME" -->
-            <h2>HOME</h2>
+            <!-- 🔥 PERUBAHAN 2: Judul "HOME" Dihapus -->
+            <!-- <h2>HOME</h2> (Dihapus) -->
             
             <div class="menu-grid">
                 
                 <!-- Pilihan 1: Tabel Real Time -->
                 <a href="realtime.html" class="menu-card">
                     <h3>TABEL REAL TIME</h3>
-                    <!-- 🔥 PERUBAHAN: Deskripsi Baru -->
+                    <!-- (Deskripsi sesuai permintaan Anda sebelumnya) -->
                     <p>Format tabel akan menampilkan tabel dengan parameter utama dari tiap mesin,click jika ingin melanjutkan ke halaman</p>
                 </a>
                 
                 <!-- Pilihan 2: Biaya Mingguan -->
                 <a href="biaya.html" class="menu-card">
                     <h3>PERHITUNGAN BIAYA MINGGUAN</h3>
-                    <!-- 🔥 PERUBAHAN: Deskripsi Baru -->
+                    <!-- (Deskripsi sesuai permintaan Anda sebelumnya) -->
                     <p>Format akan menampilkan grafik dan total biaya harian per-mesin yang di rekap dalam 7 hari,click jika ingin melanjutkan ke halaman.</p>
                 </a>
                 
                 <!-- Pilihan 3: Cek Trouble -->
                 <a href="trouble.html" class="menu-card">
                     <h3>CEK TROUBLE</h3>
-                    <!-- 🔥 PERUBAHAN: Deskripsi Baru -->
+                    <!-- (Deskripsi sesuai permintaan Anda sebelumnya) -->
                     <p>format menampilkan riwayat trouble pada mesin per hari/jam (over voltage/over current) yang di rekap dalam 7 hari.</p>
                 </a>
 
-                <!-- PILIHAN 4: KHUSUS ADMIN -->
+                <!-- 🔥 PERUBAHAN: Tombol ke-4 (Khusus Admin) diubah namanya -->
                 <a href="admin.html" class="menu-card" id="admin-menu-card">
-                    <h3>PANEL ADMIN (PERSETUJUAN)</h3>
-                    <p>Menyetujui (Approve) pengguna baru yang sedang 'pending'.</p>
+                    <h3>Admin Control</h3>
+                    <p>Menyetujui (Approve) dan mengelola pengguna baru.</p>
                 </a>
                 
             </div>
         </div>
         
-        <!-- 🔥 PERUBAHAN: Teks Welcome dipindah ke Bawah (Footer) -->
+        <!-- Teks Welcome dipindah ke Bawah (Footer) -->
         <div class="footer-status">
             <p class="status" id="welcomeMessage">Memuat data pengguna...</p>
             <p class="status" id="menuInfo">Silakan pilih menu dashboard yang ingin Anda lihat.</p>
