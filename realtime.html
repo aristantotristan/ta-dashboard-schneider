@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tabel Real Time - TA Monitoring</title>
+    <!-- 1. Impor Supabase Client Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* (Gunakan CSS yang sama persis seperti di index.html (Halaman Home)) */
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: #f4f7f6; color: #333; }
+        .container { width: 95%; max-width: 1400px; margin: 20px; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 6px 18px rgba(0,0,0,0.07); }
+        h1 { color: #00529B; border-bottom: 2px solid #00529B; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        h2 { color: #333; border-bottom: 1px solid #eee; padding-bottom: 5px; margin-top: 30px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.85rem; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background-color: #00529B; color: white; position: sticky; top: 0; }
+        tbody tr:nth-child(even) { background-color: #f9f9f9; }
+        .table-container { max-height: 400px; overflow-y: auto; }
+        .status { font-size: 0.9em; color: #555; }
+        .pending-box, .admin-panel { padding: 20px; background-color: #fff3cd; border: 1px solid #ffeeba; border-radius: 8px; text-align: center; font-size: 1.1em; }
+        .admin-panel { background-color: #e2e3e5; border-color: #d6d8db; }
+        .logout-btn { background-color: #dc3545; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-size: 0.9em; }
+        .approve-btn { background-color: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; }
+        .back-btn { background-color: #6c757d; color: white; padding: 8px 12px; text-decoration: none; border-radius: 5px; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+
+    <div class="container" id="app-container">
+        <h1>
+            <span>Menu 1: TABEL REAL TIME</span>
+            <div>
+                <a href="index.html" class="back-btn" style="margin-right: 10px;">Kembali ke Home</a>
+                <button id="logoutButton" class="logout-btn">Logout</button>
+            </div>
+        </h1>
+        <p class="status">Memuat data pengguna dan meter...</p>
+
+        <!-- 1. Konten untuk Pengguna 'Pending' -->
+        <div id="pendingContainer" class="pending-box" style="display: none;">
+            <h2>Menunggu Persetujuan</h2>
+            <p>Akun Anda (<span id="pendingUserEmail"></span>) masih 'pending'. Anda tidak diizinkan melihat data meter. Silakan hubungi Admin.</p>
+        </div>
+
+        <!-- 2. Konten untuk Pengguna 'User' dan 'Admin' -->
+        <div id="dataContainer" style="display: none;">
+            <h2>Data Kualitas Daya (18 Meter) - (Data Penting)</h2>
+            <p class="status" id="status-message">Mengambil data terbaru dari tabel `raw_meter_data`...</p>
+            <div class="table-container">
+                <table>
+                    <thead id="data-table-head">
+                        <!-- Header Tabel (Data "Penting") akan di-generate oleh JS -->
+                    </thead>
+                    <tbody id="data-table-body">
+                        <!-- Data Meter (18 Baris) akan di-generate oleh JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 3. Konten KHUSUS 'Admin' -->
+        <div id="adminContainer" class="admin-panel" style="display: none;">
+            <h2>Panel Admin: Persetujuan Pengguna</h2>
+            <p>Pengguna berikut sedang menunggu persetujuan Anda (Role: 'pending').</p>
+            <div class="table-container" style="max-height: 200px;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Email Pengguna</th>
+                            <th>Nama Lengkap</th>
+                            <th>Role Saat Ini</th>
+                            <th>Tindakan</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admin-table-body">
+                        <!-- Daftar user 'pending' akan di-generate oleh JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <script type"module">
+        // --- FASE 1: KONFIGURASI SUPABASE (WAJIB DIISI) ---
+        const SUPABASE_URL = 'https://rojhcadtqfynlqzubftx.supabase.co'; // Ganti ini
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs'; // Ganti ini (Anon, Public Key)
+        
+        // --- Variabel Global ---
+        let supabase;
+        const REFRESH_INTERVAL = 10000; // Refresh data setiap 10 detik
+        
+        // --- Elemen DOM ---
+        const pendingContainer = document.getElementById('pendingContainer');
+        const dataContainer = document.getElementById('dataContainer');
+        const adminContainer = document.getElementById('adminContainer');
+        const statusMessage = document.getElementById('status-message');
+        const logoutButton = document.getElementById('logoutButton');
+        const pendingUserEmail = document.getElementById('pendingUserEmail');
+
+        // --- FASE 2: Inisialisasi Klien Supabase ---
+        try {
+            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        } catch (error) {
+            console.error("Gagal inisialisasi Supabase. Cek URL/Key.", error);
+            document.body.innerHTML = "<h1>Error Konfigurasi Supabase. Cek Konsol (F12).</h1>";
+        }
+
+        // --- FASE 3: Fungsi Utama (Pengecekan Login & Role) ---
+        async function checkLoginAndFetchData() {
+            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+            
+            if (sessionError || !session) {
+                redirectToLogin(); return;
+            }
+
+            const user = session.user;
+            const { data: profile, error: profileError } = await supabase
+                .from('profiles')
+                .select('role, full_name')
+                .eq('id', user.id)
+                .single();
+
+            if (profileError || !profile) {
+                console.error("Error mengambil profile:", profileError);
+                await handleLogout(); return;
+            }
+
+            const userRole = profile.role;
+
+            if (userRole === 'admin') {
+                showView('admin'); 
+                await fetchMeterData(); 
+                await fetchAdminPanelData(); 
+            
+            } else if (userRole === 'user') {
+                showView('user'); 
+                await fetchMeterData(); 
+            
+            } else if (userRole === 'pending') {
+                pendingUserEmail.textContent = user.email || "Email Anda";
+                showView('pending'); 
+            
+            } else {
+                await handleLogout();
+            }
+        }
+
+        // --- FASE 4: Fungsi Pengambilan Data ---
+
+        // Mengambil data meter (untuk 'admin' dan 'user')
+        async function fetchMeterData() {
+            statusMessage.textContent = "Memanggil RPC 'get_latest_raw_data'...";
+            
+            // 🔥 MEMANGGIL ASISTEN/RPC BARU (DARI FASE 1.5)
+            const { data, error } = await supabase.rpc('get_latest_raw_data');
+
+            if (error) {
+                console.error("Error mengambil data meter (Cek RLS/RPC 'get_latest_raw_data'):", error);
+                statusMessage.innerHTML = `❌ Error mengambil data meter: ${error.message}`;
+                if (error.code === '401' || error.code === '403') await handleLogout();
+                return;
+            }
+
+            renderDataTable(data);
+            statusMessage.textContent = "Data (raw) berhasil diperbarui: " + new Date().toLocaleTimeString();
+        }
+
+        // Mengambil data user 'pending' (KHUSUS 'admin')
+        async function fetchAdminPanelData() {
+            const { data: pendingUsers, error } = await supabase
+                .from('profiles')
+                .select('id, full_name, email, role')
+                .eq('role', 'pending'); 
+
+            if (error) {
+                console.error("Error mengambil data user pending (Hanya Admin yang bisa):", error);
+                adminContainer.innerHTML = "<p>Gagal memuat data admin. Pastikan RLS di tabel 'profiles' mengizinkan Admin.</p>";
+                return;
+            }
+            renderAdminTable(pendingUsers);
+        }
+
+        // --- FASE 5: Fungsi Tampilan (Render) ---
+
+        // Menampilkan tabel data meter (Data "Penting")
+        function renderDataTable(data) {
+            const tHead = document.getElementById('data-table-head');
+            const tBody = document.getElementById('data-table-body');
+            tHead.innerHTML = ''; 
+            tBody.innerHTML = ''; 
+
+            if (data.length === 0) {
+                tBody.innerHTML = '<tr><td colspan="9">Belum ada data meter yang masuk dari ESP32 (Tabel: raw_meter_data).</td></tr>';
+                return;
+            }
+
+            // Buat Header (Ambil keys dari data pertama)
+            const headers = Object.keys(data[0]);
+            const headerRow = document.createElement('tr');
+            
+            // Mapping nama kolom (Sesuai tabel 'raw_meter_data')
+            const headerNames = {
+                meter_id: "ID", 
+                v_avg: "Tegangan (V)", 
+                a_avg: "Arus (A)",
+                p_total: "Daya (W)",
+                pf_total: "PF Total", 
+                energy_total: "Energi (kWh)", 
+                cost: "Biaya (Rp)",
+                timestamp: "Update Terakhir",
+                id: "Data ID" // ID dari tabel raw_meter_data
+            };
+
+            headers.forEach(key => {
+                if (!headerNames[key]) return; // Hanya tampilkan kolom yang ada di mapping
+                const th = document.createElement('th');
+                th.textContent = headerNames[key]; 
+                headerRow.appendChild(th);
+            });
+            tHead.appendChild(headerRow);
+
+            // Buat Body (Isi data)
+            data.forEach(rowData => {
+                const row = document.createElement('tr');
+                if (rowData.v_avg === 0) {
+                    row.style.backgroundColor = "#ffebee"; 
+                    row.style.color = "#c62828";
+                }
+                
+                headers.forEach(key => {
+                    if (!headerNames[key]) return; // Hanya tampilkan kolom yang ada di mapping
+                    const td = document.createElement('td');
+                    let value = rowData[key];
+                    
+                    if (typeof value === 'number' && key !== 'meter_id' && key !== 'id') {
+                        value = value.toFixed(2);
+                    }
+                    if (key === 'timestamp') {
+                        value = new Date(value).toLocaleTimeString('id-ID');
+                    }
+                    
+                    td.textContent = value;
+                    row.appendChild(td);
+                });
+                tBody.appendChild(row);
+            });
+        }
+
+        // Menampilkan tabel admin (untuk approve user)
+        function renderAdminTable(users) {
+            const tBody = document.getElementById('admin-table-body');
+            tBody.innerHTML = '';
+
+            if (users.length === 0) {
+                tBody.innerHTML = '<tr><td colspan="4">Tidak ada pengguna yang menunggu persetujuan.</td></tr>';
+                return;
+            }
+
+            users.forEach(user => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${user.email || 'N/A'}</td>
+                    <td>${user.full_name || 'Belum diisi'}</td>
+                    <td>${user.role}</td>
+                    <td><button class="approve-btn" data-id="${user.id}">Approve (Jadikan 'user')</button></td>
+                `;
+                tBody.appendChild(row);
+            });
+        }
+
+        // --- FASE 6: Fungsi Interaksi (Event Listeners) ---
+        logoutButton.addEventListener('click', async () => {
+            await handleLogout();
+        });
+
+        adminContainer.addEventListener('click', async (e) => {
+            if (e.target.classList.contains('approve-btn')) {
+                const userId = e.target.getAttribute('data-id');
+                if (confirm(`Anda yakin ingin menyetujui (approve) pengguna ini? Role akan diubah menjadi 'user'.`)) {
+                    await approveUser(userId);
+                }
+            }
+        });
+        
+        async function approveUser(userId) {
+            // Memanggil 'rpc' 'update_user_role' (dari 'setup_rls_policies.sql')
+            const { error } = await supabase.rpc('update_user_role', {
+                target_user_id: userId,
+                new_role: 'user'
+            });
+
+            if (error) {
+                console.error("Gagal approve user:", error);
+                alert("Gagal approve user: " + error.message);
+            } else {
+                alert("Pengguna berhasil di-approve! Role diubah menjadi 'user'.");
+                await fetchAdminPanelData();
+            }
+        }
+
+        // --- FUNGSI HELPER ---
+        async function handleLogout() {
+            await supabase.auth.signOut();
+            redirectToLogin();
+        }
+
+        function redirectToLogin() {
+            window.location.href = 'login.html';
+        }
+
+        function showView(role) {
+            pendingContainer.style.display = 'none';
+            dataContainer.style.display = 'none';
+            adminContainer.style.display = 'none';
+
+            if (role === 'admin') {
+                dataContainer.style.display = 'block';
+                adminContainer.style.display = 'block';
+            } else if (role === 'user') {
+                dataContainer.style.display = 'block';
+            } else if (role === 'pending') {
+                pendingContainer.style.display = 'block';
+            }
+        }
+
+        // --- FASE 7: Jalankan Aplikasi ---
+        checkLoginAndFetchData(); // Cek login saat halaman dimuat
+        
+        setInterval(() => {
+            if (dataContainer.style.display === 'block') {
+                fetchMeterData();
+            }
+            if (adminContainer.style.display === 'block') {
+                fetchAdminPanelData();
+            }
+        }, REFRESH_INTERVAL);
+
+    </script>
+</body>
+</html>
+
