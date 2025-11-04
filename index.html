@@ -7,14 +7,98 @@
     <!-- 1. Impor Supabase Client Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: #f4f7f6; color: #333; }
-        .container { width: 95%; max-width: 900px; margin: 20px; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 6px 18px rgba(0,0,0,0.07); }
-        h1 { color: #00529B; border-bottom: 2px solid #00529B; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-        h2 { color: #333; text-align: center; margin-bottom: 30px;}
-        .logout-btn { background-color: #dc3545; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-size: 0.9em; }
-        .status { font-size: 0.9em; color: #555; text-align: center; margin-bottom: 20px;}
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            background-color: #f4f7f6; 
+            color: #333; 
+            margin: 0;
+            padding: 20px 0; /* Tambah padding atas/bawah */
+        }
+        .container { 
+            width: 95%; 
+            max-width: 900px; 
+            margin: 20px auto; /* Margin auto untuk tengahkan */
+            background: white; 
+            padding: 25px; 
+            border-radius: 12px; 
+            box-shadow: 0 6px 18px rgba(0,0,0,0.07); 
+        }
         
-        /* CSS untuk Menu Pilihan */
+        /* 🔥 PERUBAHAN: Header Baru (Logo + Judul) */
+        h1 { 
+            border-bottom: 2px solid #00529B; 
+            padding-bottom: 20px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 30px;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+        }
+        .logo {
+            width: 60px; /* Ukuran logo */
+            height: auto;
+            margin-right: 20px;
+        }
+        .title-block {
+            display: flex;
+            flex-direction: column;
+        }
+        .title-main {
+            font-size: 1.5em; /* (Dashboard monitoring) */
+            font-weight: 600;
+            color: #00529B;
+        }
+        .title-sub {
+            font-size: 1.1em; /* (PT.Amarilys Karisma Gemilang) */
+            color: #333;
+            font-weight: 500;
+        }
+
+        /* 🔥 PERUBAHAN: Judul "HOME" */
+        h2 { 
+            color: #333; 
+            text-align: center; 
+            margin-bottom: 30px;
+            font-size: 1.8em;
+            font-weight: 600;
+        }
+        
+        /* 🔥 PERUBAHAN: Tombol Logout (Ukuran Sedang) */
+        .logout-btn-medium { 
+            background-color: #dc3545; 
+            color: white; 
+            border: none; 
+            padding: 8px 14px; /* Dikecilkan */
+            border-radius: 5px; 
+            cursor: pointer; 
+            font-size: 0.9em; 
+            font-weight: 600;
+        }
+        .logout-btn-medium:hover {
+            background-color: #c82333;
+        }
+
+        /* 🔥 PERUBAHAN: Teks Welcome dipindah ke Bawah (Footer) */
+        .footer-status {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        .status { 
+            font-size: 0.9em; 
+            color: #555; 
+            margin-bottom: 5px;
+        }
+        
+        /* CSS untuk Menu Pilihan (Tombol) */
         .menu-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -39,10 +123,13 @@
         .menu-card h3 {
             margin-top: 0;
             color: #007bff;
+            font-size: 1.1em;
+            font-weight: 600;
         }
         .menu-card p {
             font-size: 0.9em;
             color: #555;
+            line-height: 1.5; /* Agar deskripsi panjang tetap rapi */
         }
         /* Style khusus untuk Tombol Admin */
         #admin-menu-card {
@@ -53,7 +140,6 @@
             color: #dc3545;
         }
 
-
         /* Konten 'Pending' */
         .pending-box { padding: 20px; background-color: #fff3cd; border: 1px solid #ffeeba; border-radius: 8px; text-align: center; font-size: 1.1em; }
     </style>
@@ -61,12 +147,19 @@
 <body>
 
     <div class="container" id="app-container">
+        <!-- 🔥 PERUBAHAN: Header Baru (Logo + Judul) -->
         <h1>
-            <span>Dashboard monitoring PT.Amarilys Karisma Gemilang</span>
-            <button id="logoutButton" class="logout-btn" style="display: none;">Logout</button>
+            <div class="header-left">
+                <img src="https://amarilyskg.co.id/template/images/logo_AKG.png" alt="Logo PT. Amarilys Karisma Gemilang" class="logo">
+                <div class="title-block">
+                    <span class="title-main">Dashboard monitoring</span>
+                    <span class="title-sub">PT.Amarilys Karisma Gemilang</span>
+                </div>
+            </div>
+            <button id="logoutButton" class="logout-btn-medium" style="display: none;">Logout</button>
         </h1>
         
-        <p class="status" id="welcomeMessage">Memuat data pengguna...</p>
+        <!-- (Teks Welcome dipindah ke bawah) -->
 
         <!-- 1. Konten untuk Pengguna 'Pending' -->
         <div id="pendingContainer" class="pending-box" style="display: none;">
@@ -76,29 +169,34 @@
 
         <!-- 2. Konten untuk Pengguna 'User' dan 'Admin' (Menu Pilihan) -->
         <div id="menuContainer" style="display: none;">
-            <h2>Menu Utama</h2>
-            <p class="status">Silakan pilih menu dashboard yang ingin Anda lihat.</p>
+            
+            <!-- 🔥 PERUBAHAN: Judul "HOME" -->
+            <h2>HOME</h2>
+            
             <div class="menu-grid">
                 
                 <!-- Pilihan 1: Tabel Real Time -->
                 <a href="realtime.html" class="menu-card">
                     <h3>TABEL REAL TIME</h3>
-                    <p>Melihat data "Penting" (V, A, P) terbaru dari 18 meter dalam format tabel.</p>
+                    <!-- 🔥 PERUBAHAN: Deskripsi Baru -->
+                    <p>Format tabel akan menampilkan tabel dengan parameter utama dari tiap mesin,click jika ingin melanjutkan ke halaman</p>
                 </a>
                 
                 <!-- Pilihan 2: Biaya Mingguan -->
                 <a href="biaya.html" class="menu-card">
                     <h3>PERHITUNGAN BIAYA MINGGUAN</h3>
-                    <p>Melihat grafik dan total biaya per jam/harian (dari data `hourly_summary`).</p>
+                    <!-- 🔥 PERUBAHAN: Deskripsi Baru -->
+                    <p>Format akan menampilkan grafik dan total biaya harian per-mesin yang di rekap dalam 7 hari,click jika ingin melanjutkan ke halaman.</p>
                 </a>
                 
                 <!-- Pilihan 3: Cek Trouble -->
                 <a href="trouble.html" class="menu-card">
                     <h3>CEK TROUBLE</h3>
-                    <p>Melihat riwayat anomali (Over Voltage, Over Current) yang terjadi (dari data `anomaly_log`).</p>
+                    <!-- 🔥 PERUBAHAN: Deskripsi Baru -->
+                    <p>format menampilkan riwayat trouble pada mesin per hari/jam (over voltage/over current) yang di rekap dalam 7 hari.</p>
                 </a>
 
-                <!-- 🔥 PILIHAN 4: KHUSUS ADMIN -->
+                <!-- PILIHAN 4: KHUSUS ADMIN -->
                 <a href="admin.html" class="menu-card" id="admin-menu-card">
                     <h3>PANEL ADMIN (PERSETUJUAN)</h3>
                     <p>Menyetujui (Approve) pengguna baru yang sedang 'pending'.</p>
@@ -107,6 +205,12 @@
             </div>
         </div>
         
+        <!-- 🔥 PERUBAHAN: Teks Welcome dipindah ke Bawah (Footer) -->
+        <div class="footer-status">
+            <p class="status" id="welcomeMessage">Memuat data pengguna...</p>
+            <p class="status" id="menuInfo">Silakan pilih menu dashboard yang ingin Anda lihat.</p>
+        </div>
+
     </div>
 
     <script type="module">
@@ -123,7 +227,8 @@
         const pendingContainer = document.getElementById('pendingContainer');
         const menuContainer = document.getElementById('menuContainer');
         const pendingUserEmail = document.getElementById('pendingUserEmail');
-        const adminMenuCard = document.getElementById('admin-menu-card'); // Tombol ke-4
+        const adminMenuCard = document.getElementById('admin-menu-card'); 
+        const menuInfo = document.getElementById('menuInfo'); // Teks deskripsi menu
 
         // --- FASE 2: Inisialisasi Klien Supabase ---
         try {
@@ -139,13 +244,11 @@
             const { data: { session }, error: sessionError } = await supabase.auth.getSession();
             
             if (sessionError || !session) {
-                // Jika tidak ada sesi (belum login), lempar ke login.html
                 if (sessionError) console.error("Error mengambil sesi:", sessionError);
                 redirectToLogin();
                 return;
             }
 
-            // Jika login sukses, tampilkan tombol logout
             logoutButton.style.display = 'block';
 
             // 2. Cek Role (Peran) di tabel 'profiles'
@@ -170,7 +273,7 @@
             if (userRole === 'admin') {
                 welcomeMessage.textContent = `Selamat datang, ${userName}! (Role: Admin)`;
                 showView('menu'); // Tampilkan Menu Pilihan
-                adminMenuCard.style.display = 'block'; // 🔥 Tampilkan Tombol ke-4 (Panel Admin)
+                adminMenuCard.style.display = 'block'; // Tampilkan Tombol ke-4 (Panel Admin)
             
             } else if (userRole === 'user') {
                 welcomeMessage.textContent = `Selamat datang, ${userName}! (Role: User)`;
@@ -189,36 +292,34 @@
 
         // --- FUNGSI HELPER ---
 
-        // Tombol Logout
         logoutButton.addEventListener('click', async () => {
             await handleLogout();
         });
 
-        // Fungsi Logout
         async function handleLogout() {
             await supabase.auth.signOut();
             redirectToLogin();
         }
 
-        // Fungsi pindah halaman ke Login
         function redirectToLogin() {
             window.location.href = 'login.html';
         }
 
-        // Fungsi untuk menampilkan view yang sesuai (menu/pending)
         function showView(viewName) {
             pendingContainer.style.display = 'none';
             menuContainer.style.display = 'none';
+            menuInfo.style.display = 'none'; // Sembunyikan deskripsi menu
 
             if (viewName === 'menu') {
                 menuContainer.style.display = 'block';
+                menuInfo.style.display = 'block'; // Tampilkan deskripsi menu
             } else if (viewName === 'pending') {
                 pendingContainer.style.display = 'block';
             }
         }
 
         // --- FASE 4: Jalankan Aplikasi ---
-        checkLoginAndShowMenu(); // Cek login saat halaman dimuat
+        checkLoginAndShowMenu(); 
 
     </script>
 </body>
