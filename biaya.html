@@ -24,7 +24,7 @@
         .controls { background-color: #f9f9f9; padding: 15px; border-radius: 8px; display: flex; gap: 20px; align-items: center; }
         .controls label { font-weight: 600; }
         .controls select { padding: 8px; border-radius: 5px; border: 1px solid #ddd; }
-        #chart-container { width: 100%; margin-top: 20px; }
+        #chart-container { width: 100%; margin-top: 20px; max-height: 400px;}
         #total-biaya { font-size: 1.5em; font-weight: bold; color: #dc3545; }
     </style>
 </head>
@@ -161,8 +161,7 @@
             selectedMeterTitle.textContent = meterId;
             statusMessage.textContent = `Mengambil data biaya (per jam) untuk ID ${meterId}...`;
             
-            // 🔥 MEMANGGIL ASISTEN/RPC BARU (DARI FASE 1.5)
-            // (Mengambil data 'hourly_summary' dari 7 hari terakhir)
+            // 🔥 MEMANGGIL ASISTEN/RPC 'get_hourly_summary_last_7_days'
             const { data, error } = await supabase.rpc('get_hourly_summary_last_7_days', {
                 target_meter_id: meterId
             });
@@ -246,8 +245,6 @@
             dataContainer.style.display = 'none';
 
             if (role === 'admin' || role === 'user') {
-                dataContainer.style.display = 'block';
-            } else if (role ===in') {
                 dataContainer.style.display = 'block';
             } else if (role === 'pending') {
                 pendingContainer.style.display = 'block';
