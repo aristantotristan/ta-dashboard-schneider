@@ -54,14 +54,14 @@
             padding: 0;
         }
 
-        /* 🔥 PERUBAHAN: Sub-Header (Dashboard Monitoring) */
+        /* 🔥 PERUBAHAN: Sub-Header (Dashboard Monitoring) - Rata Tengah */
         .subheader-text {
-            text-align: left; /* Pindah ke kiri */
+            text-align: center; /* 🔥 PERUBAHAN: Pindah ke tengah */
             font-size: 1.2em; /* Ukuran sedang */
             font-weight: 500;
             color: #00529B; /* Warna biru */
             margin-bottom: 30px; /* Jarak dengan menu */
-            margin-left: 10px; /* Sedikit geser ke kanan agar tidak terlalu nempel */
+            /* margin-left: 10px; (Dihapus) */
         }
         
         /* Tombol Logout (Ukuran Sedang) */
@@ -287,7 +287,7 @@
 
             if (viewName === 'menu') {
                 menuContainer.style.display = 'block';
-                menuInfo.style.display = 'block'; // Tampilkan deskripsi menu
+                menuInfo.style.display = 'block'; // Tampilkan deskri
             } else if (viewName === 'pending') {
                 pendingContainer.style.display = 'block';
             }
