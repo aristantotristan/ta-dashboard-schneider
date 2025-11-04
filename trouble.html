@@ -38,7 +38,7 @@
 
     <div class="container" id="app-container">
         <h1>
-            <span>Menu 3: CEK TROUBLE (LOG ANOMALI)</span>
+            <span>Menu 3: CEK TROUBLE</span>
             <div>
                 <a href="index.html" class="back-btn" style="margin-right: 10px;">Kembali ke Home</a>
                 <button id="logoutButton" class="logout-btn">Logout</button>
@@ -72,6 +72,7 @@
             </div>
 
             <!-- Tabel Log Anomali -->
+            <!-- 🔥 PERUBAHAN: Menghilangkan "Tabel: `anomaly_log`" -->
             <h2>Log Detail Anomali (7 Hari Terakhir)</h2>
             <div class="table-container">
                 <table>
@@ -192,7 +193,7 @@
             }
             
             if (data.length === 0) {
-                statusMessage.textContent = `Aman. Tidak ada anomali yang tercatat untuk ID ${meterId} (Tabel: anomaly_log).`;
+                statusMessage.textContent = `Aman. Tidak ada anomali yang tercatat untuk ID ${meterId} (7 hari terakhir).`;
                 anomalyLogBody.innerHTML = `<tr><td colspan="5">Aman. Tidak ada anomali.</td></tr>`;
                 // Tampilkan grafik "Aman" (Semua Stabil)
                 renderWeeklyStatusChart([]); 
@@ -231,25 +232,34 @@
             // 1. Inisialisasi data 7 hari (Senin=0, ..., Minggu=6)
             // 1 = STABIL, 0 = TROUBLE
             const weekStatus = [1, 1, 1, 1, 1, 1, 1]; // Asumsi 7 hari STABIL
-            const days = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
             
             // 2. Cek apakah ada anomali di 7 hari terakhir
             const today = new Date();
-            const last7Days = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+            today.setHours(0, 0, 0, 0); // Set ke awal hari ini
 
             anomalyData.forEach(log => {
                 const logDate = new Date(log.timestamp);
-                if (logDate >= last7Days) {
-                    // (0 = Minggu, 1 = Senin, ..., 6 = Sabtu)
-                    // Kita sesuaikan (Senin=0)
-                    let dayIndex = logDate.getDay(); 
-                    dayIndex = (dayIndex === 0) ? 6 : dayIndex - 1; // Konversi Minggu=0 -> 6, Senin=1 -> 0
-                    
+                
+                // Hitung selisih hari (0 = hari ini, 1 = kemarin, dst.)
+                const diffTime = Math.abs(today.getTime() - logDate.getTime());
+                const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24)); 
+                
+                const dayIndex = 6 - diffDays; // Konversi ke index (Hari ini = 6)
+                
+                if (dayIndex >= 0 && dayIndex <= 6) {
                     weekStatus[dayIndex] = 0; // Set hari itu menjadi "TROUBLE"
                 }
             });
 
             // 3. Proses data untuk Chart.js (Grafik Batang)
+            // Ubah label hari (6 -> Senin, 5 -> Minggu, dst.)
+            const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+            const labels = [];
+            for (let i = 6; i >= 0; i--) { // Loop dari 7 hari lalu ke hari ini
+                const date = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
+                labels.push(dayNames[date.getDay()]); // Ambil nama hari (Senin, Selasa, ...)
+            }
+
             const backgroundColors = weekStatus.map(status => {
                 return status === 1 ? 'rgba(40, 167, 69, 0.6)' : 'rgba(220, 53, 69, 0.6)'; // Hijau (Stabil) vs Merah (Trouble)
             });
@@ -262,7 +272,7 @@
             statusChartInstance = new Chart(ctx, {
                 type: 'bar', // Tipe Grafik: Batang
                 data: {
-                    labels: days,
+                    labels: labels,
                     datasets: [{
                         label: 'Status Mesin',
                         data: weekStatus, // Data [1, 1, 0, 1, 1, 0, 1]
@@ -294,11 +304,13 @@
                             min: -1, 
                             max: 2,
                             ticks: {
+                                // Kustomisasi label sumbu Y
                                 callback: function(value) {
                                     if (value === 1) return 'STABIL';
-                                    if (value === 0) return 'OFFLINE';
-                                    if (value === -1) return 'TROUBLE'; // (Meskipun data kita 0/1, kita siapkan skala)
-                                }
+                                    if (value === 0) return 'OFFLINE/TROUBLE';
+                                    return ''; // Sembunyikan label lain
+                                },
+                                stepSize: 1
                             }
                         }
                     }
