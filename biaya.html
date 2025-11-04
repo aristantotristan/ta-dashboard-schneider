@@ -25,7 +25,25 @@
         .controls label { font-weight: 600; }
         .controls select { padding: 8px; border-radius: 5px; border: 1px solid #ddd; }
         #chart-container { width: 100%; margin-top: 20px; max-height: 400px;}
-        #total-biaya { font-size: 1.5em; font-weight: bold; color: #dc3545; }
+        
+        /* 🔥 Styling untuk 2 Tampilan Biaya */
+        .biaya-summary {
+            display: flex;
+            gap: 30px;
+            margin-top: 15px;
+            flex-wrap: wrap; /* Agar responsif di HP */
+        }
+        .biaya-box {
+            padding: 15px;
+            border-radius: 8px;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            flex-grow: 1; /* Agar box membesar rata */
+        }
+        .biaya-box h3 { margin-top: 0; color: #495057; font-size: 1.1em; }
+        .biaya-box p { font-size: 1.5em; font-weight: bold; margin: 0; }
+        #total-biaya { color: #dc3545; } /* Merah */
+        #avg-biaya-per-jam { color: #007bff; } /* Biru */
     </style>
 </head>
 <body>
@@ -58,12 +76,22 @@
                 <p class="status" id="status-message">Silakan pilih meter...</p>
             </div>
 
-            <!-- Total Biaya -->
-            <h2>Total Biaya 7 Hari Terakhir (Meter <span id="selectedMeterTitle"></span>)</h2>
-            <p id="total-biaya">Rp 0.00</p>
+            <!-- 🔥 PERUBAHAN: Tampilan Biaya (Total & Rata-rata) -->
+            <div class="biaya-summary">
+                <div class="biaya-box">
+                    <h3>Total Biaya 7 Hari Terakhir (Meter <span id="selectedMeterTitle">1</span>)</h3>
+                    <p id="total-biaya">Rp 0.00</p>
+                </div>
+                <div class="biaya-box">
+                    <h3>Rata-rata Biaya per Jam (7 Hari)</h3>
+                    <p id="avg-biaya-per-jam">Rp 0.00</p>
+                </div>
+            </div>
+
 
             <!-- Container Grafik -->
-            <h2>Grafik Biaya per Jam (7 Hari Terakhir)</h2>
+            <!-- 🔥 PERUBAHAN: Judul Grafik Harian -->
+            <h2>Grafik Biaya Harian (7 Hari Terakhir)</h2>
             <div id="chart-container">
                 <canvas id="biayaChart"></canvas>
             </div>
@@ -90,6 +118,7 @@
         const meterSelect = document.getElementById('meterSelect');
         const selectedMeterTitle = document.getElementById('selectedMeterTitle');
         const totalBiayaEl = document.getElementById('total-biaya');
+        const avgBiayaEl = document.getElementById('avg-biaya-per-jam'); // 🔥 Elemen baru
 
         // --- FASE 2: Inisialisasi Klien Supabase ---
         try {
@@ -136,7 +165,6 @@
         
         // --- FASE 4: Inisialisasi Kontrol (Dropdown) ---
         function initializeControls() {
-            // Buat <option> untuk 18 meter
             for(let i = 1; i <= MAX_METER_ID; i++) {
                 const option = document.createElement('option');
                 option.value = i;
@@ -144,7 +172,6 @@
                 meterSelect.appendChild(option);
             }
             
-            // Tambahkan event listener saat dropdown diganti
             meterSelect.addEventListener('change', (e) => {
                 const selectedId = e.target.value;
                 if(selectedId) {
@@ -152,76 +179,122 @@
                 }
             });
             
-            // Otomatis muat data untuk ID 1 saat pertama kali dibuka
-            fetchBiayaData(1);
+            fetchBiayaData(1); // Otomatis muat data untuk ID 1
         }
 
         // --- FASE 5: Fungsi Pengambilan Data Biaya (dari DB) ---
         async function fetchBiayaData(meterId) {
             selectedMeterTitle.textContent = meterId;
-            statusMessage.textContent = `Mengambil data biaya (per jam) untuk ID ${meterId}...`;
+            statusMessage.textContent = `Mengambil data biaya (per hari) untuk ID ${meterId}...`;
             
-            // 🔥 MEMANGGIL ASISTEN/RPC 'get_hourly_summary_last_7_days'
-            const { data, error } = await supabase.rpc('get_hourly_summary_last_7_days', {
+            // 🔥 PERUBAHAN: Memanggil Asisten/RPC BARU (Harian)
+            const { data, error } = await supabase.rpc('get_daily_cost_summary_last_7_days', {
                 target_meter_id: meterId
             });
 
             if (error) {
-                console.error(`Error mengambil data biaya (Cek RLS/RPC 'get_hourly_summary'):`, error);
+                console.error(`Error mengambil data biaya harian (Cek RLS/RPC 'get_daily_cost_summary'):`, error);
                 statusMessage.innerHTML = `❌ Error mengambil data biaya: ${error.message}`;
                 if (error.code === '401' || error.code === '403') await handleLogout();
                 return;
             }
             
             if (data.length === 0) {
-                statusMessage.textContent = `Tidak ada data ringkasan per jam (hourly_summary) untuk ID ${meterId}.`;
-                // Hancurkan chart lama jika ada
+                statusMessage.textContent = `Tidak ada data ringkasan harian (hourly_summary) untuk ID ${meterId}.`;
                 if (biayaChartInstance) {
                     biayaChartInstance.destroy();
                 }
                 totalBiayaEl.textContent = "Rp 0.00";
+                avgBiayaEl.textContent = "Rp 0.00"; // Set avg ke 0
+                renderBiayaChart([]); // Tampilkan chart kosong
                 return;
             }
 
             // (Data Dummy dari FASE 1.5 akan muncul di sini)
             renderBiayaChart(data);
-            statusMessage.textContent = "Data biaya berhasil diperbarui: " + new Date().toLocaleTimeString();
+            statusMessage.textContent = "Data biaya harian berhasil diperbarui: " + new Date().toLocaleTimeString();
         }
 
         // --- FASE 6: Fungsi Tampilan (Render Grafik) ---
         function renderBiayaChart(data) {
             const ctx = document.getElementById('biayaChart').getContext('2d');
             
-            // Proses data untuk Chart.js
-            const labels = data.map(d => new Date(d.hour_timestamp).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }));
-            const biayaData = data.map(d => d.cost_per_hour);
+            // --- 🔥 PERUBAHAN: Logika Agregasi Harian (Senin-Minggu) ---
             
-            // Hitung Total Biaya
-            const totalBiaya = biayaData.reduce((acc, val) => acc + val, 0);
-            totalBiayaEl.textContent = `Rp ${totalBiaya.toFixed(2)}`;
+            // 1. Siapkan 7 hari (Hari ini = 6, kemarin = 5, ..., 7 hari lalu = 0)
+            const days = ['7 Hari Lalu', '6 Hari Lalu', '5 Hari Lalu', '4 Hari Lalu', '3 Hari Lalu', 'Kemarin', 'Hari Ini'];
+            const dailyData = [0, 0, 0, 0, 0, 0, 0]; // 7 slot data (biaya)
+            let totalCost = 0;
+            let totalHours = 0;
 
-            // Hancurkan chart lama jika ada (penting untuk update)
+            const today = new Date();
+            today.setHours(0, 0, 0, 0); // Set ke awal hari ini
+
+            data.forEach(d => {
+                const dayDate = new Date(d.day_start);
+                
+                // Hitung selisih hari (0 = hari ini, 1 = kemarin, dst.)
+                const diffTime = Math.abs(today - dayDate);
+                // Pembulatan ke atas untuk memastikan selisih hari akurat
+                const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24)); 
+                
+                const dayIndex = 6 - diffDays; // Konversi ke index (Hari ini = 6)
+                
+                if (dayIndex >= 0 && dayIndex <= 6) {
+                    dailyData[dayIndex] = d.total_cost_per_day;
+                }
+                
+                // Hitung total untuk rata-rata
+                totalCost += d.total_cost_per_day;
+                totalHours += d.total_hours_recorded;
+            });
+            
+            // Ubah label hari (6 -> Senin, 5 -> Minggu, dst.)
+            const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+            const labels = [];
+            for (let i = 6; i >= 0; i--) { // Loop dari 7 hari lalu ke hari ini
+                const date = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
+                labels.push(dayNames[date.getDay()]); // Ambil nama hari (Senin, Selasa, ...)
+            }
+            // Hasil akhir: ['Kamis', 'Jumat', 'Sabtu', 'Minggu', 'Senin', 'Selasa', 'Rabu'] (Contoh)
+
+            // --- END Logika Agregasi ---
+
+
+            // 🔥 PERUBAHAN: Tampilkan Total dan Rata-rata
+            totalBiayaEl.textContent = `Rp ${totalCost.toFixed(2)}`;
+            const avgCost = totalHours > 0 ? (totalCost / totalHours) : 0;
+            avgBiayaEl.textContent = `Rp ${avgCost.toFixed(2)}`;
+
+            
             if (biayaChartInstance) {
                 biayaChartInstance.destroy();
             }
 
             // Buat chart baru
             biayaChartInstance = new Chart(ctx, {
-                type: 'line', // Tipe grafik: Garis
+                // 🔥 PERUBAHAN: Tipe Grafik (Batang)
+                type: 'bar', 
                 data: {
-                    labels: labels,
+                    labels: labels, // Sumbu X (Senin - Minggu)
                     datasets: [{
-                        label: 'Biaya (Rp) per Jam',
-                        data: biayaData,
-                        borderColor: '#dc3545', // Merah
-                        backgroundColor: 'rgba(220, 53, 69, 0.1)',
-                        fill: true,
-                        tension: 0.1
+                        label: 'Total Biaya (Rp) per Hari',
+                        data: dailyData, // Data 7 hari
+                        backgroundColor: 'rgba(220, 53, 69, 0.6)', // Merah
+                        borderColor: 'rgba(220, 53, 69, 1)',
+                        borderWidth: 1
                     }]
                 },
                 options: {
                     responsive: true,
-                    maintainAspectRatio: false
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            // 🔥 PERUBAHAN: Skala 0 - 1 Juta
+                            min: 0,
+                            max: 1000000 
+                        }
+                    }
                 }
             });
         }
