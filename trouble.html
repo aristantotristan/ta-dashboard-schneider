@@ -29,7 +29,7 @@
         .controls { background-color: #f9f9f9; padding: 15px; border-radius: 8px; display: flex; gap: 20px; align-items: center; }
         .controls label { font-weight: 600; }
         .controls select { padding: 8px; border-radius: 5px; border: 1px solid #ddd; }
-        #chart-container { width: 100%; margin-top: 20px; }
+        #chart-container { width: 100%; margin-top: 20px; max-height: 300px;}
         /* Style untuk log anomali */
         #anomaly-log-body tr { background-color: #ffebee !important; color: #c62828; }
     </style>
@@ -64,8 +64,15 @@
                 <p class="status" id="status-message">Silakan pilih meter...</p>
             </div>
 
+            <!-- Container Grafik -->
+            <!-- 🔥 PERMINTAAN ANDA: Grafik Batang On/Off (Senin-Minggu) -->
+            <h2>Grafik Status Mesin (7 Hari Terakhir)</h2>
+            <div id="chart-container">
+                <canvas id="statusChart"></canvas>
+            </div>
+
             <!-- Tabel Log Anomali -->
-            <h2>Log Anomali (7 Hari Terakhir) - (Tabel: `anomaly_log`)</h2>
+            <h2>Log Detail Anomali (7 Hari Terakhir)</h2>
             <div class="table-container">
                 <table>
                     <thead>
@@ -82,12 +89,6 @@
                     </tbody>
                 </table>
             </div>
-
-            <!-- Container Grafik -->
-            <h2>Grafik Anomali Tegangan (V_avg)</h2>
-            <div id="chart-container">
-                <canvas id="anomalyChart"></canvas>
-            </div>
             
         </div>
     </div>
@@ -99,7 +100,7 @@
         
         // --- Variabel Global ---
         let supabase;
-        let anomalyChartInstance = null;
+        let statusChartInstance = null; // Instance untuk Grafik Batang
         const MAX_METER_ID = 18;
         
         // --- Elemen DOM ---
@@ -178,7 +179,7 @@
         async function fetchAnomalyData(meterId) {
             statusMessage.textContent = `Mengambil log anomali untuk ID ${meterId}...`;
             
-            // 🔥 MEMANGGIL ASISTEN/RPC BARU (DARI FASE 1.5)
+            // 🔥 MEMANGGIL ASISTEN/RPC 'get_anomaly_log_last_7_days'
             const { data, error } = await supabase.rpc('get_anomaly_log_last_7_days', {
                 target_meter_id: meterId
             });
@@ -191,17 +192,16 @@
             }
             
             if (data.length === 0) {
-                statusMessage.textContent = `Tidak ada anomali yang tercatat untuk ID ${meterId} (Tabel: anomaly_log).`;
+                statusMessage.textContent = `Aman. Tidak ada anomali yang tercatat untuk ID ${meterId} (Tabel: anomaly_log).`;
                 anomalyLogBody.innerHTML = `<tr><td colspan="5">Aman. Tidak ada anomali.</td></tr>`;
-                if (anomalyChartInstance) {
-                    anomalyChartInstance.destroy();
-                }
+                // Tampilkan grafik "Aman" (Semua Stabil)
+                renderWeeklyStatusChart([]); 
                 return;
             }
 
             // (Data Dummy dari FASE 1.5 akan muncul di sini)
             renderAnomalyTable(data);
-            renderAnomalyChart(data); // Panggil fungsi render chart
+            renderWeeklyStatusChart(data); // Panggil fungsi render chart
             statusMessage.textContent = "Log anomali berhasil diperbarui: " + new Date().toLocaleTimeString();
         }
 
@@ -224,60 +224,82 @@
             });
         }
         
-        // Render Grafik (Grafik On/Off - Kita plot Tegangan)
-        function renderAnomalyChart(data) {
-            const ctx = document.getElementById('anomalyChart').getContext('2d');
+        // 🔥 FUNGSI BARU: Render Grafik Batang (Senin-Minggu)
+        function renderWeeklyStatusChart(anomalyData) {
+            const ctx = document.getElementById('statusChart').getContext('2d');
             
-            // Proses data untuk Chart.js (kita balik agar waktu dari kiri ke kanan)
-            const reversedData = data.slice().reverse();
-            const labels = reversedData.map(d => new Date(d.timestamp).toLocaleTimeString('id-ID'));
-            const voltageData = reversedData.map(d => d.v_avg);
+            // 1. Inisialisasi data 7 hari (Senin=0, ..., Minggu=6)
+            // 1 = STABIL, 0 = TROUBLE
+            const weekStatus = [1, 1, 1, 1, 1, 1, 1]; // Asumsi 7 hari STABIL
+            const days = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
             
-            // Batas aman (Upper/Lower)
-            const upperLimit = 231;
-            const lowerLimit = 198;
+            // 2. Cek apakah ada anomali di 7 hari terakhir
+            const today = new Date();
+            const last7Days = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-            if (anomalyChartInstance) {
-                anomalyChartInstance.destroy();
+            anomalyData.forEach(log => {
+                const logDate = new Date(log.timestamp);
+                if (logDate >= last7Days) {
+                    // (0 = Minggu, 1 = Senin, ..., 6 = Sabtu)
+                    // Kita sesuaikan (Senin=0)
+                    let dayIndex = logDate.getDay(); 
+                    dayIndex = (dayIndex === 0) ? 6 : dayIndex - 1; // Konversi Minggu=0 -> 6, Senin=1 -> 0
+                    
+                    weekStatus[dayIndex] = 0; // Set hari itu menjadi "TROUBLE"
+                }
+            });
+
+            // 3. Proses data untuk Chart.js (Grafik Batang)
+            const backgroundColors = weekStatus.map(status => {
+                return status === 1 ? 'rgba(40, 167, 69, 0.6)' : 'rgba(220, 53, 69, 0.6)'; // Hijau (Stabil) vs Merah (Trouble)
+            });
+
+            if (statusChartInstance) {
+                statusChartInstance.destroy();
             }
 
             // Buat chart baru
-            anomalyChartInstance = new Chart(ctx, {
-                type: 'line',
+            statusChartInstance = new Chart(ctx, {
+                type: 'bar', // Tipe Grafik: Batang
                 data: {
-                    labels: labels,
-                    datasets: [
-                    {
-                        label: 'Tegangan (V_avg)',
-                        data: voltageData,
-                        borderColor: '#007bff', // Biru
-                        backgroundColor: 'rgba(0, 123, 255, 0.1)',
-                        fill: false,
-                    },
-                    {
-                        label: 'Batas Atas Aman (231V)',
-                        data: Array(labels.length).fill(upperLimit),
-                        borderColor: '#dc3545', // Merah
-                        borderDash: [5, 5],
-                        fill: false,
-                        pointRadius: 0
-                    },
-                    {
-                        label: 'Batas Bawah Aman (198V)',
-                        data: Array(labels.length).fill(lowerLimit),
-                        borderColor: '#ffc107', // Kuning
-                        borderDash: [5, 5],
-                        fill: false,
-                        pointRadius: 0
-                    }
-                ]
+                    labels: days,
+                    datasets: [{
+                        label: 'Status Mesin',
+                        data: weekStatus, // Data [1, 1, 0, 1, 1, 0, 1]
+                        backgroundColor: backgroundColors,
+                        borderColor: backgroundColors,
+                        borderWidth: 1
+                    }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    // Kustomisasi tooltip (Sesuai permintaan Anda)
+                                    if (context.parsed.y === 1) {
+                                        return 'Mesin ON STABIL';
+                                    } else {
+                                        return 'Mesin OFF / TROUBLE';
+                                    }
+                                }
+                            }
+                        }
+                    },
                     scales: {
                         y: {
-                            beginAtZero: false
+                            // Sesuai permintaan Anda (Batang di tengah/bawah)
+                            min: -1, 
+                            max: 2,
+                            ticks: {
+                                callback: function(value) {
+                                    if (value === 1) return 'STABIL';
+                                    if (value === 0) return 'OFFLINE';
+                                    if (value === -1) return 'TROUBLE'; // (Meskipun data kita 0/1, kita siapkan skala)
+                                }
+                            }
                         }
                     }
                 }
