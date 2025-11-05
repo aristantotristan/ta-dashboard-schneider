@@ -7,7 +7,7 @@
     <!-- 1. Impor Supabase Client Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* (CSS Anda yang sudah ada) */
+        /* (Gunakan CSS yang sama persis seperti di index.html (Halaman Home)) */
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: #f4f7f6; color: #333; }
         .container { width: 95%; max-width: 1400px; margin: 20px; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 6px 18px rgba(0,0,0,0.07); }
         h1 { color: #00529B; border-bottom: 2px solid #00529B; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
@@ -47,7 +47,7 @@
             text-decoration: none; 
             border-radius: 5px; 
             font-size: 0.9em; 
-            font-weight: 600;
+            font-weight: 600; 
         }
     </style>
 </head>
@@ -55,8 +55,10 @@
 
     <div class="container" id="app-container">
         <h1>
+            <!-- 🔥 PERUBAHAN: Judul "TABEL REAL TIME" -->
             <span>TABEL REAL TIME</span>
             <div>
+                <!-- 🔥 PERUBAHAN: Tombol "Back to Home" -->
                 <a href="index.html" class="back-btn" style="margin-right: 10px;">Back to Home</a>
                 <!-- (Tombol Logout Dihapus) -->
             </div>
@@ -72,7 +74,7 @@
         <!-- 2. Konten untuk Pengguna 'User' dan 'Admin' -->
         <div id="dataContainer" style="display: none;">
             
-            <!-- 🔥 PERUBAHAN: H2 Dihapus, Deskripsi Baru Ditambahkan -->
+            <!-- 🔥 PERUBAHAN: Deskripsi Baru (Sesuai Permintaan) -->
             <p class="deskripsi-realtime">
                 Tabel ini menampilkan parameter utama mesin untuk memantau kondisi operasional secara real time, meliputi tegangan, arus, daya (aktif, reaktif, semu), faktor daya, frekuensi, dan energi listrik terpakai.
                 Melalui data ini, pengguna dapat menganalisis kestabilan sistem, mendeteksi anomali, serta mengambil keputusan perawatan atau pengendalian berdasarkan pembacaan dari smart meter atau sensor mesin.
@@ -89,6 +91,7 @@
                             <th>Arus (A)</th>
                             <th>Daya (W)</th>
                             <th>PF Total</th>
+                            <th>Frekuensi (Hz)</th> <!-- 🔥 (Kolom baru) -->
                             <th>Energi (kWh)</th>
                             <th>Biaya (Rp)</th>
                             <th>Update Terakhir</th>
@@ -103,6 +106,7 @@
                             <td id="a_avg_1">0.00</td>
                             <td id="p_total_1">0.00</td>
                             <td id="pf_total_1">0.00</td>
+                            <td id="frequency_1">0.00</td> <!-- 🔥 (Sel baru) -->
                             <td id="energy_total_1">0.00</td>
                             <td id="cost_1">0.00</td>
                             <td id="timestamp_1">-</td>
@@ -113,6 +117,7 @@
                             <td id="a_avg_2">0.00</td>
                             <td id="p_total_2">0.00</td>
                             <td id="pf_total_2">0.00</td>
+                            <td id="frequency_2">0.00</td> <!-- 🔥 (Sel baru) -->
                             <td id="energy_total_2">0.00</td>
                             <td id="cost_2">0.00</td>
                             <td id="timestamp_2">-</td>
@@ -123,6 +128,7 @@
                             <td id="a_avg_3">0.00</td>
                             <td id="p_total_3">0.00</td>
                             <td id="pf_total_3">0.00</td>
+                            <td id="frequency_3">0.00</td> <!-- 🔥 (Sel baru) -->
                             <td id="energy_total_3">0.00</td>
                             <td id="cost_3">0.00</td>
                             <td id="timestamp_3">-</td>
@@ -133,6 +139,7 @@
                             <td id="a_avg_4">0.00</td>
                             <td id="p_total_4">0.00</td>
                             <td id="pf_total_4">0.00</td>
+                            <td id="frequency_4">0.00</td> <!-- 🔥 (Sel baru) -->
                             <td id="energy_total_4">0.00</td>
                             <td id="cost_4">0.00</td>
                             <td id="timestamp_4">-</td>
@@ -143,6 +150,7 @@
                             <td id="a_avg_5">0.00</td>
                             <td id="p_total_5">0.00</td>
                             <td id="pf_total_5">0.00</td>
+                            <td id="frequency_5">0.00</td> <!-- 🔥 (Sel baru) -->
                             <td id="energy_total_5">0.00</td>
                             <td id="cost_5">0.00</td>
                             <td id="timestamp_5">-</td>
@@ -153,6 +161,7 @@
                             <td id="a_avg_6">0.00</td>
                             <td id="p_total_6">0.00</td>
                             <td id="pf_total_6">0.00</td>
+                            <td id="frequency_6">0.00</td> <!-- 🔥 (Sel baru) -->
                             <td id="energy_total_6">0.00</td>
                             <td id="cost_6">0.00</td>
                             <td id="timestamp_6">-</td>
@@ -163,6 +172,7 @@
                             <td id="a_avg_7">0.00</td>
                             <td id="p_total_7">0.00</td>
                             <td id="pf_total_7">0.00</td>
+                            <td id="frequency_7">0.00</td> <!-- 🔥 (Sel baru) -->
                             <td id="energy_total_7">0.00</td>
                             <td id="cost_7">0.00</td>
                             <td id="timestamp_7">-</td>
@@ -173,6 +183,7 @@
                             <td id="a_avg_8">0.00</td>
                             <td id="p_total_8">0.00</td>
                             <td id="pf_total_8">0.00</td>
+                            <td id="frequency_8">0.00</td> <!-- 🔥 (Sel baru) -->
                             <td id="energy_total_8">0.00</td>
                             <td id="cost_8">0.00</td>
                             <td id="timestamp_8">-</td>
@@ -183,6 +194,7 @@
                             <td id="a_avg_9">0.00</td>
                             <td id="p_total_9">0.00</td>
                             <td id="pf_total_9">0.00</td>
+                            <td id="frequency_9">0.00</td> <!-- 🔥 (Sel baru) -->
                             <td id="energy_total_9">0.00</td>
                             <td id="cost_9">0.00</td>
                             <td id="timestamp_9">-</td>
@@ -193,6 +205,7 @@
                             <td id="a_avg_10">0.00</td>
                             <td id="p_total_10">0.00</td>
                             <td id="pf_total_10">0.00</td>
+                            <td id="frequency_10">0.00</td> <!-- 🔥 (Sel baru) -->
                             <td id="energy_total_10">0.00</td>
                             <td id="cost_10">0.00</td>
                             <td id="timestamp_10">-</td>
@@ -203,6 +216,7 @@
                             <td id="a_avg_11">0.00</td>
                             <td id="p_total_11">0.00</td>
                             <td id="pf_total_11">0.00</td>
+                            <td id="frequency_11">0.00</td> <!-- 🔥 (Sel baru) -->
                             <td id="energy_total_11">0.00</td>
                             <td id="cost_11">0.00</td>
                             <td id="timestamp_11">-</td>
@@ -213,6 +227,7 @@
                             <td id="a_avg_12">0.00</td>
                             <td id="p_total_12">0.00</td>
                             <td id="pf_total_12">0.00</td>
+                            <td id="frequency_12">0.00</td> <!-- 🔥 (Sel baru) -->
                             <td id="energy_total_12">0.00</td>
                             <td id="cost_12">0.00</td>
                             <td id="timestamp_12">-</td>
@@ -223,6 +238,7 @@
                             <td id="a_avg_13">0.00</td>
                             <td id="p_total_13">0.00</td>
                             <td id="pf_total_13">0.00</td>
+                            <td id="frequency_13">0.00</td> <!-- 🔥 (Sel baru) -->
                             <td id="energy_total_13">0.00</td>
                             <td id="cost_13">0.00</td>
                             <td id="timestamp_13">-</td>
@@ -233,6 +249,7 @@
                             <td id="a_avg_14">0.00</td>
                             <td id="p_total_14">0.00</td>
                             <td id="pf_total_14">0.00</td>
+                            <td id="frequency_14">0.00</td> <!-- 🔥 (Sel baru) -->
                             <td id="energy_total_14">0.00</td>
                             <td id="cost_14">0.00</td>
                             <td id="timestamp_14">-</td>
@@ -243,6 +260,7 @@
                             <td id="a_avg_15">0.00</td>
                             <td id="p_total_15">0.00</td>
                             <td id="pf_total_15">0.00</td>
+                            <td id="frequency_15">0.00</td> <!-- 🔥 (Sel baru) -->
                             <td id="energy_total_15">0.00</td>
                             <td id="cost_15">0.00</td>
                             <td id="timestamp_15">-</td>
@@ -253,6 +271,7 @@
                             <td id="a_avg_16">0.00</td>
                             <td id="p_total_16">0.00</td>
                             <td id="pf_total_16">0.00</td>
+                            <td id="frequency_16">0.00</td> <!-- 🔥 (Sel baru) -->
                             <td id="energy_total_16">0.00</td>
                             <td id="cost_16">0.00</td>
                             <td id="timestamp_16">-</td>
@@ -263,6 +282,7 @@
                             <td id="a_avg_17">0.00</td>
                             <td id="p_total_17">0.00</td>
                             <td id="pf_total_17">0.00</td>
+                            <td id="frequency_17">0.00</td> <!-- 🔥 (Sel baru) -->
                             <td id="energy_total_17">0.00</td>
                             <td id="cost_17">0.00</td>
                             <td id="timestamp_17">-</td>
@@ -273,6 +293,7 @@
                             <td id="a_avg_18">0.00</td>
                             <td id="p_total_18">0.00</td>
                             <td id="pf_total_18">0.00</td>
+                            <td id="frequency_18">0.00</td> <!-- 🔥 (Sel baru) -->
                             <td id="energy_total_18">0.00</td>
                             <td id="cost_18">0.00</td>
                             <td id="timestamp_18">-</td>
@@ -287,7 +308,8 @@
     <script type="module">
         // --- FASE 1: KONFIGURASI SUPABASE (WAJIB DIISI) ---
         const SUPABASE_URL = 'https://rojhcadtqfynlqzubftx.supabase.co'; // Ganti ini
-        const SUPABASE_KEY = 'ANON_PUBLIC_KEY_ANDAeyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs'; // Ganti ini (Anon, Public Key)
+        
         // --- Variabel Global ---
         let supabase;
         const REFRESH_INTERVAL = 10000; // Refresh data setiap 10 detik
@@ -378,6 +400,7 @@
                 if (document.getElementById(`a_avg_${i}`)) document.getElementById(`a_avg_${i}`).textContent = '0.00';
                 if (document.getElementById(`p_total_${i}`)) document.getElementById(`p_total_${i}`).textContent = '0.00';
                 if (document.getElementById(`pf_total_${i}`)) document.getElementById(`pf_total_${i}`).textContent = '0.00';
+                if (document.getElementById(`frequency_${i}`)) document.getElementById(`frequency_${i}`).textContent = '0.00'; // 🔥 (Reset Frekuensi)
                 if (document.getElementById(`energy_total_${i}`)) document.getElementById(`energy_total_${i}`).textContent = '0.00';
                 if (document.getElementById(`cost_${i}`)) document.getElementById(`cost_${i}`).textContent = '0.00';
                 if (document.getElementById(`timestamp_${i}`)) document.getElementById(`timestamp_${i}`).textContent = 'OFFLINE';
@@ -404,13 +427,14 @@
                 }
 
                 // Format dan Isi nilai
-                document.getElementById(`v_avg_${id}`).textContent = rowData.v_avg.toFixed(2);
-                document.getElementById(`a_avg_${id}`).textContent = rowData.a_avg.toFixed(3); // A.avg
-                document.getElementById(`p_total_${id}`).textContent = rowData.p_total.toFixed(2);
-                document.getElementById(`pf_total_${id}`).textContent = rowData.pf_total.toFixed(2);
-                document.getElementById(`energy_total_${id}`).textContent = rowData.energy_total.toFixed(2);
-                document.getElementById(`cost_${id}`).textContent = rowData.cost.toFixed(2);
-                document.getElementById(`timestamp_${id}`).textContent = new Date(rowData.timestamp).toLocaleTimeString('id-ID');
+                if (document.getElementById(`v_avg_${id}`)) document.getElementById(`v_avg_${id}`).textContent = rowData.v_avg.toFixed(2);
+                if (document.getElementById(`a_avg_${id}`)) document.getElementById(`a_avg_${id}`).textContent = rowData.a_avg.toFixed(3); // A.avg
+                if (document.getElementById(`p_total_${id}`)) document.getElementById(`p_total_${id}`).textContent = rowData.p_total.toFixed(2);
+                if (document.getElementById(`pf_total_${id}`)) document.getElementById(`pf_total_${id}`).textContent = rowData.pf_total.toFixed(2);
+                if (document.getElementById(`frequency_${id}`)) document.getElementById(`frequency_${id}`).textContent = rowData.frequency.toFixed(2); // 🔥 (Isi Frekuensi)
+                if (document.getElementById(`energy_total_${id}`)) document.getElementById(`energy_total_${id}`).textContent = rowData.energy_total.toFixed(2);
+                if (document.getElementById(`cost_${id}`)) document.getElementById(`cost_${id}`).textContent = rowData.cost.toFixed(2);
+                if (document.getElementById(`timestamp_${id}`)) document.getElementById(`timestamp_${id}`).textContent = new Date(rowData.timestamp).toLocaleTimeString('id-ID');
             });
             
             statusMessage.textContent = "Data (raw) berhasil diperbarui: " + new Date().toLocaleTimeString();
