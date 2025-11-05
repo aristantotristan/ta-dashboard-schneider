@@ -19,18 +19,32 @@
         .table-container { max-height: 400px; overflow-y: auto; }
         .status { font-size: 0.9em; color: #555; }
         .pending-box { padding: 20px; background-color: #fff3cd; border: 1px solid #ffeeba; border-radius: 8px; text-align: center; font-size: 1.1em; }
-        .logout-btn { background-color: #dc3545; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-size: 0.9em; }
-        .back-btn { background-color: #6c757d; color: white; padding: 8px 12px; text-decoration: none; border-radius: 5px; font-size: 0.9em; }
+        
+        /* 🔥 PERUBAHAN: Tombol Logout Dihapus (sesuai permintaan) */
+        /* .logout-btn { ... } */
+
+        /* 🔥 PERUBAHAN: Ukuran "sedang" untuk tombol Back to Home */
+        .back-btn { 
+            background-color: #6c757d; 
+            color: white; 
+            padding: 8px 14px; /* Ukuran sedang */
+            text-decoration: none; 
+            border-radius: 5px; 
+            font-size: 0.9em; 
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
 
     <div class="container" id="app-container">
         <h1>
-            <span>Menu 1: TABEL REAL TIME</span>
+            <!-- 🔥 PERUBAHAN: "Menu 1:" Dihapus -->
+            <span>TABEL REAL TIME</span>
             <div>
-                <a href="index.html" class="back-btn" style="margin-right: 10px;">Kembali ke Home</a>
-                <button id="logoutButton" class="logout-btn">Logout</button>
+                <!-- 🔥 PERUBAHAN: Teks "Back to Home" & Tombol Logout Dihapus -->
+                <a href="index.html" class="back-btn" style="margin-right: 10px;">Back to Home</a>
+                <!-- <button id="logoutButton" class="logout-btn">Logout</button> (DIHAPUS) -->
             </div>
         </h1>
         <p class="status">Memuat data pengguna dan meter...</p>
@@ -64,8 +78,7 @@
     <script type="module">
         // --- FASE 1: KONFIGURASI SUPABASE (WAJIB DIISI) ---
         const SUPABASE_URL = 'https://rojhcadtqfynlqzubftx.supabase.co'; // Ganti ini
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs'; // Ganti ini (Anon, Public Key)
-        
+        const SUPABASE_KEY = 'ANON_PUBLIC_KEY_ANDAeyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs
         // --- Variabel Global ---
         let supabase;
         const REFRESH_INTERVAL = 10000; // Refresh data setiap 10 detik
@@ -73,9 +86,8 @@
         // --- Elemen DOM ---
         const pendingContainer = document.getElementById('pendingContainer');
         const dataContainer = document.getElementById('dataContainer');
-        // (Elemen AdminContainer dihapus)
         const statusMessage = document.getElementById('status-message');
-        const logoutButton = document.getElementById('logoutButton');
+        // const logoutButton = document.getElementById('logoutButton'); (DIHAPUS)
         const pendingUserEmail = document.getElementById('pendingUserEmail');
 
         // --- FASE 2: Inisialisasi Klien Supabase ---
@@ -103,7 +115,8 @@
 
             if (profileError || !profile) {
                 console.error("Error mengambil profile:", profileError);
-                await handleLogout(); return;
+                redirectToLogin(); // 🔥 Ganti handleLogout()
+                return;
             }
 
             const userRole = profile.role;
@@ -117,23 +130,22 @@
                 showView('pending'); 
             
             } else {
-                await handleLogout();
+                redirectToLogin(); // 🔥 Ganti handleLogout()
             }
         }
 
         // --- FASE 4: Fungsi Pengambilan Data ---
-
-        // Mengambil data meter (untuk 'admin' dan 'user')
         async function fetchMeterData() {
             statusMessage.textContent = "Memanggil RPC 'get_latest_raw_data'...";
             
-            // 🔥 MEMANGGIL ASISTEN/RPC 'get_latest_raw_data'
             const { data, error } = await supabase.rpc('get_latest_raw_data');
 
             if (error) {
                 console.error("Error mengambil data meter (Cek RLS/RPC 'get_latest_raw_data'):", error);
                 statusMessage.innerHTML = `❌ Error mengambil data meter: ${error.message}`;
-                if (error.code === '401' || error.code === '403') await handleLogout();
+                if (error.code === '401' || error.code === '403') {
+                    redirectToLogin(); // 🔥 Ganti handleLogout()
+                }
                 return;
             }
 
@@ -141,11 +153,7 @@
             statusMessage.textContent = "Data (raw) berhasil diperbarui: " + new Date().toLocaleTimeString();
         }
 
-        // (Fungsi fetchAdminPanelData dihapus)
-
         // --- FASE 5: Fungsi Tampilan (Render) ---
-
-        // Menampilkan tabel data meter (Data "Penting")
         function renderDataTable(data) {
             const tHead = document.getElementById('data-table-head');
             const tBody = document.getElementById('data-table-body');
@@ -206,17 +214,9 @@
             });
         }
 
-        // (Fungsi renderAdminTable dihapus)
-
         // --- FUNGSI HELPER ---
-        logoutButton.addEventListener('click', async () => {
-            await handleLogout();
-        });
-
-        async function handleLogout() {
-            await supabase.auth.signOut();
-            redirectToLogin();
-        }
+        // (Event listener logout dihapus)
+        // (Fungsi handleLogout dihapus)
 
         function redirectToLogin() {
             window.location.href = 'login.html';
