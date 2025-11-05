@@ -18,7 +18,7 @@
         .status { font-size: 0.9em; color: #555; }
         .pending-box { padding: 20px; background-color: #fff3cd; border: 1px solid #ffeeba; border-radius: 8px; text-align: center; font-size: 1.1em; }
         .logout-btn { background-color: #dc3545; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-size: 0.9em; }
-        .back-btn { background-color: #6c757d; color: white; padding: 8px 12px; text-decoration: none; border-radius: 5px; font-size: 0.9em; }
+        .back-btn { background-color: #6c757d; color: white; padding: 8px 14px; text-decoration: none; border-radius: 5px; font-size: 0.9em; font-weight: 600; }
         
         /* CSS Khusus Halaman Biaya */
         .controls { background-color: #f9f9f9; padding: 15px; border-radius: 8px; display: flex; gap: 20px; align-items: center; }
@@ -52,8 +52,8 @@
         <h1>
             <span>Menu 2: PERHITUNGAN BIAYA MINGGUAN</span>
             <div>
-                <a href="index.html" class="back-btn" style="margin-right: 10px;">Kembali ke Home</a>
-                <button id="logoutButton" class="logout-btn">Logout</button>
+                <a href="index.html" class="back-btn" style="margin-right: 10px;">Back to Home</a>
+                <button id="logoutButton" class="logout-btn" style="display: none;">Logout</button>
             </div>
         </h1>
         <p class="status">Memuat data pengguna dan ringkasan biaya...</p>
@@ -135,6 +135,9 @@
             if (sessionError || !session) {
                 redirectToLogin(); return;
             }
+            
+            // Tampilkan tombol logout jika login berhasil
+            logoutButton.style.display = 'block';
 
             const user = session.user;
             const { data: profile, error: profileError } = await supabase
@@ -222,7 +225,6 @@
             // --- 🔥 PERUBAHAN: Logika Agregasi Harian (Senin-Minggu) ---
             
             // 1. Siapkan 7 hari (Hari ini = 6, kemarin = 5, ..., 7 hari lalu = 0)
-            const days = ['7 Hari Lalu', '6 Hari Lalu', '5 Hari Lalu', '4 Hari Lalu', '3 Hari Lalu', 'Kemarin', 'Hari Ini'];
             const dailyData = [0, 0, 0, 0, 0, 0, 0]; // 7 slot data (biaya)
             let totalCost = 0;
             let totalHours = 0;
@@ -234,7 +236,7 @@
                 const dayDate = new Date(d.day_start);
                 
                 // Hitung selisih hari (0 = hari ini, 1 = kemarin, dst.)
-                const diffTime = Math.abs(today - dayDate);
+                const diffTime = Math.abs(today.getTime() - dayDate.getTime());
                 // Pembulatan ke atas untuk memastikan selisih hari akurat
                 const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24)); 
                 
@@ -330,4 +332,3 @@
     </script>
 </body>
 </html>
-
