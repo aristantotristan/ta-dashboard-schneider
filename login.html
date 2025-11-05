@@ -3,92 +3,156 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - TA Monitoring Schneider</title>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f4f9; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        .login-container { background: white; padding: 2.5rem; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-align: center; width: 350px; }
-        h1 { color: #00529B; margin-top: 0; font-size: 1.8rem; }
-        form { display: flex; flex-direction: column; }
-        label { text-align: left; font-weight: bold; color: #333; margin-top: 1rem; }
-        input[type="email"], input[type="password"] { padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; margin-top: 0.5rem; font-size: 1rem; }
-        button { background-color: #00529B; color: white; padding: 0.75rem; border: none; border-radius: 4px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-top: 1.5rem; }
-        button:hover { background-color: #003e75; }
-        #error-message { color: #b71c1c; margin-top: 1rem; font-weight: bold; }
-        
-        /* CSS BARU: Link untuk Sign Up */
-        .signup-link { margin-top: 1.5rem; font-size: 0.9rem; }
-        .signup-link a { color: #00529B; text-decoration: none; font-weight: bold; }
-    </style>
-    <!-- Import Supabase Client Library -->
+    <title>Login - TA Monitoring</title>
+    <!-- 1. Impor Supabase Client Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-</head>
-<body>
-    <div class="login-container">
-        <h1>Login Dashboard</h1>
-        <p>PT.Amarilys Karisma Gemilang</p>
-        <form id="login-form">
-            <label for="email">Email</label>
-            <input type="email" id="email" required>
-            
-            <label for="password">Password</label>
-            <input type="password" id="password" required>
-            
-            <button type="submit">Login</button>
-        </form>
-        <p id="error-message"></p>
-
-        <!-- LINK BARU: Ke halaman Sign Up -->
-        <p class="signup-link">
-            Belum punya akun? <a href="./signup.html">Daftar di sini</a>
-        </p>
-    </div>
-
-    <script>
-        // --- 🔥 WAJIB DIISI! (Ganti dengan Kredensial Supabase Anda) ---
-        const SUPABASE_URL = 'https://rojhcadtqfynlqzubftx.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs';
-        // --------------------------------------------------------
-
-        let supabase;
-        try {
-            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        } catch (e) {
-            console.error("Gagal inisialisasi Supabase:", e);
-            alert("Gagal memuat Supabase. Cek URL/Key.");
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: #f4f7f6; }
+        .login-container { 
+            background: white; 
+            padding: 40px; 
+            border-radius: 12px; 
+            box-shadow: 0 6px 18px rgba(0,0,0,0.07); 
+            width: 100%; 
+            max-width: 400px; 
+            text-align: center; 
+        }
+        
+        /* Header (Hanya Logo + "Login Dashboard") */
+        .header-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 25px; /* Disesuaikan */
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        .logo {
+            width: 80px; 
+            height: auto;
+            margin-right: 15px;
         }
 
-        const loginForm = document.getElementById('login-form');
-        const errorMessage = document.getElementById('error-message');
+        /* 🔥 PERUBAHAN: Judul "Login Dashboard" dipindah ke header dan diperbesar */
+        h2 { 
+            color: #00529B; 
+            margin: 0; /* Hapus margin default */
+            font-size: 1.8em; /* 🔥 Diperbesar lagi dari 1.5em */
+            font-weight: bold; /* Ditebalkan */
+            text-align: left;
+        }
+        
+        .form-group { margin-bottom: 20px; text-align: left; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; color: #444; }
+        .form-group input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; } /* Fix padding */
+        
+        .login-btn { width: 100%; padding: 12px; background-color: #007bff; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1em; font-weight: 600; }
+        .login-btn:hover { background-color: #0056b3; }
+        
+        .error-msg { color: #dc3545; background-color: #f8d7da; border: 1px solid #f5c6cb; padding: 10px; border-radius: 8px; margin-bottom: 20px; display: none; }
+        .bottom-link { margin-top: 20px; font-size: 0.9em; }
+    </style>
+</head>
+<body>
 
+    <div class="login-container">
+
+        <!-- Header (Logo + Judul "Login Dashboard") -->
+        <div class="header-container">
+            <img src="https://amarilyskg.co.id/template/images/logo_AKG.png" alt="Logo PT. AKG" class="logo">
+            <!-- Tulisan "PT" dihapus, "Login Dashboard" dipindah ke sini -->
+            <h2>Login Dashboard</h2>
+        </div>
+
+        <!-- (Sub-Judul h2 dipindah ke atas) -->
+
+        <div id="errorMessage" class="error-msg"></div>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" placeholder="email@anda.com" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="••••••••" required>
+            </div>
+            <button type="submit" class="login-btn" id="loginButton">Login</button>
+        </form>
+
+        <p class="bottom-link">Belum punya akun? <a href="signup.html">Daftar di sini</a></p>
+    </div>
+
+    <script type="module">
+        // --- FASE 1: KONFIGURASI SUPABASE (WAJIB DIISI) ---
+        const SUPABASE_URL = 'https://rojhcadtqfynlqzubftx.supabase.co'; // Ganti ini
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs'; // Ganti ini (Anon, Public Key)
+        
+        // --- Variabel Global ---
+        let supabase;
+        const loginForm = document.getElementById('loginForm');
+        const loginButton = document.getElementById('loginButton');
+        const errorMessage = document.getElementById('errorMessage');
+
+        // --- FASE 2: Inisialisasi Klien Supabase ---
+        try {
+            // 🔥 PERBAIKAN: Menggunakan window.supabase (Penting untuk Vercel/CDN)
+            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        } catch (error) {
+            console.error("Gagal inisialisasi Supabase. Cek URL/Key.", error);
+            errorMessage.textContent = "Error Konfigurasi Supabase. Cek Konsol (F12).";
+            errorMessage.style.display = 'block';
+        }
+
+        // --- FASE 3: Event Listener untuk Login ---
         loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault(); 
-            errorMessage.textContent = ''; 
-            
+            e.preventDefault(); // Mencegah form submit default
+
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
 
-            try {
-                // Coba login menggunakan Supabase Auth
-                const { data, error } = await supabase.auth.signInWithPassword({
-                    email: email,
-                    password: password,
-                });
+            // Reset pesan
+            errorMessage.style.display = 'none';
+            loginButton.disabled = true;
+            loginButton.textContent = 'Memproses...';
 
-                if (error) {
-                    throw error; // Lempar error jika ada
+            // Coba login
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email: email,
+                password: password,
+            });
+
+            if (error) {
+                console.error("Error saat Login:", error);
+                if (error.message.includes("Invalid login credentials")) {
+                    errorMessage.textContent = "Email atau Password salah.";
+                } else if (error.message.includes("Email not confirmed")) {
+                    errorMessage.textContent = "Email Anda belum diverifikasi. Silakan cek email (termasuk folder Spam).";
+                } else {
+                    errorMessage.textContent = error.message;
                 }
-
-                // Jika login sukses, arahkan ke dashboard utama
-                console.log('Login sukses!', data);
-                window.location.href = './index.html'; // Arahkan ke dashboard
-
-            } catch (error) {
-                console.error('Error login:', error.message);
-                errorMessage.textContent = 'Login Gagal: ' + error.message;
+                errorMessage.style.display = 'block';
+            } else {
+                console.log("Login berhasil:", data);
+                // Jika login sukses, lempar ke halaman Menu Utama (index.html)
+                window.location.href = 'index.html';
             }
+            
+            loginButton.disabled = false;
+            loginButton.textContent = 'Login';
         });
+
+        // --- FASE 4: Cek Sesi (Jika sudah login, lempar ke index) ---
+        (async () => {
+            if (supabase) { // Hanya jalankan jika supabase berhasil diinisialisasi
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session) {
+                    // Jika sudah ada sesi aktif, langsung lempar ke dashboard
+                    window.location.href = 'index.html';
+                }
+            }
+        })();
+
     </script>
 </body>
 </html>
-
-
