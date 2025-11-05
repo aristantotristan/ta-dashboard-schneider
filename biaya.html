@@ -17,32 +17,42 @@
         h2 { color: #333; border-bottom: 1px solid #eee; padding-bottom: 5px; margin-top: 30px; }
         .status { font-size: 0.9em; color: #555; }
         .pending-box { padding: 20px; background-color: #fff3cd; border: 1px solid #ffeeba; border-radius: 8px; text-align: center; font-size: 1.1em; }
-        .logout-btn { background-color: #dc3545; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-size: 0.9em; }
-        .back-btn { background-color: #6c757d; color: white; padding: 8px 14px; text-decoration: none; border-radius: 5px; font-size: 0.9em; font-weight: 600; }
+        /* Tombol Logout Dihapus */
+        .back-btn { 
+            background-color: #6c757d; 
+            color: white; 
+            padding: 8px 14px; /* Ukuran sedang */
+            text-decoration: none; 
+            border-radius: 5px; 
+            font-size: 0.9em; 
+            font-weight: 600; 
+        }
         
         /* CSS Khusus Halaman Biaya */
-        .controls { background-color: #f9f9f9; padding: 15px; border-radius: 8px; display: flex; gap: 20px; align-items: center; }
+        .controls { background-color: #f9f9f9; padding: 15px; border-radius: 8px; display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
         .controls label { font-weight: 600; }
         .controls select { padding: 8px; border-radius: 5px; border: 1px solid #ddd; }
         #chart-container { width: 100%; margin-top: 20px; max-height: 400px;}
         
-        /* 🔥 Styling untuk 2 Tampilan Biaya */
+        /* Styling untuk Box Biaya */
         .biaya-summary {
             display: flex;
             gap: 30px;
             margin-top: 15px;
-            flex-wrap: wrap; /* Agar responsif di HP */
+            flex-wrap: wrap; 
         }
         .biaya-box {
             padding: 15px;
             border-radius: 8px;
             background-color: #f8f9fa;
             border: 1px solid #dee2e6;
-            flex-grow: 1; /* Agar box membesar rata */
+            flex-grow: 1; 
         }
         .biaya-box h3 { margin-top: 0; color: #495057; font-size: 1.1em; }
         .biaya-box p { font-size: 1.5em; font-weight: bold; margin: 0; }
-        #total-biaya { color: #dc3545; } /* Merah */
+        
+        #total-biaya-all { color: #28a745; } /* Hijau */
+        #total-biaya-single { color: #dc3545; } /* Merah */
         #avg-biaya-per-jam { color: #007bff; } /* Biru */
     </style>
 </head>
@@ -50,10 +60,12 @@
 
     <div class="container" id="app-container">
         <h1>
-            <span>Menu 2: PERHITUNGAN BIAYA MINGGUAN</span>
+            <!-- 🔥 PERUBAHAN: "Menu 2:" Dihapus -->
+            <span>PERHITUNGAN BIAYA MINGGUAN</span>
             <div>
+                <!-- 🔥 PERUBAHAN: Teks "Back to Home" & Tombol Logout Dihapus -->
                 <a href="index.html" class="back-btn" style="margin-right: 10px;">Back to Home</a>
-                <button id="logoutButton" class="logout-btn" style="display: none;">Logout</button>
+                <!-- <button id="logoutButton" class="logout-btn">Logout</button> (DIHAPUS) -->
             </div>
         </h1>
         <p class="status">Memuat data pengguna dan ringkasan biaya...</p>
@@ -76,21 +88,27 @@
                 <p class="status" id="status-message">Silakan pilih meter...</p>
             </div>
 
-            <!-- 🔥 PERUBAHAN: Tampilan Biaya (Total & Rata-rata) -->
+            <!-- Tampilan Biaya -->
             <div class="biaya-summary">
+                <!-- 🔥 FITUR BARU: Total Biaya Semua Mesin -->
                 <div class="biaya-box">
-                    <h3>Total Biaya 7 Hari Terakhir (Meter <span id="selectedMeterTitle">1</span>)</h3>
-                    <p id="total-biaya">Rp 0.00</p>
+                    <h3>Total Biaya SEMUA Mesin (7 Hari)</h3>
+                    <p id="total-biaya-all">Rp 0.00</p>
                 </div>
+                <!-- Total Biaya per Mesin -->
                 <div class="biaya-box">
-                    <h3>Rata-rata Biaya per Jam (7 Hari)</h3>
+                    <h3>Total Biaya 7 Hari (Meter <span id="selectedMeterTitle">1</span>)</h3>
+                    <p id="total-biaya-single">Rp 0.00</p>
+                </div>
+                <!-- Rata-rata Biaya per Jam -->
+                <div class="biaya-box">
+                    <h3>Rata-rata Biaya per Jam (Meter <span id="selectedMeterTitleAvg">1</span>)</h3>
                     <p id="avg-biaya-per-jam">Rp 0.00</p>
                 </div>
             </div>
 
 
             <!-- Container Grafik -->
-            <!-- 🔥 PERUBAHAN: Judul Grafik Harian -->
             <h2>Grafik Biaya Harian (7 Hari Terakhir)</h2>
             <div id="chart-container">
                 <canvas id="biayaChart"></canvas>
@@ -113,12 +131,14 @@
         const pendingContainer = document.getElementById('pendingContainer');
         const dataContainer = document.getElementById('dataContainer');
         const statusMessage = document.getElementById('status-message');
-        const logoutButton = document.getElementById('logoutButton');
+        // const logoutButton = document.getElementById('logoutButton'); (DIHAPUS)
         const pendingUserEmail = document.getElementById('pendingUserEmail');
         const meterSelect = document.getElementById('meterSelect');
         const selectedMeterTitle = document.getElementById('selectedMeterTitle');
-        const totalBiayaEl = document.getElementById('total-biaya');
-        const avgBiayaEl = document.getElementById('avg-biaya-per-jam'); // 🔥 Elemen baru
+        const selectedMeterTitleAvg = document.getElementById('selectedMeterTitleAvg');
+        const totalBiayaEl = document.getElementById('total-biaya-single');
+        const avgBiayaEl = document.getElementById('avg-biaya-per-jam'); 
+        const totalBiayaAllEl = document.getElementById('total-biaya-all'); // 🔥 Elemen baru
 
         // --- FASE 2: Inisialisasi Klien Supabase ---
         try {
@@ -135,9 +155,6 @@
             if (sessionError || !session) {
                 redirectToLogin(); return;
             }
-            
-            // Tampilkan tombol logout jika login berhasil
-            logoutButton.style.display = 'block';
 
             const user = session.user;
             const { data: profile, error: profileError } = await supabase
@@ -148,7 +165,7 @@
 
             if (profileError || !profile) {
                 console.error("Error mengambil profile:", profileError);
-                await handleLogout(); return;
+                redirectToLogin(); return;
             }
 
             const userRole = profile.role;
@@ -156,13 +173,14 @@
             if (userRole === 'admin' || userRole === 'user') {
                 showView('user'); 
                 initializeControls(); // Buat dropdown 1-18
+                fetchTotalCostAllMachines(); // 🔥 Panggil fungsi total biaya
             
             } else if (userRole === 'pending') {
                 pendingUserEmail.textContent = user.email || "Email Anda";
                 showView('pending'); 
             
             } else {
-                await handleLogout();
+                redirectToLogin();
             }
         }
         
@@ -186,19 +204,41 @@
         }
 
         // --- FASE 5: Fungsi Pengambilan Data Biaya (dari DB) ---
+
+        // 🔥 FUNGSI BARU: Mengambil Total Biaya (Semua Mesin)
+        async function fetchTotalCostAllMachines() {
+            // Memanggil RPC 'get_total_cost_all_machines_7_days'
+            const { data, error } = await supabase.rpc('get_total_cost_all_machines_7_days');
+            
+            if (error) {
+                console.error(`Error mengambil Total Biaya (RPC 'get_total_cost_all_machines'):`, error);
+                totalBiayaAllEl.textContent = "Error";
+                return;
+            }
+            
+            if (data && data.length > 0 && data[0].total_cost_all_machines) {
+                totalBiayaAllEl.textContent = `Rp ${data[0].total_cost_all_machines.toFixed(2)}`;
+            } else {
+                totalBiayaAllEl.textContent = "Rp 0.00";
+            }
+        }
+
+        // Fungsi Mengambil Biaya per Mesin (untuk Grafik)
         async function fetchBiayaData(meterId) {
             selectedMeterTitle.textContent = meterId;
+            selectedMeterTitleAvg.textContent = meterId;
             statusMessage.textContent = `Mengambil data biaya (per hari) untuk ID ${meterId}...`;
             
-            // 🔥 PERUBAHAN: Memanggil Asisten/RPC BARU (Harian)
+            // 🔥 PERBAIKAN: Memanggil Asisten/RPC Harian (yang sudah di-fix)
             const { data, error } = await supabase.rpc('get_daily_cost_summary_last_7_days', {
                 target_meter_id: meterId
             });
 
             if (error) {
+                // Ini akan menangkap error "structure of query does not match..." (JIKA FASE 1.7 GAGAL)
                 console.error(`Error mengambil data biaya harian (Cek RLS/RPC 'get_daily_cost_summary'):`, error);
                 statusMessage.innerHTML = `❌ Error mengambil data biaya: ${error.message}`;
-                if (error.code === '401' || error.code === '403') await handleLogout();
+                if (error.code === '401' || error.code === '403') redirectToLogin();
                 return;
             }
             
@@ -213,7 +253,6 @@
                 return;
             }
 
-            // (Data Dummy dari FASE 1.5 akan muncul di sini)
             renderBiayaChart(data);
             statusMessage.textContent = "Data biaya harian berhasil diperbarui: " + new Date().toLocaleTimeString();
         }
@@ -228,42 +267,31 @@
             const dailyData = [0, 0, 0, 0, 0, 0, 0]; // 7 slot data (biaya)
             let totalCost = 0;
             let totalHours = 0;
-
             const today = new Date();
-            today.setHours(0, 0, 0, 0); // Set ke awal hari ini
+            today.setHours(0, 0, 0, 0); 
 
             data.forEach(d => {
                 const dayDate = new Date(d.day_start);
-                
-                // Hitung selisih hari (0 = hari ini, 1 = kemarin, dst.)
                 const diffTime = Math.abs(today.getTime() - dayDate.getTime());
-                // Pembulatan ke atas untuk memastikan selisih hari akurat
                 const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24)); 
-                
-                const dayIndex = 6 - diffDays; // Konversi ke index (Hari ini = 6)
+                const dayIndex = 6 - diffDays; 
                 
                 if (dayIndex >= 0 && dayIndex <= 6) {
                     dailyData[dayIndex] = d.total_cost_per_day;
                 }
                 
-                // Hitung total untuk rata-rata
                 totalCost += d.total_cost_per_day;
                 totalHours += d.total_hours_recorded;
             });
             
-            // Ubah label hari (6 -> Senin, 5 -> Minggu, dst.)
             const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
             const labels = [];
             for (let i = 6; i >= 0; i--) { // Loop dari 7 hari lalu ke hari ini
                 const date = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
-                labels.push(dayNames[date.getDay()]); // Ambil nama hari (Senin, Selasa, ...)
+                labels.push(dayNames[date.getDay()]); 
             }
-            // Hasil akhir: ['Kamis', 'Jumat', 'Sabtu', 'Minggu', 'Senin', 'Selasa', 'Rabu'] (Contoh)
-
-            // --- END Logika Agregasi ---
-
-
-            // 🔥 PERUBAHAN: Tampilkan Total dan Rata-rata
+            
+            // Tampilkan Total dan Rata-rata
             totalBiayaEl.textContent = `Rp ${totalCost.toFixed(2)}`;
             const avgCost = totalHours > 0 ? (totalCost / totalHours) : 0;
             avgBiayaEl.textContent = `Rp ${avgCost.toFixed(2)}`;
@@ -302,14 +330,7 @@
         }
 
         // --- FUNGSI HELPER ---
-        logoutButton.addEventListener('click', async () => {
-            await handleLogout();
-        });
-
-        async function handleLogout() {
-            await supabase.auth.signOut();
-            redirectToLogin();
-        }
+        // (Tombol Logout Dihapus)
 
         function redirectToLogin() {
             window.location.href = 'login.html';
