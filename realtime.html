@@ -7,23 +7,39 @@
     <!-- 1. Impor Supabase Client Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* (Gunakan CSS yang sama persis seperti di index.html (Halaman Home)) */
+        /* (CSS Anda yang sudah ada) */
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: #f4f7f6; color: #333; }
         .container { width: 95%; max-width: 1400px; margin: 20px; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 6px 18px rgba(0,0,0,0.07); }
         h1 { color: #00529B; border-bottom: 2px solid #00529B; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-        h2 { color: #333; border-bottom: 1px solid #eee; padding-bottom: 5px; margin-top: 30px; }
+        
+        /* 🔥 PERUBAHAN: Deskripsi (H2 dihapus) */
+        .deskripsi-realtime {
+            font-size: 0.95em;
+            color: #444;
+            line-height: 1.6;
+            background-color: #f8f9fa;
+            border: 1px solid #e0e0e0;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
         table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.85rem; }
         th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
         th { background-color: #00529B; color: white; position: sticky; top: 0; }
         tbody tr:nth-child(even) { background-color: #f9f9f9; }
-        .table-container { max-height: 400px; overflow-y: auto; }
+        /* 🔥 Style untuk baris OFFLINE (Baris statis) */
+        .offline-row {
+            background-color: #ffebee !important;
+            color: #c62828 !important;
+            font-style: italic;
+        }
+        
+        .table-container { max-height: 500px; /* Diperbesar sedikit */ overflow-y: auto; }
         .status { font-size: 0.9em; color: #555; }
         .pending-box { padding: 20px; background-color: #fff3cd; border: 1px solid #ffeeba; border-radius: 8px; text-align: center; font-size: 1.1em; }
         
-        /* 🔥 PERUBAHAN: Tombol Logout Dihapus (sesuai permintaan) */
-        /* .logout-btn { ... } */
-
-        /* 🔥 PERUBAHAN: Ukuran "sedang" untuk tombol Back to Home */
+        /* Ukuran "sedang" untuk tombol Back to Home (Sudah Sesuai) */
         .back-btn { 
             background-color: #6c757d; 
             color: white; 
@@ -39,12 +55,10 @@
 
     <div class="container" id="app-container">
         <h1>
-            <!-- 🔥 PERUBAHAN: "Menu 1:" Dihapus -->
             <span>TABEL REAL TIME</span>
             <div>
-                <!-- 🔥 PERUBAHAN: Teks "Back to Home" & Tombol Logout Dihapus -->
                 <a href="index.html" class="back-btn" style="margin-right: 10px;">Back to Home</a>
-                <!-- <button id="logoutButton" class="logout-btn">Logout</button> (DIHAPUS) -->
+                <!-- (Tombol Logout Dihapus) -->
             </div>
         </h1>
         <p class="status">Memuat data pengguna dan meter...</p>
@@ -57,39 +71,234 @@
 
         <!-- 2. Konten untuk Pengguna 'User' dan 'Admin' -->
         <div id="dataContainer" style="display: none;">
-            <h2>Data Kualitas Daya (18 Meter) - (Data Penting)</h2>
-            <p class="status" id="status-message">Mengambil data terbaru dari tabel `raw_meter_data`...</p>
+            
+            <!-- 🔥 PERUBAHAN: H2 Dihapus, Deskripsi Baru Ditambahkan -->
+            <p class="deskripsi-realtime">
+                Tabel ini menampilkan parameter utama mesin untuk memantau kondisi operasional secara real time, meliputi tegangan, arus, daya (aktif, reaktif, semu), faktor daya, frekuensi, dan energi listrik terpakai.
+                Melalui data ini, pengguna dapat menganalisis kestabilan sistem, mendeteksi anomali, serta mengambil keputusan perawatan atau pengendalian berdasarkan pembacaan dari smart meter atau sensor mesin.
+            </p>
+            <p class="status" id="status-message">Mengambil data terbaru...</p>
+            
             <div class="table-container">
                 <table>
-                    <thead id="data-table-head">
-                        <!-- Header Tabel (Data "Penting") akan di-generate oleh JS -->
+                    <thead>
+                        <tr>
+                            <!-- 🔥 PERUBAHAN: ID -> SLAVE ID -->
+                            <th>SLAVE ID</th>
+                            <th>Tegangan (V)</th>
+                            <th>Arus (A)</th>
+                            <th>Daya (W)</th>
+                            <th>PF Total</th>
+                            <th>Energi (kWh)</th>
+                            <th>Biaya (Rp)</th>
+                            <th>Update Terakhir</th>
+                        </tr>
                     </thead>
+                    <!-- 🔥 PERUBAHAN: 18 Baris Statis (Sesuai Permintaan) -->
                     <tbody id="data-table-body">
-                        <!-- Data Meter (18 Baris) akan di-generate oleh JS -->
+                        <!-- (Data akan diisi oleh JS) -->
+                        <tr>
+                            <td>Mesin 1</td>
+                            <td id="v_avg_1">0.00</td>
+                            <td id="a_avg_1">0.00</td>
+                            <td id="p_total_1">0.00</td>
+                            <td id="pf_total_1">0.00</td>
+                            <td id="energy_total_1">0.00</td>
+                            <td id="cost_1">0.00</td>
+                            <td id="timestamp_1">-</td>
+                        </tr>
+                        <tr>
+                            <td>Mesin 2</td>
+                            <td id="v_avg_2">0.00</td>
+                            <td id="a_avg_2">0.00</td>
+                            <td id="p_total_2">0.00</td>
+                            <td id="pf_total_2">0.00</td>
+                            <td id="energy_total_2">0.00</td>
+                            <td id="cost_2">0.00</td>
+                            <td id="timestamp_2">-</td>
+                        </tr>
+                        <tr>
+                            <td>Mesin 3</td>
+                            <td id="v_avg_3">0.00</td>
+                            <td id="a_avg_3">0.00</td>
+                            <td id="p_total_3">0.00</td>
+                            <td id="pf_total_3">0.00</td>
+                            <td id="energy_total_3">0.00</td>
+                            <td id="cost_3">0.00</td>
+                            <td id="timestamp_3">-</td>
+                        </tr>
+                        <tr>
+                            <td>Mesin 4</td>
+                            <td id="v_avg_4">0.00</td>
+                            <td id="a_avg_4">0.00</td>
+                            <td id="p_total_4">0.00</td>
+                            <td id="pf_total_4">0.00</td>
+                            <td id="energy_total_4">0.00</td>
+                            <td id="cost_4">0.00</td>
+                            <td id="timestamp_4">-</td>
+                        </tr>
+                        <tr>
+                            <td>Mesin 5</td>
+                            <td id="v_avg_5">0.00</td>
+                            <td id="a_avg_5">0.00</td>
+                            <td id="p_total_5">0.00</td>
+                            <td id="pf_total_5">0.00</td>
+                            <td id="energy_total_5">0.00</td>
+                            <td id="cost_5">0.00</td>
+                            <td id="timestamp_5">-</td>
+                        </tr>
+                        <tr>
+                            <td>Mesin 6</td>
+                            <td id="v_avg_6">0.00</td>
+                            <td id="a_avg_6">0.00</td>
+                            <td id="p_total_6">0.00</td>
+                            <td id="pf_total_6">0.00</td>
+                            <td id="energy_total_6">0.00</td>
+                            <td id="cost_6">0.00</td>
+                            <td id="timestamp_6">-</td>
+                        </tr>
+                        <tr>
+                            <td>Mesin 7</td>
+                            <td id="v_avg_7">0.00</td>
+                            <td id="a_avg_7">0.00</td>
+                            <td id="p_total_7">0.00</td>
+                            <td id="pf_total_7">0.00</td>
+                            <td id="energy_total_7">0.00</td>
+                            <td id="cost_7">0.00</td>
+                            <td id="timestamp_7">-</td>
+                        </tr>
+                        <tr>
+                            <td>Mesin 8</td>
+                            <td id="v_avg_8">0.00</td>
+                            <td id="a_avg_8">0.00</td>
+                            <td id="p_total_8">0.00</td>
+                            <td id="pf_total_8">0.00</td>
+                            <td id="energy_total_8">0.00</td>
+                            <td id="cost_8">0.00</td>
+                            <td id="timestamp_8">-</td>
+                        </tr>
+                        <tr>
+                            <td>Mesin 9</td>
+                            <td id="v_avg_9">0.00</td>
+                            <td id="a_avg_9">0.00</td>
+                            <td id="p_total_9">0.00</td>
+                            <td id="pf_total_9">0.00</td>
+                            <td id="energy_total_9">0.00</td>
+                            <td id="cost_9">0.00</td>
+                            <td id="timestamp_9">-</td>
+                        </tr>
+                        <tr>
+                            <td>Mesin 10</td>
+                            <td id="v_avg_10">0.00</td>
+                            <td id="a_avg_10">0.00</td>
+                            <td id="p_total_10">0.00</td>
+                            <td id="pf_total_10">0.00</td>
+                            <td id="energy_total_10">0.00</td>
+                            <td id="cost_10">0.00</td>
+                            <td id="timestamp_10">-</td>
+                        </tr>
+                        <tr>
+                            <td>Mesin 11</td>
+                            <td id="v_avg_11">0.00</td>
+                            <td id="a_avg_11">0.00</td>
+                            <td id="p_total_11">0.00</td>
+                            <td id="pf_total_11">0.00</td>
+                            <td id="energy_total_11">0.00</td>
+                            <td id="cost_11">0.00</td>
+                            <td id="timestamp_11">-</td>
+                        </tr>
+                        <tr>
+                            <td>Mesin 12</td>
+                            <td id="v_avg_12">0.00</td>
+                            <td id="a_avg_12">0.00</td>
+                            <td id="p_total_12">0.00</td>
+                            <td id="pf_total_12">0.00</td>
+                            <td id="energy_total_12">0.00</td>
+                            <td id="cost_12">0.00</td>
+                            <td id="timestamp_12">-</td>
+                        </tr>
+                        <tr>
+                            <td>Mesin 13</td>
+                            <td id="v_avg_13">0.00</td>
+                            <td id="a_avg_13">0.00</td>
+                            <td id="p_total_13">0.00</td>
+                            <td id="pf_total_13">0.00</td>
+                            <td id="energy_total_13">0.00</td>
+                            <td id="cost_13">0.00</td>
+                            <td id="timestamp_13">-</td>
+                        </tr>
+                        <tr>
+                            <td>Mesin 14</td>
+                            <td id="v_avg_14">0.00</td>
+                            <td id="a_avg_14">0.00</td>
+                            <td id="p_total_14">0.00</td>
+                            <td id="pf_total_14">0.00</td>
+                            <td id="energy_total_14">0.00</td>
+                            <td id="cost_14">0.00</td>
+                            <td id="timestamp_14">-</td>
+                        </tr>
+                        <tr>
+                            <td>Mesin 15</td>
+                            <td id="v_avg_15">0.00</td>
+                            <td id="a_avg_15">0.00</td>
+                            <td id="p_total_15">0.00</td>
+                            <td id="pf_total_15">0.00</td>
+                            <td id="energy_total_15">0.00</td>
+                            <td id="cost_15">0.00</td>
+                            <td id="timestamp_15">-</td>
+                        </tr>
+                        <tr>
+                            <td>Mesin 16</td>
+                            <td id="v_avg_16">0.00</td>
+                            <td id="a_avg_16">0.00</td>
+                            <td id="p_total_16">0.00</td>
+                            <td id="pf_total_16">0.00</td>
+                            <td id="energy_total_16">0.00</td>
+                            <td id="cost_16">0.00</td>
+                            <td id="timestamp_16">-</td>
+                        </tr>
+                        <tr>
+                            <td>Mesin 17</td>
+                            <td id="v_avg_17">0.00</td>
+                            <td id="a_avg_17">0.00</td>
+                            <td id="p_total_17">0.00</td>
+                            <td id="pf_total_17">0.00</td>
+                            <td id="energy_total_17">0.00</td>
+                            <td id="cost_17">0.00</td>
+                            <td id="timestamp_17">-</td>
+                        </tr>
+                        <tr>
+                            <td>Mesin 18</td>
+                            <td id="v_avg_18">0.00</td>
+                            <td id="a_avg_18">0.00</td>
+                            <td id="p_total_18">0.00</td>
+                            <td id="pf_total_18">0.00</td>
+                            <td id="energy_total_18">0.00</td>
+                            <td id="cost_18">0.00</td>
+                            <td id="timestamp_18">-</td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
         </div>
-
-        <!-- 3. (PANEL ADMIN DIHAPUS DARI SINI) -->
 
     </div>
 
     <script type="module">
         // --- FASE 1: KONFIGURASI SUPABASE (WAJIB DIISI) ---
         const SUPABASE_URL = 'https://rojhcadtqfynlqzubftx.supabase.co'; // Ganti ini
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs'; // Ganti ini (Anon, Public Key)
-        
+        const SUPABASE_KEY = 'ANON_PUBLIC_KEY_ANDAeyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs
         // --- Variabel Global ---
         let supabase;
         const REFRESH_INTERVAL = 10000; // Refresh data setiap 10 detik
+        const MAX_METER_ID = 18; // Total mesin
         
         // --- Elemen DOM ---
         const pendingContainer = document.getElementById('pendingContainer');
         const dataContainer = document.getElementById('dataContainer');
         const statusMessage = document.getElementById('status-message');
-        // const logoutButton = document.getElementById('logoutButton'); (DIHAPUS)
         const pendingUserEmail = document.getElementById('pendingUserEmail');
+        const tBody = document.getElementById('data-table-body'); // Ambil tbody
 
         // --- FASE 2: Inisialisasi Klien Supabase ---
         try {
@@ -116,7 +325,7 @@
 
             if (profileError || !profile) {
                 console.error("Error mengambil profile:", profileError);
-                redirectToLogin(); // 🔥 Ganti handleLogout()
+                redirectToLogin(); 
                 return;
             }
 
@@ -131,7 +340,7 @@
                 showView('pending'); 
             
             } else {
-                redirectToLogin(); // 🔥 Ganti handleLogout()
+                redirectToLogin(); 
             }
         }
 
@@ -145,80 +354,69 @@
                 console.error("Error mengambil data meter (Cek RLS/RPC 'get_latest_raw_data'):", error);
                 statusMessage.innerHTML = `❌ Error mengambil data meter: ${error.message}`;
                 if (error.code === '401' || error.code === '403') {
-                    redirectToLogin(); // 🔥 Ganti handleLogout()
+                    redirectToLogin(); 
                 }
                 return;
             }
 
-            renderDataTable(data);
-            statusMessage.textContent = "Data (raw) berhasil diperbarui: " + new Date().toLocaleTimeString();
+            renderDataTable(data); // Panggil fungsi render baru
         }
 
         // --- FASE 5: Fungsi Tampilan (Render) ---
+        // 🔥 PERUBAHAN: Fungsi renderDataTable ditulis ulang total
         function renderDataTable(data) {
-            const tHead = document.getElementById('data-table-head');
-            const tBody = document.getElementById('data-table-body');
-            tHead.innerHTML = ''; 
-            tBody.innerHTML = ''; 
+            
+            // 1. Reset semua 18 baris ke status 'Offline' (Merah)
+            for (let i = 1; i <= MAX_METER_ID; i++) {
+                const row = document.getElementById(`v_avg_${i}`)?.parentNode; // Ambil <tr>
+                if (row) {
+                    row.className = 'offline-row'; // Terapkan style offline
+                }
+                
+                // Reset nilai (kecuali ID)
+                if (document.getElementById(`v_avg_${i}`)) document.getElementById(`v_avg_${i}`).textContent = '0.00';
+                if (document.getElementById(`a_avg_${i}`)) document.getElementById(`a_avg_${i}`).textContent = '0.00';
+                if (document.getElementById(`p_total_${i}`)) document.getElementById(`p_total_${i}`).textContent = '0.00';
+                if (document.getElementById(`pf_total_${i}`)) document.getElementById(`pf_total_${i}`).textContent = '0.00';
+                if (document.getElementById(`energy_total_${i}`)) document.getElementById(`energy_total_${i}`).textContent = '0.00';
+                if (document.getElementById(`cost_${i}`)) document.getElementById(`cost_${i}`).textContent = '0.00';
+                if (document.getElementById(`timestamp_${i}`)) document.getElementById(`timestamp_${i}`).textContent = 'OFFLINE';
+            }
 
+            // 2. Cek jika data yang masuk kosong
             if (data.length === 0) {
-                tBody.innerHTML = '<tr><td colspan="9">Belum ada data meter yang masuk dari ESP32 (Tabel: raw_meter_data).</td></tr>';
+                statusMessage.textContent = "Data (raw) berhasil diperbarui (Tidak ada data aktif dari ESP32).";
                 return;
             }
 
-            const headers = Object.keys(data[0]);
-            const headerRow = document.createElement('tr');
-            
-            const headerNames = {
-                meter_id: "ID", 
-                v_avg: "Tegangan (V)", 
-                a_avg: "Arus (A)",
-                p_total: "Daya (W)",
-                pf_total: "PF Total", 
-                energy_total: "Energi (kWh)", 
-                cost: "Biaya (Rp)",
-                timestamp: "Update Terakhir",
-                id: "Data ID" 
-            };
-
-            headers.forEach(key => {
-                if (!headerNames[key]) return; 
-                const th = document.createElement('th');
-                th.textContent = headerNames[key]; 
-                headerRow.appendChild(th);
-            });
-            tHead.appendChild(headerRow);
-
+            // 3. Loop data yang AKTIF (dari Supabase) dan isi tabel
             data.forEach(rowData => {
-                const row = document.createElement('tr');
-                if (rowData.v_avg === 0) {
-                    row.style.backgroundColor = "#ffebee"; 
-                    row.style.color = "#c62828";
+                const id = rowData.meter_id;
+                if (id > MAX_METER_ID) return; // Lewati jika ID > 18
+
+                // Ambil <tr> lagi dan set style 'Online'
+                const row = document.getElementById(`v_avg_${id}`)?.parentNode; 
+                if (row) {
+                    // Ganti warna (Zebra)
+                    row.className = (id % 2 === 0) ? "even-row" : "odd-row";
+                    row.style.backgroundColor = (id % 2 === 0) ? "#f9f9f9" : "#ffffff";
+                    row.style.color = "#333";
                 }
-                
-                headers.forEach(key => {
-                    if (!headerNames[key]) return; 
-                    const td = document.createElement('td');
-                    let value = rowData[key];
-                    
-                    if (typeof value === 'number' && key !== 'meter_id' && key !== 'id') {
-                        value = value.toFixed(2);
-                    }
-                    if (key === 'timestamp') {
-                        value = new Date(value).toLocaleTimeString('id-ID');
-                    }
-                    
-                    td.textContent = value;
-                    row.appendChild(td);
-                });
-                tBody.appendChild(row);
+
+                // Format dan Isi nilai
+                document.getElementById(`v_avg_${id}`).textContent = rowData.v_avg.toFixed(2);
+                document.getElementById(`a_avg_${id}`).textContent = rowData.a_avg.toFixed(3); // A.avg
+                document.getElementById(`p_total_${id}`).textContent = rowData.p_total.toFixed(2);
+                document.getElementById(`pf_total_${id}`).textContent = rowData.pf_total.toFixed(2);
+                document.getElementById(`energy_total_${id}`).textContent = rowData.energy_total.toFixed(2);
+                document.getElementById(`cost_${id}`).textContent = rowData.cost.toFixed(2);
+                document.getElementById(`timestamp_${id}`).textContent = new Date(rowData.timestamp).toLocaleTimeString('id-ID');
             });
+            
+            statusMessage.textContent = "Data (raw) berhasil diperbarui: " + new Date().toLocaleTimeString();
         }
 
         // --- FUNGSI HELPER ---
-        // (Event listener logout dihapus)
-        // (Fungsi handleLogout dihapus)
-
         function redirectToLogin() {
             window.location.href = 'login.html';
         }
