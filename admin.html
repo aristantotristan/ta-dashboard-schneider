@@ -10,7 +10,7 @@
         /* (Gunakan CSS yang sama persis seperti di index.html (Halaman Home)) */
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: #f4f7f6; color: #333; }
         .container { width: 95%; max-width: 1400px; margin: 20px; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 6px 18px rgba(0,0,0,0.07); }
-        h1 { color: #00529B; border-bottom: 2px solid #00529B; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        h1 { color: #dc3545; border-bottom: 2px solid #dc3545; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; } /* Merah */
         h2 { color: #333; border-bottom: 1px solid #eee; padding-bottom: 5px; margin-top: 30px; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.85rem; }
         th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
@@ -18,24 +18,33 @@
         tbody tr:nth-child(even) { background-color: #f9f9f9; }
         .table-container { max-height: 400px; overflow-y: auto; }
         .status { font-size: 0.9em; color: #555; }
-        /* Box Peringatan/Info */
+        
+        /* Box Info/Error */
         .info-box { padding: 20px; background-color: #fff3cd; border: 1px solid #ffeeba; border-radius: 8px; text-align: center; font-size: 1.1em; }
         .admin-panel { background-color: #e2e3e5; border-color: #d6d8db; }
         .error-box { background-color: #f8d7da; border-color: #f5c6cb; color: #721c24; } /* Box Error (Akses Ditolak) */
         
         .logout-btn { background-color: #dc3545; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-size: 0.9em; }
         .approve-btn { background-color: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; }
-        .back-btn { background-color: #6c757d; color: white; padding: 8px 12px; text-decoration: none; border-radius: 5px; font-size: 0.9em; }
+        .back-btn { 
+            background-color: #6c757d; 
+            color: white; 
+            padding: 8px 14px; /* Ukuran sedang */
+            text-decoration: none; 
+            border-radius: 5px; 
+            font-size: 0.9em; 
+            font-weight: 600; 
+        }
     </style>
 </head>
 <body>
 
     <div class="container" id="app-container">
         <h1>
-            <span>Menu 4: PANEL ADMIN (PERSETUJUAN)</span>
+            <span>Menu 4: ADMIN CONTROL</span>
             <div>
-                <a href="index.html" class="back-btn" style="margin-right: 10px;">Kembali ke Home</a>
-                <button id="logoutButton" class="logout-btn">Logout</button>
+                <a href="index.html" class="back-btn" style="margin-right: 10px;">Back to Home</a>
+                <!-- <button id="logoutButton" class="logout-btn">Logout</button> (DIHAPUS) -->
             </div>
         </h1>
         <p class="status">Memuat data pengguna...</p>
@@ -81,7 +90,7 @@
         // --- Elemen DOM ---
         const deniedContainer = document.getElementById('deniedContainer');
         const adminContainer = document.getElementById('adminContainer');
-        const logoutButton = document.getElementById('logoutButton');
+        // const logoutButton = document.getElementById('logoutButton'); (DIHAPUS)
 
         // --- FASE 2: Inisialisasi Klien Supabase ---
         try {
@@ -108,7 +117,7 @@
 
             if (profileError || !profile) {
                 console.error("Error mengambil profile:", profileError);
-                await handleLogout(); return;
+                redirectToLogin(); return;
             }
 
             const userRole = profile.role;
@@ -121,7 +130,7 @@
                 showView('denied'); // User/Pending tidak boleh lihat halaman ini
             
             } else {
-                await handleLogout();
+                redirectToLogin();
             }
         }
 
@@ -129,14 +138,12 @@
 
         // Mengambil data user 'pending' (KHUSUS 'admin')
         async function fetchAdminPanelData() {
-            const { data: pendingUsers, error } = await supabase
-                .from('profiles')
-                .select('id, full_name, email, role') 
-                .eq('role', 'pending'); 
+            // Memanggil RPC 'get_pending_users' (yang kita buat di FASE 1.5)
+            const { data: pendingUsers, error } = await supabase.rpc('get_pending_users');
 
             if (error) {
                 console.error("Error mengambil data user pending (Hanya Admin yang bisa):", error);
-                adminContainer.innerHTML = "<p>Gagal memuat data admin. Pastikan RLS di tabel 'profiles' mengizinkan Admin.</p>";
+                adminContainer.innerHTML = "<p>Gagal memuat data admin. Pastikan RLS di tabel 'profiles' mengizinkan Admin dan RPC 'get_pending_users' ada.</p>";
                 return;
             }
             renderAdminTable(pendingUsers);
@@ -167,9 +174,7 @@
         }
 
         // --- FASE 6: Fungsi Interaksi (Event Listeners) ---
-        logoutButton.addEventListener('click', async () => {
-            await handleLogout();
-        });
+        // (Tombol Logout Dihapus)
 
         // Tombol Approve (di Panel Admin)
         adminContainer.addEventListener('click', async (e) => {
@@ -182,7 +187,7 @@
         });
         
         async function approveUser(userId) {
-            // Memanggil 'rpc' 'update_user_role' (dari 'setup_rls_policies.sql')
+            // Memanggil 'rpc' 'update_user_role'
             const { error } = await supabase.rpc('update_user_role', {
                 target_user_id: userId,
                 new_role: 'user'
@@ -198,10 +203,7 @@
         }
 
         // --- FUNGSI HELPER ---
-        async function handleLogout() {
-            await supabase.auth.signOut();
-            redirectToLogin();
-        }
+        // (Fungsi handleLogout dihapus)
 
         function redirectToLogin() {
             window.location.href = 'login.html';
@@ -219,7 +221,7 @@
         }
 
         // --- FASE 7: Jalankan Aplikasi ---
-        checkLoginAndFetchData(); // Cek login saat halaman dimuat
+        checkLoginAndInitialize(); // Cek login saat halaman dimuat
 
         setInterval(() => {
             if (adminContainer.style.display === 'block') {
@@ -230,4 +232,3 @@
     </script>
 </body>
 </html>
-
