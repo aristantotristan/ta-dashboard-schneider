@@ -1,302 +1,154 @@
 <!DOCTYPE html>
-<html lang="id">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard monitoring PT.Amarilys Karisma Gemilang</title>
-    <!-- 1. Impor Supabase Client Library --><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <title>Dashboard Meteran (18-Meter)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.js"></script>
     <style>
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            min-height: 100vh; 
-            background-color: #f4f7f6; 
-            color: #333; 
-            margin: 0;
-            padding: 20px 0; /* Tambah padding atas/bawah */
-        }
-        .container { 
-            width: 95%; 
-            max-width: 900px; 
-            margin: 20px auto; /* Margin auto untuk tengahkan */
-            background: white; 
-            padding: 25px; 
-            border-radius: 12px; 
-            box-shadow: 0 6px 18px rgba(0,0,0,0.07); 
-        }
-        
-        /* 🔥 PERUBAHAN: Header Utama (PT. Amarilys Karisma Gemilang) */
-        .main-header-block {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 2px solid #00529B;
-            padding-bottom: 20px;
-            margin-bottom: 20px; /* Jarak antara header dan sub-header/konten */
-        }
-        .header-left {
-            display: flex;
-            align-items: center;
-        }
-        .logo {
-            width: 80px; /* Ukuran logo */
-            height: auto;
-            margin-right: 20px;
-        }
-        /* 🔥 PERUBAHAN: Ukuran dan Huruf Tebal untuk PT. Amarilys Karisma Gemilang */
-        .pt-title {
-            font-size: 1.5em; /* Ukuran sedang */
-            font-weight: bold; /* Huruf tebal */
-            color: #00529B;
-            margin: 0;
-            padding: 0;
-        }
-
-        /* 🔥 PERUBAHAN: Sub-Header (Dashboard Monitoring) - Rata Tengah */
-        .subheader-text {
-            text-align: center; /* 🔥 PERUBAHAN: Pindah ke tengah */
-            font-size: 1.2em; /* Ukuran sedang */
-            font-weight: 500;
-            color: #00529B; /* Warna biru */
-            margin-bottom: 30px; /* Jarak dengan menu */
-            /* margin-left: 10px; (Dihapus) */
-        }
-        
-        /* Tombol Logout (Ukuran Sedang) */
-        .logout-btn-medium { 
-            background-color: #dc3545; 
-            color: white; 
-            border: none; 
-            padding: 8px 14px; /* Dikecilkan */
-            border-radius: 5px; 
-            cursor: pointer; 
-            font-size: 0.9em; 
-            font-weight: 600;
-        }
-        .logout-btn-medium:hover {
-            background-color: #c82333;
-        }
-
-        /* Teks Welcome dipindah ke Bawah (Footer) */
-        .footer-status {
-            text-align: center;
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #eee;
-        }
-        .status { 
-            font-size: 0.9em; 
-            color: #555; 
-            margin-bottom: 5px;
-        }
-        
-        /* CSS untuk Menu Pilihan (Tombol) */
-        .menu-grid {
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .grid-container {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-top: 20px;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
         }
-        .menu-card {
-            background-color: #f9f9f9;
-            border: 1px solid #ddd;
+        .meter-card {
+            border: 1px solid #ccc;
             border-radius: 8px;
-            padding: 25px;
-            text-align: center;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            color: #333;
+            padding: 10px;
+            box-shadow: 2px 2px 5px #eee;
         }
-        .menu-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            border-color: #007bff;
-        }
-        .menu-card h3 {
-            margin-top: 0;
-            color: #007bff;
-            font-size: 1.1em;
-            font-weight: 600;
-        }
-        .menu-card p {
-            font-size: 0.9em;
-            color: #555;
-            line-height: 1.5; /* Agar deskripsi panjang tetap rapi */
-        }
-        /* Style khusus untuk Tombol Admin */
-        #admin-menu-card {
-            border-color: #dc3545;
-            display: none; /* (Sembunyi by default) */
-        }
-        #admin-menu-card h3 {
-            color: #dc3545;
-        }
-
-        /* Konten 'Pending' */
-        .pending-box { padding: 20px; background-color: #fff3cd; border: 1px solid #ffeeba; border-radius: 8px; text-align: center; font-size: 1.1em; }
+        .meter-card h3 { margin-top: 0; }
+        .meter-card p { margin: 5px 0; font-size: 14px; }
+        .meter-card .value { font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <div class="container" id="app-container">
-        <!-- 🔥 PERUBAHAN: Main Header Block (Logo + PT Title + Logout) --><div class="main-header-block">
-            <div class="header-left">
-                <img src="https://amarilyskg.co.id/template/images/logo_AKG.png" alt="Logo PT. Amarilys Karisma Gemilang" class="logo">
-                <p class="pt-title">PT.Amarilys Karisma Gemilang</p> <!-- 🔥 PERUBAHAN: Judul PT --></div>
-            <button id="logoutButton" class="logout-btn-medium" style="display: none;">Logout</button>
-        </div>
-        
-        <!-- 🔥 PERUBAHAN: Sub-Header (Dashboard Monitoring) di bawah garis --><p class="subheader-text">Dashboard Monitoring</p>
+    <h1>Live Dashboard Schneider (18 Meter)</h1>
+    <p>Status: <span id="status">Menyambungkan...</span></p>
 
-        <!-- 1. Konten untuk Pengguna 'Pending' --><div id="pendingContainer" class="pending-box" style="display: none;">
-            <h2>Menunggu Persetujuan</h2>
-            <p>Akun Anda (<span id="pendingUserEmail"></span>) berhasil dibuat tetapi masih menunggu persetujuan dari Admin. Silakan hubungi Admin untuk mengaktifkan akun Anda.</p>
+    <div class="grid-container" id="dashboard-grid">
         </div>
 
-        <!-- 2. Konten untuk Pengguna 'User' dan 'Admin' (Menu Pilihan) --><div id="menuContainer" style="display: none;">
-            <!-- 🔥 H2 "HOME" sudah dihapus --><div class="menu-grid">
-                
-                <!-- Pilihan 1: Tabel Real Time --><a href="realtime.html" class="menu-card">
-                    <h3>TABEL REAL TIME</h3>
-                    <p>Format tabel akan menampilkan tabel dengan parameter utama dari tiap mesin,click jika ingin melanjutkan ke halaman</p>
-                </a>
-                
-                <!-- Pilihan 2: Biaya Mingguan --><a href="biaya.html" class="menu-card">
-                    <h3>PERHITUNGAN BIAYA MINGGUAN</h3>
-                    <p>Format akan menampilkan grafik dan total biaya harian per-mesin yang di rekap dalam 7 hari,click jika ingin melanjutkan ke halaman.</p>
-                </a>
-                
-                <!-- Pilihan 3: Cek Trouble --><a href="trouble.html" class="menu-card">
-                    <h3>CEK TROUBLE</h3>
-                    <p>format menampilkan riwayat trouble pada mesin per hari/jam (over voltage/over current) yang di rekap dalam 7 hari.</p>
-                </a>
+<script>
+    // --- SESUAIKAN PENGATURAN INI ---
+    const HIVEMQ_HOST = "9ae48494805f4ac0895d5bdd40731dfa.s1.eu.hivemq.cloud"; // 👈 Ganti dengan Host Anda
+    const HIVEMQ_PORT = 8884; // Port WSS (WebSockets)
+    const HIVEMQ_USER = "web_dashboard";          // 👈 Ganti dengan user SUBSCRIBER
+    const HIVEMQ_PASS = "VercelPass123!";      // 👈 Ganti dengan password SUBSCRIBER
+    
+    // Topik yang akan didengarkan
+    const TOPIC_DATA = "politeknik/meter/data";
+    // ---------------------------------
 
-                <!-- PILIHAN 4: KHUSUS ADMIN --><a href="admin.html" class="menu-card" id="admin-menu-card">
-                    <h3>Admin Control</h3>
-                    <p>Menyetujui (Approve) dan mengelola pengguna baru.</p>
-                </a>
-                
-            </div>
-        </div>
+    // Buat ClientID unik untuk browser
+    const CLIENT_ID = "web_client_" + parseInt(Math.random() * 1000);
+
+    // Buat Paho MQTT Client
+    var client = new Paho.MQTT.Client(HIVEMQ_HOST, HIVEMQ_PORT, CLIENT_ID);
+
+    // Set callback handlers
+    client.onConnectionLost = onConnectionLost;
+    client.onMessageArrived = onMessageArrived;
+
+    // Opsi koneksi
+    var options = {
+        useSSL: true, // Wajib untuk HiveMQ Cloud (WSS)
+        userName: HIVEMQ_USER,
+        password: HIVEMQ_PASS,
+        onSuccess: onConnect,
+        onFailure: onFail
+    };
+
+    // Panggil fungsi connect
+    client.connect(options);
+
+    function onConnect() {
+        console.log("Terhubung ke HiveMQ!");
+        document.getElementById("status").innerHTML = "Terhubung ✅";
         
-        <!-- Teks Welcome dipindah ke Bawah (Footer) --><div class="footer-status">
-            <p class="status" id="welcomeMessage">Memuat data pengguna...</p>
-            <p class="status" id="menuInfo">Silakan pilih menu dashboard yang ingin Anda lihat.</p>
-        </div>
+        // Subscribe ke topik data
+        client.subscribe(TOPIC_DATA);
+        console.log("Subscribed ke: " + TOPIC_DATA);
 
-    </div>
+        // Buat 18 card meteran
+        createMeterCards();
+    }
 
-    <script type="module">
-        // --- FASE 1: KONFIGURASI SUPABASE (WAJIB DIISI) ---
-        const SUPABASE_URL = 'https://rojhcadtqfynlqzubftx.supabase.co'; // Ganti ini
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs'; // Ganti ini (Anon, Public Key)
+    function onFail(message) {
+        console.error("Koneksi gagal: " + message.errorMessage);
+        document.getElementById("status").innerHTML = "Koneksi Gagal ❌: " + message.errorMessage;
+    }
+
+    function onConnectionLost(responseObject) {
+        if (responseObject.errorCode !== 0) {
+            console.log("Koneksi terputus: " + responseObject.errorMessage);
+            document.getElementById("status").innerHTML = "Koneksi Terputus ❌";
+            // Coba sambungkan lagi (opsional)
+            // client.connect(options);
+        }
+    }
+
+    function onMessageArrived(message) {
+        console.log("Pesan diterima di topik: " + message.destinationName);
         
-        // --- Variabel Global ---
-        let supabase;
-        
-        // --- Elemen DOM ---
-        const logoutButton = document.getElementById('logoutButton');
-        const welcomeMessage = document.getElementById('welcomeMessage');
-        const pendingContainer = document.getElementById('pendingContainer');
-        const menuContainer = document.getElementById('menuContainer');
-        const pendingUserEmail = document.getElementById('pendingUserEmail');
-        const adminMenuCard = document.getElementById('admin-menu-card'); 
-        const menuInfo = document.getElementById('menuInfo'); // Teks deskripsi menu
-
-        // --- FASE 2: Inisialisasi Klien Supabase ---
         try {
-            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        } catch (error) {
-            console.error("Gagal inisialisasi Supabase. Cek URL/Key.", error);
-            document.body.innerHTML = "<h1>Error Konfigurasi Supabase. Cek Konsol (F12).</h1>";
-        }
-
-        // --- FASE 3: Fungsi Utama (Pengecekan Login & Role) ---
-        async function checkLoginAndShowMenu() {
-            // 1. Cek Sesi Login
-            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+            // Ubah teks pesan (JSON) menjadi objek JavaScript
+            var data = JSON.parse(message.payloadString);
             
-            if (sessionError || !session) {
-                if (sessionError) console.error("Error mengambil sesi:", sessionError);
-                redirectToLogin();
-                return;
-            }
+            // Panggil fungsi untuk update card
+            updateCard(data);
+        } catch (e) {
+            console.error("Error parsing JSON:", e);
+        }
+    }
 
-            logoutButton.style.display = 'block';
+    // Fungsi untuk membuat 18 card di awal
+    function createMeterCards() {
+        var grid = document.getElementById("dashboard-grid");
+        grid.innerHTML = ""; // Bersihkan grid
 
-            // 2. Cek Role (Peran) di tabel 'profiles'
-            const user = session.user;
-            const { data: profile, error: profileError } = await supabase
-                .from('profiles')
-                .select('role, full_name')
-                .eq('id', user.id)
-                .single();
-
-            if (profileError || !profile) {
-                console.error("Error mengambil profile:", profileError);
-                welcomeMessage.textContent = "Gagal memuat profil pengguna.";
-                await handleLogout(); 
-                return;
-            }
-
-            // 3. Tentukan Tampilan Berdasarkan Role
-            const userRole = profile.role;
-            const userName = profile.full_name || user.email;
-
-            if (userRole === 'admin') {
-                welcomeMessage.textContent = `Selamat datang, ${userName}! (Role: Admin)`;
-                showView('menu'); // Tampilkan Menu Pilihan
-                adminMenuCard.style.display = 'block'; // Tampilkan Tombol ke-4 (Panel Admin)
+        for (var i = 1; i <= 18; i++) {
+            var card = document.createElement("div");
+            card.className = "meter-card";
+            card.id = "meter_" + i; // ID unik untuk setiap card (meter_1, meter_2, ...)
             
-            } else if (userRole === 'user') {
-                welcomeMessage.textContent = `Selamat datang, ${userName}! (Role: User)`;
-                showView('menu'); // Tampilkan Menu Pilihan (tanpa tombol Admin)
-            
-            } else if (userRole === 'pending') {
-                welcomeMessage.textContent = `Akun Anda sedang ditinjau, ${userName}.`;
-                pendingUserEmail.textContent = user.email;
-                showView('pending'); // Tampilkan halaman "Menunggu Approval"
-            
-            } else {
-                console.error("Role tidak dikenal:", userRole);
-                await handleLogout();
-            }
+            card.innerHTML = `
+                <h3>Meter ID: ${i}</h3>
+                <p>Status: <span class="value" id="status_${i}">Menunggu data...</span></p>
+                <p>Voltage: <span class="value" id="v_${i}">-</span> V</p>
+                <p>Current: <span class="value" id="a_${i}">-</span> A</p>
+                <p>Power: <span class="value" id="p_${i}">-</span> W</p>
+                <p>Energy: <span class="value" id="e_${i}">-</span> kWh</p>
+                <p>Freq: <span class="value" id="f_${i}">-</span> Hz</p>
+            `;
+            grid.appendChild(card);
+        }
+    }
+
+    // Fungsi untuk update data di card yang spesifik
+    function updateCard(data) {
+        var id = data.id; // Ambil ID dari data JSON (misal: 1, 2, 3...)
+        
+        // Cek jika ID valid
+        if (id < 1 || id > 18) {
+            console.warn("ID meter tidak valid:", id);
+            return;
         }
 
-        // --- FUNGSI HELPER ---
+        // Update nilai di card yang sesuai
+        document.getElementById(`status_${id}`).innerHTML = "Online ✅";
+        document.getElementById(`v_${id}`).innerHTML = data.v_avg.toFixed(2);
+        document.getElementById(`a_${id}`).innerHTML = data.a_avg.toFixed(3);
+        document.getElementById(`p_${id}`).innerHTML = data.p_total.toFixed(2);
+        document.getElementById(`e_${id}`).innerHTML = data.energy.toFixed(4);
+        document.getElementById(`f_${id}`).innerHTML = data.freq.toFixed(2);
 
-        logoutButton.addEventListener('click', async () => {
-            await handleLogout();
-        });
+        // (Opsional) tambahkan highlight atau ganti warna
+        var card = document.getElementById(`meter_${id}`);
+        card.style.borderColor = "green";
+        setTimeout(() => { card.style.borderColor = "#ccc"; }, 500); // Hilangkan highlight setelah 0.5 dtk
+    }
 
-        async function handleLogout() {
-            await supabase.auth.signOut();
-            redirectToLogin();
-        }
-
-        function redirectToLogin() {
-            window.location.href = 'login.html';
-        }
-
-        function showView(viewName) {
-            pendingContainer.style.display = 'none';
-            menuContainer.style.display = 'none';
-            menuInfo.style.display = 'none'; // Sembunyikan deskripsi menu
-
-            if (viewName === 'menu') {
-                menuContainer.style.display = 'block';
-                menuInfo.style.display = 'block'; // Tampilkan deskri
-            } else if (viewName === 'pending') {
-                pendingContainer.style.display = 'block';
-            }
-        }
-
-        // --- FASE 4: Jalankan Aplikasi ---
-        checkLoginAndShowMenu(); 
-
-    </script>
+</script>
 </body>
 </html>
-
