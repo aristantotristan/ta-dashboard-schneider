@@ -1,134 +1,146 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Meteran (18-Meter)</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4; }
-        h1 { text-align: center; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background-color: #f0f2f5; color: #333; }
+        h1 { text-align: center; color: #1a73e8; }
+        #status-container { text-align: center; margin-bottom: 30px; padding: 15px; background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        #status { font-weight: bold; transition: all 0.3s; }
+        .status-connected { color: #28a745; }
+        .status-disconnected { color: #dc3545; }
+        .status-connecting { color: #ffc107; }
+
         .grid-container {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 20px;
+            padding: 10px;
         }
         .meter-card {
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            padding: 15px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
             background-color: #fff;
-            transition: all 0.3s ease;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05), 0 1px 3px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
         }
-        .meter-card h3 { 
-            margin-top: 0; 
-            color: #333;
-            border-bottom: 2px solid #eee;
-            padding-bottom: 5px;
+        .meter-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px rgba(0,0,0,0.1); }
+        .meter-card h3 { margin-top: 0; color: #444; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; font-size: 1.2em; }
+        .meter-card .row { display: flex; justify-content: space-between; margin: 8px 0; font-size: 0.95em; }
+        .meter-card .label { color: #666; }
+        .meter-card .value { font-weight: 600; color: #222; }
+        .meter-card .unit { color: #888; font-size: 0.9em; margin-left: 4px; }
+        .highlight-update { animation: highlight-fade 1s ease-out; }
+        @keyframes highlight-fade {
+            0% { background-color: rgba(40, 167, 69, 0.2); }
+            100% { background-color: #fff; }
         }
-        .meter-card p { 
-            margin: 8px 0; 
-            font-size: 16px;
-            display: flex;
-            justify-content: space-between;
-        }
-        .meter-card .label { color: #555; }
-        .meter-card .value { 
-            font-weight: bold; 
-            color: #000;
-        }
-        /* Status styling */
-        #status-container { text-align: center; margin-bottom: 20px; font-size: 1.1em; }
-        #status-container .value { font-weight: bold; }
-        .status-connected { color: green; }
-        .status-disconnected { color: red; }
     </style>
 </head>
 <body>
 
     <h1>Live Dashboard Schneider (18 Meter)</h1>
-    <div id="status-container">Status: <span id="status" class="value status-disconnected">Menyambungkan...</span></div>
+    <div id="status-container">
+        Status Koneksi MQTT: <span id="status" class="status-connecting">Menghubungkan...</span>
+    </div>
 
     <div class="grid-container" id="dashboard-grid">
         </div>
 
 <script>
-    // --- SESUAIKAN PENGATURAN INI ---
-    const HIVEMQ_HOST = "701d32236feb43b38c22855a611f4d42.s1.eu.hivemq.cloud"; // 👈 Host Anda
-    const HIVEMQ_PORT = 8884; // Port WSS (WebSockets)
-    
-    // PENTING: Gunakan user SUBSCRIBER (bukan 'vercel_client')
-    const HIVEMQ_USER = "web_dashboard";          // 👈 Ganti dengan user SUBSCRIBER Anda
-    const HIVEMQ_PASS = "Tristan12";   // 👈 Ganti dengan password SUBSCRIBER Anda
-    
-    // Topik yang akan didengarkan
-    const TOPIC_DATA = "politeknik/meter/data";
-    // ---------------------------------
+    // --- KONFIGURASI MQTT ---
+    const MQTT_HOST = "9ae48494805f4ac0895d5bdd40731dfa.s1.eu.hivemq.cloud";
+    const MQTT_PORT = 8884; // WSS Port
+    const MQTT_USER = "web_dashboard";
+    const MQTT_PASS = "Tristan12";
+    const MQTT_TOPIC = "politeknik/meter/data";
+    // ------------------------
 
-    const CLIENT_ID = "web_client_" + parseInt(Math.random() * 10000);
-    var client = new Paho.MQTT.Client(HIVEMQ_HOST, HIVEMQ_PORT, CLIENT_ID);
+    let client;
+    let reconnectTimeout = 5000;
 
-    client.onConnectionLost = onConnectionLost;
-    client.onMessageArrived = onMessageArrived;
-
-    var options = {
-        useSSL: true,
-        userName: HIVEMQ_USER,
-        password: HIVEMQ_PASS,
-        onSuccess: onConnect,
-        onFailure: onFail,
-        reconnect: true // Coba sambung ulang otomatis
-    };
-
-    // Panggil fungsi connect
-    client.connect(options);
-
-    function onConnect() {
-        console.log("Terhubung ke HiveMQ!");
-        const statusEl = document.getElementById("status");
-        statusEl.innerHTML = "Terhubung ✅";
-        statusEl.className = "value status-connected";
-        
-        client.subscribe(TOPIC_DATA);
-        console.log("Subscribed ke: " + TOPIC_DATA);
-
+    // Fungsi inisialisasi awal
+    function init() {
         createMeterCards();
+        connectMQTT();
     }
 
-    function onFail(message) {
-        console.error("Koneksi gagal: " + message.errorMessage);
-        const statusEl = document.getElementById("status");
-        statusEl.innerHTML = "Koneksi Gagal ❌: " + message.errorMessage;
-        statusEl.className = "value status-disconnected";
+    function connectMQTT() {
+        const clientId = "web_dash_" + Math.random().toString(16).substr(2, 8);
+        client = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, clientId);
+
+        client.onConnectionLost = onConnectionLost;
+        client.onMessageArrived = onMessageArrived;
+
+        const options = {
+            useSSL: true,
+            userName: MQTT_USER,
+            password: MQTT_PASS,
+            onSuccess: onConnect,
+            onFailure: onFail,
+            keepAliveInterval: 60,
+            timeout: 10
+        };
+
+        updateStatus("Menghubungkan ke HiveMQ...", "status-connecting");
+        try {
+            client.connect(options);
+        } catch (e) {
+            console.error("Error saat connect:", e);
+            onFail({ errorMessage: e.message });
+        }
+    }
+
+    function onConnect() {
+        console.log("MQTT Terhubung!");
+        updateStatus("Terhubung ✅", "status-connected");
+        client.subscribe(MQTT_TOPIC);
+    }
+
+    function onFail(responseObject) {
+        let msg = "Koneksi Gagal ❌";
+        if (responseObject.errorCode === 8) {
+             msg += ": Tidak diizinkan (Cek User/Pass atau Web Client setting di HiveMQ)";
+        } else {
+             msg += ": " + responseObject.errorMessage;
+        }
+        console.error("MQTT Gagal:", responseObject);
+        updateStatus(msg, "status-disconnected");
+        setTimeout(connectMQTT, reconnectTimeout); // Coba lagi nanti
     }
 
     function onConnectionLost(responseObject) {
         if (responseObject.errorCode !== 0) {
-            console.log("Koneksi terputus: " + responseObject.errorMessage);
-            const statusEl = document.getElementById("status");
-            statusEl.innerHTML = "Koneksi Terputus ❌";
-            statusEl.className = "value status-disconnected";
+            console.warn("Koneksi Terputus:", responseObject.errorMessage);
+            updateStatus("Terputus ⚠️. Mencoba lagi...", "status-connecting");
+            setTimeout(connectMQTT, reconnectTimeout);
         }
     }
 
-    // Fungsi untuk membuat 18 card di awal
-    function createMeterCards() {
-        var grid = document.getElementById("dashboard-grid");
-        grid.innerHTML = ""; // Bersihkan grid
+    function updateStatus(text, className) {
+        const el = document.getElementById("status");
+        el.textContent = text;
+        el.className = className;
+    }
 
-        for (var i = 1; i <= 18; i++) {
-            var card = document.createElement("div");
+    function createMeterCards() {
+        const grid = document.getElementById("dashboard-grid");
+        grid.innerHTML = "";
+        for (let i = 1; i <= 18; i++) {
+            const card = document.createElement("div");
             card.className = "meter-card";
-            card.id = "meter_" + i; 
-            
-            // INI ADALAH TAMPILAN 5 PARAMETER YANG STABIL
+            card.id = `meter_${i}`;
             card.innerHTML = `
-                <h3>Meter ID: ${i}</h3>
-                <p><span class="label">Status:</span> <span class="value" id="status_${i}">Menunggu data...</span></p>
-                <p><span class="label">Voltage (V):</span> <span class="value" id="v_${i}">-</span></p>
-                <p><span class="label">Current (A):</span> <span class="value" id="a_${i}">-</span></p>
-                <p><span class="label">Power (W):</span> <span class="value" id="p_${i}">-</span></p>
-                <p><span class="label">Total Ea Import (kWh):</span> <span class="value" id="e_${i}">-</span></p>
-                <p><span class="label">Frequency (Hz):</span> <span class="value" id="f_${i}">-</span></p>
+                <h3>Meter ID: ${i.toString().padStart(2, '0')}</h3>
+                <div class="row"><span class="label">Status:</span> <span class="value" id="s_${i}" style="color: orange">Menunggu...</span></div>
+                <div class="row"><span class="label">Voltage:</span> <div><span class="value" id="v_${i}">-</span><span class="unit">V</span></div></div>
+                <div class="row"><span class="label">Current:</span> <div><span class="value" id="a_${i}">-</span><span class="unit">A</span></div></div>
+                <div class="row"><span class="label">Active Power:</span> <div><span class="value" id="p_${i}">-</span><span class="unit">W</span></div></div>
+                <div class="row"><span class="label">Total Energy:</span> <div><span class="value" id="e_${i}">-</span><span class="unit">kWh</span></div></div>
+                <div class="row"><span class="label">Frequency:</span> <div><span class="value" id="f_${i}">-</span><span class="unit">Hz</span></div></div>
             `;
             grid.appendChild(card);
         }
@@ -136,44 +148,37 @@
 
     function onMessageArrived(message) {
         try {
-            var data = JSON.parse(message.payloadString);
+            const data = JSON.parse(message.payloadString);
             updateCard(data);
         } catch (e) {
-            console.error("Error parsing JSON:", e);
+            console.error("Data JSON rusak:", e);
         }
     }
 
-    // FUNGSI INI AKAN MENAMPILKAN "TOTAL EA IMPORT"
     function updateCard(data) {
-        var id = data.id; 
-        if (id < 1 || id > 18) return;
+        const id = data.id;
+        if (!id || id < 1 || id > 18) return;
 
-        // Update nilai di card yang sesuai
-        document.getElementById(`status_${id}`).innerHTML = "Online";
-        document.getElementById(`status_${id}`).style.color = "green";
-        
-        document.getElementById(`v_${id}`).innerHTML = data.v_avg.toFixed(2);
-        document.getElementById(`a_${id}`).innerHTML = data.a_avg.toFixed(3);
-        document.getElementById(`p_${id}`).innerHTML = data.p_total.toFixed(2);
-        
-        // INI BAGIAN "TOTAL EA IMPORT" ANDA
-        document.getElementById(`e_${id}`).innerHTML = data.energy.toFixed(4); 
-        
-        document.getElementById(`f_${id}`).innerHTML = data.freq.toFixed(2);
+        // Helper untuk format angka desimal
+        const fmt = (val, d) => (val !== undefined && val !== null) ? Number(val).toFixed(d) : "-";
 
-        // Highlight card
-        var card = document.getElementById(`meter_${id}`);
-        card.style.borderColor = "green";
-        card.style.boxShadow = "0 2px 8px rgba(0,128,0,0.3)";
-        setTimeout(() => { 
-            card.style.borderColor = "#ccc"; 
-            card.style.boxShadow = "0 2px 5px rgba(0,0,0,0.1)";
-        }, 1000);
+        document.getElementById(`s_${id}`).textContent = "Online ●";
+        document.getElementById(`s_${id}`).style.color = "#28a745";
+        document.getElementById(`v_${id}`).textContent = fmt(data.v_avg, 1);
+        document.getElementById(`a_${id}`).textContent = fmt(data.a_avg, 3);
+        document.getElementById(`p_${id}`).textContent = fmt(data.p_total, 1);
+        document.getElementById(`e_${id}`).textContent = fmt(data.energy, 3); // Total Ea Import
+        document.getElementById(`f_${id}`).textContent = fmt(data.freq, 2);
+
+        // Efek kedip saat update
+        const card = document.getElementById(`meter_${id}`);
+        card.classList.remove("highlight-update");
+        void card.offsetWidth; // Trigger reflow
+        card.classList.add("highlight-update");
     }
 
+    // Mulai aplikasi
+    init();
 </script>
 </body>
 </html>
-
-
-
