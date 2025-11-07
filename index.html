@@ -3,183 +3,138 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Meteran (18-Meter)</title>
+    <title>Monitor Energi Lengkap 18-Titik</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background-color: #f0f2f5; color: #333; }
-        h1 { text-align: center; color: #1a73e8; }
-        #status-container { text-align: center; margin-bottom: 30px; padding: 15px; background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        #status { font-weight: bold; transition: all 0.3s; }
-        .status-connected { color: #28a745; }
-        .status-disconnected { color: #dc3545; }
-        .status-connecting { color: #ffc107; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; }
+        h1 { text-align: center; color: #1a237e; }
+        #status { text-align: center; padding: 10px; margin-bottom: 20px; font-weight: bold; color: white; border-radius: 5px; }
+        .bg-ok { background: #43a047; } .bg-err { background: #e53935; } .bg-wait { background: #fb8c00; }
 
-        .grid-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 20px;
-            padding: 10px;
-        }
-        .meter-card {
-            background-color: #fff;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05), 0 1px 3px rgba(0,0,0,0.1);
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        .meter-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px rgba(0,0,0,0.1); }
-        .meter-card h3 { margin-top: 0; color: #444; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; font-size: 1.2em; }
-        .meter-card .row { display: flex; justify-content: space-between; margin: 8px 0; font-size: 0.95em; }
-        .meter-card .label { color: #666; }
-        .meter-card .value { font-weight: 600; color: #222; }
-        .meter-card .unit { color: #888; font-size: 0.9em; margin-left: 4px; }
-        .highlight-update { animation: highlight-fade 1s ease-out; }
-        @keyframes highlight-fade {
-            0% { background-color: rgba(40, 167, 69, 0.2); }
-            100% { background-color: #fff; }
-        }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 15px; }
+        .card { background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-top: 5px solid #bdbdbd; }
+        .card h3 { margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 10px; display: flex; justify-content: space-between; }
+        .badge { font-size: 0.7em; padding: 3px 8px; border-radius: 10px; background: #eee; color: #666; }
+        .badge.on { background: #c8e6c9; color: #2e7d32; }
+
+        .data-table { width: 100%; font-size: 0.9em; border-collapse: collapse; margin-top: 10px; }
+        .data-table td { padding: 3px 5px; border-bottom: 1px dotted #eee; }
+        .lbl { color: #555; font-weight: 500; }
+        .val { text-align: right; font-weight: bold; color: #000; }
+        .unit { color: #999; font-size: 0.8em; margin-left: 2px; }
+        .group-header { background: #e3f2fd; color: #1565c0; font-weight: bold; font-size: 0.85em; }
+
+        .highlight { animation: pulse 1s; }
+        @keyframes pulse { 0% { background: #e8f5e9; } 100% { background: #fff; } }
     </style>
 </head>
 <body>
-
-    <h1>Live Dashboard Schneider (18 Meter)</h1>
-    <div id="status-container">
-        Status Koneksi MQTT: <span id="status" class="status-connecting">Menghubungkan...</span>
-    </div>
-
-    <div class="grid-container" id="dashboard-grid">
-        </div>
+    <h1>Monitor Energi Lengkap (18 Titik)</h1>
+    <div id="status" class="bg-wait">Menghubungkan...</div>
+    <div class="grid" id="main"></div>
 
 <script>
-    // --- KONFIGURASI MQTT ---
-    const MQTT_HOST = "701d32236feb43b38c22855a611f4d42.s1.eu.hivemq.cloud";
-    const MQTT_PORT = 8884; // WSS Port
-    const MQTT_USER = "web_dashboard";
-    const MQTT_PASS = "Tristan12";
-    const MQTT_TOPIC = "politeknik/meter/data";
-    // ------------------------
+    // === KONFIGURASI MQTT ===
+    const HOST = "701d32236feb43b38c22855a611f4d42.s1.eu.hivemq.cloud";
+    const PORT = 8884;
+    const USER = "web_dashboard";
+    const PASS = "Tristan12";
+    const TOPIC = "politeknik/meter/data";
+    // ========================
 
-    let client;
-    let reconnectTimeout = 5000;
+    const client = new Paho.MQTT.Client(HOST, PORT, "web_" + Date.now());
 
-    // Fungsi inisialisasi awal
     function init() {
-        createMeterCards();
-        connectMQTT();
-    }
-
-    function connectMQTT() {
-        const clientId = "web_dash_" + Math.random().toString(16).substr(2, 8);
-        client = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, clientId);
-
-        client.onConnectionLost = onConnectionLost;
-        client.onMessageArrived = onMessageArrived;
-
-        const options = {
-            useSSL: true,
-            userName: MQTT_USER,
-            password: MQTT_PASS,
-            onSuccess: onConnect,
-            onFailure: onFail,
-            keepAliveInterval: 60,
-            timeout: 10
-        };
-
-        updateStatus("Menghubungkan ke HiveMQ...", "status-connecting");
-        try {
-            client.connect(options);
-        } catch (e) {
-            console.error("Error saat connect:", e);
-            onFail({ errorMessage: e.message });
-        }
-    }
-
-    function onConnect() {
-        console.log("MQTT Terhubung!");
-        updateStatus("Terhubung ✅", "status-connected");
-        client.subscribe(MQTT_TOPIC);
-    }
-
-    function onFail(responseObject) {
-        let msg = "Koneksi Gagal ❌";
-        if (responseObject.errorCode === 8) {
-             msg += ": Tidak diizinkan (Cek User/Pass atau Web Client setting di HiveMQ)";
-        } else {
-             msg += ": " + responseObject.errorMessage;
-        }
-        console.error("MQTT Gagal:", responseObject);
-        updateStatus(msg, "status-disconnected");
-        setTimeout(connectMQTT, reconnectTimeout); // Coba lagi nanti
-    }
-
-    function onConnectionLost(responseObject) {
-        if (responseObject.errorCode !== 0) {
-            console.warn("Koneksi Terputus:", responseObject.errorMessage);
-            updateStatus("Terputus ⚠️. Mencoba lagi...", "status-connecting");
-            setTimeout(connectMQTT, reconnectTimeout);
-        }
-    }
-
-    function updateStatus(text, className) {
-        const el = document.getElementById("status");
-        el.textContent = text;
-        el.className = className;
-    }
-
-    function createMeterCards() {
-        const grid = document.getElementById("dashboard-grid");
-        grid.innerHTML = "";
+        let html = "";
         for (let i = 1; i <= 18; i++) {
-            const card = document.createElement("div");
-            card.className = "meter-card";
-            card.id = `meter_${i}`;
-            card.innerHTML = `
-                <h3>Meter ID: ${i.toString().padStart(2, '0')}</h3>
-                <div class="row"><span class="label">Status:</span> <span class="value" id="s_${i}" style="color: orange">Menunggu...</span></div>
-                <div class="row"><span class="label">Voltage:</span> <div><span class="value" id="v_${i}">-</span><span class="unit">V</span></div></div>
-                <div class="row"><span class="label">Current:</span> <div><span class="value" id="a_${i}">-</span><span class="unit">A</span></div></div>
-                <div class="row"><span class="label">Active Power:</span> <div><span class="value" id="p_${i}">-</span><span class="unit">W</span></div></div>
-                <div class="row"><span class="label">Total Energy:</span> <div><span class="value" id="e_${i}">-</span><span class="unit">kWh</span></div></div>
-                <div class="row"><span class="label">Frequency:</span> <div><span class="value" id="f_${i}">-</span><span class="unit">Hz</span></div></div>
-            `;
-            grid.appendChild(card);
+            html += `
+            <div class="card" id="c${i}">
+                <h3>Meter #${i} <span id="s${i}" class="badge">Offline</span></h3>
+                <table class="data-table">
+                    <tr class="group-header"><td colspan="3">KELISTRIKAN DASAR</td></tr>
+                    <tr><td class="lbl">Volt (Avg)</td><td class="val" id="v${i}">-</td><td class="unit">V</td></tr>
+                    <tr><td class="lbl">Arus (Avg)</td><td class="val" id="i${i}">-</td><td class="unit">A</td></tr>
+                    <tr><td class="lbl">Freq</td><td class="val" id="f${i}">-</td><td class="unit">Hz</td></tr>
+                    <tr><td class="lbl">PF Total</td><td class="val" id="pf${i}">-</td><td class="unit"></td></tr>
+                    
+                    <tr class="group-header"><td colspan="3">DAYA (POWER)</td></tr>
+                    <tr><td class="lbl">Active (P)</td><td class="val" id="p${i}">-</td><td class="unit">W</td></tr>
+                    <tr><td class="lbl">Reactive (Q)</td><td class="val" id="q${i}">-</td><td class="unit">VAR</td></tr>
+                    <tr><td class="lbl">Apparent (S)</td><td class="val" id="sx${i}">-</td><td class="unit">VA</td></tr>
+
+                    <tr class="group-header"><td colspan="3">ENERGI (AKUMULASI)</td></tr>
+                    <tr style="background:#fff3e0"><td class="lbl">Total Ea Import</td><td class="val" id="ea${i}">-</td><td class="unit">kWh</td></tr>
+                    <tr><td class="lbl">Total Er Import</td><td class="val" id="er${i}">-</td><td class="unit">kVARh</td></tr>
+                    <tr><td class="lbl">Tariff 1 (Ea)</td><td class="val" id="t1${i}">-</td><td class="unit">kWh</td></tr>
+                    <tr><td class="lbl">Partial Ea</td><td class="val" id="eap${i}">-</td><td class="unit">kWh</td></tr>
+                    <tr><td class="lbl">Partial Er</td><td class="val" id="erp${i}">-</td><td class="unit">kVARh</td></tr>
+                    
+                    <tr class="group-header"><td colspan="3">LAINNYA</td></tr>
+                    <tr><td class="lbl">Waktu Operasi</td><td class="val" id="tm${i}">-</td><td class="unit">Jam</td></tr>
+                </table>
+            </div>`;
         }
+        document.getElementById("main").innerHTML = html;
+        connect();
     }
 
-    function onMessageArrived(message) {
-        try {
-            const data = JSON.parse(message.payloadString);
-            updateCard(data);
-        } catch (e) {
-            console.error("Data JSON rusak:", e);
+    function connect() {
+        client.connect({
+            useSSL: true, userName: USER, password: PASS,
+            onSuccess: () => {
+                document.getElementById("status").textContent = "Terhubung Sistem Utama ✅";
+                document.getElementById("status").className = "bg-ok";
+                client.subscribe(TOPIC);
+            },
+            onFailure: (e) => {
+                document.getElementById("status").textContent = "Gagal Terhubung: " + e.errorMessage;
+                document.getElementById("status").className = "bg-err";
+                setTimeout(connect, 5000);
+            }
+        });
+    }
+
+    client.onConnectionLost = (r) => {
+        if (r.errorCode !== 0) {
+            document.getElementById("status").textContent = "Koneksi Terputus ⚠️";
+            document.getElementById("status").className = "bg-wait";
+            setTimeout(connect, 5000);
         }
+    };
+
+    client.onMessageArrived = (m) => {
+        try { update(JSON.parse(m.payloadString)); } catch (e) {}
+    };
+
+    function update(d) {
+        const id = d.id; if (!id) return;
+        const f = (v, n) => (v != null) ? Number(v).toFixed(n) : "-";
+        
+        document.getElementById(`s${id}`).textContent = "ONLINE";
+        document.getElementById(`s${id}`).classList.add("on");
+        document.getElementById(`c${id}`).style.borderTopColor = "#43a047";
+
+        document.getElementById(`v${id}`).textContent = f(d.v, 1);
+        document.getElementById(`i${id}`).textContent = f(d.i, 3);
+        document.getElementById(`f${id}`).textContent = f(d.f, 2);
+        document.getElementById(`pf${id}`).textContent = f(d.pf, 3);
+        document.getElementById(`p${id}`).textContent = f(d.p, 1);
+        document.getElementById(`q${id}`).textContent = f(d.q, 1);
+        document.getElementById(`sx${id}`).textContent = f(d.s, 1);
+        document.getElementById(`ea${id}`).textContent = f(d.ea, 3);
+        document.getElementById(`er${id}`).textContent = f(d.er, 3);
+        document.getElementById(`t1${id}`).textContent = f(d.t1, 3);
+        document.getElementById(`eap${id}`).textContent = f(d.eap, 3);
+        document.getElementById(`erp${id}`).textContent = f(d.erp, 3);
+        document.getElementById(`tm${id}`).textContent = f(d.tm, 1);
+
+        const card = document.getElementById(`c${id}`);
+        card.classList.remove("highlight");
+        void card.offsetWidth;
+        card.classList.add("highlight");
     }
 
-    function updateCard(data) {
-        const id = data.id;
-        if (!id || id < 1 || id > 18) return;
-
-        // Helper untuk format angka desimal
-        const fmt = (val, d) => (val !== undefined && val !== null) ? Number(val).toFixed(d) : "-";
-
-        document.getElementById(`s_${id}`).textContent = "Online ●";
-        document.getElementById(`s_${id}`).style.color = "#28a745";
-        document.getElementById(`v_${id}`).textContent = fmt(data.v_avg, 1);
-        document.getElementById(`a_${id}`).textContent = fmt(data.a_avg, 3);
-        document.getElementById(`p_${id}`).textContent = fmt(data.p_total, 1);
-        document.getElementById(`e_${id}`).textContent = fmt(data.energy, 3); // Total Ea Import
-        document.getElementById(`f_${id}`).textContent = fmt(data.freq, 2);
-
-        // Efek kedip saat update
-        const card = document.getElementById(`meter_${id}`);
-        card.classList.remove("highlight-update");
-        void card.offsetWidth; // Trigger reflow
-        card.classList.add("highlight-update");
-    }
-
-    // Mulai aplikasi
     init();
 </script>
 </body>
 </html>
-
