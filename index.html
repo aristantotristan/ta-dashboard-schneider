@@ -3,74 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monitor Energi Lengkap 18-Titik</title>
+    <title>Monitor Energi v8 (Operating Time)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; }
-        h1 { text-align: center; color: #1a237e; }
+        h1 { text-align: center; color: #1a237e; margin-bottom: 10px; }
         #status { text-align: center; padding: 10px; margin-bottom: 20px; font-weight: bold; color: white; border-radius: 5px; }
         .bg-ok { background: #43a047; } .bg-err { background: #e53935; } .bg-wait { background: #fb8c00; }
 
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 15px; }
-        .card { background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-top: 5px solid #bdbdbd; }
-        .card h3 { margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 10px; display: flex; justify-content: space-between; }
-        .badge { font-size: 0.7em; padding: 3px 8px; border-radius: 10px; background: #eee; color: #666; }
-        .badge.on { background: #c8e6c9; color: #2e7d32; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px; }
+        .card { background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-top: 5px solid #bdbdbd; transition: all 0.3s ease; }
+        .card h3 { margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .badge { font-size: 0.7em; padding: 4px 8px; border-radius: 12px; background: #eee; color: #999; font-weight: bold; }
+        .badge.on { background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
 
-        .data-table { width: 100%; font-size: 0.9em; border-collapse: collapse; margin-top: 10px; }
-        .data-table td { padding: 3px 5px; border-bottom: 1px dotted #eee; }
-        .lbl { color: #555; font-weight: 500; }
-        .val { text-align: right; font-weight: bold; color: #000; }
-        .unit { color: #999; font-size: 0.8em; margin-left: 2px; }
-        .group-header { background: #e3f2fd; color: #1565c0; font-weight: bold; font-size: 0.85em; }
-
-        .highlight { animation: pulse 1s; }
-        @keyframes pulse { 0% { background: #e8f5e9; } 100% { background: #fff; } }
+        .data-table { width: 100%; font-size: 0.95em; border-collapse: collapse; margin-top: 15px; }
+        .data-table td { padding: 6px 5px; border-bottom: 1px dotted #eee; vertical-align: middle; }
+        .lbl { color: #666; font-weight: 500; }
+        .val { text-align: right; font-weight: bold; color: #222; font-size: 1.1em; }
+        .unit { color: #999; font-size: 0.8em; width: 40px; text-align: right; }
+        
+        .op-time-row { background: #e3f2fd; }
+        .highlight { animation: pulse 0.8s; }
+        @keyframes pulse { 0% { background: #e8f5e9; transform: scale(1.02); } 100% { background: #fff; transform: scale(1); } }
     </style>
 </head>
 <body>
-    <h1>Monitor Energi Lengkap (18 Titik)</h1>
-    <div id="status" class="bg-wait">Menghubungkan...</div>
+    <h1>Monitor Energi 18 Titik (v8)</h1>
+    <div id="status" class="bg-wait">Menghubungkan ke HiveMQ...</div>
     <div class="grid" id="main"></div>
 
 <script>
-    // === KONFIGURASI MQTT ===
+    // === KONFIGURASI MQTT (SAMA DENGAN ESP32) ===
     const HOST = "701d32236feb43b38c22855a611f4d42.s1.eu.hivemq.cloud";
-    const PORT = 8884;
+    const PORT = 8884; // Port WSS untuk Web
     const USER = "web_dashboard";
     const PASS = "Tristan12";
     const TOPIC = "politeknik/meter/data";
-    // ========================
+    // ============================================
 
-    const client = new Paho.MQTT.Client(HOST, PORT, "web_" + Date.now());
+    const client = new Paho.MQTT.Client(HOST, PORT, "web_v8_" + Date.now());
 
     function init() {
         let html = "";
         for (let i = 1; i <= 18; i++) {
             html += `
             <div class="card" id="c${i}">
-                <h3>Meter #${i} <span id="s${i}" class="badge">Offline</span></h3>
+                <h3>Meter #${i} <span id="s${i}" class="badge">OFFLINE</span></h3>
                 <table class="data-table">
-                    <tr class="group-header"><td colspan="3">KELISTRIKAN DASAR</td></tr>
-                    <tr><td class="lbl">Volt (Avg)</td><td class="val" id="v${i}">-</td><td class="unit">V</td></tr>
-                    <tr><td class="lbl">Arus (Avg)</td><td class="val" id="i${i}">-</td><td class="unit">A</td></tr>
-                    <tr><td class="lbl">Freq</td><td class="val" id="f${i}">-</td><td class="unit">Hz</td></tr>
-                    <tr><td class="lbl">PF Total</td><td class="val" id="pf${i}">-</td><td class="unit"></td></tr>
-                    
-                    <tr class="group-header"><td colspan="3">DAYA (POWER)</td></tr>
-                    <tr><td class="lbl">Active (P)</td><td class="val" id="p${i}">-</td><td class="unit">W</td></tr>
-                    <tr><td class="lbl">Reactive (Q)</td><td class="val" id="q${i}">-</td><td class="unit">VAR</td></tr>
-                    <tr><td class="lbl">Apparent (S)</td><td class="val" id="sx${i}">-</td><td class="unit">VA</td></tr>
-
-                    <tr class="group-header"><td colspan="3">ENERGI (AKUMULASI)</td></tr>
-                    <tr style="background:#fff3e0"><td class="lbl">Total Ea Import</td><td class="val" id="ea${i}">-</td><td class="unit">kWh</td></tr>
-                    <tr><td class="lbl">Total Er Import</td><td class="val" id="er${i}">-</td><td class="unit">kVARh</td></tr>
-                    <tr><td class="lbl">Tariff 1 (Ea)</td><td class="val" id="t1${i}">-</td><td class="unit">kWh</td></tr>
-                    <tr><td class="lbl">Partial Ea</td><td class="val" id="eap${i}">-</td><td class="unit">kWh</td></tr>
-                    <tr><td class="lbl">Partial Er</td><td class="val" id="erp${i}">-</td><td class="unit">kVARh</td></tr>
-                    
-                    <tr class="group-header"><td colspan="3">LAINNYA</td></tr>
-                    <tr><td class="lbl">Waktu Operasi</td><td class="val" id="tm${i}">-</td><td class="unit">dd hh:mm:ss</td></tr>
+                    <tr><td class="lbl">Tegangan (V)</td><td class="val" id="v${i}">-</td><td class="unit">V</td></tr>
+                    <tr><td class="lbl">Arus (I)</td><td class="val" id="a${i}">-</td><td class="unit">A</td></tr>
+                    <tr><td class="lbl">Daya Aktif (P)</td><td class="val" id="p${i}">-</td><td class="unit">W</td></tr>
+                    <tr><td class="lbl">Total Energi</td><td class="val" id="kwh${i}">-</td><td class="unit">kWh</td></tr>
+                    <tr><td class="lbl">Frekuensi</td><td class="val" id="hz${i}">-</td><td class="unit">Hz</td></tr>
+                    <tr class="op-time-row"><td class="lbl">⏱️ Waktu Operasi</td><td class="val" id="op${i}">-</td><td class="unit">Jam</td></tr>
                 </table>
             </div>`;
         }
@@ -82,12 +68,12 @@
         client.connect({
             useSSL: true, userName: USER, password: PASS,
             onSuccess: () => {
-                document.getElementById("status").textContent = "Terhubung Sistem Utama ✅";
+                document.getElementById("status").textContent = "✅ Terhubung ke Sistem Monitoring";
                 document.getElementById("status").className = "bg-ok";
                 client.subscribe(TOPIC);
             },
             onFailure: (e) => {
-                document.getElementById("status").textContent = "Gagal Terhubung: " + e.errorMessage;
+                document.getElementById("status").textContent = "❌ Gagal: " + e.errorMessage;
                 document.getElementById("status").className = "bg-err";
                 setTimeout(connect, 5000);
             }
@@ -96,47 +82,39 @@
 
     client.onConnectionLost = (r) => {
         if (r.errorCode !== 0) {
-            document.getElementById("status").textContent = "Koneksi Terputus ⚠️";
+            document.getElementById("status").textContent = "⚠️ Koneksi Terputus. Menyambung ulang...";
             document.getElementById("status").className = "bg-wait";
             setTimeout(connect, 5000);
         }
     };
 
     client.onMessageArrived = (m) => {
-        try { update(JSON.parse(m.payloadString)); } catch (e) {}
+        try { update(JSON.parse(m.payloadString)); } catch (e) { console.error(e); }
     };
 
     function update(d) {
         const id = d.id; if (!id) return;
-        const f = (v,n) => (v!=null) ? Number(v).toFixed(n) : "-";
+        // Helper untuk format angka desimal
+        const f = (v, n) => (v != null && !isNaN(v)) ? Number(v).toFixed(n) : "-";
         
-        document.getElementById(`s${id}`).textContent = "ONLINE";
-        document.getElementById(`s${id}`).classList.add("on");
+        // Update Status Online
+        const badge = document.getElementById(`s${id}`);
+        badge.textContent = "ONLINE";
+        badge.classList.add("on");
         document.getElementById(`c${id}`).style.borderTopColor = "#43a047";
 
+        // Update Data sesuai JSON v8: {id, v, a, p, kwh, hz, op_h}
         document.getElementById(`v${id}`).textContent = f(d.v, 1);
-        document.getElementById(`i${id}`).textContent = f(d.i, 3);
-        document.getElementById(`f${id}`).textContent = f(d.f, 2);
-        document.getElementById(`pf${id}`).textContent = f(d.pf, 3);
-        document.getElementById(`p${id}`).textContent = f(d.p, 1);
-        document.getElementById(`q${id}`).textContent = f(d.q, 1);
-        document.getElementById(`sx${id}`).textContent = f(d.s, 1);
-        document.getElementById(`ea${id}`).textContent = f(d.ea, 3);
-        document.getElementById(`er${id}`).textContent = f(d.er, 3);
-        document.getElementById(`t1${id}`).textContent = f(d.t1, 3);
-        document.getElementById(`eap${id}`).textContent = f(d.eap, 3);
-        document.getElementById(`erp${id}`).textContent = f(d.erp, 3);
+        document.getElementById(`a${id}`).textContent = f(d.a, 2);
+        document.getElementById(`p${id}`).textContent = f(d.p, 0);    // Daya biasanya bulat
+        document.getElementById(`kwh${id}`).textContent = f(d.kwh, 2); // Energi 2 desimal
+        document.getElementById(`hz${id}`).textContent = f(d.hz, 1);
+        document.getElementById(`op${id}`).textContent = f(d.op_h, 2); // Operating Hours
 
-        // --- Update Operating Time ---
-        const days = d.runtime_days || 0;
-        const hours = d.runtime_hours || 0;
-        const mins = d.runtime_minutes || 0;
-        const secs = d.runtime_seconds || 0;
-        document.getElementById(`tm${id}`).textContent = `${days}d ${hours}h ${mins}m ${secs}s`;
-
+        // Efek kedip saat data masuk
         const card = document.getElementById(`c${id}`);
         card.classList.remove("highlight");
-        void card.offsetWidth;
+        void card.offsetWidth; 
         card.classList.add("highlight");
     }
 
