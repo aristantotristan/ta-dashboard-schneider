@@ -3,43 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monitor Energi v9 (Mesin)</title>
+    <title>Monitor Energi V10 (13 Param)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; background: #eef2f7; padding: 20px; color: #333; }
-        h1 { text-align: center; color: #1565c0; margin-bottom: 10px; white-space: pre-line; }
-        #status { text-align: center; padding: 12px; margin-bottom: 25px; font-weight: 600; color: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: all 0.3s; }
+        body { font-family: 'Segoe UI', Roboto, sans-serif; background: #e3e7ed; padding: 20px; color: #333; }
+        h1 { text-align: center; color: #0d47a1; margin-bottom: 5px; white-space: pre-line; }
+        h2 { text-align: center; color: #546e7a; font-size: 1em; margin-top: 0; margin-bottom: 20px; }
+        #status { text-align: center; padding: 10px; margin-bottom: 20px; font-weight: 600; color: white; border-radius: 6px; font-size: 0.9em; transition: all 0.3s; }
         .bg-ok { background: #2e7d32; } .bg-err { background: #c62828; } .bg-wait { background: #f57c00; }
 
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
-        .card { background: #fff; padding: 0; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); overflow: hidden; border-top: 6px solid #cfd8dc; transition: transform 0.2s, box-shadow 0.2s; }
-        .card:hover { transform: translateY(-3px); box-shadow: 0 6px 12px rgba(0,0,0,0.1); }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 15px; }
+        .card { background: #fff; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.08); overflow: hidden; border-top: 5px solid #b0bec5; }
         
-        .card-header { padding: 15px; background: #f8f9fa; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
-        .card-header h3 { margin: 0; font-size: 1.1em; color: #455a64; }
-        .badge { font-size: 0.75em; padding: 5px 10px; border-radius: 20px; background: #eceff1; color: #b0bec5; font-weight: 700; letter-spacing: 0.5px; }
-        .badge.on { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; box-shadow: 0 0 5px rgba(76,175,80,0.2); }
+        .card-header { padding: 10px 15px; background: #f5f7fa; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; }
+        .card-header h3 { margin: 0; font-size: 1em; color: #37474f; font-weight: 700; }
+        .badge { font-size: 0.7em; padding: 3px 8px; border-radius: 10px; background: #cfd8dc; color: #90a4ae; font-weight: 700; }
+        .badge.on { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
 
-        .card-body { padding: 15px; }
-        .data-table { width: 100%; font-size: 0.9em; border-collapse: separate; border-spacing: 0 4px; }
-        .data-table td { padding: 4px 8px; vertical-align: middle; }
+        .card-body { padding: 10px; }
+        /* Tabel lebih kompak untuk 13 parameter */
+        .data-table { width: 100%; font-size: 0.85em; border-collapse: collapse; }
+        .data-table td { padding: 3px 5px; vertical-align: middle; border-bottom: 1px dashed #f0f0f0; }
+        .data-table tr:last-child td { border-bottom: none; }
         .lbl { color: #78909c; font-weight: 500; }
-        .val { text-align: right; font-weight: 700; color: #263238; font-size: 1.15em; }
-        .unit { color: #b0bec5; font-size: 0.85em; width: 35px; text-align: right; }
+        .val { text-align: right; font-weight: 700; color: #263238; font-size: 1.1em; }
+        .unit { color: #b0bec5; font-size: 0.8em; width: 30px; text-align: right; }
         
-        .row-highlight { background: #e3f2fd; border-radius: 4px; }
-        .op-time-lbl { color: #1565c0; font-weight: 600; }
-        .op-time-val { color: #0d47a1; }
+        /* Highlight baris penting */
+        .row-highlight { background: #e1f5fe; }
+        .row-total { background: #fff3e0; }
+        .op-time-val { color: #0277bd; }
 
-        /* Animasi kedip saat data masuk */
-        .update-flash { animation: flash 1s ease-out; }
+        .update-flash { animation: flash 0.8s ease-out; }
         @keyframes flash { 0% { background-color: #e8f5e9; } 100% { background-color: #fff; } }
     </style>
 </head>
 <body>
-    <h1>Monitoring Energi 
-    PT. Amarilys Karisma Gemilang</h1>
-    <div id="status" class="bg-wait">Menghubungkan ke Broker MQTT...</div>
+    <h1>MONITORING ENERGI</h1>
+    <h2>PT. Amarilys Karisma Gemilang</h2>
+    
+    <div id="status" class="bg-wait">Menghubungkan ke MQTT...</div>
     <div class="grid" id="main"></div>
 
 <script>
@@ -51,12 +54,11 @@
     const MQTT_TOPIC = "politeknik/meter/data";
     // ========================
 
-    const client = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_v9_" + Math.floor(Math.random() * 10000));
+    const client = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_v10_" + Date.now());
 
     function initDashboard() {
         let html = "";
         for (let i = 1; i <= 18; i++) {
-            // PERUBAHAN DISINI: Mengganti 'Meter #' menjadi 'Mesin '
             html += `
             <div class="card" id="c${i}">
                 <div class="card-header">
@@ -65,17 +67,19 @@
                 </div>
                 <div class="card-body">
                     <table class="data-table">
-                        <tr><td class="lbl">Tegangan</td><td class="val" id="v${i}">-</td><td class="unit">V</td></tr>
-                        <tr><td class="lbl">Arus</td><td class="val" id="i${i}">-</td><td class="unit">A</td></tr>
-                        <tr><td class="lbl">Daya Aktif</td><td class="val" id="p${i}">-</td><td class="unit">W</td></tr>
-                        <tr><td class="lbl">Energi Total</td><td class="val" id="e${i}">-</td><td class="unit">kWh</td></tr>
-                        <tr><td class="lbl">Frekuensi</td><td class="val" id="hz${i}">-</td><td class="unit">Hz</td></tr>
-                        <tr><td class="lbl">Power Factor</td><td class="val" id="pf${i}">-</td><td class="unit">PF</td></tr>
-                        <tr class="row-highlight">
-                            <td class="lbl op-time-lbl">⏱️ Waktu Operasi</td>
-                            <td class="val op-time-val" id="op${i}">-</td>
-                            <td class="unit" style="color:#1565c0">Jam</td>
-                        </tr>
+                        <tr><td class="lbl">1. Tegangan (V)</td><td class="val" id="p1_${i}">-</td><td class="unit">V</td></tr>
+                        <tr><td class="lbl">2. Arus (I)</td><td class="val" id="p2_${i}">-</td><td class="unit">A</td></tr>
+                        <tr class="row-highlight"><td class="lbl">3. Daya Aktif (P)</td><td class="val" id="p3_${i}">-</td><td class="unit">W</td></tr>
+                        <tr><td class="lbl">4. Daya Semu (S)</td><td class="val" id="p4_${i}">-</td><td class="unit">VA</td></tr>
+                        <tr><td class="lbl">5. Daya Reaktif (Q)</td><td class="val" id="p5_${i}">-</td><td class="unit">VAR</td></tr>
+                        <tr><td class="lbl">6. Power Factor</td><td class="val" id="p6_${i}">-</td><td class="unit">PF</td></tr>
+                        <tr><td class="lbl">7. Frekuensi</td><td class="val" id="p7_${i}">-</td><td class="unit">Hz</td></tr>
+                        <tr class="row-total"><td class="lbl">8. Energi Total</td><td class="val" id="p8_${i}">-</td><td class="unit">kWh</td></tr>
+                        <tr><td class="lbl">9. Energi Hari Ini</td><td class="val" id="p9_${i}">-</td><td class="unit">kWh</td></tr>
+                        <tr><td class="lbl">10. V Min (Harian)</td><td class="val" id="p10_${i}">-</td><td class="unit">V</td></tr>
+                        <tr><td class="lbl">11. V Max (Harian)</td><td class="val" id="p11_${i}">-</td><td class="unit">V</td></tr>
+                        <tr><td class="lbl">12. I Max (Harian)</td><td class="val" id="p12_${i}">-</td><td class="unit">A</td></tr>
+                        <tr style="background:#e8eaf6"><td class="lbl" style="color:#1a237e">13. Waktu Operasi</td><td class="val op-time-val" id="p13_${i}">-</td><td class="unit">Jam</td></tr>
                     </table>
                 </div>
             </div>`;
@@ -89,63 +93,50 @@
         client.connect({
             useSSL: true, userName: MQTT_USER, password: MQTT_PASS,
             onSuccess: onConnect,
-            onFailure: (e) => {
-                setStatus("Gagal Terhubung: " + e.errorMessage, "bg-err");
-                setTimeout(startConnection, 5000);
-            }
+            onFailure: (e) => { setStatus("Gagal: " + e.errorMessage, "bg-err"); setTimeout(startConnection, 5000); }
         });
     }
 
     function onConnect() {
-        setStatus("Online", "bg-ok");
+        setStatus("✅ SISTEM ONLINE SINKRON", "bg-ok");
         client.subscribe(MQTT_TOPIC);
     }
 
-    client.onConnectionLost = (r) => {
-        if (r.errorCode !== 0) {
-            setStatus("⚠️ Koneksi Terputus. Menyambung ulang...", "bg-wait");
-            setTimeout(startConnection, 5000);
-        }
-    };
-
-    client.onMessageArrived = (m) => {
-        try { updateMeter(JSON.parse(m.payloadString)); } catch (e) { console.error(e); }
-    };
+    client.onConnectionLost = (r) => { if (r.errorCode !== 0) { setStatus("⚠️ Putus. Reconnecting...", "bg-wait"); setTimeout(startConnection, 5000); }};
+    client.onMessageArrived = (m) => { try { updateMeter(JSON.parse(m.payloadString)); } catch (e) { console.error(e); }};
 
     function updateMeter(d) {
         const id = d.id; if (!id) return;
         const fmt = (val, dig) => (val != null && !isNaN(val)) ? Number(val).toFixed(dig) : "-";
 
+        // Update Status Badge
         const badge = document.getElementById(`s${id}`);
-        const card = document.getElementById(`c${id}`);
-        if (badge.textContent !== "ONLINE") {
-            badge.textContent = "ONLINE";
-            badge.className = "badge on";
-            card.style.borderTopColor = "#4caf50";
-        }
+        if (badge.textContent !== "ONLINE") { badge.textContent = "ONLINE"; badge.className = "badge on"; document.getElementById(`c${id}`).style.borderTopColor = "#2e7d32"; }
 
-        document.getElementById(`v${id}`).textContent  = fmt(d.v, 1);
-        document.getElementById(`i${id}`).textContent  = fmt(d.i, 3);
-        document.getElementById(`p${id}`).textContent  = fmt(d.p, 1);
-        document.getElementById(`e${id}`).textContent  = fmt(d.e, 2);
-        document.getElementById(`hz${id}`).textContent = fmt(d.hz, 1);
-        document.getElementById(`pf${id}`).textContent = fmt(d.pf, 2);
-        document.getElementById(`op${id}`).textContent = fmt(d.op, 1);
+        // === MAPPING 13 PARAMETER (SESUAIKAN KEY JSON DI SINI) ===
+        // Format: document.getElementById(`p[NOMOR]_${id}`).textContent = fmt(d.[KEY_JSON], [DESIMAL]);
+        
+        document.getElementById(`p1_${id}`).textContent  = fmt(d.v, 1);      // 1. Tegangan
+        document.getElementById(`p2_${id}`).textContent  = fmt(d.i, 3);      // 2. Arus
+        document.getElementById(`p3_${id}`).textContent  = fmt(d.p, 1);      // 3. Daya Aktif (W)
+        document.getElementById(`p4_${id}`).textContent  = fmt(d.va, 1);     // 4. Daya Semu (VA) - Pastikan key 'va' dikirim ESP32
+        document.getElementById(`p5_${id}`).textContent  = fmt(d.var, 1);    // 5. Daya Reaktif (VAR) - Pastikan key 'var' dikirim
+        document.getElementById(`p6_${id}`).textContent  = fmt(d.pf, 2);     // 6. Power Factor
+        document.getElementById(`p7_${id}`).textContent  = fmt(d.hz, 1);     // 7. Frekuensi
+        document.getElementById(`p8_${id}`).textContent  = fmt(d.e, 2);      // 8. Energi Total (kWh)
+        document.getElementById(`p9_${id}`).textContent  = fmt(d.e_day, 2);  // 9. Energi Hari Ini - Pastikan key 'e_day' dikirim
+        document.getElementById(`p10_${id}`).textContent = fmt(d.vmin, 1);   // 10. V Min
+        document.getElementById(`p11_${id}`).textContent = fmt(d.vmax, 1);   // 11. V Max
+        document.getElementById(`p12_${id}`).textContent = fmt(d.imax, 2);   // 12. I Max
+        document.getElementById(`p13_${id}`).textContent = fmt(d.op, 1);     // 13. Waktu Operasi
 
-        const cardBody = card.querySelector('.card-body');
-        cardBody.classList.remove("update-flash");
-        void cardBody.offsetWidth;
-        cardBody.classList.add("update-flash");
+        // Animasi Flash
+        const cb = document.getElementById(`c${id}`).querySelector('.card-body');
+        cb.classList.remove("update-flash"); void cb.offsetWidth; cb.classList.add("update-flash");
     }
 
-    function setStatus(msg, className) {
-        const s = document.getElementById("status");
-        s.textContent = msg;
-        s.className = className;
-    }
-
+    function setStatus(msg, cls) { const s = document.getElementById("status"); s.textContent = msg; s.className = cls; }
     initDashboard();
 </script>
 </body>
 </html>
-
