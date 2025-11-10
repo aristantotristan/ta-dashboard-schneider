@@ -101,7 +101,7 @@
     }
 
     function onConnect() {
-        setStatus("✅ Terhubung ke Sistem Monitoring", "bg-ok");
+        setStatus("Online", "bg-ok");
         client.subscribe(MQTT_TOPIC);
     }
 
@@ -167,4 +167,5 @@
 </script>
 </body>
 </html>
+
 
