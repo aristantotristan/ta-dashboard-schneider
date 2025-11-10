@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monitor Energi v9 (Full Data)</title>
+    <title>Monitor Energi v9 (Mesin)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; background: #eef2f7; padding: 20px; color: #333; }
-        h1 { text-align: center; color: #1565c0; margin-bottom: 10px; }
+        h1 { text-align: center; color: #1565c0; margin-bottom: 10px; white-space: pre-line; }
         #status { text-align: center; padding: 12px; margin-bottom: 25px; font-weight: 600; color: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: all 0.3s; }
         .bg-ok { background: #2e7d32; } .bg-err { background: #c62828; } .bg-wait { background: #f57c00; }
 
@@ -37,16 +37,15 @@
     </style>
 </head>
 <body>
-    <h1>Monitoing Energi 
-    PT.Amarilys Karisma Gemilang</h1>
+    <h1>Monitoring Energi 
+    PT. Amarilys Karisma Gemilang</h1>
     <div id="status" class="bg-wait">Menghubungkan ke Broker MQTT...</div>
     <div class="grid" id="main"></div>
 
 <script>
     // === KONFIGURASI MQTT ===
-    // Pastikan ini SAMA PERSIS dengan yang ada di kodingan ESP32
     const MQTT_HOST = "701d32236feb43b38c22855a611f4d42.s1.eu.hivemq.cloud";
-    const MQTT_PORT = 8884; // Port WebSocket Secure (WSS)
+    const MQTT_PORT = 8884;
     const MQTT_USER = "web_dashboard";
     const MQTT_PASS = "Tristan12";
     const MQTT_TOPIC = "politeknik/meter/data";
@@ -54,14 +53,14 @@
 
     const client = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_v9_" + Math.floor(Math.random() * 10000));
 
-    // Inisialisasi Kartu Tampilan
     function initDashboard() {
         let html = "";
         for (let i = 1; i <= 18; i++) {
+            // PERUBAHAN DISINI: Mengganti 'Meter #' menjadi 'Mesin '
             html += `
             <div class="card" id="c${i}">
                 <div class="card-header">
-                    <h3>Meter #${i}</h3>
+                    <h3>Mesin ${i}</h3>
                     <span id="s${i}" class="badge">OFFLINE</span>
                 </div>
                 <div class="card-body">
@@ -85,74 +84,57 @@
         startConnection();
     }
 
-    // Fungsi Koneksi MQTT
     function startConnection() {
         setStatus("Menghubungkan...", "bg-wait");
         client.connect({
-            useSSL: true, 
-            userName: MQTT_USER, 
-            password: MQTT_PASS,
+            useSSL: true, userName: MQTT_USER, password: MQTT_PASS,
             onSuccess: onConnect,
             onFailure: (e) => {
                 setStatus("Gagal Terhubung: " + e.errorMessage, "bg-err");
-                setTimeout(startConnection, 5000); // Coba lagi setelah 5 detik
+                setTimeout(startConnection, 5000);
             }
         });
     }
 
     function onConnect() {
-        setStatus("Online", "bg-ok");
+        setStatus("✅ Online - Terhubung ke Sistem", "bg-ok");
         client.subscribe(MQTT_TOPIC);
     }
 
-    client.onConnectionLost = (responseObject) => {
-        if (responseObject.errorCode !== 0) {
+    client.onConnectionLost = (r) => {
+        if (r.errorCode !== 0) {
             setStatus("⚠️ Koneksi Terputus. Menyambung ulang...", "bg-wait");
             setTimeout(startConnection, 5000);
         }
     };
 
-    client.onMessageArrived = (message) => {
-        try {
-            const payload = message.payloadString;
-            // console.log("Data masuk:", payload); // Debug jika perlu
-            updateMeter(JSON.parse(payload));
-        } catch (e) {
-            console.error("Error parsing data:", e);
-        }
+    client.onMessageArrived = (m) => {
+        try { updateMeter(JSON.parse(m.payloadString)); } catch (e) { console.error(e); }
     };
 
-    // Update Tampilan per Meter
     function updateMeter(d) {
-        const id = d.id;
-        if (!id) return;
-
-        // Helper untuk format angka desimal yang aman
+        const id = d.id; if (!id) return;
         const fmt = (val, dig) => (val != null && !isNaN(val)) ? Number(val).toFixed(dig) : "-";
 
-        // 1. Update Status menjadi ONLINE
         const badge = document.getElementById(`s${id}`);
         const card = document.getElementById(`c${id}`);
         if (badge.textContent !== "ONLINE") {
             badge.textContent = "ONLINE";
             badge.className = "badge on";
-            card.style.borderTopColor = "#4caf50"; // Hijau saat online
+            card.style.borderTopColor = "#4caf50";
         }
 
-        // 2. Isi Data ke Tabel (Sesuai Key JSON ESP32 Terbaru)
-        // Key yang diharapkan dari ESP32: { id, v, i, p, e, hz, pf, op }
-        document.getElementById(`v${id}`).textContent  = fmt(d.v, 1);   // Tegangan (1 desimal)
-        document.getElementById(`i${id}`).textContent  = fmt(d.i, 3);   // Arus (3 desimal agar presisi untuk arus kecil)
-        document.getElementById(`p${id}`).textContent  = fmt(d.p, 1);   // Daya (1 desimal)
-        document.getElementById(`e${id}`).textContent  = fmt(d.e, 2);   // Energi kWh (2 desimal)
-        document.getElementById(`hz${id}`).textContent = fmt(d.hz, 1);  // Frekuensi (1 desimal)
-        document.getElementById(`pf${id}`).textContent = fmt(d.pf, 2);  // Power Factor (2 desimal)
-        document.getElementById(`op${id}`).textContent = fmt(d.op, 1);  // Operating Time (1 desimal)
+        document.getElementById(`v${id}`).textContent  = fmt(d.v, 1);
+        document.getElementById(`i${id}`).textContent  = fmt(d.i, 3);
+        document.getElementById(`p${id}`).textContent  = fmt(d.p, 1);
+        document.getElementById(`e${id}`).textContent  = fmt(d.e, 2);
+        document.getElementById(`hz${id}`).textContent = fmt(d.hz, 1);
+        document.getElementById(`pf${id}`).textContent = fmt(d.pf, 2);
+        document.getElementById(`op${id}`).textContent = fmt(d.op, 1);
 
-        // 3. Efek Visual Data Baru
         const cardBody = card.querySelector('.card-body');
         cardBody.classList.remove("update-flash");
-        void cardBody.offsetWidth; // Trigger reflow untuk reset animasi
+        void cardBody.offsetWidth;
         cardBody.classList.add("update-flash");
     }
 
@@ -162,10 +144,7 @@
         s.className = className;
     }
 
-    // Mulai Aplikasi
     initDashboard();
 </script>
 </body>
 </html>
-
-
