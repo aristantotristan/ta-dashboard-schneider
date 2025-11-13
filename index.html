@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monitor Energi V15 (Unit Dikonversi)</title>
+    <title>Monitor Energi V17 (Label Sesuai)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; background: #f0f2f5; padding: 20px; color: #333; }
@@ -30,6 +30,7 @@
         
         .row-energy { background: #e3f2fd; }
         .row-time { background: #e8f5e9; }
+        .time-val { font-size: 1.05em; text-align: right; }
 
         .update-flash { animation: flash 1s ease-out; }
         @keyframes flash { 0% { background-color: #e8f5e9; } 100% { background-color: #fff; } }
@@ -51,14 +52,14 @@
     const MQTT_TOPIC = "politeknik/meter/data";
     // ========================
 
-    const client = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_v15_solo_" + Date.now());
+    const client = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_v17_solo_" + Date.now());
 
     function initDashboard() {
         let html = "";
         const i = 1; // Hanya buat kartu ID 1
 
         // ==========================================================
-        // --- LABEL SATUAN HTML DI-UPDATE DI SINI ---
+        // --- LABEL HTML DISESUAIKAN DENGAN LIST KAMU ---
         // ==========================================================
         html += `
         <div class="card" id="c${i}">
@@ -68,23 +69,23 @@
             </div>
             <div class="card-body">
                 <table class="data-table">
-                    <tr class="row-energy"><td class="lbl">1. Total Active Energy</td><td class="val" id="e${i}">-</td><td class="unit">kWh</td></tr>
-                    <tr class="row-energy"><td class="lbl">2. Total Reactive Energy</td><td class="val" id="q_tot${i}">-</td><td class="unit">kVARh</td></tr>
-                    <tr class="row-energy"><td class="lbl">3. Partial Active Energy</td><td class="val" id="e_part${i}">-</td><td class="unit">kWh</td></tr>
-                    <tr class="row-energy"><td class="lbl">4. Partial Reactive Energy</td><td class="val" id="q_part${i}">-</td><td class="unit">kVARh</td></tr>
-                    <tr class="row-energy"><td class="lbl">5. Tariff 1 Active Energy</td><td class="val" id="e_t1${i}">-</td><td class="unit">kWh</td></tr>
+                    <tr class="row-energy"><td class="lbl">1. Total ea import</td><td class="val" id="e${i}">-</td><td class="unit">kWh</td></tr>
+                    <tr class="row-energy"><td class="lbl">2. Total er import</td><td class="val" id="q_tot${i}">-</td><td class="unit">kVARh</td></tr>
+                    <tr class="row-energy"><td class="lbl">3. partial active E</td><td class="val" id="e_part${i}">-</td><td class="unit">kWh</td></tr>
+                    <tr class="row-energy"><td class="lbl">4. partial Reactive E</td><td class="val" id="q_part${i}">-</td><td class="unit">kVARh</td></tr>
+                    <tr class="row-energy"><td class="lbl">5. Tariffs (T1 Active)</td><td class="val" id="e_t1${i}">-</td><td class="unit">kWh</td></tr>
 
-                    <tr><td class="lbl">6. Tegangan (Avg)</td><td class="val" id="v${i}">-</td><td class="unit">V</td></tr>
-                    <tr><td class="lbl">7. Arus (Avg)</td><td class="val" id="i${i}">-</td><td class="unit">A</td></tr>
+                    <tr><td class="lbl">6. Voltage (V)</td><td class="val" id="v${i}">-</td><td class="unit">V</td></tr>
+                    <tr><td class="lbl">7. Current (A)</td><td class="val" id="i${i}">-</td><td class="unit">A</td></tr>
                     
-                    <tr><td class="lbl">8. Daya Aktif (P)</td><td class="val" id="p${i}">-</td><td class="unit">W</td></tr>
-                    <tr><td class="lbl">9. Daya Reaktif (Q)</td><td class="val" id="q${i}">-</td><td class="unit">VAR</td></tr>
-                    <tr><td class="lbl">10. Daya Semu (S)</td><td class="val" id="s${i}">-</td><td class="unit">kVA</td></tr>
+                    <tr><td class="lbl">8. Active power (P)</td><td class="val" id="p${i}">-</td><td class="unit">W</td></tr>
+                    <tr><td class="lbl">9. Reactive Power (Q)</td><td class="val" id="q${i}">-</td><td class="unit">VAR</td></tr>
+                    <tr><td class="lbl">10. Apparent power (S)</td><td class="val" id="s${i}">-</td><td class="unit">kVA</td></tr>
                     
-                    <tr><td class="lbl">11. Power Factor (PF)</td><td class="val" id="pf${i}">-</td><td class="unit">PF</td></tr>
-                    <tr><td class="lbl">12. Frekuensi</td><td class="val" id="hz${i}">-</td><td class="unit">Hz</td></tr>
+                    <tr><td class="lbl">11. Power Factor (Pf)</td><td class="val" id="pf${i}">-</td><td class="unit">PF</td></tr>
+                    <tr><td class="lbl">12. Frequency (F)</td><td class="val" id="hz${i}">-</td><td class="unit">Hz</td></tr>
                     
-                    <tr class="row-time"><td class="lbl">13. Operation Time</td><td class="val" id="op_time${i}">-</td><td class="unit">Jam</td></tr>
+                    <tr class="row-time"><td class="lbl">13. Operation time</td><td class="val time-val" id="op_time${i}" colspan="2">-</td></tr>
                 </table>
             </div>
         </div>`;
@@ -111,7 +112,6 @@
 
     // Helper (SAMA)
     const fmt = (val, dig) => (val != null && !isNaN(val)) ? Number(val).toFixed(dig) : "-";
-    const fmt_large = (val) => (val != null && !isNaN(val)) ? Number(val).toLocaleString('id-ID') : "-";
 
     // Fungsi updateMeter (SAMA)
     function updateMeter(d) {
@@ -124,37 +124,42 @@
         }
     }
 
-    // ==========================================================
-    // --- FORMAT ANGKA DISESUAIKAN DENGAN UNIT BARU ---
-    // ==========================================================
+    // Fungsi setMeterOnline (SAMA, key JSON tidak berubah)
     function setMeterOnline(id, d) {
         const badge = document.getElementById(`s${id}`);
         badge.textContent = "ONLINE";
         badge.className = "badge on";
         document.getElementById(`c${id}`).classList.add("online");
 
-        // Grup Energi (kWh/kVARh - pakai 2 desimal)
+        // Grup Energi
         document.getElementById(`e${id}`).textContent  = fmt(d.e, 2);
         document.getElementById(`q_tot${id}`).textContent = fmt(d.q_tot, 2);
         document.getElementById(`e_part${id}`).textContent  = fmt(d.e_part, 2);
         document.getElementById(`q_part${id}`).textContent  = fmt(d.q_part, 2);
         document.getElementById(`e_t1${id}`).textContent  = fmt(d.e_t1, 2);
         
-        // Grup V & I (Sama)
+        // Grup V & I
         document.getElementById(`v${id}`).textContent  = fmt(d.v, 1);
         document.getElementById(`i${id}`).textContent  = fmt(d.i, 3);
         
-        // Grup P,Q,S (W/VAR pakai 0 desimal, kVA pakai 2 desimal)
+        // Grup P,Q,S
         document.getElementById(`p${id}`).textContent  = fmt(d.p, 0); 
         document.getElementById(`q${id}`).textContent  = fmt(d.q, 0); 
         document.getElementById(`s${id}`).textContent  = fmt(d.s, 2); 
         
-        // Grup PF & Freq (Sama)
+        // Grup PF & Freq
         document.getElementById(`pf${id}`).textContent = fmt(d.pf, 2);
         document.getElementById(`hz${id}`).textContent = fmt(d.hz, 1);
         
-        // Grup Waktu (Jam - pakai 1 desimal)
-        document.getElementById(`op_time${id}`).textContent = fmt(d.op_time, 1);
+        // Grup Waktu (Perhitungan "Hari & Jam" tetap sama)
+        const total_hours = d.op_time;
+        if (total_hours != null && !isNaN(total_hours)) {
+            const days = Math.floor(total_hours / 24);
+            const hours = (total_hours % 24).toFixed(1);
+            document.getElementById(`op_time${id}`).textContent = `${days} hari & ${hours} jam`;
+        } else {
+            document.getElementById(`op_time${id}`).textContent = "-";
+        }
         
         const cb = document.getElementById(`c${id}`).querySelector('.card-body');
         cb.classList.remove("update-flash"); void cb.offsetWidth; cb.classList.add("update-flash");
