@@ -56,7 +56,7 @@
 
     function initDashboard() {
         let html = "";
-        // Kita tetap buat 18 kartu, tapi hanya ID 1 yang akan online
+        // Kita tetap buat 18 kartu
         for (let i = 1; i <= 18; i++) {
             html += `
             <div class="card" id="c${i}">
@@ -105,13 +105,15 @@
     client.onConnectionLost = (r) => { if (r.errorCode !== 0) { setStatus("⚠️ Koneksi Terputus. Menyambung ulang...", "bg-wait"); setTimeout(startConnection, 5000); }};
     client.onMessageArrived = (m) => { try { updateMeter(JSON.parse(m.payloadString)); } catch (e) { console.error(e); }};
 
-    // Helper untuk format angka
+    // Helper untuk format angka desimal
     const fmt = (val, dig) => (val != null && !isNaN(val)) ? Number(val).toFixed(dig) : "-";
+    // Helper untuk format angka besar (ribuan/jutaan)
     const fmt_large = (val) => (val != null && !isNaN(val)) ? Number(val).toLocaleString('id-ID') : "-";
 
-    // Fungsi updateMeter (Sama, hanya memanggil fungsi baru)
     function updateMeter(d) {
         const id = d.id; if (!id) return;
+        
+        // Logika IF/ELSE yang sudah benar
         if (d.status === "offline") {
             setMeterOffline(id);
         } else {
@@ -120,14 +122,13 @@
     }
 
     function setMeterOnline(id, d) {
-        // 1. Update Status Online
         const badge = document.getElementById(`s${id}`);
         badge.textContent = "ONLINE";
         badge.className = "badge on";
         document.getElementById(`c${id}`).classList.add("online");
 
-        // 2. Mapping 13 Parameter
-        // Grup 1 (Power)
+        // --- Mapping 13 Parameter ---
+        // Grup 1 (Power) - pakai format desimal
         document.getElementById(`v${id}`).textContent  = fmt(d.v, 1);
         document.getElementById(`i${id}`).textContent  = fmt(d.i, 3);
         document.getElementById(`p${id}`).textContent  = fmt(d.p, 2); // Satuan asli kW
@@ -135,13 +136,16 @@
         document.getElementById(`s${id}`).textContent  = fmt(d.s, 2); // Satuan asli kVA
         document.getElementById(`pf${id}`).textContent = fmt(d.pf, 2);
         document.getElementById(`hz${id}`).textContent = fmt(d.hz, 1);
-        // Grup 2 (Energy) - Pakai format angka besar
+        
+        // Grup 2 (Energy) - Pakai format angka besar (toLocaleString)
         document.getElementById(`e${id}`).textContent  = fmt_large(d.e);     // Wh
         document.getElementById(`q_tot${id}`).textContent = fmt_large(d.q_tot); // VARh
         document.getElementById(`e_t1${id}`).textContent  = fmt_large(d.e_t1);  // Wh
+        
         // Grup 3 (Partial)
         document.getElementById(`e_part${id}`).textContent  = fmt_large(d.e_part); // Wh
         document.getElementById(`q_part${id}`).textContent  = fmt_large(d.q_part); // VARh
+        
         // Grup 4 (Time)
         document.getElementById(`op_time${id}`).textContent = fmt_large(d.op_time); // Detik
         
@@ -150,15 +154,13 @@
         cb.classList.remove("update-flash"); void cb.offsetWidth; cb.classList.add("update-flash");
     }
 
-    // --- FUNGSI OFFLINE (DI-UPGRADE) ---
     function setMeterOffline(id) {
-        // 1. Update Status Offline
         const badge = document.getElementById(`s${id}`);
         badge.textContent = "OFFLINE";
         badge.className = "badge"; 
         document.getElementById(`c${id}`).classList.remove("online"); 
 
-        // 2. Reset semua 13 nilai jadi "-"
+        // Reset semua 13 nilai jadi "-"
         document.getElementById(`v${id}`).textContent  = "-";
         document.getElementById(`i${id}`).textContent  = "-";
         document.getElementById(`p${id}`).textContent  = "-";
