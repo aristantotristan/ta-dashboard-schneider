@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monitor Energi V13 (1 Mesin)</title>
+    <title>Monitor Energi V14 (Urutan Sesuai)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; background: #f0f2f5; padding: 20px; color: #333; }
@@ -12,22 +12,8 @@
         #status { text-align: center; padding: 12px; margin-bottom: 30px; font-weight: 600; color: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .bg-ok { background: #2e7d32; } .bg-err { background: #c62828; } .bg-wait { background: #f57c00; }
 
-        /* --- MODIFIKASI STYLE GRID --- */
-        .grid { 
-            display: grid; 
-            grid-template-columns: 1fr; /* Hanya 1 kolom */
-            justify-items: center; /* Pusatkan kartu ke tengah */
-        }
-        .card { 
-            background: #fff; 
-            border-radius: 12px; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
-            overflow: hidden; 
-            border-top: 6px solid #90a4ae; 
-            transition: all 0.3s ease; 
-            width: 100%; /* Lebar kartu */
-            max-width: 400px; /* Batas lebar maksimum */
-        }
+        .grid { display: grid; grid-template-columns: 1fr; justify-items: center; }
+        .card { background: #fff; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); overflow: hidden; border-top: 6px solid #90a4ae; transition: all 0.3s ease; width: 100%; max-width: 400px; }
         .card.online { border-top-color: #2e7d32; } 
         
         .card-header { padding: 15px 20px; background: #fafafa; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
@@ -42,8 +28,8 @@
         .val { text-align: right; font-weight: 700; color: #263238; font-size: 1.15em; }
         .unit { color: #b0bec5; font-size: 0.85em; width: 45px; text-align: right; padding-left: 5px; }
         
+        /* Highlight baris yang penting */
         .row-energy { background: #e3f2fd; }
-        .row-partial { background: #f3e5f5; }
         .row-time { background: #e8f5e9; }
 
         .update-flash { animation: flash 1s ease-out; }
@@ -66,15 +52,15 @@
     const MQTT_TOPIC = "politeknik/meter/data";
     // ========================
 
-    const client = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_v13_solo_" + Date.now());
+    const client = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_v14_solo_" + Date.now());
 
-    // ==========================================================
-    // --- MODIFIKASI HANYA BUAT 1 KARTU ---
-    // ==========================================================
     function initDashboard() {
         let html = "";
         const i = 1; // Kita hanya buat kartu untuk ID 1
 
+        // ==========================================================
+        // --- URUTAN HTML DISESUAIKAN DENGAN PERMINTAANMU ---
+        // ==========================================================
         html += `
         <div class="card" id="c${i}">
             <div class="card-header">
@@ -83,20 +69,21 @@
             </div>
             <div class="card-body">
                 <table class="data-table">
-                    <tr><td class="lbl">1. Tegangan (Avg)</td><td class="val" id="v${i}">-</td><td class="unit">V</td></tr>
-                    <tr><td class="lbl">2. Arus (Avg)</td><td class="val" id="i${i}">-</td><td class="unit">A</td></tr>
-                    <tr><td class="lbl">3. Daya Aktif (P)</td><td class="val" id="p${i}">-</td><td class="unit">kW</td></tr>
-                    <tr><td class="lbl">4. Daya Reaktif (Q)</td><td class="val" id="q${i}">-</td><td class="unit">kVAR</td></tr>
-                    <tr><td class="lbl">5. Daya Semu (S)</td><td class="val" id="s${i}">-</td><td class="unit">kVA</td></tr>
-                    <tr><td class="lbl">6. Power Factor (PF)</td><td class="val" id="pf${i}">-</td><td class="unit">PF</td></tr>
-                    <tr><td class="lbl">7. Frekuensi</td><td class="val" id="hz${i}">-</td><td class="unit">Hz</td></tr>
-                    
-                    <tr class="row-energy"><td class="lbl">8. Total Active Energy</td><td class="val" id="e${i}">-</td><td class="unit">Wh</td></tr>
-                    <tr class="row-energy"><td class="lbl">9. Total Reactive Energy</td><td class="val" id="q_tot${i}">-</td><td class="unit">VARh</td></tr>
-                    <tr class="row-energy"><td class="lbl">10. Tariff 1 Active Energy</td><td class="val" id="e_t1${i}">-</td><td class="unit">Wh</td></tr>
+                    <tr class="row-energy"><td class="lbl">1. Total Active Energy</td><td class="val" id="e${i}">-</td><td class="unit">Wh</td></tr>
+                    <tr class="row-energy"><td class="lbl">2. Total Reactive Energy</td><td class="val" id="q_tot${i}">-</td><td class="unit">VARh</td></tr>
+                    <tr class="row-energy"><td class="lbl">3. Partial Active Energy</td><td class="val" id="e_part${i}">-</td><td class="unit">Wh</td></tr>
+                    <tr class="row-energy"><td class="lbl">4. Partial Reactive Energy</td><td class="val" id="q_part${i}">-</td><td class="unit">VARh</td></tr>
+                    <tr class="row-energy"><td class="lbl">5. Tariff 1 Active Energy</td><td class="val" id="e_t1${i}">-</td><td class="unit">Wh</td></tr>
 
-                    <tr class="row-partial"><td class="lbl">11. Partial Active Energy</td><td class="val" id="e_part${i}">-</td><td class="unit">Wh</td></tr>
-                    <tr class="row-partial"><td class="lbl">12. Partial Reactive Energy</td><td class="val" id="q_part${i}">-</td><td class="unit">VARh</td></tr>
+                    <tr><td class="lbl">6. Tegangan (Avg)</td><td class="val" id="v${i}">-</td><td class="unit">V</td></tr>
+                    <tr><td class="lbl">7. Arus (Avg)</td><td class="val" id="i${i}">-</td><td class="unit">A</td></tr>
+                    
+                    <tr><td class="lbl">8. Daya Aktif (P)</td><td class="val" id="p${i}">-</td><td class="unit">kW</td></tr>
+                    <tr><td class="lbl">9. Daya Reaktif (Q)</td><td class="val" id="q${i}">-</td><td class="unit">kVAR</td></tr>
+                    <tr><td class="lbl">10. Daya Semu (S)</td><td class="val" id="s${i}">-</td><td class="unit">kVA</td></tr>
+                    
+                    <tr><td class="lbl">11. Power Factor (PF)</td><td class="val" id="pf${i}">-</td><td class="unit">PF</td></tr>
+                    <tr><td class="lbl">12. Frekuensi</td><td class="val" id="hz${i}">-</td><td class="unit">Hz</td></tr>
                     
                     <tr class="row-time"><td class="lbl">13. Operation Time</td><td class="val" id="op_time${i}">-</td><td class="unit">detik</td></tr>
                 </table>
@@ -107,8 +94,7 @@
         startConnection();
     }
 
-    // ... (Semua fungsi JavaScript lainnya SAMA PERSIS) ...
-
+    // ... (Fungsi startConnection, onConnect, onConnectionLost SAMA PERSIS) ...
     function startConnection() {
         setStatus("Menghubungkan...", "bg-wait");
         client.connect({
@@ -124,15 +110,14 @@
     client.onConnectionLost = (r) => { if (r.errorCode !== 0) { setStatus("⚠️ Koneksi Terputus. Menyambung ulang...", "bg-wait"); setTimeout(startConnection, 5000); }};
     client.onMessageArrived = (m) => { try { updateMeter(JSON.parse(m.payloadString)); } catch (e) { console.error(e); }};
 
+    // Helper (SAMA)
     const fmt = (val, dig) => (val != null && !isNaN(val)) ? Number(val).toFixed(dig) : "-";
     const fmt_large = (val) => (val != null && !isNaN(val)) ? Number(val).toLocaleString('id-ID') : "-";
 
+    // Fungsi updateMeter (SAMA)
     function updateMeter(d) {
         const id = d.id; if (!id) return;
-        
-        // Kita hanya peduli pada ID 1
-        if (id !== 1) return; 
-
+        if (id !== 1) return; // Hanya proses ID 1
         if (d.status === "offline") {
             setMeterOffline(id);
         } else {
@@ -140,36 +125,52 @@
         }
     }
 
+    // Fungsi setMeterOnline (SAMA, key JSON tidak berubah)
     function setMeterOnline(id, d) {
         const badge = document.getElementById(`s${id}`);
         badge.textContent = "ONLINE";
         badge.className = "badge on";
         document.getElementById(`c${id}`).classList.add("online");
 
+        // Grup Energi
+        document.getElementById(`e${id}`).textContent  = fmt_large(d.e);
+        document.getElementById(`q_tot${id}`).textContent = fmt_large(d.q_tot);
+        document.getElementById(`e_part${id}`).textContent  = fmt_large(d.e_part);
+        document.getElementById(`q_part${id}`).textContent  = fmt_large(d.q_part);
+        document.getElementById(`e_t1${id}`).textContent  = fmt_large(d.e_t1);
+        
+        // Grup V & I
         document.getElementById(`v${id}`).textContent  = fmt(d.v, 1);
         document.getElementById(`i${id}`).textContent  = fmt(d.i, 3);
+        
+        // Grup P,Q,S
         document.getElementById(`p${id}`).textContent  = fmt(d.p, 2); 
         document.getElementById(`q${id}`).textContent  = fmt(d.q, 2); 
         document.getElementById(`s${id}`).textContent  = fmt(d.s, 2); 
+        
+        // Grup PF & Freq
         document.getElementById(`pf${id}`).textContent = fmt(d.pf, 2);
         document.getElementById(`hz${id}`).textContent = fmt(d.hz, 1);
-        document.getElementById(`e${id}`).textContent  = fmt_large(d.e);
-        document.getElementById(`q_tot${id}`).textContent = fmt_large(d.q_tot);
-        document.getElementById(`e_t1${id}`).textContent  = fmt_large(d.e_t1);
-        document.getElementById(`e_part${id}`).textContent  = fmt_large(d.e_part);
-        document.getElementById(`q_part${id}`).textContent  = fmt_large(d.q_part);
+        
+        // Grup Waktu
         document.getElementById(`op_time${id}`).textContent = fmt_large(d.op_time);
         
         const cb = document.getElementById(`c${id}`).querySelector('.card-body');
         cb.classList.remove("update-flash"); void cb.offsetWidth; cb.classList.add("update-flash");
     }
 
+    // Fungsi setMeterOffline (SAMA, me-reset semua 13 parameter)
     function setMeterOffline(id) {
         const badge = document.getElementById(`s${id}`);
         badge.textContent = "OFFLINE";
         badge.className = "badge"; 
         document.getElementById(`c${id}`).classList.remove("online"); 
 
+        document.getElementById(`e${id}`).textContent  = "-";
+        document.getElementById(`q_tot${id}`).textContent = "-";
+        document.getElementById(`e_part${id}`).textContent  = "-";
+        document.getElementById(`q_part${id}`).textContent  = "-";
+        document.getElementById(`e_t1${id}`).textContent  = "-";
         document.getElementById(`v${id}`).textContent  = "-";
         document.getElementById(`i${id}`).textContent  = "-";
         document.getElementById(`p${id}`).textContent  = "-";
@@ -177,11 +178,6 @@
         document.getElementById(`s${id}`).textContent  = "-";
         document.getElementById(`pf${id}`).textContent = "-";
         document.getElementById(`hz${id}`).textContent = "-";
-        document.getElementById(`e${id}`).textContent  = "-";
-        document.getElementById(`q_tot${id}`).textContent = "-";
-        document.getElementById(`e_t1${id}`).textContent  = "-";
-        document.getElementById(`e_part${id}`).textContent  = "-";
-        document.getElementById(`q_part${id}`).textContent  = "-";
         document.getElementById(`op_time${id}`).textContent = "-";
     }
 
