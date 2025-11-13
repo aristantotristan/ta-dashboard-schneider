@@ -31,6 +31,9 @@
         .row-energy { background: #e3f2fd; }
         .row-partial { background: #f3e5f5; }
         .row-time { background: #e8f5e9; }
+
+        .update-flash { animation: flash 1s ease-out; }
+        @keyframes flash { 0% { background-color: #e8f5e9; } 100% { background-color: #fff; } }
     </style>
 </head>
 <body>
@@ -53,6 +56,7 @@
 
     function initDashboard() {
         let html = "";
+        // Kita tetap buat 18 kartu, tapi hanya ID 1 yang akan online
         for (let i = 1; i <= 18; i++) {
             html += `
             <div class="card" id="c${i}">
@@ -86,7 +90,6 @@
         startConnection();
     }
 
-    // ... (Fungsi startConnection, onConnect, onConnectionLost SAMA PERSIS) ...
     function startConnection() {
         setStatus("Menghubungkan...", "bg-wait");
         client.connect({
@@ -104,6 +107,7 @@
 
     // Helper untuk format angka
     const fmt = (val, dig) => (val != null && !isNaN(val)) ? Number(val).toFixed(dig) : "-";
+    const fmt_large = (val) => (val != null && !isNaN(val)) ? Number(val).toLocaleString('id-ID') : "-";
 
     // Fungsi updateMeter (Sama, hanya memanggil fungsi baru)
     function updateMeter(d) {
@@ -131,15 +135,19 @@
         document.getElementById(`s${id}`).textContent  = fmt(d.s, 2); // Satuan asli kVA
         document.getElementById(`pf${id}`).textContent = fmt(d.pf, 2);
         document.getElementById(`hz${id}`).textContent = fmt(d.hz, 1);
-        // Grup 2 (Energy)
-        document.getElementById(`e${id}`).textContent  = fmt(d.e, 0);     // Wh (angka besar, 0 desimal)
-        document.getElementById(`q_tot${id}`).textContent = fmt(d.q_tot, 0); // VARh
-        document.getElementById(`e_t1${id}`).textContent  = fmt(d.e_t1, 0);  // Wh
+        // Grup 2 (Energy) - Pakai format angka besar
+        document.getElementById(`e${id}`).textContent  = fmt_large(d.e);     // Wh
+        document.getElementById(`q_tot${id}`).textContent = fmt_large(d.q_tot); // VARh
+        document.getElementById(`e_t1${id}`).textContent  = fmt_large(d.e_t1);  // Wh
         // Grup 3 (Partial)
-        document.getElementById(`e_part${id}`).textContent  = fmt(d.e_part, 0); // Wh
-        document.getElementById(`q_part${id}`).textContent  = fmt(d.q_part, 0); // VARh
+        document.getElementById(`e_part${id}`).textContent  = fmt_large(d.e_part); // Wh
+        document.getElementById(`q_part${id}`).textContent  = fmt_large(d.q_part); // VARh
         // Grup 4 (Time)
-        document.getElementById(`op_time${id}`).textContent = fmt(d.op_time, 0); // Detik
+        document.getElementById(`op_time${id}`).textContent = fmt_large(d.op_time); // Detik
+        
+        // Efek Flash
+        const cb = document.getElementById(`c${id}`).querySelector('.card-body');
+        cb.classList.remove("update-flash"); void cb.offsetWidth; cb.classList.add("update-flash");
     }
 
     // --- FUNGSI OFFLINE (DI-UPGRADE) ---
