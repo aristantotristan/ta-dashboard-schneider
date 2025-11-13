@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monitor Energi V11 (8 Param Murni)</title>
+    <title>Monitor Energi V12 (Handle Offline)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; background: #f0f2f5; padding: 20px; color: #333; }
@@ -13,12 +13,14 @@
         .bg-ok { background: #2e7d32; } .bg-err { background: #c62828; } .bg-wait { background: #f57c00; }
 
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
-        .card { background: #fff; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); overflow: hidden; border-top: 6px solid #90a4ae; transition: transform 0.2s; }
+        .card { background: #fff; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); overflow: hidden; border-top: 6px solid #90a4ae; transition: all 0.3s ease; }
+        .card.online { border-top-color: #2e7d32; } /* <--- STYLE BARU UNTUK ONLINE */
+        
         .card:hover { transform: translateY(-5px); }
         
         .card-header { padding: 15px 20px; background: #fafafa; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
         .card-header h3 { margin: 0; font-size: 1.2em; color: #37474f; }
-        .badge { font-size: 0.75em; padding: 5px 10px; border-radius: 20px; background: #eceff1; color: #b0bec5; font-weight: 700; }
+        .badge { font-size: 0.75em; padding: 5px 10px; border-radius: 20px; background: #eceff1; color: #b0bec5; font-weight: 700; transition: all 0.3s ease; }
         .badge.on { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
 
         .card-body { padding: 15px 20px; }
@@ -28,7 +30,6 @@
         .val { text-align: right; font-weight: 700; color: #263238; font-size: 1.2em; }
         .unit { color: #b0bec5; font-size: 0.85em; width: 40px; text-align: right; padding-left: 5px; }
         
-        /* Highlight untuk Energi sebagai parameter utama */
         .row-energy { background: #e3f2fd; border-radius: 6px; }
         .row-energy td { padding-top: 8px; padding-bottom: 8px; }
         .energy-val { color: #1565c0; }
@@ -45,7 +46,7 @@
     <div class="grid" id="main"></div>
 
 <script>
-    // === KONFIGURASI MQTT ===
+    // === KONFIGURASI MQTT (SAMA) ===
     const MQTT_HOST = "701d32236feb43b38c22855a611f4d42.s1.eu.hivemq.cloud";
     const MQTT_PORT = 8884;
     const MQTT_USER = "web_dashboard";
@@ -53,7 +54,7 @@
     const MQTT_TOPIC = "politeknik/meter/data";
     // ========================
 
-    const client = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_v11_" + Date.now());
+    const client = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_v12_" + Date.now());
 
     function initDashboard() {
         let html = "";
@@ -94,38 +95,71 @@
     }
 
     function onConnect() {
-        setStatus("ONLINE", "bg-ok");
+        setStatus("ONLINE - MONITORING AKTIF", "bg-ok");
         client.subscribe(MQTT_TOPIC);
     }
 
     client.onConnectionLost = (r) => { if (r.errorCode !== 0) { setStatus("⚠️ Koneksi Terputus. Menyambung ulang...", "bg-wait"); setTimeout(startConnection, 5000); }};
     client.onMessageArrived = (m) => { try { updateMeter(JSON.parse(m.payloadString)); } catch (e) { console.error(e); }};
 
+    // Helper untuk format angka
+    const fmt = (val, dig) => (val != null && !isNaN(val)) ? Number(val).toFixed(dig) : "-";
+
     function updateMeter(d) {
         const id = d.id; if (!id) return;
-        // Format angka: 1 desimal untuk umum, 2 desimal untuk Energi & PF, 3 desimal untuk Arus kecil
-        const fmt = (val, dig) => (val != null && !isNaN(val)) ? Number(val).toFixed(dig) : "-";
 
-        // Update Status Online
-        const badge = document.getElementById(`s${id}`);
-        if (badge.textContent !== "ONLINE") {
-            badge.textContent = "ONLINE"; badge.className = "badge on";
-            document.getElementById(`c${id}`).style.borderTopColor = "#2e7d32"; // Hijau tua
+        // ==========================================================
+        // --- MODIFIKASI UTAMA DI SINI ---
+        // ==========================================================
+        
+        if (d.status === "offline") {
+            // PANGGIL FUNGSI BARU JIKA STATUS OFFLINE
+            setMeterOffline(id);
+        } else {
+            // JALANKAN FUNGSI LAMA JIKA STATUS ONLINE (atau tidak ada status)
+            setMeterOnline(id, d);
         }
+    }
 
-        // === MAPPING 8 PARAMETER MURNI SCHNEIDER ===
-        document.getElementById(`v${id}`).textContent  = fmt(d.v, 1);   // Voltage
-        document.getElementById(`i${id}`).textContent  = fmt(d.i, 3);   // Current (presisi 3 desimal)
-        document.getElementById(`p${id}`).textContent  = fmt(d.p, 1);   // Active Power (W)
-        document.getElementById(`q${id}`).textContent  = fmt(d.q, 1);   // Reactive Power (VAR) - Pastikan key 'q' dikirim ESP32
-        document.getElementById(`s${id}`).textContent  = fmt(d.s, 1);   // Apparent Power (VA) - Pastikan key 's' dikirim ESP32
-        document.getElementById(`pf${id}`).textContent = fmt(d.pf, 2);  // Power Factor
-        document.getElementById(`hz${id}`).textContent = fmt(d.hz, 1);  // Frequency
-        document.getElementById(`e${id}`).textContent  = fmt(d.e, 2);   // Total Active Energy (kWh)
+    function setMeterOnline(id, d) {
+        // 1. Update Status Online
+        const badge = document.getElementById(`s${id}`);
+        badge.textContent = "ONLINE";
+        badge.className = "badge on";
+        document.getElementById(`c${id}`).classList.add("online"); // Ganti border jadi hijau
 
-        // Efek Flash saat update
+        // 2. Mapping 8 Parameter
+        document.getElementById(`v${id}`).textContent  = fmt(d.v, 1);
+        document.getElementById(`i${id}`).textContent  = fmt(d.i, 3);
+        document.getElementById(`p${id}`).textContent  = fmt(d.p, 1); 
+        document.getElementById(`q${id}`).textContent  = fmt(d.q, 1);
+        document.getElementById(`s${id}`).textContent  = fmt(d.s, 1);
+        document.getElementById(`pf${id}`).textContent = fmt(d.pf, 2);
+        document.getElementById(`hz${id}`).textContent = fmt(d.hz, 1);
+        document.getElementById(`e${id}`).textContent  = fmt(d.e, 2);
+
+        // 3. Efek Flash
         const cb = document.getElementById(`c${id}`).querySelector('.card-body');
         cb.classList.remove("update-flash"); void cb.offsetWidth; cb.classList.add("update-flash");
+    }
+
+    // --- FUNGSI BARU UNTUK HANDLE OFFLINE ---
+    function setMeterOffline(id) {
+        // 1. Update Status Offline
+        const badge = document.getElementById(`s${id}`);
+        badge.textContent = "OFFLINE";
+        badge.className = "badge"; // Kembali ke style abu-abu
+        document.getElementById(`c${id}`).classList.remove("online"); // Ganti border jadi abu-abu
+
+        // 2. Reset semua nilai jadi "-"
+        document.getElementById(`v${id}`).textContent  = "-";
+        document.getElementById(`i${id}`).textContent  = "-";
+        document.getElementById(`p${id}`).textContent  = "-";
+        document.getElementById(`q${id}`).textContent  = "-";
+        document.getElementById(`s${id}`).textContent  = "-";
+        document.getElementById(`pf${id}`).textContent = "-";
+        document.getElementById(`hz${id}`).textContent = "-";
+        document.getElementById(`e${id}`).textContent  = "-";
     }
 
     function setStatus(msg, cls) { const s = document.getElementById("status"); s.textContent = msg; s.className = cls; }
@@ -133,4 +167,3 @@
 </script>
 </body>
 </html>
-
