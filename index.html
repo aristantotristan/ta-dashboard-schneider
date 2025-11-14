@@ -96,7 +96,7 @@
         });
     }
     function onConnect() {
-        setStatus("ONLINE - MONITORING AKTIF", "bg-ok");
+        setStatus("ONLINE", "bg-ok");
         client.subscribe(MQTT_TOPIC);
     }
     client.onConnectionLost = (r) => { if (r.errorCode !== 0) { setStatus("⚠️ Koneksi Terputus. Menyambung ulang...", "bg-wait"); setTimeout(startConnection, 5000); }};
@@ -159,3 +159,4 @@
 </script>
 </body>
 </html>
+
