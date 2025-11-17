@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TA Monitoring Energi (v31 - No Login)</title>
+    <title>TA Monitoring Energi (v31 - Key FIX)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gauge.js/1.3.7/gauge.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
+        /* ... (CSS SAMA PERSIS SEPERTI v30) ... */
         body { font-family: 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; padding: 20px; color: #333; }
         h1 { text-align: center; color: #0d47a1; margin-bottom: 5px; }
         h2 { text-align: center; color: #546e7a; font-size: 1.1em; margin-top: 0; margin-bottom: 25px; font-weight: 400; }
@@ -56,7 +57,6 @@
         .tarif-controls input[type="date"] { padding: 8px; border: 1px solid #ccc; border-radius: 8px; font-size: 1em; }
         .tarif-controls button { padding: 9px 15px; background: #0d47a1; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1em; font-weight: 500; margin-left: 10px; }
         #tarif-loading { text-align: center; font-weight: 600; color: #546e7a; padding: 20px; }
-        /* Style Tabel Tarif */
         #tarif-data-table th { text-align: left; padding: 10px 4px; border-bottom: 2px solid #ccc; }
         #tarif-data-table tfoot td { font-weight: bold; background: #fafafa; border-top: 2px solid #ccc; padding-top: 10px; }
     </style>
@@ -137,10 +137,10 @@
 
 <script type="module">
     // ==========================================================
-    // --- 1. KONFIGURASI SUPABASE (WAJIB GANTI!) ---
+    // --- 1. KONFIGURASI SUPABASE (SUDAH DIISI) ---
     // ==========================================================
-    const SUPABASE_URL = "https://roijhcaoityfnlqzubfx.supabase.co"; // <-- GANTI DENGAN URL-mu
-    const SUPABASE_ANON_KEY = "eyJh...GANTI...INI..."; // <-- GANTI DENGAN ANON KEY-mu
+    const SUPABASE_URL = "https://rojhcadtqfynlqzubftx.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs";
 
     // ==========================================================
     // --- 2. KONFIGURASI MQTT (SAMA) ---
@@ -182,8 +182,6 @@
         if (pageId === 'page-monitor-menu') document.getElementById('page-title').textContent = "Pilih Mesin (Monitoring)";
         if (pageId === 'page-tarif-menu') document.getElementById('page-title').textContent = "Pilih Mesin (Tarif)";
     }
-    
-    // (FUNGSI LOGIN & LOGOUT DIHAPUS)
     
     // --- FUNGSI UTAMA (YANG JALAN SAAT AWAL) ---
     function initializeApp() {
@@ -419,8 +417,6 @@
         const startDate = new Date();
         
         if (range === 'daily') {
-            // Set start date ke hari ini juga
-            // (Kita akan ambil data 'today' dari Supabase)
             startDate.setDate(startDate.getDate());
         } else if (range === 'weekly') {
             startDate.setDate(startDate.getDate() - 7);
