@@ -281,6 +281,7 @@ window.showGaugeView = () => {
 }
 
 function setupGauges() {
+    // (Library 'Gauge' sudah ada di scope global)
     const baseOpts = { angle: 0.0, lineWidth: 0.3, radiusScale: 0.9, pointer: { length: 0.5, strokeWidth: 0.03, color: '#000000' }, limitMax: false, limitMin: false, colorStart: '#6FADCF', colorStop: '#8FC0DA', strokeColor: '#E0E0E0', generateGradient: true };
     
     var optsV = { ...baseOpts }; 
@@ -479,7 +480,7 @@ window.onload = function() {
     try {
         // 1. Inisialisasi Klien (panggil dari global)
         supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_v36_spa_" + Date.now());
+        mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_v38_spa_" + Date.now()); // <-- v38
 
         // 2. Pasang handler MQTT (FIX v38 - Dipindah ke sini)
         mqttClient.onConnectionLost = (r) => { 
