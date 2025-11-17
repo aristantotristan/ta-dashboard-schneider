@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TA Monitoring Energi (v30)</title>
+    <title>TA Monitoring Energi (v31 - No Login)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gauge.js/1.3.7/gauge.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
-        /* ... (SEMUA CSS SAMA SEPERTI v25, SAYA RINGKAS AGAR TIDAK TERLALU PANJANG) ... */
+        /* ... (CSS SAMA PERSIS SEPERTI v30) ... */
         body { font-family: 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; padding: 20px; color: #333; }
         h1 { text-align: center; color: #0d47a1; margin-bottom: 5px; }
         h2 { text-align: center; color: #546e7a; font-size: 1.1em; margin-top: 0; margin-bottom: 25px; font-weight: 400; }
@@ -19,13 +19,6 @@
         .page { display: none; }
         .page.active { display: block; }
         
-        /* Halaman Login */
-        .login-card { background: #fff; padding: 30px; border-radius: 12px; max-width: 400px; margin: 40px auto; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        .login-input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; }
-        .login-button { width: 100%; padding: 12px; background: #0d47a1; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1em; font-weight: 600; }
-        .login-button:hover { background: #1565c0; }
-        #login-error { color: #c62828; text-align: center; margin-top: 15px; }
-
         /* Halaman Menu Utama */
         .main-menu-grid { display: grid; grid-template-columns: 1fr; gap: 20px; max-width: 500px; margin: 20px auto; }
         .main-menu-button { background: #fff; padding: 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: center; font-size: 1.5em; font-weight: 600; color: #0d47a1; border: 2px solid #fff; cursor: pointer; transition: all 0.2s ease; }
@@ -71,23 +64,10 @@
     <h2 id="page-title">PT. Amarilys Karisma Gemilang</h2>
     <div id="status" class="bg-wait">Memuat...</div>
 
-    <div id="page-login" class="page active">
-        <div class="login-card">
-            <h2 style="text-align: center; margin-top: 0;">Login</h2>
-            <input type="email" id="login-email" class="login-input" placeholder="Email">
-            <input type="password" id="login-pass" class="login-input" placeholder="Password">
-            <button class="login-button" onclick="handleLogin()">Masuk</button>
-            <div id="login-error"></div>
-        </div>
-    </div>
-
-    <div id="page-main-menu" class="page">
+    <div id="page-main-menu" class="page active">
         <div class="main-menu-grid">
             <div class="main-menu-button" onclick="showPage('page-monitor-menu')">1. Monitoring Mesin</div>
             <div class="main-menu-button" onclick="showPage('page-tarif-menu')">2. Tarif Mesin</div>
-        </div>
-        <div style="text-align: center; margin-top: 30px;">
-            <a href="#" onclick="handleLogout()" style="color: #78909c;">Logout</a>
         </div>
     </div>
 
@@ -174,7 +154,7 @@
     // ==========================================================
     const { createClient } = supabase;
     const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    const mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_v30_spa_" + Date.now());
+    const mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_v31_spa_" + Date.now());
 
     // Variabel Global
     let gaugeV, gaugeA, gaugeP, gaugeHz;
@@ -187,7 +167,7 @@
     const fmt_rp = (val) => (val != null && !isNaN(val)) ? 'Rp ' + Number(val).toLocaleString('id-ID', {minimumFractionDigits: 0, maximumFractionDigits: 0}) : "-";
 
     // ======================================
-    // --- 4. LOGIKA UTAMA (NAVIGASI & LOGIN) ---
+    // --- 4. LOGIKA UTAMA (NAVIGASI) ---
     // ======================================
 
     // Pindah Halaman
@@ -196,62 +176,14 @@
         document.getElementById(pageId).classList.add('active');
         
         // Ganti judul utama
-        if (pageId === 'page-login') document.getElementById('page-title').textContent = "Selamat Datang";
         if (pageId === 'page-main-menu') document.getElementById('page-title').textContent = "Menu Utama";
         if (pageId === 'page-monitor-menu') document.getElementById('page-title').textContent = "Pilih Mesin (Monitoring)";
         if (pageId === 'page-tarif-menu') document.getElementById('page-title').textContent = "Pilih Mesin (Tarif)";
     }
-
-    // --- FUNGSI LOGIN ---
-    window.handleLogin = async () => {
-        const email = document.getElementById('login-email').value;
-        const pass = document.getElementById('login-pass').value;
-        const errorDiv = document.getElementById('login-error');
-        errorDiv.textContent = "";
-        
-        try {
-            const { data, error } = await supabaseClient.auth.signInWithPassword({
-                email: email,
-                password: pass,
-            });
-
-            if (error) throw error;
-            
-            console.log("Login sukses:", data.user.email);
-            initializeApp(); // <-- Mulai aplikasi setelah login
-            
-        } catch (error) {
-            console.error("Login gagal:", error.message);
-            errorDiv.textContent = "Login Gagal: " + error.message;
-        }
-    }
     
-    // --- FUNGSI LOGOUT ---
-    window.handleLogout = async () => {
-        await supabaseClient.auth.signOut();
-        // Hentikan MQTT & reset
-        mqttClient.disconnect();
-        latestDataCache = {};
-        gaugesInitialized = false;
-        // Kembali ke halaman login
-        showPage('page-login');
-        document.getElementById('login-email').value = "";
-        document.getElementById('login-pass').value = "";
-    }
-
-    // --- Cek Sesi Login Saat Halaman Dimuat ---
-    async function checkLoginSession() {
-        const { data: { session } } = await supabaseClient.auth.getSession();
-        if (session) {
-            console.log("Sesi ditemukan, langsung masuk:", session.user.email);
-            initializeApp(); // <-- Mulai aplikasi
-        } else {
-            console.log("Tidak ada sesi, tampilkan login.");
-            showPage('page-login');
-        }
-    }
+    // (FUNGSI LOGIN & LOGOUT DIHAPUS)
     
-    // --- FUNGSI UTAMA SETELAH LOGIN SUKSES ---
+    // --- FUNGSI UTAMA (YANG JALAN SAAT AWAL) ---
     function initializeApp() {
         // 1. Buat grid 18 mesin untuk Monitoring
         let monitorGridHtml = "";
@@ -274,7 +206,7 @@
         }
         document.getElementById("tarif-grid-container").innerHTML = tarifGridHtml;
 
-        // 3. Tampilkan Menu Utama
+        // 3. Tampilkan Menu Utama (Sudah 'active' di HTML)
         showPage('page-main-menu');
         
         // 4. Mulai koneksi MQTT
@@ -469,46 +401,37 @@
     // --- 7. LOGIKA Halaman DETAIL TARIF (DATABASE) ---
     // ======================================
     
-    // --- Navigasi ---
     window.showTarifDetailView = (id) => {
         activeMachineId = id; 
         document.getElementById("tarif-detail-title").textContent = `Detail Tarif Mesin ${activeMachineId}`;
-        
-        // Set date picker ke "7 Hari Terakhir" by default
-        setTarifRange('weekly');
-        
-        // Tampilkan halaman
+        setTarifRange('weekly'); // Default 7 hari
         showPage('page-tarif-detail');
-        
-        // Langsung ambil datanya
         fetchTarifData();
     }
     
-    // --- Helper Set Tanggal ---
     window.setTarifRange = (range) => {
         const endDate = new Date();
         const startDate = new Date();
         
         if (range === 'daily') {
-            // Kosongkan, kita hanya akan ambil data 'today' di Supabase
+            // Set start date ke hari ini juga
+            startDate.setDate(startDate.getDate());
         } else if (range === 'weekly') {
             startDate.setDate(startDate.getDate() - 7);
         } else if (range === 'monthly') {
             startDate.setDate(startDate.getDate() - 30);
         }
         
-        // Format YYYY-MM-DD
         document.getElementById('tarif-datepicker-start').value = startDate.toISOString().split('T')[0];
         document.getElementById('tarif-datepicker-end').value = endDate.toISOString().split('T')[0];
     }
     
-    // --- FUNGSI UTAMA PENGAMBIL DATA SUPABASE ---
     window.fetchTarifData = async () => {
         const tableBody = document.getElementById("tarif-data-table");
         const loadingDiv = document.getElementById("tarif-loading");
         
-        tableBody.innerHTML = ""; // Kosongkan tabel
-        loadingDiv.style.display = "block"; // Tampilkan "Loading..."
+        tableBody.innerHTML = ""; 
+        loadingDiv.style.display = "block"; 
         
         const startDate = document.getElementById('tarif-datepicker-start').value;
         const endDate = document.getElementById('tarif-datepicker-end').value;
@@ -539,14 +462,13 @@
                 <tbody>
             `;
             
-            // Variabel untuk total mingguan/bulanan
             let totalBiaya = 0;
             let totalKwh = 0;
             let totalJamGuna = 0;
             let totalJamStandby = 0;
 
             if (data.length === 0) {
-                html += '<tr><td colspan="5" style="text-align:center; padding: 20px;">Tidak ada data riwayat untuk rentang tanggal ini.</td></tr>';
+                html += '<tr><td colspan="5" style="text-align:center; padding: 20px;">Tidak ada data riwayat untuk rentang tanggal ini. (Data dihitung otomatis tiap jam 00:05 UTC)</td></tr>';
             } else {
                 data.forEach(row => {
                     html += `
@@ -558,7 +480,6 @@
                             <td class="val">${fmt(row.total_jam_standby, 1)} jam</td>
                         </tr>
                     `;
-                    // Jumlahkan total
                     totalBiaya += row.total_biaya_rp;
                     totalKwh += row.total_kwh_harian;
                     totalJamGuna += row.total_jam_digunakan;
@@ -566,7 +487,6 @@
                 });
             }
             
-            // Tambahkan baris TOTAL di paling bawah (footer)
             html += `
                 </tbody>
                 <tfoot style="font-weight: bold; background: #fafafa; border-top: 2px solid #ccc;">
@@ -585,14 +505,15 @@
         } catch (error) {
             tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 20px; color: red;">Error: ${error.message}</td></tr>`;
         } finally {
-            loadingDiv.style.display = "none"; // Sembunyikan "Loading..."
+            loadingDiv.style.display = "none";
         }
     }
     
     function setStatus(msg, cls) { const s = document.getElementById("status"); s.textContent = msg; s.className = cls; }
     
-    // Mulai! Cek sesi login dulu
-    checkLoginSession();
+    // Mulai!
+    // (Kita tidak cek login, langsung jalankan aplikasi)
+    initializeApp();
     
 </script>
 </body>
