@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TA Monitoring Energi (v35 - FINAL FIX)</title>
+    <title>TA Monitoring Energi (v35 - FINAL)</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gauge.js/1.3.7/gauge.min.js"></script>
@@ -205,7 +205,7 @@ window.onload = function() {
         client.connect({
             useSSL: true, userName: MQTT_USER, password: MQTT_PASS,
             onSuccess: onConnect,
-            onFailure: (e) => { setStatus("Gagal Terhubung: " + e.errorMessage, "bg-err"); setTimeout(startConnection, 5000); }
+            onFailure: (e) => { setStatus("Gagal Terhubung: "JSON.parse(m.payloadString) " + e.errorMessage, "bg-err"); setTimeout(startConnection, 5000); }
         });
     }
     
