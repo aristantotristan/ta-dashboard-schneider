@@ -3,9 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TA Monitoring Energi (v32 - Fix Import)</title>
+    <title>TA Monitoring Energi (v33 - Fix Onload)</title>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gauge.js/1.3.7/gauge.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <style>
         /* ... (CSS SAMA PERSIS SEPERTI v31) ... */
         body { font-family: 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; padding: 20px; color: #333; }
@@ -110,11 +113,11 @@
     </div>
 
 
-<script type="module">
-    // ==========================================================
-    // --- 0. (FIX v32) IMPORT SUPABASE LANGSUNG DI SINI ---
-    // ==========================================================
-    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'
+<script>
+// ==========================================================
+// --- (FIX v33) BUNGKUS SEMUA DALAM 'window.onload' ---
+// ==========================================================
+window.onload = function() {
 
     // ==========================================================
     // --- 1. KONFIGURASI SUPABASE (SUDAH DIISI SESUAI DATA KAMU) ---
@@ -135,10 +138,10 @@
     // --- 3. INISIALISASI ---
     // ==========================================================
     
-    // (FIX v32: Hapus 'const { createClient } = supabase;')
+    // (FIX v33: Library 'supabase' dan 'Paho' sudah ada di scope global)
+    const { createClient } = supabase; 
     const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    
-    const mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_v32_spa_" + Date.now());
+    const mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_v33_spa_" + Date.now());
 
     // Variabel Global
     let gaugeV, gaugeA, gaugeP, gaugeHz;
@@ -299,6 +302,7 @@
     }
     
     function setupGauges() {
+        // (Library 'Gauge' sudah ada di scope global)
         const baseOpts = { angle: 0.0, lineWidth: 0.3, radiusScale: 0.9, pointer: { length: 0.5, strokeWidth: 0.03, color: '#000000' }, limitMax: false, limitMin: false, colorStart: '#6FADCF', colorStop: '#8FC0DA', strokeColor: '#E0E0E0', generateGradient: true };
         
         var optsV = { ...baseOpts }; 
@@ -486,7 +490,8 @@
     
     // Mulai! (Tanpa login)
     initializeApp();
-    
+
+} // <-- (FIX v33) AKHIR DARI 'window.onload'
 </script>
 </body>
 </html>
