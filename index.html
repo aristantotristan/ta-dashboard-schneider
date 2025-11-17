@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TA Monitoring Energi (v34 - FINAL FIX)</title>
+    <title>TA Monitoring Energi (v35 - FINAL)</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gauge.js/1.3.7/gauge.min.js"></script>
@@ -114,381 +114,383 @@
 
 
 <script>
-// (FIX v33) BUNGKUS SEMUA DALAM 'window.onload'
-window.onload = function() {
 
-    // ==========================================================
-    // --- 1. KONFIGURASI SUPABASE (SUDAH DIISI SESUAI DATA KAMU) ---
-    // ==========================================================
-    const SUPABASE_URL = "https://rojhcadtqfynlqzubftx.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs";
+// ==========================================================
+// --- BAGIAN 1: KONFIGURASI & INISIALISASI (GLOBAL) ---
+// ==========================================================
 
-    // ==========================================================
-    // --- 2. KONFIGURASI MQTT (SAMA) ---
-    // ==========================================================
-    const MQTT_HOST = "701d32236feb43b38c22855a611f4d42.s1.eu.hivemq.cloud";
-    const MQTT_PORT = 8884;
-    const MQTT_USER = "web_dashboard";
-    const MQTT_PASS = "Tristan12";
-    const MQTT_TOPIC = "politeknik/meter/data";
+// (Key Supabase-mu yang asli)
+const SUPABASE_URL = "https://rojhcadtqfynlqzubftx.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs";
 
-    // ==========================================================
-    // --- 3. INISIALISASI ---
-    // ==========================================================
+// (Konfigurasi MQTT)
+const MQTT_HOST = "701d32236feb43b38c22855a611f4d42.s1.eu.hivemq.cloud";
+const MQTT_PORT = 8884;
+const MQTT_USER = "web_dashboard";
+const MQTT_PASS = "Tristan12";
+const MQTT_TOPIC = "politeknik/meter/data";
+
+// (Inisialisasi Library)
+const { createClient } = supabase; 
+const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_v35_spa_" + Date.now());
+
+// (Variabel Global)
+let gaugeV, gaugeA, gaugeP, gaugeHz;
+let activeMachineId = 0; 
+let gaugesInitialized = false; 
+let latestDataCache = {}; 
+
+// (Helper)
+const fmt = (val, dig) => (val != null && !isNaN(val)) ? Number(val).toFixed(dig) : "-";
+const fmt_rp = (val) => (val != null && !isNaN(val)) ? 'Rp ' + Number(val).toLocaleString('id-ID', {minimumFractionDigits: 0, maximumFractionDigits: 0}) : "-";
+
+// ==========================================================
+// --- BAGIAN 2: NAVIGASI & FUNGSI UTAMA (GLOBAL) ---
+// ==========================================================
+
+// Pindah Halaman
+window.showPage = (pageId) => {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById(pageId).classList.add('active');
     
-    // (FIX v33: Library 'supabase' dan 'Paho' sudah ada di scope global)
-    const { createClient } = supabase; 
-    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    const mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_v33_spa_" + Date.now());
+    if (pageId === 'page-main-menu') document.getElementById('page-title').textContent = "Menu Utama";
+    if (pageId === 'page-monitor-menu') document.getElementById('page-title').textContent = "Pilih Mesin (Monitoring)";
+    if (pageId === 'page-tarif-menu') document.getElementById('page-title').textContent = "Pilih Mesin (Tarif)";
+}
 
-    // Variabel Global
-    let gaugeV, gaugeA, gaugeP, gaugeHz;
-    let activeMachineId = 0; 
-    let gaugesInitialized = false; 
-    let latestDataCache = {}; 
+// --- FUNGSI UTAMA (YANG JALAN SAAT AWAL) ---
+function initializeApp() {
+    let monitorGridHtml = "";
+    for (let i = 1; i <= 18; i++) {
+        monitorGridHtml += `
+        <div class="menu-card" id="monitor-card-${i}" onclick="showMonitorDetailView(${i})">
+            Mesin ${i}
+            <span class="menu-badge" id="monitor-badge-${i}">OFFLINE</span>
+        </div>`;
+    }
+    document.getElementById("monitor-grid-container").innerHTML = monitorGridHtml;
 
-    // Helper
-    const fmt = (val, dig) => (val != null && !isNaN(val)) ? Number(val).toFixed(dig) : "-";
-    const fmt_rp = (val) => (val != null && !isNaN(val)) ? 'Rp ' + Number(val).toLocaleString('id-ID', {minimumFractionDigits: 0, maximumFractionDigits: 0}) : "-";
+    let tarifGridHtml = "";
+    for (let i = 1; i <= 18; i++) {
+        tarifGridHtml += `
+        <div class="menu-card" id="tarif-card-${i}" onclick="showTarifDetailView(${i})">
+            Mesin ${i}
+        </div>`;
+    }
+    document.getElementById("tarif-grid-container").innerHTML = tarifGridHtml;
 
-    // ======================================
-    // --- 4. LOGIKA UTAMA (NAVIGASI) ---
-    // ======================================
+    showPage('page-main-menu');
+    startConnection();
+}
 
-    // Pindah Halaman
-    window.showPage = (pageId) => {
-        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-        document.getElementById(pageId).classList.add('active');
+// ======================================
+// --- 5. LOGIKA MQTT (REAL-TIME) ---
+// ======================================
+
+function startConnection() {
+    setStatus("Menghubungkan ke MQTT...", "bg-wait");
+    client.connect({
+        useSSL: true, userName: MQTT_USER, password: MQTT_PASS,
+        onSuccess: onConnect,
+        onFailure: (e) => { setStatus("Gagal Terhubung: " + e.errorMessage, "bg-err"); setTimeout(startConnection, 5000); }
+    });
+}
+
+function onConnect() {
+    setStatus("ONLINE - Terhubung ke Sistem Real-time", "bg-ok");
+    client.subscribe(MQTT_TOPIC);
+}
+
+client.onConnectionLost = (r) => { if (r.errorCode !== 0) { setStatus("⚠️ Koneksi MQTT Terputus. Menyambung ulang...", "bg-wait"); setTimeout(startConnection, 5000); }};
+
+client.onMessageArrived = (m) => {
+    try {
+        const d = JSON.parse(m.payloadString);
+        if (d.id_mesin) d.id = d.id_mesin; // <-- FIX KESESUAIAN
+        if (!d.id) return;
         
-        if (pageId === 'page-main-menu') document.getElementById('page-title').textContent = "Menu Utama";
-        if (pageId === 'page-monitor-menu') document.getElementById('page-title').textContent = "Pilih Mesin (Monitoring)";
-        if (pageId === 'page-tarif-menu') document.getElementById('page-title').textContent = "Pilih Mesin (Tarif)";
-    }
-    
-    // --- FUNGSI UTAMA (YANG JALAN SAAT AWAL) ---
-    function initializeApp() {
-        let monitorGridHtml = "";
-        for (let i = 1; i <= 18; i++) {
-            monitorGridHtml += `
-            <div class="menu-card" id="monitor-card-${i}" onclick="showMonitorDetailView(${i})">
-                Mesin ${i}
-                <span class="menu-badge" id="monitor-badge-${i}">OFFLINE</span>
-            </div>`;
-        }
-        document.getElementById("monitor-grid-container").innerHTML = monitorGridHtml;
-
-        let tarifGridHtml = "";
-        for (let i = 1; i <= 18; i++) {
-            tarifGridHtml += `
-            <div class="menu-card" id="tarif-card-${i}" onclick="showTarifDetailView(${i})">
-                Mesin ${i}
-            </div>`;
-        }
-        document.getElementById("tarif-grid-container").innerHTML = tarifGridHtml;
-
-        showPage('page-main-menu');
-        startConnection();
-    }
-    
-    // ======================================
-    // --- 5. LOGIKA MQTT (REAL-TIME) ---
-    // ======================================
-
-    function startConnection() {
-        setStatus("Menghubungkan ke MQTT...", "bg-wait");
-        client.connect({
-            useSSL: true, userName: MQTT_USER, password: MQTT_PASS,
-            onSuccess: onConnect,
-            onFailure: (e) => { setStatus("Gagal Terhubung: " + e.errorMessage, "bg-err"); setTimeout(startConnection, 5000); }
-        });
-    }
-    
-    function onConnect() {
-        setStatus("ONLINE - Terhubung ke Sistem Real-time", "bg-ok");
-        client.subscribe(MQTT_TOPIC);
-    }
-    
-    client.onConnectionLost = (r) => { if (r.errorCode !== 0) { setStatus("⚠️ Koneksi MQTT Terputus. Menyambung ulang...", "bg-wait"); setTimeout(startConnection, 5000); }};
-
-    client.onMessageArrived = (m) => {
-        try {
-            const d = JSON.parse(m.payloadString);
-            if (d.id_mesin) d.id = d.id_mesin; // <-- FIX KESESUAIAN
-            if (!d.id) return;
-            
-            latestDataCache[d.id] = d;
-            updateMonitorMenuCard(d);
-            
-            if (d.id === activeMachineId) {
-                if (d.status === "offline") {
-                    setMeterOffline();
-                } else {
-                    setMeterOnline(d);
-                }
+        latestDataCache[d.id] = d;
+        updateMonitorMenuCard(d);
+        
+        if (d.id === activeMachineId) {
+            if (d.status === "offline") {
+                setMeterOffline();
+            } else {
+                setMeterOnline(d);
             }
-        } catch (e) { console.error(e); }
-    };
+        }
+    } catch (e) { console.error(e); }
+};
 
-    function updateMonitorMenuCard(d) {
-        const card = document.getElementById(`monitor-card-${d.id}`);
-        const badge = document.getElementById(`monitor-badge-${d.id}`);
-        if (!card || !badge) return;
-        if (d.status === "offline") {
-            card.classList.remove("online");
-            badge.textContent = "OFFLINE";
+function updateMonitorMenuCard(d) {
+    const card = document.getElementById(`monitor-card-${d.id}`);
+    const badge = document.getElementById(`monitor-badge-${d.id}`);
+    if (!card || !badge) return;
+    if (d.status === "offline") {
+        card.classList.remove("online");
+        badge.textContent = "OFFLINE";
+    } else {
+        card.classList.add("online");
+        badge.textContent = "ONLINE";
+    }
+}
+
+// ======================================
+// --- 6. LOGIKA Halaman DETAIL MONITORING (GAUGE) ---
+// ======================================
+
+window.showMonitorDetailView = (id) => {
+    activeMachineId = id; 
+    document.getElementById("monitor-detail-title").textContent = `Detail Mesin ${activeMachineId}`;
+    
+    document.getElementById("monitor-data-table").innerHTML = `
+        <tr class="row-energy"><td class="lbl">1. Total ea import</td><td class="val" id="d-e">-</td><td class="unit">kWh</td></tr>
+        <tr class="row-energy"><td class="lbl">2. Total er import</td><td class="val" id="d-q_tot">-</td><td class="unit">kVARh</td></tr>
+        <tr class="row-energy"><td class="lbl">3. partial active E</td><td class="val" id="d-e_part">-</td><td class="unit">kWh</td></tr>
+        <tr class="row-energy"><td class="lbl">4. partial Reactive E</td><td class="val" id="d-q_part">-</td><td class="unit">kVARh</td></tr>
+        <tr><td class="lbl">5. Voltage (V)</td><td class="val" id="d-v">-</td><td class="unit">V</td></tr>
+        <tr><td class="lbl">6. Current (A)</td><td class="val" id="d-i">-</td><td class="unit">A</td></tr>
+        <tr><td class="lbl">7. Active power (P)</td><td class="val" id="d-p">-</td><td class="unit">W</td></tr>
+        <tr><td class="lbl">8. Reactive Power (Q)</td><td class="val" id="d-q">-</td><td class="unit">VAR</td></tr>
+        <tr><td class="lbl">9. Apparent power (S)</td><td class="val" id="d-s">-</td><td class="unit">kVA</td></tr>
+        <tr><td class="lbl">10. Power Factor (Pf)</td><td class="val" id="d-pf">-</td><td class="unit">PF</td></tr>
+        <tr><td class="lbl">11. Frequency (F)</td><td class="val" id="d-hz">-</td><td class="unit">Hz</td></tr>
+        <tr class="row-time"><td class="lbl">12. Operation time</td><td class="val time-val" id="d-op_time" colspan="2">-</td></tr>
+    `;
+    
+    if (latestDataCache[id]) {
+        setMeterOnline(latestDataCache[id]); 
+    } else {
+        setMeterOffline(); 
+    }
+
+    showFullView(); 
+    showPage('page-monitor-detail');
+}
+
+window.showFullView = () => {
+    document.getElementById("full-params-view").style.display = "block";
+    document.getElementById("core-gauges-view").style.display = "none";
+    document.getElementById("btn-full").classList.add("active");
+    document.getElementById("btn-gauges").classList.remove("active");
+}
+
+window.showGaugeView = () => {
+    document.getElementById("full-params-view").style.display = "none";
+    document.getElementById("core-gauges-view").style.display = "block";
+    document.getElementById("btn-full").classList.remove("active");
+    document.getElementById("btn-gauges").classList.add("active");
+
+    if (!gaugesInitialized) {
+        setupGauges();
+        gaugesInitialized = true;
+        if (latestDataCache[activeMachineId]) {
+            setMeterOnline(latestDataCache[activeMachineId]);
         } else {
-            card.classList.add("online");
-            badge.textContent = "ONLINE";
+            setMeterOffline();
         }
     }
-    
-    // ======================================
-    // --- 6. LOGIKA Halaman DETAIL MONITORING (GAUGE) ---
-    // ======================================
+}
 
-    window.showMonitorDetailView = (id) => {
-        activeMachineId = id; 
-        document.getElementById("monitor-detail-title").textContent = `Detail Mesin ${activeMachineId}`;
+function setupGauges() {
+    const baseOpts = { angle: 0.0, lineWidth: 0.3, radiusScale: 0.9, pointer: { length: 0.5, strokeWidth: 0.03, color: '#000000' }, limitMax: false, limitMin: false, colorStart: '#6FADCF', colorStop: '#8FC0DA', strokeColor: '#E0E0E0', generateGradient: true };
+    
+    var optsV = { ...baseOpts }; 
+    optsV.staticLabels = { font: "12px sans-serif", labels: [0, 50, 100, 150, 200, 220, 250, 300], color: "#555" };
+    optsV.staticZones = [ {strokeStyle: "#30B32D", min: 200, max: 240}, {strokeStyle: "#FFDD00", min: 240, max: 260}, {strokeStyle: "#F03E3E", min: 260, max: 300} ];
+    gaugeV = new Gauge(document.getElementById('gauge-volt')).setOptions(optsV);
+    gaugeV.maxValue = 300; gaugeV.set(0);
+
+    var optsA = { ...baseOpts }; 
+    optsA.staticLabels = { font: "12px sans-serif", labels: [0, 20, 40, 60, 80, 100], color: "#555" };
+    optsA.staticZones = [ {strokeStyle: "#30B32D", min: 0, max: 70}, {strokeStyle: "#FFDD00", min: 70, max: 90}, {strokeStyle: "#F03E3E", min: 90, max: 100} ];
+    gaugeA = new Gauge(document.getElementById('gauge-amp')).setOptions(optsA);
+    gaugeA.maxValue = 100; gaugeA.set(0);
+
+    var optsP = { ...baseOpts }; 
+    optsP.staticLabels = { font: "12px sans-serif", labels: [0, 5000, 10000, 15000, 20000, 25000], color: "#555" };
+    optsP.staticZones = [ {strokeStyle: "#30B32D", min: 0, max: 15000}, {strokeStyle: "#FFDD00", min: 15000, max: 20000}, {strokeStyle: "#F03E3E", min: 20000, max: 25000} ];
+    gaugeP = new Gauge(document.getElementById('gauge-power')).setOptions(optsP);
+    gaugeP.maxValue = 25000; gaugeP.set(0);
+    
+    var optsHz = { ...baseOpts }; 
+    optsHz.staticLabels = { font: "12px sans-serif", labels: [45, 48, 50, 52, 55], color: "#555" };
+    optsHz.staticZones = [ {strokeStyle: "#F03E3E", min: 45, max: 48}, {strokeStyle: "#30B32D", min: 48, max: 52}, {strokeStyle: "#F03E3E", min: 52, max: 55} ];
+    gaugeHz = new Gauge(document.getElementById('gauge-freq')).setOptions(optsHz);
+    gaugeHz.maxValue = 55;
+    gaugeHz.minValue = 45;
+    gaugeHz.set(50);
+}
+
+function setMeterOnline(d) {
+    document.getElementById(`d-e`).textContent  = fmt(d.e, 2);
+    document.getElementById(`d-q_tot`).textContent = fmt(d.q_tot, 2);
+    document.getElementById(`d-e_part`).textContent  = fmt(d.e_part, 2);
+    document.getElementById(`d-q_part`).textContent  = fmt(d.q_part, 2);
+    document.getElementById(`d-v`).textContent  = fmt(d.v, 1);
+    document.getElementById(`d-i`).textContent  = fmt(d.i, 3);
+    document.getElementById(`d-p`).textContent  = fmt(d.p, 0); 
+    document.getElementById(`d-q`).textContent  = fmt(d.q, 0); 
+    document.getElementById(`d-s`).textContent  = fmt(d.s, 2); 
+    document.getElementById(`d-pf`).textContent = fmt(d.pf, 2);
+    document.getElementById(`d-hz`).textContent = fmt(d.hz, 1);
+    const total_hours = d.op_time;
+    if (total_hours != null && !isNaN(total_hours)) {
+        const days = Math.floor(total_hours / 24);
+        const hours = (total_hours % 24).toFixed(1);
+        document.getElementById(`d-op_time`).textContent = `${days} hari & ${hours} jam`;
+    } else {
+        document.getElementById(`d-op_time`).textContent = "-";
+    }
+    
+    if (gaugesInitialized) {
+        gaugeV.set(d.v); gaugeA.set(d.i); gaugeP.set(d.p); gaugeHz.set(d.hz);
+    }
+}
+
+function setMeterOffline() {
+    document.getElementById(`d-e`).textContent  = "-";
+    document.getElementById(`d-q_tot`).textContent = "-";
+    document.getElementById(`d-e_part`).textContent  = "-";
+    document.getElementById(`d-q_part`).textContent  = "-";
+    document.getElementById(`d-v`).textContent  = "-";
+    document.getElementById(`d-i`).textContent  = "-";
+    document.getElementById(`d-p`).textContent  = "-";
+    document.getElementById(`d-q`).textContent  = "-";
+    document.getElementById(`d-s`).textContent  = "-";
+    document.getElementById(`d-pf`).textContent = "-";
+    document.getElementById(`d-hz`).textContent = "-";
+    document.getElementById(`d-op_time`).textContent = "-";
+
+    if (gaugesInitialized) {
+        gaugeV.set(0); gaugeA.set(0); gaugeP.set(0); gaugeHz.set(50);
+    }
+}
+
+// ======================================
+// --- 7. LOGIKA Halaman DETAIL TARIF (DATABASE) ---
+// ======================================
+
+window.showTarifDetailView = (id) => {
+    activeMachineId = id; 
+    document.getElementById("tarif-detail-title").textContent = `Detail Tarif Mesin ${activeMachineId}`;
+    setTarifRange('weekly'); // Default 7 hari
+    showPage('page-tarif-detail');
+    fetchTarifData();
+}
+
+window.setTarifRange = (range) => {
+    const endDate = new Date();
+    const startDate = new Date();
+    
+    if (range === 'daily') {
+        startDate.setDate(startDate.getDate());
+    } else if (range === 'weekly') {
+        startDate.setDate(startDate.getDate() - 7);
+    } else if (range === 'monthly') {
+        startDate.setDate(startDate.getDate() - 30);
+    }
+    
+    document.getElementById('tarif-datepicker-start').value = startDate.toISOString().split('T')[0];
+    document.getElementById('tarif-datepicker-end').value = endDate.toISOString().split('T')[0];
+}
+
+window.fetchTarifData = async () => {
+    const tableBody = document.getElementById("tarif-data-table");
+    const loadingDiv = document.getElementById("tarif-loading");
+    
+    tableBody.innerHTML = ""; 
+    loadingDiv.style.display = "block"; 
+    
+    const startDate = document.getElementById('tarif-datepicker-start').value;
+    const endDate = document.getElementById('tarif-datepicker-end').value;
+
+    try {
+        const { data, error } = await supabaseClient
+            .from('summary_harian') 
+            .select('*')
+            .eq('id_mesin', activeMachineId) 
+            .gte('tanggal', startDate)       
+            .lte('tanggal', endDate)         
+            .order('tanggal', { ascending: false }); 
+
+        if (error) throw error;
         
-        document.getElementById("monitor-data-table").innerHTML = `
-            <tr class="row-energy"><td class="lbl">1. Total ea import</td><td class="val" id="d-e">-</td><td class="unit">kWh</td></tr>
-            <tr class="row-energy"><td class="lbl">2. Total er import</td><td class="val" id="d-q_tot">-</td><td class="unit">kVARh</td></tr>
-            <tr class="row-energy"><td class="lbl">3. partial active E</td><td class="val" id="d-e_part">-</td><td class="unit">kWh</td></tr>
-            <tr class="row-energy"><td class="lbl">4. partial Reactive E</td><td class="val" id="d-q_part">-</td><td class="unit">kVARh</td></tr>
-            <tr><td class="lbl">5. Voltage (V)</td><td class="val" id="d-v">-</td><td class="unit">V</td></tr>
-            <tr><td class="lbl">6. Current (A)</td><td class="val" id="d-i">-</td><td class="unit">A</td></tr>
-            <tr><td class="lbl">7. Active power (P)</td><td class="val" id="d-p">-</td><td class="unit">W</td></tr>
-            <tr><td class="lbl">8. Reactive Power (Q)</td><td class="val" id="d-q">-</td><td class="unit">VAR</td></tr>
-            <tr><td class="lbl">9. Apparent power (S)</td><td class="val" id="d-s">-</td><td class="unit">kVA</td></tr>
-            <tr><td class="lbl">10. Power Factor (Pf)</td><td class="val" id="d-pf">-</td><td class="unit">PF</td></tr>
-            <tr><td class="lbl">11. Frequency (F)</td><td class="val" id="d-hz">-</td><td class="unit">Hz</td></tr>
-            <tr class="row-time"><td class="lbl">12. Operation time</td><td class="val time-val" id="d-op_time" colspan="2">-</td></tr>
+        let html = `
+            <thead>
+                <tr>
+                    <th>Tanggal</th>
+                    <th>Biaya (Rp)</th>
+                    <th>Konsumsi (kWh)</th>
+                    <th>Jam Digunakan</th>
+                    <th>Jam Standby</th>
+                </tr>
+            </thead>
+            <tbody>
         `;
         
-        if (latestDataCache[id]) {
-            setMeterOnline(latestDataCache[id]); 
+        let totalBiaya = 0;
+        let totalKwh = 0;
+        let totalJamGuna = 0;
+        let totalJamStandby = 0;
+
+        if (data.length === 0) {
+            html += '<tr><td colspan="5" style="text-align:center; padding: 20px;">Tidak ada data riwayat untuk rentang tanggal ini. (Data dihitung otomatis tiap jam 00:05 UTC / 07:05 WIB)</td></tr>';
         } else {
-            setMeterOffline(); 
-        }
-
-        showFullView(); 
-        showPage('page-monitor-detail');
-    }
-    
-    window.showFullView = () => {
-        document.getElementById("full-params-view").style.display = "block";
-        document.getElementById("core-gauges-view").style.display = "none";
-        document.getElementById("btn-full").classList.add("active");
-        document.getElementById("btn-gauges").classList.remove("active");
-    }
-
-    window.showGaugeView = () => {
-        document.getElementById("full-params-view").style.display = "none";
-        document.getElementById("core-gauges-view").style.display = "block";
-        document.getElementById("btn-full").classList.remove("active");
-        document.getElementById("btn-gauges").classList.add("active");
-
-        if (!gaugesInitialized) {
-            setupGauges();
-            gaugesInitialized = true;
-            if (latestDataCache[activeMachineId]) {
-                setMeterOnline(latestDataCache[activeMachineId]);
-            } else {
-                setMeterOffline();
-            }
-        }
-    }
-    
-    function setupGauges() {
-        const baseOpts = { angle: 0.0, lineWidth: 0.3, radiusScale: 0.9, pointer: { length: 0.5, strokeWidth: 0.03, color: '#000000' }, limitMax: false, limitMin: false, colorStart: '#6FADCF', colorStop: '#8FC0DA', strokeColor: '#E0E0E0', generateGradient: true };
-        
-        var optsV = { ...baseOpts }; 
-        optsV.staticLabels = { font: "12px sans-serif", labels: [0, 50, 100, 150, 200, 220, 250, 300], color: "#555" };
-        optsV.staticZones = [ {strokeStyle: "#30B32D", min: 200, max: 240}, {strokeStyle: "#FFDD00", min: 240, max: 260}, {strokeStyle: "#F03E3E", min: 260, max: 300} ];
-        gaugeV = new Gauge(document.getElementById('gauge-volt')).setOptions(optsV);
-        gaugeV.maxValue = 300; gaugeV.set(0);
-
-        var optsA = { ...baseOpts }; 
-        optsA.staticLabels = { font: "12px sans-serif", labels: [0, 20, 40, 60, 80, 100], color: "#555" };
-        optsA.staticZones = [ {strokeStyle: "#30B32D", min: 0, max: 70}, {strokeStyle: "#FFDD00", min: 70, max: 90}, {strokeStyle: "#F03E3E", min: 90, max: 100} ];
-        gaugeA = new Gauge(document.getElementById('gauge-amp')).setOptions(optsA);
-        gaugeA.maxValue = 100; gaugeA.set(0);
-
-        var optsP = { ...baseOpts }; 
-        optsP.staticLabels = { font: "12px sans-serif", labels: [0, 5000, 10000, 15000, 20000, 25000], color: "#555" };
-        optsP.staticZones = [ {strokeStyle: "#30B32D", min: 0, max: 15000}, {strokeStyle: "#FFDD00", min: 15000, max: 20000}, {strokeStyle: "#F03E3E", min: 20000, max: 25000} ];
-        gaugeP = new Gauge(document.getElementById('gauge-power')).setOptions(optsP);
-        gaugeP.maxValue = 25000; gaugeP.set(0);
-        
-        var optsHz = { ...baseOpts }; 
-        optsHz.staticLabels = { font: "12px sans-serif", labels: [45, 48, 50, 52, 55], color: "#555" };
-        optsHz.staticZones = [ {strokeStyle: "#F03E3E", min: 45, max: 48}, {strokeStyle: "#30B32D", min: 48, max: 52}, {strokeStyle: "#F03E3E", min: 52, max: 55} ];
-        gaugeHz = new Gauge(document.getElementById('gauge-freq')).setOptions(optsHz);
-        gaugeHz.maxValue = 55;
-        gaugeHz.minValue = 45;
-        gaugeHz.set(50);
-    }
-    
-    function setMeterOnline(d) {
-        document.getElementById(`d-e`).textContent  = fmt(d.e, 2);
-        document.getElementById(`d-q_tot`).textContent = fmt(d.q_tot, 2);
-        document.getElementById(`d-e_part`).textContent  = fmt(d.e_part, 2);
-        document.getElementById(`d-q_part`).textContent  = fmt(d.q_part, 2);
-        document.getElementById(`d-v`).textContent  = fmt(d.v, 1);
-        document.getElementById(`d-i`).textContent  = fmt(d.i, 3);
-        document.getElementById(`d-p`).textContent  = fmt(d.p, 0); 
-        document.getElementById(`d-q`).textContent  = fmt(d.q, 0); 
-        document.getElementById(`d-s`).textContent  = fmt(d.s, 2); 
-        document.getElementById(`d-pf`).textContent = fmt(d.pf, 2);
-        document.getElementById(`d-hz`).textContent = fmt(d.hz, 1);
-        const total_hours = d.op_time;
-        if (total_hours != null && !isNaN(total_hours)) {
-            const days = Math.floor(total_hours / 24);
-            const hours = (total_hours % 24).toFixed(1);
-            document.getElementById(`d-op_time`).textContent = `${days} hari & ${hours} jam`;
-        } else {
-            document.getElementById(`d-op_time`).textContent = "-";
-        }
-        
-        if (gaugesInitialized) {
-            gaugeV.set(d.v); gaugeA.set(d.i); gaugeP.set(d.p); gaugeHz.set(d.hz);
-        }
-    }
-
-    function setMeterOffline() {
-        document.getElementById(`d-e`).textContent  = "-";
-        document.getElementById(`d-q_tot`).textContent = "-";
-        document.getElementById(`d-e_part`).textContent  = "-";
-        document.getElementById(`d-q_part`).textContent  = "-";
-        document.getElementById(`d-v`).textContent  = "-";
-        document.getElementById(`d-i`).textContent  = "-";
-        document.getElementById(`d-p`).textContent  = "-";
-        document.getElementById(`d-q`).textContent  = "-";
-        document.getElementById(`d-s`).textContent  = "-";
-        document.getElementById(`d-pf`).textContent = "-";
-        document.getElementById(`d-hz`).textContent = "-";
-        document.getElementById(`d-op_time`).textContent = "-";
-
-        if (gaugesInitialized) {
-            gaugeV.set(0); gaugeA.set(0); gaugeP.set(0); gaugeHz.set(50);
-        }
-    }
-    
-    // ======================================
-    // --- 7. LOGIKA Halaman DETAIL TARIF (DATABASE) ---
-    // ======================================
-    
-    window.showTarifDetailView = (id) => {
-        activeMachineId = id; 
-        document.getElementById("tarif-detail-title").textContent = `Detail Tarif Mesin ${activeMachineId}`;
-        setTarifRange('weekly'); // Default 7 hari
-        showPage('page-tarif-detail');
-        fetchTarifData();
-    }
-    
-    window.setTarifRange = (range) => {
-        const endDate = new Date();
-        const startDate = new Date();
-        
-        if (range === 'daily') {
-            startDate.setDate(startDate.getDate());
-        } else if (range === 'weekly') {
-            startDate.setDate(startDate.getDate() - 7);
-        } else if (range === 'monthly') {
-            startDate.setDate(startDate.getDate() - 30);
-        }
-        
-        document.getElementById('tarif-datepicker-start').value = startDate.toISOString().split('T')[0];
-        document.getElementById('tarif-datepicker-end').value = endDate.toISOString().split('T')[0];
-    }
-    
-    window.fetchTarifData = async () => {
-        const tableBody = document.getElementById("tarif-data-table");
-        const loadingDiv = document.getElementById("tarif-loading");
-        
-        tableBody.innerHTML = ""; 
-        loadingDiv.style.display = "block"; 
-        
-        const startDate = document.getElementById('tarif-datepicker-start').value;
-        const endDate = document.getElementById('tarif-datepicker-end').value;
-
-        try {
-            const { data, error } = await supabaseClient
-                .from('summary_harian') 
-                .select('*')
-                .eq('id_mesin', activeMachineId) 
-                .gte('tanggal', startDate)       
-                .lte('tanggal', endDate)         
-                .order('tanggal', { ascending: false }); 
-
-            if (error) throw error;
-            
-            let html = `
-                <thead>
+            data.forEach(row => {
+                html += `
                     <tr>
-                        <th>Tanggal</th>
-                        <th>Biaya (Rp)</th>
-                        <th>Konsumsi (kWh)</th>
-                        <th>Jam Digunakan</th>
-                        <th>Jam Standby</th>
+                        <td>${new Date(row.tanggal + 'T00:00:00').toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' })}</td>
+                        <td class="val">${fmt_rp(row.total_biaya_rp)}</td>
+                        <td class="val">${fmt(row.total_kwh_harian, 2)}</td>
+                        <td class="val">${fmt(row.total_jam_digunakan, 1)} jam</td>
+                        <td class="val">${fmt(row.total_jam_standby, 1)} jam</td>
                     </tr>
-                </thead>
-                <tbody>
-            `;
-            
-            let totalBiaya = 0;
-            let totalKwh = 0;
-            let totalJamGuna = 0;
-            let totalJamStandby = 0;
-
-            if (data.length === 0) {
-                html += '<tr><td colspan="5" style="text-align:center; padding: 20px;">Tidak ada data riwayat untuk rentang tanggal ini. (Data dihitung otomatis tiap jam 00:05 UTC / 07:05 WIB)</td></tr>';
-            } else {
-                data.forEach(row => {
-                    html += `
-                        <tr>
-                            <td>${new Date(row.tanggal + 'T00:00:00').toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' })}</td>
-                            <td class="val">${fmt_rp(row.total_biaya_rp)}</td>
-                            <td class="val">${fmt(row.total_kwh_harian, 2)}</td>
-                            <td class="val">${fmt(row.total_jam_digunakan, 1)} jam</td>
-                            <td class="val">${fmt(row.total_jam_standby, 1)} jam</td>
-                        </tr>
-                    `;
-                    totalBiaya += row.total_biaya_rp;
-                    totalKwh += row.total_kwh_harian;
-                    totalJamGuna += row.total_jam_digunakan;
-                    totalJamStandby += row.total_jam_standby;
-                });
-            }
-            
-            html += `
-                </tbody>
-                <tfoot style="font-weight: bold; background: #fafafa; border-top: 2px solid #ccc;">
-                    <tr>
-                        <td>TOTAL</td>
-                        <td class="val">${fmt_rp(totalBiaya)}</td>
-                        <td class="val">${fmt(totalKwh, 2)}</td>
-                        <td class="val">${fmt(totalJamGuna, 1)} jam</td>
-                        <td class="val">${fmt(totalJamStandby, 1)} jam</td>
-                    </tr>
-                </tfoot>
-            `;
-            
-            tableBody.innerHTML = html;
-            
-        } catch (error) {
-            tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 20px; color: red;">Error: ${error.message}</td></tr>`;
-        } finally {
-            loadingDiv.style.display = "none";
+                `;
+                totalBiaya += row.total_biaya_rp;
+                totalKwh += row.total_kwh_harian;
+                totalJamGuna += row.total_jam_digunakan;
+                totalJamStandby += row.total_jam_standby;
+            });
         }
+        
+        html += `
+            </tbody>
+            <tfoot style="font-weight: bold; background: #fafafa; border-top: 2px solid #ccc;">
+                <tr>
+                    <td>TOTAL</td>
+                    <td class="val">${fmt_rp(totalBiaya)}</td>
+                    <td class="val">${fmt(totalKwh, 2)}</td>
+                    <td class="val">${fmt(totalJamGuna, 1)} jam</td>
+                    <td class="val">${fmt(totalJamStandby, 1)} jam</td>
+                </tr>
+            </tfoot>
+        `;
+        
+        tableBody.innerHTML = html;
+        
+    } catch (error) {
+        tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 20px; color: red;">Error: ${error.message}</td></tr>`;
+    } finally {
+        loadingDiv.style.display = "none";
     }
-    
-    function setStatus(msg, cls) { const s = document.getElementById("status"); s.textContent = msg; s.className = cls; }
-    
-    // Mulai! (Tanpa login)
-    initializeApp();
+}
 
-} // <-- (FIX v33) AKHIR DARI 'window.onload'
+function setStatus(msg, cls) { 
+    const s = document.getElementById("status");
+    if (s) {
+        s.textContent = msg;
+        s.className = cls;
+    }
+}
+
+// ==========================================================
+// --- (FIX v33) JALANKAN SETELAH SEMUA FUNGSI SIAP ---
+// ==========================================================
+initializeApp();
+
+} // <-- AKHIR DARI 'window.onload'
 </script>
 </body>
 </html>
