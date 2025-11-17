@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monitor Energi V25 (FINAL SPA)</title>
+    <title>Monitor Energi V27 (Full Kalkulasi)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gauge.js/1.3.7/gauge.min.js"></script>
     <style>
@@ -13,11 +13,10 @@
         #status { text-align: center; padding: 12px; margin-bottom: 20px; font-weight: 600; color: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .bg-ok { background: #2e7d32; } .bg-err { background: #c62828; } .bg-wait { background: #f57c00; }
         
-        /* --- SEMUA HALAMAN DIMULAI DENGAN DISPLAY:NONE --- */
         .page { display: none; }
         .page.active { display: block; }
         
-        /* --- Halaman 1: Menu --- */
+        /* Halaman 1: Menu */
         .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; }
         .menu-card { background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; font-size: 1.1em; font-weight: 600; color: #455a64; border-top: 5px solid #b0bec5; cursor: pointer; transition: all 0.2s ease; }
         .menu-card:hover { transform: translateY(-5px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
@@ -25,7 +24,7 @@
         .menu-badge { display: block; font-size: 0.7em; font-weight: 700; color: #b0bec5; margin-top: 5px; }
         .menu-card.online .menu-badge { color: #43a047; }
         
-        /* --- Halaman 2: Detail --- */
+        /* Halaman 2: Detail */
         .back-button { display: inline-block; background: #78909c; color: white; padding: 10px 15px; border-radius: 8px; text-decoration: none; font-weight: 600; margin-bottom: 20px; cursor: pointer; }
         .back-button:hover { background: #546e7a; }
         .tab-container { display: flex; margin-bottom: 20px; }
@@ -44,9 +43,17 @@
         .lbl { color: #78909c; font-weight: 500; }
         .val { text-align: right; font-weight: 700; color: #263238; font-size: 1.15em; }
         .unit { color: #b0bec5; font-size: 0.85em; width: 45px; text-align: right; padding-left: 5px; }
+        
         .row-energy { background: #e3f2fd; }
         .row-time { background: #e8f5e9; }
         .time-val { font-size: 1.05em; text-align: right; }
+        
+        /* Style baris baru (Kuning & Hijau) */
+        .row-calc-cost { background: #fffbe6; }
+        .row-calc-cost .val { color: #d46b08; font-weight: bold; }
+        .row-calc-time { background: #f6ffed; }
+        .row-calc-time .val { color: #389e0d; font-weight: bold; }
+        
     </style>
 </head>
 <body>
@@ -94,16 +101,34 @@
     const MQTT_TOPIC = "politeknik/meter/data";
     // ========================
 
-    const client = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_v25_spa_" + Date.now());
+    // ==========================================================
+    // --- KONFIGURASI BARU UNTUK KALKULASI ---
+    // ==========================================================
+    // (GANTI ANGKA 1450 DENGAN TARIFMU)
+    const TARIF_PER_KWH = 1450; // (Contoh: Rp 1.450 per kWh)
+    
+    // (Sesuaikan dengan SCAN_INTERVAL di ESP32-mu, dalam detik)
+    const SCAN_INTERVAL_SEC = 30; // (Default 30 detik)
+    
+    // (Batas daya untuk dianggap "Standby", dalam Watt)
+    const STANDBY_THRESHOLD_WATT = 10; 
+    // ==========================================================
+
+    const client = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_v27_spa_" + Date.now());
 
     // Variabel Global
     let gaugeV, gaugeA, gaugeP, gaugeHz;
     let machineId = 0;
-    let gaugesInitialized = false; // Flag (penting)
-    let latestDataCache = {}; // Cache data terakhir
+    let gaugesInitialized = false; 
+    let latestDataCache = {}; 
+    
+    // Variabel BARU untuk kalkulasi
+    let energyTracker = {}; 
+    const TRACKER_STORAGE_KEY = 'schneiderEnergyTracker_v2'; // v2
 
     // Helper
     const fmt = (val, dig) => (val != null && !isNaN(val)) ? Number(val).toFixed(dig) : "-";
+    const fmt_rp = (val) => (val != null && !isNaN(val)) ? 'Rp ' + Number(val).toLocaleString('id-ID', {minimumFractionDigits: 0, maximumFractionDigits: 0}) : "-";
 
     // ======================================
     // --- 1. INISIALISASI & KONEKSI MQTT ---
@@ -112,7 +137,6 @@
     function initDashboard() {
         let html = "";
         for (let i = 1; i <= 18; i++) {
-            // Kartu menu sekarang memanggil fungsi JavaScript, bukan link
             html += `
             <div class="menu-card" id="menu-card-${i}" onclick="showDetailView(${i})">
                 Mesin ${i}
@@ -121,9 +145,17 @@
         }
         document.getElementById("menu-grid-container").innerHTML = html;
         
-        // Tampilkan halaman menu
+        loadEnergyTracker();
         showMenuView();
         startConnection();
+    }
+
+    function loadEnergyTracker() {
+        const savedTracker = localStorage.getItem(TRACKER_STORAGE_KEY);
+        if (savedTracker) {
+            energyTracker = JSON.parse(savedTracker);
+            console.log("Memuat tracker v2:", energyTracker);
+        }
     }
 
     function startConnection() {
@@ -151,14 +183,16 @@
             const d = JSON.parse(m.payloadString);
             if (!d.id) return;
             
-            // 1. Simpan data terakhir ke cache
             latestDataCache[d.id] = d;
-            
-            // 2. Selalu update kartu menu (agar status ON/OFF terlihat)
             updateMenuCard(d);
             
-            // 3. Jika kita sedang melihat halaman detail mesin ini, update juga
+            if (d.status === "online") {
+                // Lakukan kalkulasi di background, walaupun tidak dilihat
+                calculateUsageAndStatus(d);
+            }
+            
             if (d.id === machineId) {
+                // Update tampilan HANYA jika sedang dilihat
                 if (d.status === "offline") {
                     setMeterOffline();
                 } else {
@@ -186,10 +220,10 @@
     // ======================================
 
     function showDetailView(id) {
-        machineId = id; // Set ID mesin yang aktif
+        machineId = id; 
         document.getElementById("detail-title").textContent = `Detail Mesin ${machineId}`;
         
-        // Buat tabel (kita buat ulang setiap kali agar bersih)
+        // --- MODIFIKASI: Tambah 4 baris tabel baru ---
         document.getElementById("detail-data-table").innerHTML = `
             <tr class="row-energy"><td class="lbl">1. Total ea import</td><td class="val" id="d-e">-</td><td class="unit">kWh</td></tr>
             <tr class="row-energy"><td class="lbl">2. Total er import</td><td class="val" id="d-q_tot">-</td><td class="unit">kVARh</td></tr>
@@ -202,32 +236,33 @@
             <tr><td class="lbl">9. Apparent power (S)</td><td class="val" id="d-s">-</td><td class="unit">kVA</td></tr>
             <tr><td class="lbl">10. Power Factor (Pf)</td><td class="val" id="d-pf">-</td><td class="unit">PF</td></tr>
             <tr><td class="lbl">11. Frequency (F)</td><td class="val" id="d-hz">-</td><td class="unit">Hz</td></tr>
-            <tr class="row-time"><td class="lbl">12. Operation time</td><td class="val time-val" id="d-op_time" colspan="2">-</td></tr>
+            <tr class="row-time"><td class="lbl">12. Total Waktu Nyala (Meteran)</td><td class="val time-val" id="d-op_time" colspan="2">-</td></tr>
+            <tr class="row-calc-time"><td class="lbl">13. Waktu Standby (Mingguan)</td><td class="val" id="d-time-standby" colspan="2">-</td></tr>
+            <tr class="row-calc-time"><td class="lbl">14. Waktu Digunakan (Mingguan)</td><td class="val" id="d-time-used" colspan="2">-</td></tr>
+            <tr class="row-calc-cost"><td class="lbl">15. Biaya Harian (Est.)</td><td class="val" id="d-cost-daily" colspan="2">-</td></tr>
+            <tr class="row-calc-cost"><td class="lbl">16. Biaya Mingguan (Est.)</td><td class="val" id="d-cost-weekly" colspan="2">-</td></tr>
         `;
         
-        // Tampilkan data dari cache (jika ada)
         if (latestDataCache[id]) {
-            setMeterOnline(latestDataCache[id]);
+            setMeterOnline(latestDataCache[id]); // Tampilkan data terakhir (termasuk kalkulasi)
         } else {
-            setMeterOffline(); // Reset jika belum ada data
+            setMeterOffline(); 
         }
 
-        // Set tab default ke "Full Parameters"
         showFullView();
         
-        // Tukar halaman
         document.getElementById("page-menu").classList.remove("active");
         document.getElementById("page-detail").classList.add("active");
     }
 
     function showMenuView() {
-        machineId = 0; // Berhenti update detail
+        machineId = 0; 
         document.getElementById("page-detail").classList.remove("active");
         document.getElementById("page-menu").classList.add("active");
+        gaugesInitialized = false; 
     }
 
-    // --- FUNGSI NAVIGASI TAB ---
-    
+    // --- FUNGSI NAVIGASI TAB (SAMA) ---
     function showFullView() {
         document.getElementById("full-params-view").style.display = "block";
         document.getElementById("core-gauges-view").style.display = "none";
@@ -236,21 +271,14 @@
     }
 
     function showGaugeView() {
-        // --- INI PERBAIKAN FINALNYA ---
-        
-        // 1. Tampilkan div-nya DULU
         document.getElementById("full-params-view").style.display = "none";
         document.getElementById("core-gauges-view").style.display = "block";
         document.getElementById("btn-full").classList.remove("active");
         document.getElementById("btn-gauges").classList.add("active");
 
-        // 2. Cek apakah gauge sudah pernah dibuat
         if (!gaugesInitialized) {
-            // 3. Jika belum, buat SEKARANG (karena div sudah terlihat)
             setupGauges();
             gaugesInitialized = true;
-            
-            // 4. Update gauge-nya dengan data terakhir (jika ada)
             if (latestDataCache[machineId]) {
                 setMeterOnline(latestDataCache[machineId]);
             } else {
@@ -290,12 +318,75 @@
         gaugeHz.set(50);
     }
     
-    // ======================================
-    // --- 4. FUNGSI UPDATE TAMPILAN ---
-    // ======================================
+    // ================================================
+    // --- 4. FUNGSI UTAMA BARU: KALKULASI & TAMPIL ---
+    // ================================================
     
+    // --- FUNGSI BARU UNTUK MENGHITUNG ---
+    function calculateUsageAndStatus(d) {
+        if (!d || d.e == null || isNaN(d.e) || d.p == null || isNaN(d.p)) return;
+
+        const now = new Date();
+        const today = now.getDate(); // 1-31
+        const dayOfWeek = now.getDay(); // 0=Minggu, 1=Senin...
+        const currentEnergy = d.e;
+        const currentPower = d.p;
+
+        let tracker = energyTracker[d.id];
+        
+        // Inisialisasi tracker jika ini mesin baru
+        if (!tracker) {
+            console.log(`[ID ${d.id}] Membuat tracker baru.`);
+            tracker = {
+                dailyStart_kWh: currentEnergy,
+                weeklyStart_kWh: currentEnergy,
+                dailyPacketsStandby: 0,
+                dailyPacketsUsed: 0,
+                weeklyPacketsStandby: 0,
+                weeklyPacketsUsed: 0,
+                lastUpdateDay: today,
+                lastUpdateDayOfWeek: dayOfWeek
+            };
+            energyTracker[d.id] = tracker;
+        }
+
+        // --- Cek Rollover Harian ---
+        if (today !== tracker.lastUpdateDay) {
+            console.log(`[ID ${d.id}] Rollover HARI (dari ${tracker.lastUpdateDay} ke ${today}).`);
+            tracker.dailyStart_kWh = currentEnergy; // Reset odometer harian
+            tracker.dailyPacketsStandby = 0; // Reset waktu harian
+            tracker.dailyPacketsUsed = 0;
+            tracker.lastUpdateDay = today;
+        }
+
+        // --- Cek Rollover Mingguan ---
+        // (Asumsi Minggu = 0, hari pertama)
+        if (dayOfWeek < tracker.lastUpdateDayOfWeek) {
+            console.log(`[ID ${d.id}] Rollover MINGGU (dari ${tracker.lastUpdateDayOfWeek} ke ${dayOfWeek}).`);
+            tracker.weeklyStart_kWh = currentEnergy; // Reset odometer mingguan
+            tracker.weeklyPacketsStandby = 0; // Reset waktu mingguan
+            tracker.weeklyPacketsUsed = 0;
+        }
+        tracker.lastUpdateDayOfWeek = dayOfWeek; // Selalu update hari terakhir
+
+        // --- Lakukan Kalkulasi Status (Hitung Paket) ---
+        if (currentPower < STANDBY_THRESHOLD_WATT) {
+            // STANDBY (Kuning)
+            tracker.dailyPacketsStandby++;
+            tracker.weeklyPacketsStandby++;
+        } else {
+            // DIGUNAKAN (Hijau)
+            tracker.dailyPacketsUsed++;
+            tracker.weeklyPacketsUsed++;
+        }
+
+        // Simpan kembali ke localStorage
+        localStorage.setItem(TRACKER_STORAGE_KEY, JSON.stringify(energyTracker));
+    }
+
+    // --- FUNGSI TAMPIL ONLINE (MODIFIKASI) ---
     function setMeterOnline(d) {
-        // --- SELALU UPDATE 12 DATA TABEL ---
+        // --- 1. UPDATE 12 DATA TABEL (SAMA) ---
         document.getElementById(`d-e`).textContent  = fmt(d.e, 2);
         document.getElementById(`d-q_tot`).textContent = fmt(d.q_tot, 2);
         document.getElementById(`d-e_part`).textContent  = fmt(d.e_part, 2);
@@ -317,17 +408,42 @@
             document.getElementById(`d-op_time`).textContent = "-";
         }
         
-        // --- SELALU UPDATE 4 GAUGE (jika sudah dibuat) ---
+        // --- 2. UPDATE 4 GAUGE (SAMA) ---
         if (gaugesInitialized) {
             gaugeV.set(d.v);
             gaugeA.set(d.i);
             gaugeP.set(d.p);
             gaugeHz.set(d.hz);
         }
+        
+        // --- 3. TAMPILKAN HASIL KALKULASI (BARU) ---
+        const tracker = energyTracker[d.id];
+        if (tracker && d.e != null && !isNaN(d.e)) {
+            // Hitung Biaya
+            const dailyUsage_kWh = d.e - tracker.dailyStart_kWh;
+            const weeklyUsage_kWh = d.e - tracker.weeklyStart_kWh;
+            const dailyCost = dailyUsage_kWh * TARIF_PER_KWH;
+            const weeklyCost = weeklyUsage_kWh * TARIF_PER_KWH;
+            
+            // Hitung Waktu (dari paket data)
+            const weeklyStandbyHours = (tracker.weeklyPacketsStandby * SCAN_INTERVAL_SEC) / 3600;
+            const weeklyUsedHours = (tracker.weeklyPacketsUsed * SCAN_INTERVAL_SEC) / 3600;
+            
+            document.getElementById(`d-cost-daily`).textContent = `${fmt_rp(dailyCost)} (${fmt(dailyUsage_kWh, 2)} kWh)`;
+            document.getElementById(`d-cost-weekly`).textContent = `${fmt_rp(weeklyCost)} (${fmt(weeklyUsage_kWh, 2)} kWh)`;
+            document.getElementById(`d-time-standby`).textContent = `${fmt(weeklyStandbyHours, 1)} Jam`;
+            document.getElementById(`d-time-used`).textContent = `${fmt(weeklyUsedHours, 1)} Jam`;
+        } else {
+            document.getElementById(`d-cost-daily`).textContent = "-";
+            document.getElementById(`d-cost-weekly`).textContent = "-";
+            document.getElementById(`d-time-standby`).textContent = "-";
+            document.getElementById(`d-time-used`).textContent = "-";
+        }
     }
 
+    // --- FUNGSI TAMPIL OFFLINE (MODIFIKASI) ---
     function setMeterOffline() {
-        // --- RESET 12 DATA TABEL ---
+        // --- RESET 16 DATA TABEL ---
         document.getElementById(`d-e`).textContent  = "-";
         document.getElementById(`d-q_tot`).textContent = "-";
         document.getElementById(`d-e_part`).textContent  = "-";
@@ -340,13 +456,17 @@
         document.getElementById(`d-pf`).textContent = "-";
         document.getElementById(`d-hz`).textContent = "-";
         document.getElementById(`d-op_time`).textContent = "-";
+        document.getElementById(`d-cost-daily`).textContent = "-";
+        document.getElementById(`d-cost-weekly`).textContent = "-";
+        document.getElementById(`d-time-standby`).textContent = "-";
+        document.getElementById(`d-time-used`).textContent = "-";
 
-        // --- RESET 4 GAUGE (jika sudah dibuat) ---
+        // --- RESET 4 GAUGE (SAMA) ---
         if (gaugesInitialized) {
             gaugeV.set(0);
             gaugeA.set(0);
             gaugeP.set(0);
-            gaugeHz.set(50); // Reset ke 50 Hz
+            gaugeHz.set(50);
         }
     }
 
