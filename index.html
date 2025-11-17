@@ -9,30 +9,23 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
-        /* ... (CSS SAMA PERSIS SEPERTI v30) ... */
+        /* ... (CSS SAMA PERSIS) ... */
         body { font-family: 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; padding: 20px; color: #333; }
         h1 { text-align: center; color: #0d47a1; margin-bottom: 5px; }
         h2 { text-align: center; color: #546e7a; font-size: 1.1em; margin-top: 0; margin-bottom: 25px; font-weight: 400; }
         #status { text-align: center; padding: 12px; margin-bottom: 20px; font-weight: 600; color: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .bg-ok { background: #2e7d32; } .bg-err { background: #c62828; } .bg-wait { background: #f57c00; } .bg-info { background: #1976d2; }
-        
         .page { display: none; }
         .page.active { display: block; }
-        
-        /* Halaman Menu Utama */
         .main-menu-grid { display: grid; grid-template-columns: 1fr; gap: 20px; max-width: 500px; margin: 20px auto; }
         .main-menu-button { background: #fff; padding: 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: center; font-size: 1.5em; font-weight: 600; color: #0d47a1; border: 2px solid #fff; cursor: pointer; transition: all 0.2s ease; }
         .main-menu-button:hover { transform: translateY(-5px); box-shadow: 0 5px 20px rgba(0,0,0,0.1); border-color: #0d47a1; }
-
-        /* Halaman Grid Mesin */
         .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; }
         .menu-card { background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; font-size: 1.1em; font-weight: 600; color: #455a64; border-top: 5px solid #b0bec5; cursor: pointer; transition: all 0.2s ease; }
         .menu-card:hover { transform: translateY(-5px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
         .menu-card.online { border-top-color: #43a047; }
         .menu-badge { display: block; font-size: 0.7em; font-weight: 700; color: #b0bec5; margin-top: 5px; }
         .menu-card.online .menu-badge { color: #43a047; }
-        
-        /* Halaman Detail */
         .back-button { display: inline-block; background: #78909c; color: white; padding: 10px 15px; border-radius: 8px; text-decoration: none; font-weight: 600; margin-bottom: 20px; cursor: pointer; }
         .back-button:hover { background: #546e7a; }
         .tab-container { display: flex; margin-bottom: 20px; }
@@ -51,8 +44,6 @@
         .lbl { color: #78909c; font-weight: 500; }
         .val { text-align: right; font-weight: 700; color: #263238; font-size: 1.15em; }
         .unit { color: #b0bec5; font-size: 0.85em; width: 45px; text-align: right; padding-left: 5px; }
-        
-        /* Style Halaman Tarif */
         .tarif-controls { background: #fff; padding: 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
         .tarif-controls input[type="date"] { padding: 8px; border: 1px solid #ccc; border-radius: 8px; font-size: 1em; }
         .tarif-controls button { padding: 9px 15px; background: #0d47a1; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1em; font-weight: 500; margin-left: 10px; }
@@ -75,26 +66,21 @@
 
     <div id="page-monitor-menu" class="page">
         <a class="back-button" onclick="showPage('page-main-menu')">&#8592; Kembali</a>
-        <div class="menu-grid" id="monitor-grid-container">
-            </div>
+        <div class="menu-grid" id="monitor-grid-container"></div>
     </div>
 
     <div id="page-monitor-detail" class="page">
         <a class="back-button" onclick="showPage('page-monitor-menu')">&#8592; Kembali</a>
         <h2 id="monitor-detail-title">Detail Mesin</h2>
-        
         <div class="tab-container">
             <button class="tab-button active" id="btn-full" onclick="showFullView()">Full Parameters</button>
             <button class="tab-button" id="btn-gauges" onclick="showGaugeView()">Core Parameters</button>
         </div>
-
         <div class="tab-content active" id="full-params-view">
             <div class="data-card">
-                <table class="data-table" id="monitor-data-table">
-                    </table>
+                <table class="data-table" id="monitor-data-table"></table>
             </div>
         </div>
-        
         <div class="tab-content" id="core-gauges-view">
             <div class="gauge-grid">
                 <div class="gauge-wrapper"><canvas id="gauge-volt"></canvas><div class="gauge-label">Tegangan (V)</div></div>
@@ -107,14 +93,12 @@
     
     <div id="page-tarif-menu" class="page">
         <a class="back-button" onclick="showPage('page-main-menu')">&#8592; Kembali</a>
-        <div class="menu-grid" id="tarif-grid-container">
-            </div>
+        <div class="menu-grid" id="tarif-grid-container"></div>
     </div>
 
     <div id="page-tarif-detail" class="page">
         <a class="back-button" onclick="showPage('page-tarif-menu')">&#8592; Kembali</a>
         <h2 id="tarif-detail-title">Detail Tarif</h2>
-        
         <div class="tarif-controls">
             <label>Tampilkan data:</label>
             <input type="date" id="tarif-datepicker-start">
@@ -125,19 +109,16 @@
             <button onclick="setTarifRange('weekly')">7 Hari Terakhir</button>
             <button onclick="setTarifRange('monthly')">30 Hari Terakhir</button>
         </div>
-        
         <div id="tarif-loading" style="display: none;">Memuat data dari database...</div>
-        
         <div class="data-card">
-            <table class="data-table" id="tarif-data-table">
-                </table>
+            <table class="data-table" id="tarif-data-table"></table>
         </div>
     </div>
 
 
 <script type="module">
     // ==========================================================
-    // --- 1. KONFIGURASI SUPABASE (SUDAH DIISI) ---
+    // --- 1. KONFIGURASI SUPABASE (SUDAH DIISI SESUAI DATA KAMU) ---
     // ==========================================================
     const SUPABASE_URL = "https://rojhcadtqfynlqzubftx.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs";
@@ -154,15 +135,21 @@
     // ==========================================================
     // --- 3. INISIALISASI ---
     // ==========================================================
-    const { createClient } = supabase;
+    
+    // (FIX: Tambahkan 'supabase' sebelum 'createClient')
+    const { createClient } = supabase; 
     const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    
+    // (Jika baris di atas error, ganti jadi ini:)
+    // const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); 
+
     const mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_v31_spa_" + Date.now());
 
     // Variabel Global
     let gaugeV, gaugeA, gaugeP, gaugeHz;
-    let activeMachineId = 0; // ID mesin yang sedang dilihat
+    let activeMachineId = 0; 
     let gaugesInitialized = false; 
-    let latestDataCache = {}; // Cache data real-time
+    let latestDataCache = {}; 
 
     // Helper
     const fmt = (val, dig) => (val != null && !isNaN(val)) ? Number(val).toFixed(dig) : "-";
@@ -177,7 +164,6 @@
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.getElementById(pageId).classList.add('active');
         
-        // Ganti judul utama
         if (pageId === 'page-main-menu') document.getElementById('page-title').textContent = "Menu Utama";
         if (pageId === 'page-monitor-menu') document.getElementById('page-title').textContent = "Pilih Mesin (Monitoring)";
         if (pageId === 'page-tarif-menu') document.getElementById('page-title').textContent = "Pilih Mesin (Tarif)";
@@ -185,7 +171,6 @@
     
     // --- FUNGSI UTAMA (YANG JALAN SAAT AWAL) ---
     function initializeApp() {
-        // 1. Buat grid 18 mesin untuk Monitoring
         let monitorGridHtml = "";
         for (let i = 1; i <= 18; i++) {
             monitorGridHtml += `
@@ -196,7 +181,6 @@
         }
         document.getElementById("monitor-grid-container").innerHTML = monitorGridHtml;
 
-        // 2. Buat grid 18 mesin untuk Tarif
         let tarifGridHtml = "";
         for (let i = 1; i <= 18; i++) {
             tarifGridHtml += `
@@ -206,10 +190,7 @@
         }
         document.getElementById("tarif-grid-container").innerHTML = tarifGridHtml;
 
-        // 3. Tampilkan Menu Utama (Sudah 'active' di HTML)
         showPage('page-main-menu');
-        
-        // 4. Mulai koneksi MQTT
         startConnection();
     }
     
@@ -235,10 +216,8 @@
 
     client.onMessageArrived = (m) => {
         try {
-            // (Kita harus parse 'id_mesin' jadi 'id' agar cocok)
             const d = JSON.parse(m.payloadString);
             if (d.id_mesin) d.id = d.id_mesin; // <-- FIX KESESUAIAN
-            
             if (!d.id) return;
             
             latestDataCache[d.id] = d;
@@ -275,7 +254,6 @@
         activeMachineId = id; 
         document.getElementById("monitor-detail-title").textContent = `Detail Mesin ${activeMachineId}`;
         
-        // Buat tabel
         document.getElementById("monitor-data-table").innerHTML = `
             <tr class="row-energy"><td class="lbl">1. Total ea import</td><td class="val" id="d-e">-</td><td class="unit">kWh</td></tr>
             <tr class="row-energy"><td class="lbl">2. Total er import</td><td class="val" id="d-q_tot">-</td><td class="unit">kVARh</td></tr>
@@ -297,7 +275,7 @@
             setMeterOffline(); 
         }
 
-        showFullView(); // Tampilkan tab "Full" dulu
+        showFullView(); 
         showPage('page-monitor-detail');
     }
     
