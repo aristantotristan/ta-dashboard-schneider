@@ -3,11 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TA Monitoring Energi (v35 - FINAL)</title>
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gauge.js/1.3.7/gauge.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <title>TA Monitoring Energi (v36 - FINAL)</title>
     
     <style>
         /* ... (CSS SAMA PERSIS) ... */
@@ -113,13 +109,11 @@
     </div>
 
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gauge.js/1.3.7/gauge.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <script>
-
-// ==========================================================
-// --- (FIX v33) BUNGKUS SEMUA DALAM 'window.onload' ---
-// ==========================================================
-window.onload = function() {
-
     // ==========================================================
     // --- 1. KONFIGURASI SUPABASE (SUDAH DIISI SESUAI DATA KAMU) ---
     // ==========================================================
@@ -139,13 +133,11 @@ window.onload = function() {
     // --- 3. INISIALISASI ---
     // ==========================================================
     
-    // ==========================================================
-    // --- (FIX v35) INI ADALAH CARA MEMANGGIL YANG BENAR ---
-    // ==========================================================
+    // (FIX v36: Panggil 'supabase' dari scope global)
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    // ==========================================================
-
-    const mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_v35_spa_" + Date.now());
+    
+    // (FIX v36: Panggil 'Paho' dari scope global)
+    const mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_v36_spa_" + Date.now());
 
     // Variabel Global
     let gaugeV, gaugeA, gaugeP, gaugeHz;
