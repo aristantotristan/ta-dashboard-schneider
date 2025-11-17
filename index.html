@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TA Monitoring Energi (v37 - FINAL)</title>
+    <title>TA Monitoring Energi (v38 - FINAL)</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gauge.js/1.3.7/gauge.min.js"></script>
@@ -132,7 +132,7 @@ const MQTT_TOPIC = "politeknik/meter/data";
 
 // (FIX v36: Inisialisasi Klien DITARUH DI window.onload)
 let supabaseClient;
-let mqttClient;
+let mqttClient; // <-- (FIX v38) DIGANTI NAMANYA DI BAWAH
 
 // (Variabel Global)
 let gaugeV, gaugeA, gaugeP, gaugeHz;
@@ -190,7 +190,10 @@ function initializeApp() {
 
 function startConnection() {
     setStatus("Menghubungkan ke MQTT...", "bg-wait");
-    client.connect({
+    // ========================================================
+    // --- (FIX v38) GANTI 'client' MENJADI 'mqttClient' ---
+    // ========================================================
+    mqttClient.connect({
         useSSL: true, userName: MQTT_USER, password: MQTT_PASS,
         onSuccess: onConnect,
         onFailure: (e) => { setStatus("Gagal Terhubung: " + e.errorMessage, "bg-err"); setTimeout(startConnection, 5000); }
@@ -199,7 +202,48 @@ function startConnection() {
 
 function onConnect() {
     setStatus("ONLINE - Terhubung ke Sistem Real-time", "bg-ok");
-    client.subscribe(MQTT_TOPIC);
+    // ========================================================
+    // --- (FIX v38) GANTI 'client' MENJADI 'mqttClient' ---
+    // ========================================================
+    mqttClient.subscribe(MQTT_TOPIC);
+}
+
+// ========================================================
+// --- (FIX v38) GANTI 'client' MENJADI 'mqttClient' ---
+// ========================================================
+mqttClient.onConnectionLost = (r) => { if (r.errorCode !== 0) { setStatus("⚠️ Koneksi MQTT Terputus. Menyambung ulang...", "bg-wait"); setTimeout(startConnection, 5000); }};
+
+mqttClient.onMessageArrived = (m) => {
+    try {
+        const d = JSON.parse(m.payloadString);
+        if (d.id_mesin) d.id = d.id_mesin; // <-- FIX KESESUAIAN
+        if (!d.id) return;
+        
+        latestDataCache[d.id] = d;
+        updateMonitorMenuCard(d);
+        
+        if (d.id === activeMachineId) {
+            if (d.status === "offline") {
+                setMeterOffline();
+            } else {
+                setMeterOnline(d);
+            }
+        }
+    } catch (e) { console.error(e); }
+};
+// ========================================================
+
+function updateMonitorMenuCard(d) {
+    const card = document.getElementById(`monitor-card-${d.id}`);
+    const badge = document.getElementById(`monitor-badge-${d.id}`);
+    if (!card || !badge) return;
+    if (d.status === "offline") {
+        card.classList.remove("online");
+        badge.textContent = "OFFLINE";
+    } else {
+        card.classList.add("online");
+        badge.textContent = "ONLINE";
+    }
 }
 
 // ======================================
@@ -457,9 +501,31 @@ function setStatus(msg, cls) {
 window.onload = function() {
     try {
         // 1. Inisialisasi Klien (panggil dari global)
-        // (Kita tidak perlu definisikan 'supabaseClient' atau 'mqttClient' lagi, sudah di atas)
-        
-        // 2. Mulai Aplikasi
+        supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_v36_spa_" + Date.now());
+
+        // 2. Pasang handler MQTT (FIX v38)
+        mqttClient.onConnectionLost = (r) => { if (r.errorCode !== 0) { setStatus("⚠️ Koneksi MQTT Terputus. Menyambung ulang...", "bg-wait"); setTimeout(startConnection, 5000); }};
+        mqttClient.onMessageArrived = (m) => {
+            try {
+                const d = JSON.parse(m.payloadString);
+                if (d.id_mesin) d.id = d.id_mesin; // <-- FIX KESESUAIAN
+                if (!d.id) return;
+                
+                latestDataCache[d.id] = d;
+                updateMonitorMenuCard(d);
+                
+                if (d.id === activeMachineId) {
+                    if (d.status === "offline") {
+                        setMeterOffline();
+                    } else {
+                        setMeterOnline(d);
+                    }
+                }
+            } catch (e) { console.error(e); }
+        };
+
+        // 3. Mulai Aplikasi
         initializeApp();
         
     } catch (e) {
