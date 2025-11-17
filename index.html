@@ -9,7 +9,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
-        /* ... (CSS SAMA PERSIS SEPERTI v30) ... */
         body { font-family: 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; padding: 20px; color: #333; }
         h1 { text-align: center; color: #0d47a1; margin-bottom: 5px; }
         h2 { text-align: center; color: #546e7a; font-size: 1.1em; margin-top: 0; margin-bottom: 25px; font-weight: 400; }
@@ -57,6 +56,9 @@
         .tarif-controls input[type="date"] { padding: 8px; border: 1px solid #ccc; border-radius: 8px; font-size: 1em; }
         .tarif-controls button { padding: 9px 15px; background: #0d47a1; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1em; font-weight: 500; margin-left: 10px; }
         #tarif-loading { text-align: center; font-weight: 600; color: #546e7a; padding: 20px; }
+        /* Style Tabel Tarif */
+        #tarif-data-table th { text-align: left; padding: 10px 4px; border-bottom: 2px solid #ccc; }
+        #tarif-data-table tfoot td { font-weight: bold; background: #fafafa; border-top: 2px solid #ccc; padding-top: 10px; }
     </style>
 </head>
 <body>
@@ -235,7 +237,10 @@
 
     client.onMessageArrived = (m) => {
         try {
+            // (Kita harus parse 'id_mesin' jadi 'id' agar cocok)
             const d = JSON.parse(m.payloadString);
+            if (d.id_mesin) d.id = d.id_mesin; // <-- FIX KESESUAIAN
+            
             if (!d.id) return;
             
             latestDataCache[d.id] = d;
@@ -294,7 +299,7 @@
             setMeterOffline(); 
         }
 
-        showFullView();
+        showFullView(); // Tampilkan tab "Full" dulu
         showPage('page-monitor-detail');
     }
     
@@ -415,6 +420,7 @@
         
         if (range === 'daily') {
             // Set start date ke hari ini juga
+            // (Kita akan ambil data 'today' dari Supabase)
             startDate.setDate(startDate.getDate());
         } else if (range === 'weekly') {
             startDate.setDate(startDate.getDate() - 7);
@@ -468,12 +474,12 @@
             let totalJamStandby = 0;
 
             if (data.length === 0) {
-                html += '<tr><td colspan="5" style="text-align:center; padding: 20px;">Tidak ada data riwayat untuk rentang tanggal ini. (Data dihitung otomatis tiap jam 00:05 UTC)</td></tr>';
+                html += '<tr><td colspan="5" style="text-align:center; padding: 20px;">Tidak ada data riwayat untuk rentang tanggal ini. (Data dihitung otomatis tiap jam 00:05 UTC / 07:05 WIB)</td></tr>';
             } else {
                 data.forEach(row => {
                     html += `
                         <tr>
-                            <td>${new Date(row.tanggal).toLocaleDateString('id-ID')}</td>
+                            <td>${new Date(row.tanggal + 'T00:00:00').toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' })}</td>
                             <td class="val">${fmt_rp(row.total_biaya_rp)}</td>
                             <td class="val">${fmt(row.total_kwh_harian, 2)}</td>
                             <td class="val">${fmt(row.total_jam_digunakan, 1)} jam</td>
@@ -511,8 +517,7 @@
     
     function setStatus(msg, cls) { const s = document.getElementById("status"); s.textContent = msg; s.className = cls; }
     
-    // Mulai!
-    // (Kita tidak cek login, langsung jalankan aplikasi)
+    // Mulai! (Tanpa login)
     initializeApp();
     
 </script>
