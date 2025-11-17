@@ -205,7 +205,7 @@ window.onload = function() {
         client.connect({
             useSSL: true, userName: MQTT_USER, password: MQTT_PASS,
             onSuccess: onConnect,
-            onFailure: (e) => { setStatus("Gagal Terhubung: "JSON.parse(m.payloadString) " + e.errorMessage, "bg-err"); setTimeout(startConnection, 5000); }
+            onFailure: (e) => { setStatus("Gagal Terhubung: " + e.errorMessage, "bg-err"); setTimeout(startConnection, 5000); }
         });
     }
     
@@ -306,6 +306,7 @@ window.onload = function() {
     }
     
     function setupGauges() {
+        // (Library 'Gauge' sudah ada di scope global)
         const baseOpts = { angle: 0.0, lineWidth: 0.3, radiusScale: 0.9, pointer: { length: 0.5, strokeWidth: 0.03, color: '#000000' }, limitMax: false, limitMin: false, colorStart: '#6FADCF', colorStop: '#8FC0DA', strokeColor: '#E0E0E0', generateGradient: true };
         
         var optsV = { ...baseOpts }; 
