@@ -3,184 +3,182 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monitor Energi V18 (12 Parameter)</title>
+    <title>Dashboard Meteran (18-Meter)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; background: #f0f2f5; padding: 20px; color: #333; }
-        h1 { text-align: center; color: #0d47a1; margin-bottom: 5px; }
-        h2 { text-align: center; color: #546e7a; font-size: 1.1em; margin-top: 0; margin-bottom: 25px; font-weight: 400; }
-        #status { text-align: center; padding: 12px; margin-bottom: 30px; font-weight: 600; color: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .bg-ok { background: #2e7d32; } .bg-err { background: #c62828; } .bg-wait { background: #f57c00; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background-color: #f0f2f5; color: #333; }
+        h1 { text-align: center; color: #1a73e8; }
+        #status-container { text-align: center; margin-bottom: 30px; padding: 15px; background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        #status { font-weight: bold; transition: all 0.3s; }
+        .status-connected { color: #28a745; }
+        .status-disconnected { color: #dc3545; }
+        .status-connecting { color: #ffc107; }
 
-        .grid { display: grid; grid-template-columns: 1fr; justify-items: center; }
-        .card { background: #fff; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); overflow: hidden; border-top: 6px solid #90a4ae; transition: all 0.3s ease; width: 100%; max-width: 400px; }
-        .card.online { border-top-color: #2e7d32; } 
-        
-        .card-header { padding: 15px 20px; background: #fafafa; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
-        .card-header h3 { margin: 0; font-size: 1.2em; color: #37474f; }
-        .badge { font-size: 0.75em; padding: 5px 10px; border-radius: 20px; background: #eceff1; color: #b0bec5; font-weight: 700; }
-        .badge.on { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
-
-        .card-body { padding: 15px 20px; }
-        .data-table { width: 100%; font-size: 0.9em; border-collapse: separate; border-spacing: 0 5px; }
-        .data-table td { vertical-align: middle; padding: 2px 4px; }
-        .lbl { color: #78909c; font-weight: 500; }
-        .val { text-align: right; font-weight: 700; color: #263238; font-size: 1.15em; }
-        .unit { color: #b0bec5; font-size: 0.85em; width: 45px; text-align: right; padding-left: 5px; }
-        
-        .row-energy { background: #e3f2fd; }
-        .row-time { background: #e8f5e9; }
-        .time-val { font-size: 1.05em; text-align: right; }
-
-        .update-flash { animation: flash 1s ease-out; }
-        @keyframes flash { 0% { background-color: #e8f5e9; } 100% { background-color: #fff; } }
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            padding: 10px;
+        }
+        .meter-card {
+            background-color: #fff;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05), 0 1px 3px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .meter-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px rgba(0,0,0,0.1); }
+        .meter-card h3 { margin-top: 0; color: #444; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; font-size: 1.2em; }
+        .meter-card .row { display: flex; justify-content: space-between; margin: 8px 0; font-size: 0.95em; }
+        .meter-card .label { color: #666; }
+        .meter-card .value { font-weight: 600; color: #222; }
+        .meter-card .unit { color: #888; font-size: 0.9em; margin-left: 4px; }
+        .highlight-update { animation: highlight-fade 1s ease-out; }
+        @keyframes highlight-fade {
+            0% { background-color: rgba(40, 167, 69, 0.2); }
+            100% { background-color: #fff; }
+        }
     </style>
 </head>
 <body>
-    <h1>MONITORING ENERGI</h1>
-    <h2>PT. Amarilys Karisma Gemilang</h2>
-    
-    <div id="status" class="bg-wait">Menghubungkan ke Broker MQTT...</div>
-    <div class="grid" id="main"></div>
+
+    <h1>Live Dashboard Schneider (18 Meter)</h1>
+    <div id="status-container">
+        Status Koneksi MQTT: <span id="status" class="status-connecting">Menghubungkan...</span>
+    </div>
+
+    <div class="grid-container" id="dashboard-grid">
+        </div>
 
 <script>
-    // === KONFIGURASI MQTT (Dashboard Subscriber) ===
+    // --- KONFIGURASI MQTT ---
     const MQTT_HOST = "701d32236feb43b38c22855a611f4d42.s1.eu.hivemq.cloud";
-    const MQTT_PORT = 8884;
+    const MQTT_PORT = 8884; // WSS Port
     const MQTT_USER = "web_dashboard";
     const MQTT_PASS = "Tristan12";
     const MQTT_TOPIC = "politeknik/meter/data";
-    // ========================
+    // ------------------------
 
-    const client = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_v18_solo_" + Date.now());
+    let client;
+    let reconnectTimeout = 5000;
 
-    function initDashboard() {
-        let html = "";
-        const i = 1; // Hanya buat kartu ID 1
-
-        // ==========================================================
-        // --- LABEL HTML DISESUAIKAN (12 PARAMETER) ---
-        // ==========================================================
-        html += `
-        <div class="card" id="c${i}">
-            <div class="card-header">
-                <h3>Mesin ${i}</h3>
-                <span id="s${i}" class="badge">OFFLINE</span>
-            </div>
-            <div class="card-body">
-                <table class="data-table">
-                    <tr class="row-energy"><td class="lbl">1. Total ea import</td><td class="val" id="e${i}">-</td><td class="unit">kWh</td></tr>
-                    <tr class="row-energy"><td class="lbl">2. Total er import</td><td class="val" id="q_tot${i}">-</td><td class="unit">kVARh</td></tr>
-                    <tr class="row-energy"><td class="lbl">3. partial active E</td><td class="val" id="e_part${i}">-</td><td class="unit">kWh</td></tr>
-                    <tr class="row-energy"><td class="lbl">4. partial Reactive E</td><td class="val" id="q_part${i}">-</td><td class="unit">kVARh</td></tr>
-
-                    <tr><td class="lbl">5. Voltage (V)</td><td class="val" id="v${i}">-</td><td class="unit">V</td></tr>
-                    <tr><td class="lbl">6. Current (A)</td><td class="val" id="i${i}">-</td><td class="unit">A</td></tr>
-                    
-                    <tr><td class="lbl">7. Active power (P)</td><td class="val" id="p${i}">-</td><td class="unit">W</td></tr>
-                    <tr><td class="lbl">8. Reactive Power (Q)</td><td class="val" id="q${i}">-</td><td class="unit">VAR</td></tr>
-                    <tr><td class="lbl">9. Apparent power (S)</td><td class="val" id="s${i}">-</td><td class="unit">kVA</td></tr>
-                    
-                    <tr><td class="lbl">10. Power Factor (Pf)</td><td class="val" id="pf${i}">-</td><td class="unit">PF</td></tr>
-                    <tr><td class="lbl">11. Frequency (F)</td><td class="val" id="hz${i}">-</td><td class="unit">Hz</td></tr>
-                    
-                    <tr class="row-time"><td class="lbl">12. Operation time</td><td class="val time-val" id="op_time${i}" colspan="2">-</td></tr>
-                </table>
-            </div>
-        </div>`;
-        
-        document.getElementById("main").innerHTML = html;
-        startConnection();
+    // Fungsi inisialisasi awal
+    function init() {
+        createMeterCards();
+        connectMQTT();
     }
 
-    function startConnection() {
-        setStatus("Menghubungkan...", "bg-wait");
-        client.connect({
-            useSSL: true, userName: MQTT_USER, password: MQTT_PASS,
+    function connectMQTT() {
+        const clientId = "web_dash_" + Math.random().toString(16).substr(2, 8);
+        client = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, clientId);
+
+        client.onConnectionLost = onConnectionLost;
+        client.onMessageArrived = onMessageArrived;
+
+        const options = {
+            useSSL: true,
+            userName: MQTT_USER,
+            password: MQTT_PASS,
             onSuccess: onConnect,
-            onFailure: (e) => { setStatus("Gagal Terhubung: " + e.errorMessage, "bg-err"); setTimeout(startConnection, 5000); }
-        });
+            onFailure: onFail,
+            keepAliveInterval: 60,
+            timeout: 10
+        };
+
+        updateStatus("Menghubungkan ke HiveMQ...", "status-connecting");
+        try {
+            client.connect(options);
+        } catch (e) {
+            console.error("Error saat connect:", e);
+            onFail({ errorMessage: e.message });
+        }
     }
+
     function onConnect() {
-        setStatus("ONLINE - MONITORING AKTIF", "bg-ok");
+        console.log("MQTT Terhubung!");
+        updateStatus("Terhubung ✅", "status-connected");
         client.subscribe(MQTT_TOPIC);
     }
-    client.onConnectionLost = (r) => { if (r.errorCode !== 0) { setStatus("⚠️ Koneksi Terputus. Menyambung ulang...", "bg-wait"); setTimeout(startConnection, 5000); }};
-    client.onMessageArrived = (m) => { try { updateMeter(JSON.parse(m.payloadString)); } catch (e) { console.error(e); }};
 
-    const fmt = (val, dig) => (val != null && !isNaN(val)) ? Number(val).toFixed(dig) : "-";
-
-    function updateMeter(d) {
-        const id = d.id; if (!id) return;
-        if (id !== 1) return; // Hanya proses ID 1
-        if (d.status === "offline") {
-            setMeterOffline(id);
+    function onFail(responseObject) {
+        let msg = "Koneksi Gagal ❌";
+        if (responseObject.errorCode === 8) {
+             msg += ": Tidak diizinkan (Cek User/Pass atau Web Client setting di HiveMQ)";
         } else {
-            setMeterOnline(id, d);
+             msg += ": " + responseObject.errorMessage;
+        }
+        console.error("MQTT Gagal:", responseObject);
+        updateStatus(msg, "status-disconnected");
+        setTimeout(connectMQTT, reconnectTimeout); // Coba lagi nanti
+    }
+
+    function onConnectionLost(responseObject) {
+        if (responseObject.errorCode !== 0) {
+            console.warn("Koneksi Terputus:", responseObject.errorMessage);
+            updateStatus("Terputus ⚠️. Mencoba lagi...", "status-connecting");
+            setTimeout(connectMQTT, reconnectTimeout);
         }
     }
 
-    function setMeterOnline(id, d) {
-        const badge = document.getElementById(`s${id}`);
-        badge.textContent = "ONLINE";
-        badge.className = "badge on";
-        document.getElementById(`c${id}`).classList.add("online");
+    function updateStatus(text, className) {
+        const el = document.getElementById("status");
+        el.textContent = text;
+        el.className = className;
+    }
 
-        // Grup Energi (tanpa e_t1)
-        document.getElementById(`e${i}`).textContent  = fmt(d.e, 2);
-        document.getElementById(`q_tot${i}`).textContent = fmt(d.q_tot, 2);
-        document.getElementById(`e_part${i}`).textContent  = fmt(d.e_part, 2);
-        document.getElementById(`q_part${i}`).textContent  = fmt(d.q_part, 2);
-        
-        // Grup V & I
-        document.getElementById(`v${i}`).textContent  = fmt(d.v, 1);
-        document.getElementById(`i${i}`).textContent  = fmt(d.i, 3);
-        
-        // Grup P,Q,S
-        document.getElementById(`p${i}`).textContent  = fmt(d.p, 0); 
-        document.getElementById(`q${i}`).textContent  = fmt(d.q, 0); 
-        document.getElementById(`s${i}`).textContent  = fmt(d.s, 2); 
-        
-        // Grup PF & Freq
-        document.getElementById(`pf${i}`).textContent = fmt(d.pf, 2);
-        document.getElementById(`hz${i}`).textContent = fmt(d.hz, 1);
-        
-        // Grup Waktu (Perhitungan "Hari & Jam")
-        const total_hours = d.op_time;
-        if (total_hours != null && !isNaN(total_hours)) {
-            const days = Math.floor(total_hours / 24);
-            const hours = (total_hours % 24).toFixed(1);
-            document.getElementById(`op_time${i}`).textContent = `${days} hari & ${hours} jam`;
-        } else {
-            document.getElementById(`op_time${i}`).textContent = "-";
+    function createMeterCards() {
+        const grid = document.getElementById("dashboard-grid");
+        grid.innerHTML = "";
+        for (let i = 1; i <= 18; i++) {
+            const card = document.createElement("div");
+            card.className = "meter-card";
+            card.id = `meter_${i}`;
+            card.innerHTML = `
+                <h3>Meter ID: ${i.toString().padStart(2, '0')}</h3>
+                <div class="row"><span class="label">Status:</span> <span class="value" id="s_${i}" style="color: orange">Menunggu...</span></div>
+                <div class="row"><span class="label">Voltage:</span> <div><span class="value" id="v_${i}">-</span><span class="unit">V</span></div></div>
+                <div class="row"><span class="label">Current:</span> <div><span class="value" id="a_${i}">-</span><span class="unit">A</span></div></div>
+                <div class="row"><span class="label">Active Power:</span> <div><span class="value" id="p_${i}">-</span><span class="unit">W</span></div></div>
+                <div class="row"><span class="label">Total Energy:</span> <div><span class="value" id="e_${i}">-</span><span class="unit">kWh</span></div></div>
+                <div class="row"><span class="label">Frequency:</span> <div><span class="value" id="f_${i}">-</span><span class="unit">Hz</span></div></div>
+            `;
+            grid.appendChild(card);
         }
-        
-        const cb = document.getElementById(`c${id}`).querySelector('.card-body');
-        cb.classList.remove("update-flash"); void cb.offsetWidth; cb.classList.add("update-flash");
     }
 
-    function setMeterOffline(id) {
-        const badge = document.getElementById(`s${id}`);
-        badge.textContent = "OFFLINE";
-        badge.className = "badge"; 
-        document.getElementById(`c${id}`).classList.remove("online"); 
-
-        document.getElementById(`e${i}`).textContent  = "-";
-        document.getElementById(`q_tot${i}`).textContent = "-";
-        document.getElementById(`e_part${i}`).textContent  = "-";
-        document.getElementById(`q_part${i}`).textContent  = "-";
-        document.getElementById(`v${i}`).textContent  = "-";
-        document.getElementById(`i${i}`).textContent  = "-";
-        document.getElementById(`p${i}`).textContent  = "-";
-        document.getElementById(`q${i}`).textContent  = "-";
-        document.getElementById(`s${i}`).textContent  = "-";
-        document.getElementById(`pf${i}`).textContent = "-";
-        document.getElementById(`hz${i}`).textContent = "-";
-        document.getElementById(`op_time${i}`).textContent = "-";
+    function onMessageArrived(message) {
+        try {
+            const data = JSON.parse(message.payloadString);
+            updateCard(data);
+        } catch (e) {
+            console.error("Data JSON rusak:", e);
+        }
     }
 
-    function setStatus(msg, cls) { const s = document.getElementById("status"); s.textContent = msg; s.className = cls; }
-    initDashboard();
+    function updateCard(data) {
+        const id = data.id;
+        if (!id || id < 1 || id > 18) return;
+
+        // Helper untuk format angka desimal
+        const fmt = (val, d) => (val !== undefined && val !== null) ? Number(val).toFixed(d) : "-";
+
+        document.getElementById(`s_${id}`).textContent = "Online ●";
+        document.getElementById(`s_${id}`).style.color = "#28a745";
+        document.getElementById(`v_${id}`).textContent = fmt(data.v_avg, 1);
+        document.getElementById(`a_${id}`).textContent = fmt(data.a_avg, 3);
+        document.getElementById(`p_${id}`).textContent = fmt(data.p_total, 1);
+        document.getElementById(`e_${id}`).textContent = fmt(data.energy, 3); // Total Ea Import
+        document.getElementById(`f_${id}`).textContent = fmt(data.freq, 2);
+
+        // Efek kedip saat update
+        const card = document.getElementById(`meter_${id}`);
+        card.classList.remove("highlight-update");
+        void card.offsetWidth; // Trigger reflow
+        card.classList.add("highlight-update");
+    }
+
+    // Mulai aplikasi
+    init();
 </script>
 </body>
 </html>
