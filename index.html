@@ -3,20 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monitor Energi V27 (Full Kalkulasi)</title>
+    <title>TA Monitoring Energi (v30)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gauge.js/1.3.7/gauge.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <style>
+        /* ... (SEMUA CSS SAMA SEPERTI v25, SAYA RINGKAS AGAR TIDAK TERLALU PANJANG) ... */
         body { font-family: 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; padding: 20px; color: #333; }
         h1 { text-align: center; color: #0d47a1; margin-bottom: 5px; }
         h2 { text-align: center; color: #546e7a; font-size: 1.1em; margin-top: 0; margin-bottom: 25px; font-weight: 400; }
         #status { text-align: center; padding: 12px; margin-bottom: 20px; font-weight: 600; color: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .bg-ok { background: #2e7d32; } .bg-err { background: #c62828; } .bg-wait { background: #f57c00; }
+        .bg-ok { background: #2e7d32; } .bg-err { background: #c62828; } .bg-wait { background: #f57c00; } .bg-info { background: #1976d2; }
         
         .page { display: none; }
         .page.active { display: block; }
         
-        /* Halaman 1: Menu */
+        /* Halaman Login */
+        .login-card { background: #fff; padding: 30px; border-radius: 12px; max-width: 400px; margin: 40px auto; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .login-input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; }
+        .login-button { width: 100%; padding: 12px; background: #0d47a1; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1em; font-weight: 600; }
+        .login-button:hover { background: #1565c0; }
+        #login-error { color: #c62828; text-align: center; margin-top: 15px; }
+
+        /* Halaman Menu Utama */
+        .main-menu-grid { display: grid; grid-template-columns: 1fr; gap: 20px; max-width: 500px; margin: 20px auto; }
+        .main-menu-button { background: #fff; padding: 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: center; font-size: 1.5em; font-weight: 600; color: #0d47a1; border: 2px solid #fff; cursor: pointer; transition: all 0.2s ease; }
+        .main-menu-button:hover { transform: translateY(-5px); box-shadow: 0 5px 20px rgba(0,0,0,0.1); border-color: #0d47a1; }
+
+        /* Halaman Grid Mesin */
         .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; }
         .menu-card { background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; font-size: 1.1em; font-weight: 600; color: #455a64; border-top: 5px solid #b0bec5; cursor: pointer; transition: all 0.2s ease; }
         .menu-card:hover { transform: translateY(-5px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
@@ -24,7 +39,7 @@
         .menu-badge { display: block; font-size: 0.7em; font-weight: 700; color: #b0bec5; margin-top: 5px; }
         .menu-card.online .menu-badge { color: #43a047; }
         
-        /* Halaman 2: Detail */
+        /* Halaman Detail */
         .back-button { display: inline-block; background: #78909c; color: white; padding: 10px 15px; border-radius: 8px; text-decoration: none; font-weight: 600; margin-bottom: 20px; cursor: pointer; }
         .back-button:hover { background: #546e7a; }
         .tab-container { display: flex; margin-bottom: 20px; }
@@ -44,31 +59,47 @@
         .val { text-align: right; font-weight: 700; color: #263238; font-size: 1.15em; }
         .unit { color: #b0bec5; font-size: 0.85em; width: 45px; text-align: right; padding-left: 5px; }
         
-        .row-energy { background: #e3f2fd; }
-        .row-time { background: #e8f5e9; }
-        .time-val { font-size: 1.05em; text-align: right; }
-        
-        /* Style baris baru (Kuning & Hijau) */
-        .row-calc-cost { background: #fffbe6; }
-        .row-calc-cost .val { color: #d46b08; font-weight: bold; }
-        .row-calc-time { background: #f6ffed; }
-        .row-calc-time .val { color: #389e0d; font-weight: bold; }
-        
+        /* Style Halaman Tarif */
+        .tarif-controls { background: #fff; padding: 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .tarif-controls input[type="date"] { padding: 8px; border: 1px solid #ccc; border-radius: 8px; font-size: 1em; }
+        .tarif-controls button { padding: 9px 15px; background: #0d47a1; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1em; font-weight: 500; margin-left: 10px; }
+        #tarif-loading { text-align: center; font-weight: 600; color: #546e7a; padding: 20px; }
     </style>
 </head>
 <body>
     <h1>MONITORING ENERGI</h1>
-    <h2>PT. Amarilys Karisma Gemilang</h2>
-    <div id="status" class="bg-wait">Menghubungkan ke Sistem...</div>
+    <h2 id="page-title">PT. Amarilys Karisma Gemilang</h2>
+    <div id="status" class="bg-wait">Memuat...</div>
 
-    <div id="page-menu" class="page active">
-        <div class="menu-grid" id="menu-grid-container">
+    <div id="page-login" class="page active">
+        <div class="login-card">
+            <h2 style="text-align: center; margin-top: 0;">Login</h2>
+            <input type="email" id="login-email" class="login-input" placeholder="Email">
+            <input type="password" id="login-pass" class="login-input" placeholder="Password">
+            <button class="login-button" onclick="handleLogin()">Masuk</button>
+            <div id="login-error"></div>
+        </div>
+    </div>
+
+    <div id="page-main-menu" class="page">
+        <div class="main-menu-grid">
+            <div class="main-menu-button" onclick="showPage('page-monitor-menu')">1. Monitoring Mesin</div>
+            <div class="main-menu-button" onclick="showPage('page-tarif-menu')">2. Tarif Mesin</div>
+        </div>
+        <div style="text-align: center; margin-top: 30px;">
+            <a href="#" onclick="handleLogout()" style="color: #78909c;">Logout</a>
+        </div>
+    </div>
+
+    <div id="page-monitor-menu" class="page">
+        <a class="back-button" onclick="showPage('page-main-menu')">&#8592; Kembali</a>
+        <div class="menu-grid" id="monitor-grid-container">
             </div>
     </div>
 
-    <div id="page-detail" class="page">
-        <a class="back-button" onclick="showMenuView()">&#8592; Kembali ke Menu</a>
-        <h2 id="detail-title">Detail Mesin</h2>
+    <div id="page-monitor-detail" class="page">
+        <a class="back-button" onclick="showPage('page-monitor-menu')">&#8592; Kembali</a>
+        <h2 id="monitor-detail-title">Detail Mesin</h2>
         
         <div class="tab-container">
             <button class="tab-button active" id="btn-full" onclick="showFullView()">Full Parameters</button>
@@ -77,7 +108,7 @@
 
         <div class="tab-content active" id="full-params-view">
             <div class="data-card">
-                <table class="data-table" id="detail-data-table">
+                <table class="data-table" id="monitor-data-table">
                     </table>
             </div>
         </div>
@@ -91,75 +122,171 @@
             </div>
         </div>
     </div>
+    
+    <div id="page-tarif-menu" class="page">
+        <a class="back-button" onclick="showPage('page-main-menu')">&#8592; Kembali</a>
+        <div class="menu-grid" id="tarif-grid-container">
+            </div>
+    </div>
 
-<script>
-    // === KONFIGURASI MQTT (SAMA) ===
+    <div id="page-tarif-detail" class="page">
+        <a class="back-button" onclick="showPage('page-tarif-menu')">&#8592; Kembali</a>
+        <h2 id="tarif-detail-title">Detail Tarif</h2>
+        
+        <div class="tarif-controls">
+            <label>Tampilkan data:</label>
+            <input type="date" id="tarif-datepicker-start">
+            <input type="date" id="tarif-datepicker-end">
+            <button onclick="fetchTarifData()">Tampilkan</button>
+            <hr style="border:0; border-top:1px solid #eee; margin: 15px 0;">
+            <button onclick="setTarifRange('daily')">Hari Ini</button>
+            <button onclick="setTarifRange('weekly')">7 Hari Terakhir</button>
+            <button onclick="setTarifRange('monthly')">30 Hari Terakhir</button>
+        </div>
+        
+        <div id="tarif-loading" style="display: none;">Memuat data dari database...</div>
+        
+        <div class="data-card">
+            <table class="data-table" id="tarif-data-table">
+                </table>
+        </div>
+    </div>
+
+
+<script type="module">
+    // ==========================================================
+    // --- 1. KONFIGURASI SUPABASE (WAJIB GANTI!) ---
+    // ==========================================================
+    const SUPABASE_URL = "https://roijhcaoityfnlqzubfx.supabase.co"; // <-- GANTI DENGAN URL-mu
+    const SUPABASE_ANON_KEY = "eyJh...GANTI...INI..."; // <-- GANTI DENGAN ANON KEY-mu
+
+    // ==========================================================
+    // --- 2. KONFIGURASI MQTT (SAMA) ---
+    // ==========================================================
     const MQTT_HOST = "701d32236feb43b38c22855a611f4d42.s1.eu.hivemq.cloud";
     const MQTT_PORT = 8884;
     const MQTT_USER = "web_dashboard";
     const MQTT_PASS = "Tristan12";
     const MQTT_TOPIC = "politeknik/meter/data";
-    // ========================
 
     // ==========================================================
-    // --- KONFIGURASI BARU UNTUK KALKULASI ---
+    // --- 3. INISIALISASI ---
     // ==========================================================
-    // (GANTI ANGKA 1450 DENGAN TARIFMU)
-    const TARIF_PER_KWH = 1450; // (Contoh: Rp 1.450 per kWh)
-    
-    // (Sesuaikan dengan SCAN_INTERVAL di ESP32-mu, dalam detik)
-    const SCAN_INTERVAL_SEC = 30; // (Default 30 detik)
-    
-    // (Batas daya untuk dianggap "Standby", dalam Watt)
-    const STANDBY_THRESHOLD_WATT = 10; 
-    // ==========================================================
-
-    const client = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_v27_spa_" + Date.now());
+    const { createClient } = supabase;
+    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_v30_spa_" + Date.now());
 
     // Variabel Global
     let gaugeV, gaugeA, gaugeP, gaugeHz;
-    let machineId = 0;
+    let activeMachineId = 0; // ID mesin yang sedang dilihat
     let gaugesInitialized = false; 
-    let latestDataCache = {}; 
-    
-    // Variabel BARU untuk kalkulasi
-    let energyTracker = {}; 
-    const TRACKER_STORAGE_KEY = 'schneiderEnergyTracker_v2'; // v2
+    let latestDataCache = {}; // Cache data real-time
 
     // Helper
     const fmt = (val, dig) => (val != null && !isNaN(val)) ? Number(val).toFixed(dig) : "-";
     const fmt_rp = (val) => (val != null && !isNaN(val)) ? 'Rp ' + Number(val).toLocaleString('id-ID', {minimumFractionDigits: 0, maximumFractionDigits: 0}) : "-";
 
     // ======================================
-    // --- 1. INISIALISASI & KONEKSI MQTT ---
+    // --- 4. LOGIKA UTAMA (NAVIGASI & LOGIN) ---
     // ======================================
+
+    // Pindah Halaman
+    window.showPage = (pageId) => {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.getElementById(pageId).classList.add('active');
+        
+        // Ganti judul utama
+        if (pageId === 'page-login') document.getElementById('page-title').textContent = "Selamat Datang";
+        if (pageId === 'page-main-menu') document.getElementById('page-title').textContent = "Menu Utama";
+        if (pageId === 'page-monitor-menu') document.getElementById('page-title').textContent = "Pilih Mesin (Monitoring)";
+        if (pageId === 'page-tarif-menu') document.getElementById('page-title').textContent = "Pilih Mesin (Tarif)";
+    }
+
+    // --- FUNGSI LOGIN ---
+    window.handleLogin = async () => {
+        const email = document.getElementById('login-email').value;
+        const pass = document.getElementById('login-pass').value;
+        const errorDiv = document.getElementById('login-error');
+        errorDiv.textContent = "";
+        
+        try {
+            const { data, error } = await supabaseClient.auth.signInWithPassword({
+                email: email,
+                password: pass,
+            });
+
+            if (error) throw error;
+            
+            console.log("Login sukses:", data.user.email);
+            initializeApp(); // <-- Mulai aplikasi setelah login
+            
+        } catch (error) {
+            console.error("Login gagal:", error.message);
+            errorDiv.textContent = "Login Gagal: " + error.message;
+        }
+    }
     
-    function initDashboard() {
-        let html = "";
+    // --- FUNGSI LOGOUT ---
+    window.handleLogout = async () => {
+        await supabaseClient.auth.signOut();
+        // Hentikan MQTT & reset
+        mqttClient.disconnect();
+        latestDataCache = {};
+        gaugesInitialized = false;
+        // Kembali ke halaman login
+        showPage('page-login');
+        document.getElementById('login-email').value = "";
+        document.getElementById('login-pass').value = "";
+    }
+
+    // --- Cek Sesi Login Saat Halaman Dimuat ---
+    async function checkLoginSession() {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (session) {
+            console.log("Sesi ditemukan, langsung masuk:", session.user.email);
+            initializeApp(); // <-- Mulai aplikasi
+        } else {
+            console.log("Tidak ada sesi, tampilkan login.");
+            showPage('page-login');
+        }
+    }
+    
+    // --- FUNGSI UTAMA SETELAH LOGIN SUKSES ---
+    function initializeApp() {
+        // 1. Buat grid 18 mesin untuk Monitoring
+        let monitorGridHtml = "";
         for (let i = 1; i <= 18; i++) {
-            html += `
-            <div class="menu-card" id="menu-card-${i}" onclick="showDetailView(${i})">
+            monitorGridHtml += `
+            <div class="menu-card" id="monitor-card-${i}" onclick="showMonitorDetailView(${i})">
                 Mesin ${i}
-                <span class="menu-badge" id="menu-badge-${i}">OFFLINE</span>
+                <span class="menu-badge" id="monitor-badge-${i}">OFFLINE</span>
             </div>`;
         }
-        document.getElementById("menu-grid-container").innerHTML = html;
+        document.getElementById("monitor-grid-container").innerHTML = monitorGridHtml;
+
+        // 2. Buat grid 18 mesin untuk Tarif
+        let tarifGridHtml = "";
+        for (let i = 1; i <= 18; i++) {
+            tarifGridHtml += `
+            <div class="menu-card" id="tarif-card-${i}" onclick="showTarifDetailView(${i})">
+                Mesin ${i}
+            </div>`;
+        }
+        document.getElementById("tarif-grid-container").innerHTML = tarifGridHtml;
+
+        // 3. Tampilkan Menu Utama
+        showPage('page-main-menu');
         
-        loadEnergyTracker();
-        showMenuView();
+        // 4. Mulai koneksi MQTT
         startConnection();
     }
-
-    function loadEnergyTracker() {
-        const savedTracker = localStorage.getItem(TRACKER_STORAGE_KEY);
-        if (savedTracker) {
-            energyTracker = JSON.parse(savedTracker);
-            console.log("Memuat tracker v2:", energyTracker);
-        }
-    }
+    
+    // ======================================
+    // --- 5. LOGIKA MQTT (REAL-TIME) ---
+    // ======================================
 
     function startConnection() {
-        setStatus("Menghubungkan...", "bg-wait");
+        setStatus("Menghubungkan ke MQTT...", "bg-wait");
         client.connect({
             useSSL: true, userName: MQTT_USER, password: MQTT_PASS,
             onSuccess: onConnect,
@@ -168,15 +295,11 @@
     }
     
     function onConnect() {
-        setStatus("ONLINE - MONITORING AKTIF", "bg-ok");
+        setStatus("ONLINE - Terhubung ke Sistem Real-time", "bg-ok");
         client.subscribe(MQTT_TOPIC);
     }
     
-    client.onConnectionLost = (r) => { if (r.errorCode !== 0) { setStatus("⚠️ Koneksi Terputus. Menyambung ulang...", "bg-wait"); setTimeout(startConnection, 5000); }};
-
-    // ======================================
-    // --- 2. LOGIKA UTAMA (SAAT PESAN MASUK) ---
-    // ======================================
+    client.onConnectionLost = (r) => { if (r.errorCode !== 0) { setStatus("⚠️ Koneksi MQTT Terputus. Menyambung ulang...", "bg-wait"); setTimeout(startConnection, 5000); }};
 
     client.onMessageArrived = (m) => {
         try {
@@ -184,15 +307,9 @@
             if (!d.id) return;
             
             latestDataCache[d.id] = d;
-            updateMenuCard(d);
+            updateMonitorMenuCard(d);
             
-            if (d.status === "online") {
-                // Lakukan kalkulasi di background, walaupun tidak dilihat
-                calculateUsageAndStatus(d);
-            }
-            
-            if (d.id === machineId) {
-                // Update tampilan HANYA jika sedang dilihat
+            if (d.id === activeMachineId) {
                 if (d.status === "offline") {
                     setMeterOffline();
                 } else {
@@ -202,9 +319,9 @@
         } catch (e) { console.error(e); }
     };
 
-    function updateMenuCard(d) {
-        const card = document.getElementById(`menu-card-${d.id}`);
-        const badge = document.getElementById(`menu-badge-${d.id}`);
+    function updateMonitorMenuCard(d) {
+        const card = document.getElementById(`monitor-card-${d.id}`);
+        const badge = document.getElementById(`monitor-badge-${d.id}`);
         if (!card || !badge) return;
         if (d.status === "offline") {
             card.classList.remove("online");
@@ -214,17 +331,17 @@
             badge.textContent = "ONLINE";
         }
     }
-
+    
     // ======================================
-    // --- 3. NAVIGASI HALAMAN (SPA) ---
+    // --- 6. LOGIKA Halaman DETAIL MONITORING (GAUGE) ---
     // ======================================
 
-    function showDetailView(id) {
-        machineId = id; 
-        document.getElementById("detail-title").textContent = `Detail Mesin ${machineId}`;
+    window.showMonitorDetailView = (id) => {
+        activeMachineId = id; 
+        document.getElementById("monitor-detail-title").textContent = `Detail Mesin ${activeMachineId}`;
         
-        // --- MODIFIKASI: Tambah 4 baris tabel baru ---
-        document.getElementById("detail-data-table").innerHTML = `
+        // Buat tabel
+        document.getElementById("monitor-data-table").innerHTML = `
             <tr class="row-energy"><td class="lbl">1. Total ea import</td><td class="val" id="d-e">-</td><td class="unit">kWh</td></tr>
             <tr class="row-energy"><td class="lbl">2. Total er import</td><td class="val" id="d-q_tot">-</td><td class="unit">kVARh</td></tr>
             <tr class="row-energy"><td class="lbl">3. partial active E</td><td class="val" id="d-e_part">-</td><td class="unit">kWh</td></tr>
@@ -236,41 +353,27 @@
             <tr><td class="lbl">9. Apparent power (S)</td><td class="val" id="d-s">-</td><td class="unit">kVA</td></tr>
             <tr><td class="lbl">10. Power Factor (Pf)</td><td class="val" id="d-pf">-</td><td class="unit">PF</td></tr>
             <tr><td class="lbl">11. Frequency (F)</td><td class="val" id="d-hz">-</td><td class="unit">Hz</td></tr>
-            <tr class="row-time"><td class="lbl">12. Total Waktu Nyala (Meteran)</td><td class="val time-val" id="d-op_time" colspan="2">-</td></tr>
-            <tr class="row-calc-time"><td class="lbl">13. Waktu Standby (Mingguan)</td><td class="val" id="d-time-standby" colspan="2">-</td></tr>
-            <tr class="row-calc-time"><td class="lbl">14. Waktu Digunakan (Mingguan)</td><td class="val" id="d-time-used" colspan="2">-</td></tr>
-            <tr class="row-calc-cost"><td class="lbl">15. Biaya Harian (Est.)</td><td class="val" id="d-cost-daily" colspan="2">-</td></tr>
-            <tr class="row-calc-cost"><td class="lbl">16. Biaya Mingguan (Est.)</td><td class="val" id="d-cost-weekly" colspan="2">-</td></tr>
+            <tr class="row-time"><td class="lbl">12. Operation time</td><td class="val time-val" id="d-op_time" colspan="2">-</td></tr>
         `;
         
         if (latestDataCache[id]) {
-            setMeterOnline(latestDataCache[id]); // Tampilkan data terakhir (termasuk kalkulasi)
+            setMeterOnline(latestDataCache[id]); 
         } else {
             setMeterOffline(); 
         }
 
         showFullView();
-        
-        document.getElementById("page-menu").classList.remove("active");
-        document.getElementById("page-detail").classList.add("active");
+        showPage('page-monitor-detail');
     }
-
-    function showMenuView() {
-        machineId = 0; 
-        document.getElementById("page-detail").classList.remove("active");
-        document.getElementById("page-menu").classList.add("active");
-        gaugesInitialized = false; 
-    }
-
-    // --- FUNGSI NAVIGASI TAB (SAMA) ---
-    function showFullView() {
+    
+    window.showFullView = () => {
         document.getElementById("full-params-view").style.display = "block";
         document.getElementById("core-gauges-view").style.display = "none";
         document.getElementById("btn-full").classList.add("active");
         document.getElementById("btn-gauges").classList.remove("active");
     }
 
-    function showGaugeView() {
+    window.showGaugeView = () => {
         document.getElementById("full-params-view").style.display = "none";
         document.getElementById("core-gauges-view").style.display = "block";
         document.getElementById("btn-full").classList.remove("active");
@@ -279,15 +382,14 @@
         if (!gaugesInitialized) {
             setupGauges();
             gaugesInitialized = true;
-            if (latestDataCache[machineId]) {
-                setMeterOnline(latestDataCache[machineId]);
+            if (latestDataCache[activeMachineId]) {
+                setMeterOnline(latestDataCache[activeMachineId]);
             } else {
                 setMeterOffline();
             }
         }
     }
     
-    // --- FUNGSI SETUP GAUGE (SAMA) ---
     function setupGauges() {
         const baseOpts = { angle: 0.0, lineWidth: 0.3, radiusScale: 0.9, pointer: { length: 0.5, strokeWidth: 0.03, color: '#000000' }, limitMax: false, limitMin: false, colorStart: '#6FADCF', colorStop: '#8FC0DA', strokeColor: '#E0E0E0', generateGradient: true };
         
@@ -318,75 +420,7 @@
         gaugeHz.set(50);
     }
     
-    // ================================================
-    // --- 4. FUNGSI UTAMA BARU: KALKULASI & TAMPIL ---
-    // ================================================
-    
-    // --- FUNGSI BARU UNTUK MENGHITUNG ---
-    function calculateUsageAndStatus(d) {
-        if (!d || d.e == null || isNaN(d.e) || d.p == null || isNaN(d.p)) return;
-
-        const now = new Date();
-        const today = now.getDate(); // 1-31
-        const dayOfWeek = now.getDay(); // 0=Minggu, 1=Senin...
-        const currentEnergy = d.e;
-        const currentPower = d.p;
-
-        let tracker = energyTracker[d.id];
-        
-        // Inisialisasi tracker jika ini mesin baru
-        if (!tracker) {
-            console.log(`[ID ${d.id}] Membuat tracker baru.`);
-            tracker = {
-                dailyStart_kWh: currentEnergy,
-                weeklyStart_kWh: currentEnergy,
-                dailyPacketsStandby: 0,
-                dailyPacketsUsed: 0,
-                weeklyPacketsStandby: 0,
-                weeklyPacketsUsed: 0,
-                lastUpdateDay: today,
-                lastUpdateDayOfWeek: dayOfWeek
-            };
-            energyTracker[d.id] = tracker;
-        }
-
-        // --- Cek Rollover Harian ---
-        if (today !== tracker.lastUpdateDay) {
-            console.log(`[ID ${d.id}] Rollover HARI (dari ${tracker.lastUpdateDay} ke ${today}).`);
-            tracker.dailyStart_kWh = currentEnergy; // Reset odometer harian
-            tracker.dailyPacketsStandby = 0; // Reset waktu harian
-            tracker.dailyPacketsUsed = 0;
-            tracker.lastUpdateDay = today;
-        }
-
-        // --- Cek Rollover Mingguan ---
-        // (Asumsi Minggu = 0, hari pertama)
-        if (dayOfWeek < tracker.lastUpdateDayOfWeek) {
-            console.log(`[ID ${d.id}] Rollover MINGGU (dari ${tracker.lastUpdateDayOfWeek} ke ${dayOfWeek}).`);
-            tracker.weeklyStart_kWh = currentEnergy; // Reset odometer mingguan
-            tracker.weeklyPacketsStandby = 0; // Reset waktu mingguan
-            tracker.weeklyPacketsUsed = 0;
-        }
-        tracker.lastUpdateDayOfWeek = dayOfWeek; // Selalu update hari terakhir
-
-        // --- Lakukan Kalkulasi Status (Hitung Paket) ---
-        if (currentPower < STANDBY_THRESHOLD_WATT) {
-            // STANDBY (Kuning)
-            tracker.dailyPacketsStandby++;
-            tracker.weeklyPacketsStandby++;
-        } else {
-            // DIGUNAKAN (Hijau)
-            tracker.dailyPacketsUsed++;
-            tracker.weeklyPacketsUsed++;
-        }
-
-        // Simpan kembali ke localStorage
-        localStorage.setItem(TRACKER_STORAGE_KEY, JSON.stringify(energyTracker));
-    }
-
-    // --- FUNGSI TAMPIL ONLINE (MODIFIKASI) ---
     function setMeterOnline(d) {
-        // --- 1. UPDATE 12 DATA TABEL (SAMA) ---
         document.getElementById(`d-e`).textContent  = fmt(d.e, 2);
         document.getElementById(`d-q_tot`).textContent = fmt(d.q_tot, 2);
         document.getElementById(`d-e_part`).textContent  = fmt(d.e_part, 2);
@@ -398,7 +432,6 @@
         document.getElementById(`d-s`).textContent  = fmt(d.s, 2); 
         document.getElementById(`d-pf`).textContent = fmt(d.pf, 2);
         document.getElementById(`d-hz`).textContent = fmt(d.hz, 1);
-
         const total_hours = d.op_time;
         if (total_hours != null && !isNaN(total_hours)) {
             const days = Math.floor(total_hours / 24);
@@ -408,42 +441,12 @@
             document.getElementById(`d-op_time`).textContent = "-";
         }
         
-        // --- 2. UPDATE 4 GAUGE (SAMA) ---
         if (gaugesInitialized) {
-            gaugeV.set(d.v);
-            gaugeA.set(d.i);
-            gaugeP.set(d.p);
-            gaugeHz.set(d.hz);
-        }
-        
-        // --- 3. TAMPILKAN HASIL KALKULASI (BARU) ---
-        const tracker = energyTracker[d.id];
-        if (tracker && d.e != null && !isNaN(d.e)) {
-            // Hitung Biaya
-            const dailyUsage_kWh = d.e - tracker.dailyStart_kWh;
-            const weeklyUsage_kWh = d.e - tracker.weeklyStart_kWh;
-            const dailyCost = dailyUsage_kWh * TARIF_PER_KWH;
-            const weeklyCost = weeklyUsage_kWh * TARIF_PER_KWH;
-            
-            // Hitung Waktu (dari paket data)
-            const weeklyStandbyHours = (tracker.weeklyPacketsStandby * SCAN_INTERVAL_SEC) / 3600;
-            const weeklyUsedHours = (tracker.weeklyPacketsUsed * SCAN_INTERVAL_SEC) / 3600;
-            
-            document.getElementById(`d-cost-daily`).textContent = `${fmt_rp(dailyCost)} (${fmt(dailyUsage_kWh, 2)} kWh)`;
-            document.getElementById(`d-cost-weekly`).textContent = `${fmt_rp(weeklyCost)} (${fmt(weeklyUsage_kWh, 2)} kWh)`;
-            document.getElementById(`d-time-standby`).textContent = `${fmt(weeklyStandbyHours, 1)} Jam`;
-            document.getElementById(`d-time-used`).textContent = `${fmt(weeklyUsedHours, 1)} Jam`;
-        } else {
-            document.getElementById(`d-cost-daily`).textContent = "-";
-            document.getElementById(`d-cost-weekly`).textContent = "-";
-            document.getElementById(`d-time-standby`).textContent = "-";
-            document.getElementById(`d-time-used`).textContent = "-";
+            gaugeV.set(d.v); gaugeA.set(d.i); gaugeP.set(d.p); gaugeHz.set(d.hz);
         }
     }
 
-    // --- FUNGSI TAMPIL OFFLINE (MODIFIKASI) ---
     function setMeterOffline() {
-        // --- RESET 16 DATA TABEL ---
         document.getElementById(`d-e`).textContent  = "-";
         document.getElementById(`d-q_tot`).textContent = "-";
         document.getElementById(`d-e_part`).textContent  = "-";
@@ -456,24 +459,141 @@
         document.getElementById(`d-pf`).textContent = "-";
         document.getElementById(`d-hz`).textContent = "-";
         document.getElementById(`d-op_time`).textContent = "-";
-        document.getElementById(`d-cost-daily`).textContent = "-";
-        document.getElementById(`d-cost-weekly`).textContent = "-";
-        document.getElementById(`d-time-standby`).textContent = "-";
-        document.getElementById(`d-time-used`).textContent = "-";
 
-        // --- RESET 4 GAUGE (SAMA) ---
         if (gaugesInitialized) {
-            gaugeV.set(0);
-            gaugeA.set(0);
-            gaugeP.set(0);
-            gaugeHz.set(50);
+            gaugeV.set(0); gaugeA.set(0); gaugeP.set(0); gaugeHz.set(50);
         }
     }
+    
+    // ======================================
+    // --- 7. LOGIKA Halaman DETAIL TARIF (DATABASE) ---
+    // ======================================
+    
+    // --- Navigasi ---
+    window.showTarifDetailView = (id) => {
+        activeMachineId = id; 
+        document.getElementById("tarif-detail-title").textContent = `Detail Tarif Mesin ${activeMachineId}`;
+        
+        // Set date picker ke "7 Hari Terakhir" by default
+        setTarifRange('weekly');
+        
+        // Tampilkan halaman
+        showPage('page-tarif-detail');
+        
+        // Langsung ambil datanya
+        fetchTarifData();
+    }
+    
+    // --- Helper Set Tanggal ---
+    window.setTarifRange = (range) => {
+        const endDate = new Date();
+        const startDate = new Date();
+        
+        if (range === 'daily') {
+            // Kosongkan, kita hanya akan ambil data 'today' di Supabase
+        } else if (range === 'weekly') {
+            startDate.setDate(startDate.getDate() - 7);
+        } else if (range === 'monthly') {
+            startDate.setDate(startDate.getDate() - 30);
+        }
+        
+        // Format YYYY-MM-DD
+        document.getElementById('tarif-datepicker-start').value = startDate.toISOString().split('T')[0];
+        document.getElementById('tarif-datepicker-end').value = endDate.toISOString().split('T')[0];
+    }
+    
+    // --- FUNGSI UTAMA PENGAMBIL DATA SUPABASE ---
+    window.fetchTarifData = async () => {
+        const tableBody = document.getElementById("tarif-data-table");
+        const loadingDiv = document.getElementById("tarif-loading");
+        
+        tableBody.innerHTML = ""; // Kosongkan tabel
+        loadingDiv.style.display = "block"; // Tampilkan "Loading..."
+        
+        const startDate = document.getElementById('tarif-datepicker-start').value;
+        const endDate = document.getElementById('tarif-datepicker-end').value;
 
+        try {
+            // 1. Ambil data dari Database 3 (summary_harian)
+            const { data, error } = await supabaseClient
+                .from('summary_harian') // <-- Nama Tabel Summary-mu
+                .select('*')
+                .eq('id_mesin', activeMachineId) // Hanya untuk mesin ini
+                .gte('tanggal', startDate)       // Lebih besar dari tgl awal
+                .lte('tanggal', endDate)         // Lebih kecil dari tgl akhir
+                .order('tanggal', { ascending: false }); // Urutkan terbaru di atas
+
+            if (error) throw error;
+            
+            // 2. Buat tabel HTML dari data
+            let html = `
+                <thead>
+                    <tr>
+                        <th>Tanggal</th>
+                        <th>Biaya (Rp)</th>
+                        <th>Konsumsi (kWh)</th>
+                        <th>Jam Digunakan</th>
+                        <th>Jam Standby</th>
+                    </tr>
+                </thead>
+                <tbody>
+            `;
+            
+            // Variabel untuk total mingguan/bulanan
+            let totalBiaya = 0;
+            let totalKwh = 0;
+            let totalJamGuna = 0;
+            let totalJamStandby = 0;
+
+            if (data.length === 0) {
+                html += '<tr><td colspan="5" style="text-align:center; padding: 20px;">Tidak ada data riwayat untuk rentang tanggal ini.</td></tr>';
+            } else {
+                data.forEach(row => {
+                    html += `
+                        <tr>
+                            <td>${new Date(row.tanggal).toLocaleDateString('id-ID')}</td>
+                            <td class="val">${fmt_rp(row.total_biaya_rp)}</td>
+                            <td class="val">${fmt(row.total_kwh_harian, 2)}</td>
+                            <td class="val">${fmt(row.total_jam_digunakan, 1)} jam</td>
+                            <td class="val">${fmt(row.total_jam_standby, 1)} jam</td>
+                        </tr>
+                    `;
+                    // Jumlahkan total
+                    totalBiaya += row.total_biaya_rp;
+                    totalKwh += row.total_kwh_harian;
+                    totalJamGuna += row.total_jam_digunakan;
+                    totalJamStandby += row.total_jam_standby;
+                });
+            }
+            
+            // Tambahkan baris TOTAL di paling bawah (footer)
+            html += `
+                </tbody>
+                <tfoot style="font-weight: bold; background: #fafafa; border-top: 2px solid #ccc;">
+                    <tr>
+                        <td>TOTAL</td>
+                        <td class="val">${fmt_rp(totalBiaya)}</td>
+                        <td class="val">${fmt(totalKwh, 2)}</td>
+                        <td class="val">${fmt(totalJamGuna, 1)} jam</td>
+                        <td class="val">${fmt(totalJamStandby, 1)} jam</td>
+                    </tr>
+                </tfoot>
+            `;
+            
+            tableBody.innerHTML = html;
+            
+        } catch (error) {
+            tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 20px; color: red;">Error: ${error.message}</td></tr>`;
+        } finally {
+            loadingDiv.style.display = "none"; // Sembunyikan "Loading..."
+        }
+    }
+    
     function setStatus(msg, cls) { const s = document.getElementById("status"); s.textContent = msg; s.className = cls; }
     
-    // Mulai!
-    initDashboard();
+    // Mulai! Cek sesi login dulu
+    checkLoginSession();
+    
 </script>
 </body>
 </html>
