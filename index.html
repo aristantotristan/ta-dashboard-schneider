@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monitor Energi V20 (Menu + Detail)</title>
+    <title>Monitor Energi V21 (Gauge FIX)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gauge.js/1.3.7/gauge.min.js"></script>
     <style>
@@ -13,84 +13,24 @@
         #status { text-align: center; padding: 12px; margin-bottom: 20px; font-weight: 600; color: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .bg-ok { background: #2e7d32; } .bg-err { background: #c62828; } .bg-wait { background: #f57c00; }
 
-        /* --- STYLE BARU UNTUK MENU (PAGE 1) --- */
-        .menu-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 15px;
-        }
-        .menu-card {
-            background: #fff;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            text-align: center;
-            font-size: 1.1em;
-            font-weight: 600;
-            color: #455a64;
-            border-top: 5px solid #b0bec5; /* Default OFFLINE */
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        .menu-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-        .menu-card.online {
-            border-top-color: #43a047; /* ONLINE */
-        }
-        .menu-badge {
-            display: block;
-            font-size: 0.7em;
-            font-weight: 700;
-            color: #b0bec5;
-            margin-top: 5px;
-        }
-        .menu-card.online .menu-badge {
-            color: #43a047;
-        }
+        /* --- STYLE MENU (PAGE 1) --- */
+        .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; }
+        .menu-card { background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; font-size: 1.1em; font-weight: 600; color: #455a64; border-top: 5px solid #b0bec5; cursor: pointer; transition: all 0.2s ease; }
+        .menu-card:hover { transform: translateY(-5px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .menu-card.online { border-top-color: #43a047; }
+        .menu-badge { display: block; font-size: 0.7em; font-weight: 700; color: #b0bec5; margin-top: 5px; }
+        .menu-card.online .menu-badge { color: #43a047; }
         
-        /* --- STYLE BARU UNTUK DETAIL (PAGE 2) --- */
-        #detail-view {
-            display: none; /* Sembunyi by default */
-        }
-        .back-button {
-            display: inline-block;
-            background: #78909c;
-            color: white;
-            padding: 10px 15px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-weight: 600;
-            margin-bottom: 20px;
-            cursor: pointer;
-        }
+        /* --- STYLE DETAIL (PAGE 2) --- */
+        #detail-view { display: none; }
+        .back-button { display: inline-block; background: #78909c; color: white; padding: 10px 15px; border-radius: 8px; text-decoration: none; font-weight: 600; margin-bottom: 20px; cursor: pointer; }
         .back-button:hover { background: #546e7a; }
 
         /* Style untuk 3 Gauge */
-        .gauge-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-        .gauge-wrapper {
-            background: #fff;
-            padding: 15px;
-            border-radius: 12px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            text-align: center;
-        }
-        .gauge-wrapper canvas {
-            width: 100%;
-            height: auto;
-        }
-        .gauge-label {
-            font-weight: 600;
-            color: #0d47a1;
-            margin-top: 10px;
-            font-size: 1.1em;
-        }
+        .gauge-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 20px; }
+        .gauge-wrapper { background: #fff; padding: 15px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; }
+        .gauge-wrapper canvas { width: 100%; height: auto; }
+        .gauge-label { font-weight: 600; color: #0d47a1; margin-top: 10px; font-size: 1.1em; }
 
         /* Style untuk tabel data (dari v18) */
         .data-card { background: #fff; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); overflow: hidden; }
@@ -142,7 +82,7 @@
 
 
 <script>
-    // === KONFIGURASI MQTT (Dashboard Subscriber) ===
+    // === KONFIGURASI MQTT (SAMA) ===
     const MQTT_HOST = "701d32236feb43b38c22855a611f4d42.s1.eu.hivemq.cloud";
     const MQTT_PORT = 8884;
     const MQTT_USER = "web_dashboard";
@@ -150,12 +90,12 @@
     const MQTT_TOPIC = "politeknik/meter/data";
     // ========================
 
-    const client = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_v20_" + Date.now());
+    const client = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_v21_" + Date.now());
 
     // Variabel Global
-    let currentMachineId = 0; // ID mesin yang sedang dilihat
-    let latestDataCache = {}; // Cache data terakhir dari 18 mesin
-    let gaugeV, gaugeA, gaugeP; // Objek untuk menyimpan gauge
+    let currentMachineId = 0; 
+    let latestDataCache = {}; 
+    let gaugeV, gaugeA, gaugeP; 
 
     // ======================================
     // --- 1. INISIALISASI & KONEKSI MQTT ---
@@ -163,7 +103,6 @@
 
     function initDashboard() {
         let html = "";
-        // Buat 18 kartu menu
         for (let i = 1; i <= 18; i++) {
             html += `
             <div class="menu-card" id="menu-card-${i}" onclick="showDetailView(${i})">
@@ -199,27 +138,18 @@
         try {
             const d = JSON.parse(m.payloadString);
             if (!d.id) return;
-
-            // 1. Simpan data terakhir ke cache
             latestDataCache[d.id] = d;
-            
-            // 2. Selalu update kartu menu (agar status ON/OFF terlihat)
             updateMenuCard(d);
-            
-            // 3. Jika kita sedang melihat halaman detail mesin ini, update juga
             if (d.id === currentMachineId) {
                 updateDetailView(d);
             }
-            
         } catch (e) { console.error(e); }
     };
 
-    // Fungsi untuk update badge di Menu Utama
     function updateMenuCard(d) {
         const card = document.getElementById(`menu-card-${d.id}`);
         const badge = document.getElementById(`menu-badge-${d.id}`);
         if (!card || !badge) return;
-
         if (d.status === "offline") {
             card.classList.remove("online");
             badge.textContent = "OFFLINE";
@@ -230,18 +160,14 @@
     }
 
     // ======================================
-    // --- 3. NAVIGASI HALAMAN & GAUGE ---
+    // --- 3. NAVIGASI HALAMAN & GAUGE (FIXED) ---
     // ======================================
 
-    // Dipanggil saat klik kartu menu
     function showDetailView(id) {
         currentMachineId = id;
-
-        // 1. Ganti judul
         document.getElementById("detail-title").textContent = `Detail Mesin ${id}`;
         
-        // 2. Buat tabel data (v18) di dalam div
-        // (Ini menimpa tabel lama jika ada)
+        // Buat tabel data
         document.getElementById("detail-data-table").innerHTML = `
             <tr class="row-energy"><td class="lbl">1. Total ea import</td><td class="val" id="d-e">-</td><td class="unit">kWh</td></tr>
             <tr class="row-energy"><td class="lbl">2. Total er import</td><td class="val" id="d-q_tot">-</td><td class="unit">kVARh</td></tr>
@@ -257,62 +183,74 @@
             <tr class="row-time"><td class="lbl">12. Operation time</td><td class="val time-val" id="d-op_time" colspan="2">-</td></tr>
         `;
         
-        // 3. Setup gauge
-        setupGauges();
+        // Setup gauge
+        setupGauges(); // <-- Panggil fungsi setup
         
-        // 4. Tampilkan data dari cache (jika ada)
+        // Tampilkan data dari cache (jika ada)
         if (latestDataCache[id]) {
             updateDetailView(latestDataCache[id]);
+        } else {
+            // Jika belum ada data, pastikan gauge di-reset ke 0
+            updateDetailView({ status: "offline" });
         }
         
-        // 5. Tukar halaman
+        // Tukar halaman
         document.getElementById("menu-view").style.display = "none";
         document.getElementById("detail-view").style.display = "block";
     }
 
-    // Dipanggil saat klik tombol "Kembali"
     function showMenuView() {
-        currentMachineId = 0; // Berhenti update detail
+        currentMachineId = 0; 
         document.getElementById("detail-view").style.display = "none";
         document.getElementById("menu-view").style.display = "block";
     }
 
+    // ==========================================================
+    // --- INI PERBAIKANNYA (v21) ---
+    // ==========================================================
     // Fungsi untuk inisialisasi 3 gauge
     function setupGauges() {
-        // Opsi Gauge
-        var opts = {
-            angle: 0.0, // Sudut lengkungan
-            lineWidth: 0.3, // Lebar garis
-            radiusScale: 0.9, // Ukuran radius
+        // Opsi dasar
+        const baseOpts = {
+            angle: 0.0,
+            lineWidth: 0.3,
+            radiusScale: 0.9,
             pointer: { length: 0.5, strokeWidth: 0.03, color: '#000000' },
             limitMax: false, limitMin: false,
             colorStart: '#6FADCF', colorStop: '#8FC0DA',
-            strokeColor: '#E0E0E0', generateGradient: true,
-            staticLabels: { font: "12px sans-serif", labels: [0, 100, 150, 200, 250, 300], color: "#555" },
-            staticZones: [ {strokeStyle: "#F03E3E", min: 250, max: 300}, {strokeStyle: "#FFDD00", min: 200, max: 250} ]
+            strokeColor: '#E0E0E0', generateGradient: true
         };
         
-        // 1. Gauge Voltase (0-300V)
+        // --- 1. Gauge Voltase (0-300V) ---
+        // (Buat optsV baru, jangan pakai ulang)
+        var optsV = { ...baseOpts }; // Salin dari baseOpts
+        optsV.staticLabels = { font: "12px sans-serif", labels: [0, 50, 100, 150, 200, 220, 250, 300], color: "#555" };
+        optsV.staticZones = [ {strokeStyle: "#30B32D", min: 200, max: 240}, {strokeStyle: "#FFDD00", min: 240, max: 260}, {strokeStyle: "#F03E3E", min: 260, max: 300} ];
+        
         var targetV = document.getElementById('gauge-volt');
-        opts.staticLabels.labels = [0, 50, 100, 150, 200, 220, 250, 300];
-        opts.staticZones = [ {strokeStyle: "#30B32D", min: 200, max: 240}, {strokeStyle: "#FFDD00", min: 240, max: 260}, {strokeStyle: "#F03E3E", min: 260, max: 300} ];
-        gaugeV = new Gauge(targetV).setOptions(opts);
+        gaugeV = new Gauge(targetV).setOptions(optsV);
         gaugeV.maxValue = 300;
         gaugeV.set(0);
 
-        // 2. Gauge Arus (0-100A, sesuai CT Primary 100)
+        // --- 2. Gauge Arus (0-100A, sesuai CT Primary 100) ---
+        // (Buat optsA baru, jangan pakai ulang)
+        var optsA = { ...baseOpts }; // Salin dari baseOpts
+        optsA.staticLabels = { font: "12px sans-serif", labels: [0, 20, 40, 60, 80, 100], color: "#555" };
+        optsA.staticZones = [ {strokeStyle: "#30B32D", min: 0, max: 70}, {strokeStyle: "#FFDD00", min: 70, max: 90}, {strokeStyle: "#F03E3E", min: 90, max: 100} ];
+        
         var targetA = document.getElementById('gauge-amp');
-        opts.staticLabels.labels = [0, 20, 40, 60, 80, 100];
-        opts.staticZones = [ {strokeStyle: "#30B32D", min: 0, max: 70}, {strokeStyle: "#FFDD00", min: 70, max: 90}, {strokeStyle: "#F03E3E", min: 90, max: 100} ];
-        gaugeA = new Gauge(targetA).setOptions(opts);
+        gaugeA = new Gauge(targetA).setOptions(optsA);
         gaugeA.maxValue = 100;
         gaugeA.set(0);
 
-        // 3. Gauge Daya (0-25000W, asumsi 230V * 100A)
+        // --- 3. Gauge Daya (0-25000W, asumsi 230V * 100A) ---
+        // (Buat optsP baru, jangan pakai ulang)
+        var optsP = { ...baseOpts }; // Salin dari baseOpts
+        optsP.staticLabels = { font: "12px sans-serif", labels: [0, 5000, 10000, 15000, 20000, 25000], color: "#555" };
+        optsP.staticZones = [ {strokeStyle: "#30B32D", min: 0, max: 15000}, {strokeStyle: "#FFDD00", min: 15000, max: 20000}, {strokeStyle: "#F03E3E", min: 20000, max: 25000} ];
+        
         var targetP = document.getElementById('gauge-power');
-        opts.staticLabels.labels = [0, 5000, 10000, 15000, 20000, 25000];
-        opts.staticZones = [ {strokeStyle: "#30B32D", min: 0, max: 15000}, {strokeStyle: "#FFDD00", min: 15000, max: 20000}, {strokeStyle: "#F03E3E", min: 20000, max: 25000} ];
-        gaugeP = new Gauge(targetP).setOptions(opts);
+        gaugeP = new Gauge(targetP).setOptions(optsP);
         gaugeP.maxValue = 25000;
         gaugeP.set(0);
     }
@@ -358,6 +296,7 @@
         }
         
         // 2. Update Gauge
+        // (Pastikan gauge sudah dibuat sebelum di-set)
         if (gaugeV) gaugeV.set(d.v);
         if (gaugeA) gaugeA.set(d.i);
         if (gaugeP) gaugeP.set(d.p);
