@@ -132,7 +132,7 @@ const MQTT_TOPIC = "politeknik/meter/data";
 
 // (FIX v36: Inisialisasi Klien DITARUH DI window.onload)
 let supabaseClient;
-let mqttClient; // <-- (FIX v38) DIGANTI NAMANYA DI BAWAH
+let mqttClient; // <-- (FIX v38) NAMA YANG BENAR
 
 // (Variabel Global)
 let gaugeV, gaugeA, gaugeP, gaugeHz;
@@ -208,30 +208,7 @@ function onConnect() {
     mqttClient.subscribe(MQTT_TOPIC);
 }
 
-// ========================================================
-// --- (FIX v38) GANTI 'client' MENJADI 'mqttClient' ---
-// ========================================================
-mqttClient.onConnectionLost = (r) => { if (r.errorCode !== 0) { setStatus("⚠️ Koneksi MQTT Terputus. Menyambung ulang...", "bg-wait"); setTimeout(startConnection, 5000); }};
-
-mqttClient.onMessageArrived = (m) => {
-    try {
-        const d = JSON.parse(m.payloadString);
-        if (d.id_mesin) d.id = d.id_mesin; // <-- FIX KESESUAIAN
-        if (!d.id) return;
-        
-        latestDataCache[d.id] = d;
-        updateMonitorMenuCard(d);
-        
-        if (d.id === activeMachineId) {
-            if (d.status === "offline") {
-                setMeterOffline();
-            } else {
-                setMeterOnline(d);
-            }
-        }
-    } catch (e) { console.error(e); }
-};
-// ========================================================
+// (Handler dipindahkan ke window.onload)
 
 function updateMonitorMenuCard(d) {
     const card = document.getElementById(`monitor-card-${d.id}`);
@@ -504,8 +481,14 @@ window.onload = function() {
         supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_v36_spa_" + Date.now());
 
-        // 2. Pasang handler MQTT (FIX v38)
-        mqttClient.onConnectionLost = (r) => { if (r.errorCode !== 0) { setStatus("⚠️ Koneksi MQTT Terputus. Menyambung ulang...", "bg-wait"); setTimeout(startConnection, 5000); }};
+        // 2. Pasang handler MQTT (FIX v38 - Dipindah ke sini)
+        mqttClient.onConnectionLost = (r) => { 
+            if (r.errorCode !== 0) { 
+                setStatus("⚠️ Koneksi MQTT Terputus. Menyambung ulang...", "bg-wait"); 
+                setTimeout(startConnection, 5000); 
+            }
+        };
+        
         mqttClient.onMessageArrived = (m) => {
             try {
                 const d = JSON.parse(m.payloadString);
