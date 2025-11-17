@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detail Monitor Energi (v22)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gauge.js/1.3.7/gauge.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; padding: 20px; color: #333; }
+        h1 { text-align: center; color: #0d47a1; margin-bottom: 5px; }
+        h2 { text-align: center; color: #546e7a; font-size: 1.1em; margin-top: 0; margin-bottom: 25px; font-weight: 400; }
+        #status { text-align: center; padding: 12px; margin-bottom: 20px; font-weight: 600; color: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .bg-ok { background: #2e7d32; } .bg-err { background: #c62828; } .bg-wait { background: #f57c00; }
+        
+        .back-button { display: inline-block; background: #78909c; color: white; padding: 10px 15px; border-radius: 8px; text-decoration: none; font-weight: 600; margin-bottom: 20px; }
+        .back-button:hover { background: #546e7a; }
+
+        /* Style untuk 3 Gauge */
+        .gauge-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 20px; }
+        .gauge-wrapper { background: #fff; padding: 15px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; }
+        .gauge-wrapper canvas { width: 100%; height: auto; }
+        .gauge-label { font-weight: 600; color: #0d47a1; margin-top: 10px; font-size: 1.1em; }
+
+        /* Style untuk tabel data */
+        .data-card { background: #fff; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); overflow: hidden; }
+        .data-table { width: 100%; font-size: 0.9em; border-collapse: separate; border-spacing: 0 5px; padding: 20px; }
+        .data-table td { vertical-align: middle; padding: 2px 4px; }
+        .lbl { color: #78909c; font-weight: 500; }
+        .val { text-align: right; font-weight: 700; color: #263238; font-size: 1.15em; }
+        .unit { color: #b0bec5; font-size: 0.85em; width: 45px; text-align: right; padding-left: 5px; }
+        .row-energy { background: #e3f2fd; }
+        .row-time { background: #e8f5e9; }
+        .time-val { font-size: 1.05em; text-align: right; }
+    </style>
+</head>
+<body>
+    <h1 id="detail-title">Detail Mesin</h1>
+    <div id="status" class="bg-wait">Menghubungkan ke Sistem...</div>
+    
+    <a class="back-button" href="index.html">&#8592; Kembali ke Menu</a>
+    
+    <div class="gauge-grid">
+        <div class="gauge-wrapper">
+            <canvas id="gauge-volt"></canvas>
+            <div class="gauge-label" id="gauge-volt-label">Tegangan (V)</div>
+        </div>
+        <div class="gauge-wrapper">
+            <canvas id="gauge-amp"></canvas>
+            <div class="gauge-label" id="gauge-amp-label">Arus (A)</div>
+        </div>
+        <div class="gauge-wrapper">
+            <canvas id="gauge-power"></canvas>
+            <div class="gauge-label" id="gauge-power-label">Daya Aktif (W)</div>
+        </div>
+    </div>
+    
+    <div class="data-card">
+        <table class="data-table" id="detail-data-table">
+            </table>
+    </div>
+
+
+<script>
+    // === KONFIGURASI MQTT (SAMA) ===
+    const MQTT_HOST = "701d32236feb43b38c22855a611f4d42.s1.eu.hivemq.cloud";
+    const MQTT_PORT = 8884;
+    const MQTT_USER = "web_dashboard";
+    const MQTT_PASS = "Tristan12";
+    const MQTT_TOPIC = "politeknik/meter/data";
+    // ========================
+
+    const client = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_v22_detail_" + Date.now());
+
+    // Variabel Global
+    let gaugeV, gaugeA, gaugeP; // Objek untuk menyimpan gauge
+    let machineId = 0; // ID mesin yang sedang dilihat
+
+    // Helper
+    const fmt = (val, dig) => (val != null && !isNaN(val)) ? Number(val).toFixed(dig) : "-";
+
+    // ======================================
+    // --- 1. INISIALISASI HALAMAN DETAIL ---
+    // ======================================
+    
+    function initDetail() {
+        // 1. Ambil ID dari URL (misal: detail.html?id=5)
+        const urlParams = new URLSearchParams(window.location.search);
+        machineId = parseInt(urlParams.get('id'));
+
+        if (!machineId) {
+            document.body.innerHTML = "<h1>Error: Tidak ada ID Mesin.</h1><a href='index.html'>Kembali</a>";
+            return;
+        }
+
+        // 2. Set Judul
+        document.getElementById("detail-title").textContent = `Detail Mesin ${machineId}`;
+
+        // 3. Buat tabel data
+        document.getElementById("detail-data-table").innerHTML = `
+            <tr class="row-energy"><td class="lbl">1. Total ea import</td><td class="val" id="d-e">-</td><td class="unit">kWh</td></tr>
+            <tr class="row-energy"><td class="lbl">2. Total er import</td><td class="val" id="d-q_tot">-</td><td class="unit">kVARh</td></tr>
+            <tr class="row-energy"><td class="lbl">3. partial active E</td><td class="val" id="d-e_part">-</td><td class="unit">kWh</td></tr>
+            <tr class="row-energy"><td class="lbl">4. partial Reactive E</td><td class="val" id="d-q_part">-</td><td class="unit">kVARh</td></tr>
+            <tr><td class="lbl">5. Voltage (V)</td><td class="val" id="d-v">-</td><td class="unit">V</td></tr>
+            <tr><td class="lbl">6. Current (A)</td><td class="val" id="d-i">-</td><td class="unit">A</td></tr>
+            <tr><td class="lbl">7. Active power (P)</td><td class="val" id="d-p">-</td><td class="unit">W</td></tr>
+            <tr><td class="lbl">8. Reactive Power (Q)</td><td class="val" id="d-q">-</td><td class="unit">VAR</td></tr>
+            <tr><td class="lbl">9. Apparent power (S)</td><td class="val" id="d-s">-</td><td class="unit">kVA</td></tr>
+            <tr><td class="lbl">10. Power Factor (Pf)</td><td class="val" id="d-pf">-</td><td class="unit">PF</td></tr>
+            <tr><td class="lbl">11. Frequency (F)</td><td class="val" id="d-hz">-</td><td class="unit">Hz</td></tr>
+            <tr class="row-time"><td class="lbl">12. Operation time</td><td class="val time-val" id="d-op_time" colspan="2">-</td></tr>
+        `;
+        
+        // 4. Setup gauge (Pasti berhasil karena canvas sudah terlihat)
+        setupGauges();
+        
+        // 5. Mulai koneksi MQTT
+        startConnection();
+    }
+
+    // --- FUNGSI SETUP GAUGE (v21 - FIX) ---
+    function setupGauges() {
+        const baseOpts = { angle: 0.0, lineWidth: 0.3, radiusScale: 0.9, pointer: { length: 0.5, strokeWidth: 0.03, color: '#000000' }, limitMax: false, limitMin: false, colorStart: '#6FADCF', colorStop: '#8FC0DA', strokeColor: '#E0E0E0', generateGradient: true };
+        
+        var optsV = { ...baseOpts }; 
+        optsV.staticLabels = { font: "12px sans-serif", labels: [0, 50, 100, 150, 200, 220, 250, 300], color: "#555" };
+        optsV.staticZones = [ {strokeStyle: "#30B32D", min: 200, max: 240}, {strokeStyle: "#FFDD00", min: 240, max: 260}, {strokeStyle: "#F03E3E", min: 260, max: 300} ];
+        gaugeV = new Gauge(document.getElementById('gauge-volt')).setOptions(optsV);
+        gaugeV.maxValue = 300; gaugeV.set(0);
+
+        var optsA = { ...baseOpts }; 
+        optsA.staticLabels = { font: "12px sans-serif", labels: [0, 20, 40, 60, 80, 100], color: "#555" };
+        optsA.staticZones = [ {strokeStyle: "#30B32D", min: 0, max: 70}, {strokeStyle: "#FFDD00", min: 70, max: 90}, {strokeStyle: "#F03E3E", min: 90, max: 100} ];
+        gaugeA = new Gauge(document.getElementById('gauge-amp')).setOptions(optsA);
+        gaugeA.maxValue = 100; gaugeA.set(0);
+
+        var optsP = { ...baseOpts }; 
+        optsP.staticLabels = { font: "12px sans-serif", labels: [0, 5000, 10000, 15000, 20000, 25000], color: "#555" };
+        optsP.staticZones = [ {strokeStyle: "#30B32D", min: 0, max: 15000}, {strokeStyle: "#FFDD00", min: 15000, max: 20000}, {strokeStyle: "#F03E3E", min: 20000, max: 25000} ];
+        gaugeP = new Gauge(document.getElementById('gauge-power')).setOptions(optsP);
+        gaugeP.maxValue = 25000; gaugeP.set(0);
+    }
+    
+    // ======================================
+    // --- 2. KONEKSI & LOGIKA MQTT ---
+    // ======================================
+    
+    function startConnection() {
+        setStatus("Menghubungkan...", "bg-wait");
+        client.connect({
+            useSSL: true, userName: MQTT_USER, password: MQTT_PASS,
+            onSuccess: onConnect,
+            onFailure: (e) => { setStatus("Gagal Terhubung: " + e.errorMessage, "bg-err"); setTimeout(startConnection, 5000); }
+        });
+    }
+    function onConnect() {
+        setStatus("ONLINE - Terhubung ke Mesin " + machineId, "bg-ok");
+        client.subscribe(MQTT_TOPIC);
+    }
+    client.onConnectionLost = (r) => { if (r.errorCode !== 0) { setStatus("⚠️ Koneksi Terputus. Menyambung ulang...", "bg-wait"); setTimeout(startConnection, 5000); }};
+
+    client.onMessageArrived = (m) => {
+        try {
+            const d = JSON.parse(m.payloadString);
+            
+            // --- INI KUNCINYA ---
+            // Hanya update jika ID datanya = ID halaman ini
+            if (d.id === machineId) {
+                if (d.status === "offline") {
+                    setMeterOffline();
+                } else {
+                    setMeterOnline(d);
+                }
+            }
+        } catch (e) { console.error(e); }
+    };
+
+    function setMeterOnline(d) {
+        // 1. Update Tabel
+        document.getElementById(`d-e`).textContent  = fmt(d.e, 2);
+        document.getElementById(`d-q_tot`).textContent = fmt(d.q_tot, 2);
+        document.getElementById(`d-e_part`).textContent  = fmt(d.e_part, 2);
+        document.getElementById(`d-q_part`).textContent  = fmt(d.q_part, 2);
+        document.getElementById(`d-v`).textContent  = fmt(d.v, 1);
+        document.getElementById(`d-i`).textContent  = fmt(d.i, 3);
+        document.getElementById(`d-p`).textContent  = fmt(d.p, 0); 
+        document.getElementById(`d-q`).textContent  = fmt(d.q, 0); 
+        document.getElementById(`d-s`).textContent  = fmt(d.s, 2); 
+        document.getElementById(`d-pf`).textContent = fmt(d.pf, 2);
+        document.getElementById(`d-hz`).textContent = fmt(d.hz, 1);
+
+        const total_hours = d.op_time;
+        if (total_hours != null && !isNaN(total_hours)) {
+            const days = Math.floor(total_hours / 24);
+            const hours = (total_hours % 24).toFixed(1);
+            document.getElementById(`d-op_time`).textContent = `${days} hari & ${hours} jam`;
+        } else {
+            document.getElementById(`d-op_time`).textContent = "-";
+        }
+        
+        // 2. Update Gauge
+        gaugeV.set(d.v);
+        gaugeA.set(d.i);
+        gaugeP.set(d.p);
+    }
+
+    function setMeterOffline() {
+        // 1. Update Tabel
+        document.getElementById(`d-e`).textContent  = "-";
+        document.getElementById(`d-q_tot`).textContent = "-";
+        document.getElementById(`d-e_part`).textContent  = "-";
+        document.getElementById(`d-q_part`).textContent  = "-";
+        document.getElementById(`d-v`).textContent  = "-";
+        document.getElementById(`d-i`).textContent  = "-";
+        document.getElementById(`d-p`).textContent  = "-";
+        document.getElementById(`d-q`).textContent  = "-";
+        document.getElementById(`d-s`).textContent  = "-";
+        document.getElementById(`d-pf`).textContent = "-";
+        document.getElementById(`d-hz`).textContent = "-";
+        document.getElementById(`d-op_time`).textContent = "-";
+
+        // 2. Update Gauge
+        gaugeV.set(0);
+        gaugeA.set(0);
+        gaugeP.set(0);
+    }
+
+    function setStatus(msg, cls) { const s = document.getElementById("status"); s.textContent = msg; s.className = cls; }
+    
+    // Mulai!
+    initDetail();
+</script>
+</body>
+</html>
