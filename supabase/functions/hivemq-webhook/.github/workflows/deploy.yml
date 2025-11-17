@@ -1,0 +1,35 @@
+# File: .github/workflows/deploy.yml
+
+name: Deploy Supabase Function
+
+on:
+  push:
+    branches:
+      - main  # <-- Ganti 'main' jika nama branch-mu beda, misal 'master'
+    paths:
+      - 'supabase/functions/**' # <-- Hanya jalan jika ada perubahan di folder functions
+
+jobs:
+  deploy-function:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Install Deno (untuk Edge Functions)
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: v1.x
+
+      - name: Deploy Supabase Function
+        run: |
+          supabase functions deploy hivemq-webhook --project-ref $SUPABASE_PROJECT_REF
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
