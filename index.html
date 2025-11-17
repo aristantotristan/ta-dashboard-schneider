@@ -9,23 +9,29 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
-        /* ... (CSS SAMA PERSIS) ... */
         body { font-family: 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; padding: 20px; color: #333; }
         h1 { text-align: center; color: #0d47a1; margin-bottom: 5px; }
         h2 { text-align: center; color: #546e7a; font-size: 1.1em; margin-top: 0; margin-bottom: 25px; font-weight: 400; }
         #status { text-align: center; padding: 12px; margin-bottom: 20px; font-weight: 600; color: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .bg-ok { background: #2e7d32; } .bg-err { background: #c62828; } .bg-wait { background: #f57c00; } .bg-info { background: #1976d2; }
+        
         .page { display: none; }
         .page.active { display: block; }
+        
+        /* Halaman Menu Utama */
         .main-menu-grid { display: grid; grid-template-columns: 1fr; gap: 20px; max-width: 500px; margin: 20px auto; }
         .main-menu-button { background: #fff; padding: 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: center; font-size: 1.5em; font-weight: 600; color: #0d47a1; border: 2px solid #fff; cursor: pointer; transition: all 0.2s ease; }
         .main-menu-button:hover { transform: translateY(-5px); box-shadow: 0 5px 20px rgba(0,0,0,0.1); border-color: #0d47a1; }
+
+        /* Halaman Grid Mesin */
         .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; }
         .menu-card { background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; font-size: 1.1em; font-weight: 600; color: #455a64; border-top: 5px solid #b0bec5; cursor: pointer; transition: all 0.2s ease; }
         .menu-card:hover { transform: translateY(-5px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
         .menu-card.online { border-top-color: #43a047; }
         .menu-badge { display: block; font-size: 0.7em; font-weight: 700; color: #b0bec5; margin-top: 5px; }
         .menu-card.online .menu-badge { color: #43a047; }
+        
+        /* Halaman Detail */
         .back-button { display: inline-block; background: #78909c; color: white; padding: 10px 15px; border-radius: 8px; text-decoration: none; font-weight: 600; margin-bottom: 20px; cursor: pointer; }
         .back-button:hover { background: #546e7a; }
         .tab-container { display: flex; margin-bottom: 20px; }
@@ -44,6 +50,8 @@
         .lbl { color: #78909c; font-weight: 500; }
         .val { text-align: right; font-weight: 700; color: #263238; font-size: 1.15em; }
         .unit { color: #b0bec5; font-size: 0.85em; width: 45px; text-align: right; padding-left: 5px; }
+        
+        /* Style Halaman Tarif */
         .tarif-controls { background: #fff; padding: 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
         .tarif-controls input[type="date"] { padding: 8px; border: 1px solid #ccc; border-radius: 8px; font-size: 1em; }
         .tarif-controls button { padding: 9px 15px; background: #0d47a1; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1em; font-weight: 500; margin-left: 10px; }
@@ -140,9 +148,6 @@
     const { createClient } = supabase; 
     const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     
-    // (Jika baris di atas error, ganti jadi ini:)
-    // const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); 
-
     const mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_v31_spa_" + Date.now());
 
     // Variabel Global
