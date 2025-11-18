@@ -3,60 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Detail (v42 - Instant)</title>
+    <title>Energy Dashboard (SPA)</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
 
     <style>
-        /* CSS UTAMA */
+        /* --- CSS UTAMA --- */
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f0f2f5; color: #333; margin: 0; padding: 25px; padding-top: 70px; }
         
-        /* Header Container untuk Judul & Kontrol */
-        .header-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 25px;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
+        /* STATUS BAR */
+        #status { position: fixed; top: 0; left: 0; width: 100%; text-align: center; padding: 10px; font-weight: 600; color: white; z-index: 100; transition: background-color 0.5s ease; }
+        .bg-ok { background: #2e7d32; } .bg-err { background: #c62828; } .bg-wait { background: #f57c00; }
 
-        .header-text h1 { text-align: left; color: #1a237e; margin: 0; font-size: 2.2em; }
-        .header-text h2 { text-align: left; color: #546e7a; font-size: 1em; margin: 5px 0 0 0; font-weight: 400; }
+        /* LAYOUT MANAJEMEN (PENTING) */
+        .view-section { display: none; /* Default sembunyi */ animation: fadeIn 0.3s ease; }
+        .view-section.active { display: block; /* Tampilkan jika aktif */ }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* Navigasi Atas */
-        .top-nav {
-            display: flex;
-            gap: 10px;
-            align-items: center;
+        /* --- CSS UNTUK MENU GRID (VIEW 1) --- */
+        .menu-container { max-width: 1200px; margin: 0 auto; text-align: center; }
+        .menu-title { color: #1a237e; font-size: 2em; margin-bottom: 30px; }
+        .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; }
+        .menu-card { 
+            background: #fff; padding: 25px 15px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
+            text-align: center; font-size: 1.1em; font-weight: 600; color: #455a64; border-top: 5px solid #b0bec5; 
+            cursor: pointer; transition: all 0.2s ease; 
         }
+        .menu-card:hover { transform: translateY(-5px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .menu-card.online { border-top-color: #43a047; color: #2e7d32; } /* Style jika mesin online */
+        .menu-badge { display: block; font-size: 0.7em; font-weight: 400; margin-top: 5px; color: #b0bec5; }
+        .menu-card.online .menu-badge { color: #43a047; font-weight: bold; }
 
-        .back-button {
-            background: #78909c;
-            color: white;
-            padding: 10px 15px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 0.9em;
-        }
+        /* --- CSS UNTUK DASHBOARD DETAIL (VIEW 2) --- */
+        .header-container { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px; }
+        .back-button { background: #78909c; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: 600; cursor: pointer; }
         .back-button:hover { background: #546e7a; }
-
-        /* DROPDOWN PILIH MESIN (BARU) */
-        .machine-select {
-            padding: 10px 15px;
-            border-radius: 8px;
-            border: 2px solid #1a237e;
-            background-color: white;
-            color: #1a237e;
-            font-weight: bold;
-            font-size: 1em;
-            cursor: pointer;
-            outline: none;
-        }
-        .machine-select:hover { background-color: #e8eaf6; }
-
-        /* GRID & KARTU */
+        
         .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); grid-auto-rows: auto; gap: 20px; }
         .card { background: #ffffff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.07); padding: 20px 25px; }
         .card h3 { margin-top: 0; border-bottom: 2px solid #f0f2f5; padding-bottom: 10px; color: #004d40; }
@@ -68,85 +51,88 @@
         .power-group .value { font-size: 1.8em; }
         .dual-group { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         
-        /* STATUS BAR */
-        #status { position: fixed; top: 0; left: 0; width: 100%; text-align: center; padding: 10px; font-weight: 600; color: white; z-index: 100; transition: background-color 0.5s ease; }
-        .bg-ok { background: #2e7d32; } .bg-err { background: #c62828; } .bg-wait { background: #f57c00; }
-        
-        /* Responsif untuk HP */
-        @media (max-width: 600px) {
-            .header-container { flex-direction: column; align-items: flex-start; }
-            .top-nav { width: 100%; justify-content: space-between; margin-bottom: 10px; }
-            .machine-select { flex-grow: 1; }
-        }
+        /* Tombol Ganti Mesin (Dropdown) di Detail */
+        .machine-select { padding: 10px; border-radius: 8px; border: 2px solid #1a237e; font-weight: bold; color: #1a237e; cursor: pointer; }
     </style>
 </head>
 <body>
     
     <div id="status" class="bg-wait">Menghubungkan ke MQTT Broker...</div>
 
-    <div class="header-container">
-        <div class="top-nav">
-            <a href="monitoring-menu.html" class="back-button">&#8592; Menu</a>
-            
-            <select id="machineSelector" class="machine-select" onchange="switchMachine(this.value)">
-                </select>
-        </div>
+    <div id="view-grid" class="view-section active">
+        <div class="menu-container">
+            <div style="text-align: left; margin-bottom: 20px;">
+                <a href="menu.html" class="back-button">&#8592; Menu Utama</a>
+            </div>
 
-        <div class="header-text">
-            <h1 id="page-title">Energy Dashboard - Mesin 1</h1>
-            <h2>Menampilkan data real-time untuk parameter Schneider</h2>
+            <h1 class="menu-title">Pilih Mesin (Live Monitoring)</h1>
+            <div class="menu-grid" id="machine-grid">
+                </div>
         </div>
     </div>
 
-    <div class="dashboard-grid">
-        <div class="card">
-            <h3>Energi Total</h3>
-            <div class="data-point"><span class="label">1. Total ea import</span><div><span class="value" id="val-total-ea">-</span><span class="unit">kWh</span></div></div>
-            <div class="data-point"><span class="label">2. Total er import</span><div><span class="value" id="val-total-er">-</span><span class="unit">kVARh</span></div></div>
-        </div>
-        <div class="card">
-            <h3>Energi Parsial</h3>
-            <div class="data-point"><span class="label">3. partial active E</span><div><span class="value" id="val-part-e">-</span><span class="unit">kWh</span></div></div>
-            <div class="data-point"><span class="label">4. partial Reactive E</span><div><span class="value" id="val-part-r">-</span><span class="unit">kVARh</span></div></div>
-        </div>
-        <div class="card">
-            <h3>Listrik Dasar (6 & 8)</h3>
-            <div class="dual-group">
-                <div class="data-point"><span class="label">V (Tegangan)</span><div><span class="value" id="val-v">-</span><span class="unit">V</span></div></div>
-                <div class="data-point"><span class="label">I (Arus)</span><div><span class="value" id="val-i">-</span><span class="unit">A</span></div></div>
-                <div class="data-point"><span class="label">Pf (Power Factor)</span><div><span class="value" id="val-pf">-</span><span class="unit"></span></div></div>
-                <div class="data-point"><span class="label">F (Frekuensi)</span><div><span class="value" id="val-hz">-</span><span class="unit">Hz</span></div></div>
+    <div id="view-detail" class="view-section">
+        <div class="header-container">
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <button onclick="showGrid()" class="back-button">&#8592; Kembali ke Grid</button>
+                <select id="machineSelector" class="machine-select" onchange="switchMachine(this.value)"></select>
+            </div>
+            <div class="header-text" style="text-align: right;">
+                <h1 id="page-title" style="margin:0; font-size: 2em; color: #1a237e;">Mesin 1</h1>
+                <h2 style="margin:5px 0 0 0; font-size: 1em; font-weight:400; color:#546e7a;">Real-time Data</h2>
             </div>
         </div>
-        <div class="card">
-            <h3>Daya (7)</h3>
-            <div class="power-group">
-                <div class="data-point"><span class="label">P (Active)</span><div><span class="value" id="val-p">-</span><span class="unit">W</span></div></div>
-                <div class="data-point"><span class="label">Q (Reactive)</span><div><span class="value" id="val-q">-</span><span class="unit">VAR</span></div></div>
-                <div class="data-point"><span class="label">S (Apparent)</span><div><span class="value" id="val-s">-</span><span class="unit">kVA</span></div></div>
+
+        <div class="dashboard-grid">
+            <div class="card">
+                <h3>Energi Total</h3>
+                <div class="data-point"><span class="label">1. Total ea import</span><div><span class="value" id="val-total-ea">-</span><span class="unit">kWh</span></div></div>
+                <div class="data-point"><span class="label">2. Total er import</span><div><span class="value" id="val-total-er">-</span><span class="unit">kVARh</span></div></div>
             </div>
-        </div>
-        <div class="card">
-            <h3>Waktu Operasi (9)</h3>
-            <div class="dual-group">
-                <div class="data-point"><span class="label">Hari</span><div><span class="value" id="val-op-days">-</span><span class="unit">Days</span></div></div>
-                <div class="data-point"><span class="label">Jam</span><div><span class="value" id="val-op-hrs">-</span><span class="unit">Hrs</span></div></div>
+            <div class="card">
+                <h3>Energi Parsial</h3>
+                <div class="data-point"><span class="label">3. partial active E</span><div><span class="value" id="val-part-e">-</span><span class="unit">kWh</span></div></div>
+                <div class="data-point"><span class="label">4. partial Reactive E</span><div><span class="value" id="val-part-r">-</span><span class="unit">kVARh</span></div></div>
             </div>
-        </div>
-        <div class="card">
-            <h3>Tariff (5)</h3>
-            <div class="data-point"><span class="label">Status</span><div><span class="value" id="val-tariff">-</span><span class="unit"></span></div></div>
+            <div class="card">
+                <h3>Listrik Dasar</h3>
+                <div class="dual-group">
+                    <div class="data-point"><span class="label">V (Volt)</span><div><span class="value" id="val-v">-</span><span class="unit">V</span></div></div>
+                    <div class="data-point"><span class="label">I (Ampere)</span><div><span class="value" id="val-i">-</span><span class="unit">A</span></div></div>
+                    <div class="data-point"><span class="label">Pf</span><div><span class="value" id="val-pf">-</span><span class="unit"></span></div></div>
+                    <div class="data-point"><span class="label">Freq</span><div><span class="value" id="val-hz">-</span><span class="unit">Hz</span></div></div>
+                </div>
+            </div>
+            <div class="card">
+                <h3>Daya</h3>
+                <div class="power-group">
+                    <div class="data-point"><span class="label">P (W)</span><div><span class="value" id="val-p">-</span><span class="unit">W</span></div></div>
+                    <div class="data-point"><span class="label">Q (VAR)</span><div><span class="value" id="val-q">-</span><span class="unit">VAR</span></div></div>
+                    <div class="data-point"><span class="label">S (VA)</span><div><span class="value" id="val-s">-</span><span class="unit">kVA</span></div></div>
+                </div>
+            </div>
+            <div class="card">
+                <h3>Waktu Operasi</h3>
+                <div class="dual-group">
+                    <div class="data-point"><span class="label">Hari</span><div><span class="value" id="val-op-days">-</span><span class="unit">Days</span></div></div>
+                    <div class="data-point"><span class="label">Jam</span><div><span class="value" id="val-op-hrs">-</span><span class="unit">Hrs</span></div></div>
+                </div>
+            </div>
+            <div class="card">
+                <h3>Tariff</h3>
+                <div class="data-point"><span class="label">Status</span><div><span class="value" id="val-tariff">-</span><span class="unit"></span></div></div>
+            </div>
         </div>
     </div>
 
 
 <script>
 // ==========================================================
-// --- JAVASCRIPT BARU ---
+// --- LOGIKA SPA & MQTT ---
 // ==========================================================
 let activeMachineId = 1; 
 let mqttClient; 
-let latestDataCache = {}; 
+let latestDataCache = {}; // Menyimpan data SEMUA mesin (1-18)
 
 const MQTT_HOST = "701d32236feb43b38c22855a611f4d42.s1.eu.hivemq.cloud";
 const MQTT_PORT = 8884;
@@ -157,28 +143,61 @@ const MQTT_TOPIC = "politeknik/meter/data";
 const fmt = (val, dig) => (val != null && !isNaN(val)) ? Number(val).toFixed(dig) : "-";
 function setStatus(msg, cls) { const s = document.getElementById("status"); if (s) { s.textContent = msg; s.className = cls; } }
 
-// --- FUNGSI PINDAH MESIN (CORE FEATURE) ---
-function switchMachine(id) {
+// --- 1. NAVIGASI SPA (Ganti View tanpa Reload) ---
+
+function showGrid() {
+    document.getElementById('view-detail').classList.remove('active');
+    document.getElementById('view-grid').classList.add('active');
+    // Hapus ID dari URL agar bersih
+    window.history.pushState({}, '', window.location.pathname);
+}
+
+function showDetail(id) {
     activeMachineId = parseInt(id);
     
-    // 1. Update Judul
+    // Update Dropdown & Judul
+    document.getElementById("machineSelector").value = activeMachineId;
     document.getElementById('page-title').textContent = `Energy Dashboard - Mesin ${activeMachineId}`;
     
-    // 2. Update URL tanpa reload (agar kalau di-refresh tetap di mesin ini)
-    const newUrl = new URL(window.location);
-    newUrl.searchParams.set('id', activeMachineId);
-    window.history.pushState({}, '', newUrl);
+    // Pindah Tampilan
+    document.getElementById('view-grid').classList.remove('active');
+    document.getElementById('view-detail').classList.add('active');
+    
+    // Isi Data (jika ada di cache)
+    refreshDetailView();
+}
 
-    // 3. Cek Cache Data
-    // Jika data mesin ini sudah ada di cache (pernah diterima dari MQTT), langsung tampilkan
-    if (latestDataCache[activeMachineId]) {
-        if (latestDataCache[activeMachineId].status === "offline") {
-            setMeterOffline();
+// Fungsi dipanggil saat dropdown di halaman detail berubah
+function switchMachine(id) {
+    activeMachineId = parseInt(id);
+    document.getElementById('page-title').textContent = `Energy Dashboard - Mesin ${activeMachineId}`;
+    refreshDetailView();
+}
+
+// --- 2. UPDATE TAMPILAN ---
+
+function updateGridCard(d) {
+    // Fungsi ini membuat kartu di menu grid jadi "Hidup" (berwarna hijau jika ada data)
+    const card = document.getElementById(`grid-card-${d.id}`);
+    const badge = document.getElementById(`grid-badge-${d.id}`);
+    if (card && badge) {
+        if (d.status === "online") {
+            card.classList.add("online");
+            badge.textContent = "ONLINE";
         } else {
-            setMeterOnline(latestDataCache[activeMachineId]);
+            card.classList.remove("online");
+            badge.textContent = "OFFLINE";
         }
+    }
+}
+
+function refreshDetailView() {
+    // Cek data di cache untuk mesin yang sedang aktif
+    const d = latestDataCache[activeMachineId];
+    if (d) {
+        if (d.status === "offline") setMeterOffline();
+        else setMeterOnline(d);
     } else {
-        // Jika belum ada data, kosongkan dulu sambil nunggu data baru masuk
         setMeterOffline();
     }
 }
@@ -196,89 +215,82 @@ function setMeterOnline(d) {
     document.getElementById('val-s').textContent = fmt(d.s, 2);
     document.getElementById('val-pf').textContent = fmt(d.pf, 2);
     document.getElementById('val-hz').textContent = fmt(d.hz, 1);
-
-    const total_hours = d.op_time;
-    if (total_hours != null && !isNaN(total_hours)) {
-        const days = Math.floor(total_hours / 24);
-        const hours = (total_hours % 24).toFixed(1);
-        document.getElementById(`val-op-days`).textContent = days;
-        document.getElementById(`val-op-hrs`).textContent = hours;
-    } else {
-        document.getElementById(`val-op-days`).textContent = "-";
-        document.getElementById(`val-op-hrs`).textContent = "-";
-    }
+    const days = d.op_time ? Math.floor(d.op_time / 24) : "-";
+    const hours = d.op_time ? (d.op_time % 24).toFixed(1) : "-";
+    document.getElementById(`val-op-days`).textContent = days;
+    document.getElementById(`val-op-hrs`).textContent = hours;
 }
 
 function setMeterOffline() {
     const ids = ['total-ea', 'total-er', 'part-e', 'part-r', 'tariff', 'v', 'i', 'p', 'q', 's', 'pf', 'hz', 'op-days', 'op-hrs'];
-    ids.forEach(id => {
-        const el = document.getElementById(`val-${id}`);
-        if (el) el.textContent = "-";
-    });
+    ids.forEach(id => { document.getElementById(`val-${id}`).textContent = "-"; });
 }
+
+// --- 3. MQTT CONNECTION (Jalan Terus) ---
 
 function startConnection() {
     setStatus("Menghubungkan ke MQTT Broker...", "bg-wait");
-    mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_v42_sw_" + Date.now());
-    mqttClient.onConnectionLost = onConnectionLost;
-    mqttClient.onMessageArrived = onMessageArrived;
+    mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_spa_" + Date.now());
+    mqttClient.onConnectionLost = (r) => { 
+        if (r.errorCode !== 0) { setStatus("⚠️ Koneksi Putus. Reconnecting...", "bg-wait"); setTimeout(startConnection, 5000); }
+    };
+    mqttClient.onMessageArrived = (m) => {
+        try {
+            const d = JSON.parse(m.payloadString);
+            if (d.id_mesin) d.id = d.id_mesin; 
+            if (!d.id) return;
+
+            // Simpan data ke cache (PENTING)
+            latestDataCache[d.id] = d;
+
+            // Update Grid (tanda online/offline di menu depan)
+            updateGridCard(d);
+
+            // Update Detail (jika sedang membuka mesin ini)
+            if (d.id === activeMachineId && document.getElementById('view-detail').classList.contains('active')) {
+                if (d.status === "offline") setMeterOffline();
+                else setMeterOnline(d);
+            }
+        } catch (e) { console.error("JSON Error", e); }
+    };
     mqttClient.connect({
         useSSL: true, userName: MQTT_USER, password: MQTT_PASS,
-        onSuccess: onConnect,
+        onSuccess: () => { 
+            setStatus("ONLINE - Terhubung ke System", "bg-ok"); 
+            mqttClient.subscribe(MQTT_TOPIC); 
+            
+            // Sembunyikan status bar setelah 3 detik biar bersih (Optional)
+            setTimeout(() => { document.getElementById("status").style.top = "-50px"; }, 3000);
+        },
         onFailure: (e) => { setStatus("Gagal Terhubung: " + e.errorMessage, "bg-err"); setTimeout(startConnection, 5000); }
     });
 }
 
-function onConnect() {
-    setStatus("ONLINE - Terhubung ke System", "bg-ok");
-    mqttClient.subscribe(MQTT_TOPIC);
-}
-
-function onConnectionLost(r) { 
-    if (r.errorCode !== 0) { setStatus("⚠️ Koneksi Putus. Reconnecting...", "bg-wait"); setTimeout(startConnection, 5000); }
-}
-
-function onMessageArrived(m) {
-    try {
-        const d = JSON.parse(m.payloadString);
-        if (d.id_mesin) d.id = d.id_mesin; 
-        if (!d.id) return;
-
-        // Update Cache (PENTING: Data semua mesin disimpan di sini)
-        latestDataCache[d.id] = d;
-        
-        // Hanya update tampilan jika ID data == ID mesin yang sedang dilihat
-        if (d.id === activeMachineId) {
-            if (d.status === "offline") setMeterOffline();
-            else setMeterOnline(d);
-        }
-    } catch (e) { console.error("JSON Error", e); }
-}
-
-// --- INISIALISASI ---
+// --- INISIALISASI HALAMAN ---
 window.onload = function() {
-    // 1. Isi Dropdown 1-18
-    const select = document.getElementById("machineSelector");
+    // 1. Generate Grid Menu (Mesin 1-18)
+    const gridContainer = document.getElementById("machine-grid");
+    const selectContainer = document.getElementById("machineSelector");
+    let gridHtml = "";
+    
     for (let i = 1; i <= 18; i++) {
+        // Grid Button
+        gridHtml += `
+        <div class="menu-card" id="grid-card-${i}" onclick="showDetail(${i})">
+            Mesin ${i}
+            <span class="menu-badge" id="grid-badge-${i}">OFFLINE</span>
+        </div>`;
+        
+        // Dropdown Option
         let option = document.createElement("option");
         option.value = i;
         option.text = "Mesin " + i;
-        select.appendChild(option);
+        selectContainer.appendChild(option);
     }
+    gridContainer.innerHTML = gridHtml;
 
-    // 2. Baca ID dari URL (agar kalau di-refresh tidak kembali ke 1)
-    const urlParams = new URLSearchParams(window.location.search);
-    const id = urlParams.get('id');
-    if (id && !isNaN(id)) {
-        activeMachineId = parseInt(id);
-        select.value = activeMachineId; // Set dropdown sesuai URL
-    }
-    
-    // 3. Set Judul Awal
-    document.getElementById('page-title').textContent = `Energy Dashboard - Mesin ${activeMachineId}`;
-
-    // 4. Mulai MQTT
-    startConnection(); 
+    // 2. Mulai MQTT
+    startConnection();
 }
 </script>
 </body>
