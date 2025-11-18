@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pilih Mesin (Monitoring)</title>
+    <style>
+        /* (CSS ini SAMA seperti tarif.html) */
+        body, html { height: 100%; margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f0f2f5; color: #333; padding: 20px; box-sizing: border-box; }
+        h2 { text-align: center; color: #0d47a1; font-size: 1.8em; margin-top: 50px; margin-bottom: 30px; }
+        .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; max-width: 1400px; margin: 0 auto; }
+        .menu-card { display: block; background: #fff; padding: 20px 15px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; font-size: 1.1em; font-weight: 600; color: #455a64; border-top: 5px solid #b0bec5; cursor: pointer; text-decoration: none; transition: all 0.2s ease; }
+        .menu-card:hover { transform: translateY(-5px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); border-top-color: #0d47a1; }
+        .back-button { display: inline-block; position: absolute; top: 20px; left: 20px; background: #78909c; color: white; padding: 10px 15px; border-radius: 8px; text-decoration: none; font-weight: 600; }
+        .back-button:hover { background: #546e7a; }
+    </style>
+</head>
+<body>
+
+    <a href="menu.html" class="back-button">&#8592; Kembali ke Menu</a>
+    <h2>Pilih Mesin (Monitoring Real Time)</h2>
+    
+    <div class="menu-grid" id="monitor-grid-container">
+        </div>
+
+<script>
+    window.onload = function() {
+        const container = document.getElementById("monitor-grid-container");
+        let monitorGridHtml = "";
+        
+        for (let i = 1; i <= 18; i++) {
+            // PERUBAHAN DI SINI:
+            // Link mengarah ke "dashboard.html" dengan parameter id
+            monitorGridHtml += `
+            <a href="dashboard.html?id=${i}" class="menu-card">
+                Mesin ${i}
+            </a>`;
+        }
+        container.innerHTML = monitorGridHtml;
+    }
+</script>
+
+</body>
+</html>
