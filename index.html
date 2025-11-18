@@ -5,19 +5,141 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Monitoring</title>
     <style>
-        /* (CSS SAMA SEPERTI SEBELUMNYA, TIDAK SAYA TAMPILKAN AGAR RINGKAS) */
-        body, html { height: 100%; margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #e3f2fd; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: #0d47a1; overflow: hidden; padding: 20px; box-sizing: border-box; }
-        .container { max-width: 700px; width: 90%; display: flex; flex-direction: column; align-items: center; justify-content: center; margin-bottom: 30px; }
-        img.splash-image { width: 100%; max-width: 550px; height: auto; margin-bottom: 25px; animation: fadeIn 1.5s ease-in-out forwards; }
-        h1 { font-size: 2.8em; margin-bottom: 8px; color: #1a237e; animation: fadeIn 2s ease-in-out forwards; }
-        p.description { font-size: 1.2em; color: #546e7a; font-weight: 400; margin-bottom: 30px; animation: fadeIn 2.5s ease-in-out forwards; }
-        .monitoring-button { display: inline-block; padding: 15px 35px; font-size: 1.3em; font-weight: 700; color: #ffffff; background-color: #2196f3; border: none; border-radius: 8px; cursor: pointer; text-decoration: none; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); transition: background-color 0.3s ease, transform 0.2s ease; animation: fadeIn 3s ease-in-out forwards; }
-        .monitoring-button:hover { background-color: #1976d2; transform: translateY(-2px); }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        @media (max-width: 600px) { h1 { font-size: 2em; } p.description { font-size: 1em; } .monitoring-button { font-size: 1.1em; padding: 12px 25px; } }
+        /* --- 1. DEFINISI TEMA --- */
+        :root {
+            /* Tema Terang (Default) */
+            --bg-body: #e3f2fd; /* Biru muda */
+            --text-main: #0d47a1; /* Biru tua */
+            --text-sub: #546e7a; /* Abu kebiruan */
+            --btn-bg: #2196f3;
+            --btn-text: #ffffff;
+            --switch-bg: #ffffff;
+            --shadow: rgba(0, 0, 0, 0.1);
+        }
+
+        [data-theme="dark"] {
+            /* Tema Gelap */
+            --bg-body: #0a192f; /* Biru gelap pekat (Navy) */
+            --text-main: #e6f1ff; /* Putih kebiruan */
+            --text-sub: #8892b0; /* Abu muda */
+            --btn-bg: #64ffda; /* Tosca neon (Cyberpunk style) */
+            --btn-text: #0a192f; /* Teks tombol jadi gelap */
+            --switch-bg: #172a45;
+            --shadow: rgba(0, 0, 0, 0.5);
+        }
+
+        /* --- CSS UTAMA --- */
+        body, html {
+            height: 100%;
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            overflow: hidden;
+            padding: 20px;
+            box-sizing: border-box;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .container {
+            max-width: 700px;
+            width: 90%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        img.splash-image {
+            width: 100%;
+            max-width: 550px;
+            height: auto;
+            margin-bottom: 25px;
+            animation: fadeIn 1.5s ease-in-out forwards;
+        }
+
+        h1 {
+            font-size: 2.8em;
+            margin-bottom: 8px;
+            color: var(--text-main);
+            animation: fadeIn 2s ease-in-out forwards;
+        }
+
+        p.description {
+            font-size: 1.2em;
+            color: var(--text-sub);
+            font-weight: 400;
+            margin-bottom: 30px;
+            animation: fadeIn 2.5s ease-in-out forwards;
+        }
+
+        /* Tombol Monitoring */
+        .monitoring-button {
+            display: inline-block;
+            padding: 15px 35px;
+            font-size: 1.3em;
+            font-weight: 700;
+            color: var(--btn-text);
+            background-color: var(--btn-bg);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            box-shadow: 0 4px 10px var(--shadow);
+            transition: transform 0.2s ease, background-color 0.3s;
+            animation: fadeIn 3s ease-in-out forwards;
+        }
+
+        .monitoring-button:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.1);
+        }
+
+        /* TOMBOL SWITCH TEMA (Pojok Kanan Atas) */
+        .theme-switch {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: var(--switch-bg);
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            box-shadow: 0 4px 10px var(--shadow);
+            transition: all 0.3s ease;
+            animation: fadeIn 1s ease;
+        }
+        .theme-switch:hover { transform: scale(1.1); }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 600px) {
+            h1 { font-size: 2em; }
+            p.description { font-size: 1em; }
+            .monitoring-button { font-size: 1.1em; padding: 12px 25px; }
+        }
     </style>
 </head>
 <body>
+
+    <button class="theme-switch" onclick="toggleTheme()" title="Ganti Tema">
+        <span id="theme-icon">🌙</span>
+    </button>
 
     <div class="container">
         <img src="splash-image.png" alt="Engineer melihat dashboard" class="splash-image">
@@ -27,6 +149,32 @@
         
         <a href="menu.html" class="monitoring-button">MONITORING</a>
     </div>
+
+    <script>
+        // --- LOGIKA TEMA (Copy-Paste ini ke semua halaman agar konsisten) ---
+        function toggleTheme() {
+            const body = document.body;
+            const icon = document.getElementById('theme-icon');
+            const current = body.getAttribute('data-theme');
+            
+            if (current === 'dark') {
+                body.removeAttribute('data-theme'); // Jadi Terang
+                icon.textContent = '🌙';
+                localStorage.setItem('theme', 'light');
+            } else {
+                body.setAttribute('data-theme', 'dark'); // Jadi Gelap
+                icon.textContent = '☀️';
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+
+        // Cek tema tersimpan saat loading
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
+            document.body.setAttribute('data-theme', 'dark');
+            document.getElementById('theme-icon').textContent = '☀️';
+        }
+    </script>
 
 </body>
 </html>
