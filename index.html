@@ -19,8 +19,28 @@
         .main-menu-grid { display: grid; grid-template-columns: 1fr; gap: 20px; max-width: 500px; margin: 20px auto; }
         .main-menu-button { background: #fff; padding: 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: center; font-size: 1.5em; font-weight: 600; color: #0d47a1; border: 2px solid #fff; cursor: pointer; transition: all 0.2s ease; }
         .main-menu-button:hover { transform: translateY(-5px); box-shadow: 0 5px 20px rgba(0,0,0,0.1); border-color: #0d47a1; }
-        .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; }
-        .menu-card { background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; font-size: 1.1em; font-weight: 600; color: #455a64; border-top: 5px solid #b0bec5; cursor: pointer; transition: all 0.2s ease; }
+        
+        /* --- PERUBAHAN DI SINI --- */
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); /* <-- DIUBAH DARI 150px */
+            gap: 10px; /* <-- DIUBAH DARI 15px */
+        }
+        .menu-card {
+            background: #fff;
+            padding: 15px; /* <-- DIUBAH DARI 20px */
+            border-radius: 12px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            text-align: center;
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #455a64;
+            border-top: 5px solid #b0bec5;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        /* --- AKHIR PERUBAHAN --- */
+        
         .menu-card:hover { transform: translateY(-5px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
         .menu-card.online { border-top-color: #43a047; }
         .menu-badge { display: block; font-size: 0.7em; font-weight: 700; color: #b0bec5; margin-top: 5px; }
@@ -38,8 +58,6 @@
         .gauge-wrapper canvas { width: 100%; height: auto; }
         .gauge-label { font-weight: 600; color: #0d47a1; margin-top: 10px; font-size: 1.1em; }
         .data-card { background: #fff; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); overflow: hidden; }
-        
-        /* --- (DIUBAH) Bagian 1: CSS Baru & Modifikasi --- */
         .param-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
@@ -57,11 +75,8 @@
             font-size: 0.9em;
             border-collapse: separate;
             border-spacing: 0 5px;
-            /* padding: 20px; (diganti) */
-            padding: 10px 20px 20px 20px; /* Atur padding baru */
+            padding: 10px 20px 20px 20px;
         }
-        /* --- Akhir Bagian 1 --- */
-        
         .data-table td { vertical-align: middle; padding: 2px 4px; }
         .lbl { color: #78909c; font-weight: 500; }
         .val { text-align: right; font-weight: 700; color: #263238; font-size: 1.15em; }
@@ -96,10 +111,8 @@
             <button class="tab-button active" id="btn-full" onclick="showFullView()">Full Parameters</button>
             <button class="tab-button" id="btn-gauges" onclick="showGaugeView()">Core Parameters</button>
         </div>
-        
         <div class="tab-content active" id="full-params-view">
             </div>
-        
         <div class="tab-content" id="core-gauges-view">
             <div class="gauge-grid">
                 <div class="gauge-wrapper"><canvas id="gauge-volt"></canvas><div class="gauge-label">Tegangan (V)</div></div>
@@ -136,8 +149,10 @@
 <script>
 
 // ==========================================================
-// --- BAGIAN 1: KONFIGURASI & INISIALISASI (GLOBAL) ---
+// --- SEMUA JAVASCRIPT DI BAWAH INI SAMA PERSIS (TIDAK DIUBAH) ---
 // ==========================================================
+
+// --- BAGIAN 1: KONFIGURASI & INISIALISASI (GLOBAL) ---
 let gaugeV, gaugeA, gaugeP, gaugeHz;
 let activeMachineId = 0; 
 let gaugesInitialized = false; 
@@ -146,9 +161,7 @@ const fmt = (val, dig) => (val != null && !isNaN(val)) ? Number(val).toFixed(dig
 const fmt_rp = (val) => (val != null && !isNaN(val)) ? 'Rp ' + Number(val).toLocaleString('id-ID', {minimumFractionDigits: 0, maximumFractionDigits: 0}) : "-";
 const rand = (min, max, dec = 0) => (Math.random() * (max - min) + min).toFixed(dec);
 
-// ======================================
 // --- BAGIAN 2: NAVIGASI & FUNGSI UTAMA (GLOBAL) ---
-// ======================================
 window.showPage = (pageId) => {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.getElementById(pageId).classList.add('active');
@@ -172,9 +185,7 @@ function initializeApp() {
     showPage('page-main-menu');
 }
 
-// ======================================
-// --- (BARU) BAGIAN SIMULASI DATA DUMMY ---
-// ======================================
+// --- BAGIAN SIMULASI DATA DUMMY ---
 function simulateDataUpdates() {
     for (let i = 1; i <= 18; i++) {
         let d = {}; 
@@ -213,19 +224,13 @@ function updateMonitorMenuCard(d) {
     }
 }
 
-// ======================================
-// --- 6. LOGIKA Halaman DETAIL MONITORING (GAUGE) ---
-// ======================================
-
-// --- (DIUBAH) Bagian 2: Fungsi showMonitorDetailView ---
+// --- BAGIAN 6: LOGIKA Halaman DETAIL MONITORING (GAUGE) ---
 window.showMonitorDetailView = (id) => {
     activeMachineId = id; 
     document.getElementById("monitor-detail-title").textContent = `Detail Mesin ${activeMachineId}`;
     
-    // Mengisi div #full-params-view dengan layout grid baru
     document.getElementById("full-params-view").innerHTML = `
         <div class="param-grid">
-            
             <div class="data-card">
                 <h3>Energi (Total & Parsial)</h3>
                 <table class="data-table">
@@ -237,7 +242,6 @@ window.showMonitorDetailView = (id) => {
                     </tbody>
                 </table>
             </div>
-
             <div class="data-card">
                 <h3>Parameter Daya</h3>
                 <table class="data-table">
@@ -249,7 +253,6 @@ window.showMonitorDetailView = (id) => {
                     </tbody>
                 </table>
             </div>
-
             <div class="data-card">
                 <h3>Listrik & Waktu</h3>
                 <table class="data-table">
@@ -261,22 +264,17 @@ window.showMonitorDetailView = (id) => {
                     </tbody>
                 </table>
             </div>
-
         </div>
     `;
-    // --- Akhir Bagian 2 ---
     
-    // Cek dari cache data dummy
     if (latestDataCache[id]) {
         setMeterOnline(latestDataCache[id]); 
     } else {
         setMeterOffline(); 
     }
-
     showFullView(); 
     showPage('page-monitor-detail');
 }
-// --- Akhir Perubahan ---
 
 window.showFullView = () => {
     document.getElementById("full-params-view").style.display = "block";
@@ -327,19 +325,15 @@ function setupGauges() {
 }
 
 function setMeterOnline(d) {
-    // Fungsi ini sekarang akan mencari ID di *semua* kartu
     const ids = ['e', 'q_tot', 'e_part', 'q_part', 'v', 'i', 'p', 'q', 's', 'pf', 'hz'];
     ids.forEach(id => {
         const el = document.getElementById(`d-${id}`);
-        if (el) el.textContent = fmt(d[id], (id === 'i' ? 3 : 2)); // Sesuaikan format
+        if (el) el.textContent = fmt(d[id], (id === 'i' ? 3 : 2));
     });
-    
-    // Format khusus
     if (document.getElementById('d-v')) document.getElementById('d-v').textContent = fmt(d.v, 1);
     if (document.getElementById('d-p')) document.getElementById('d-p').textContent = fmt(d.p, 0);
     if (document.getElementById('d-q')) document.getElementById('d-q').textContent = fmt(d.q, 0);
     if (document.getElementById('d-hz')) document.getElementById('d-hz').textContent = fmt(d.hz, 1);
-
     const opTimeEl = document.getElementById(`d-op_time`);
     if(opTimeEl) {
         const total_hours = d.op_time;
@@ -347,11 +341,8 @@ function setMeterOnline(d) {
             const days = Math.floor(total_hours / 24);
             const hours = (total_hours % 24).toFixed(1);
             opTimeEl.textContent = `${days} hari & ${hours} jam`;
-        } else {
-            opTimeEl.textContent = "-";
-        }
+        } else { opTimeEl.textContent = "-"; }
     }
-    
     if (gaugesInitialized) {
         gaugeV.set(d.v); gaugeA.set(d.i); gaugeP.set(d.p); gaugeHz.set(d.hz);
     }
@@ -363,15 +354,12 @@ function setMeterOffline() {
         const el = document.getElementById(`d-${id}`);
         if (el) el.textContent = "-";
     });
-
     if (gaugesInitialized) {
         gaugeV.set(0); gaugeA.set(0); gaugeP.set(0); gaugeHz.set(50);
     }
 }
 
-// ======================================
-// --- 7. LOGIKA Halaman DETAIL TARIF (DATABASE DUMMY) ---
-// ======================================
+// --- BAGIAN 7: LOGIKA Halaman DETAIL TARIF (DATABASE DUMMY) ---
 window.showTarifDetailView = (id) => {
     activeMachineId = id; 
     document.getElementById("tarif-detail-title").textContent = `Detail Tarif Mesin ${activeMachineId}`;
@@ -456,9 +444,7 @@ function setStatus(msg, cls) {
     if (s) { s.textContent = msg; s.className = cls; }
 }
 
-// ==========================================================
 // --- INISIALISASI DUMMY ---
-// ==========================================================
 window.onload = function() {
     try {
         initializeApp();
