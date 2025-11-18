@@ -10,62 +10,65 @@
             height: 100%;
             margin: 0;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            /* Warna latar belakang dari gambar Anda */
+            /* Warna latar belakang dari gambar */
             background-color: #e3f2fd; 
             display: flex;
             align-items: center;
             justify-content: center;
             text-align: center;
             color: #0d47a1; /* Biru tua */
+            overflow: hidden; /* Sembunyikan scrollbar */
         }
 
         .container {
-            max-width: 400px;
+            max-width: 600px;
+            padding: 20px;
         }
 
-        /* CSS untuk Animasi Loading */
-        .loader {
-            width: 80px;
-            height: 80px;
-            border: 6px solid rgba(13, 71, 161, 0.2); /* Biru tua transparan */
-            border-top-color: #0d47a1; /* Biru tua solid */
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 30px auto;
-        }
-
-        /* Animasi putar */
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
+        /* CSS untuk Gambar Ilustrasi */
+        img.splash-image {
+            width: 100%;
+            max-width: 450px;
+            height: auto;
+            margin-bottom: 20px;
+            /* Animasi fade-in sederhana */
+            animation: fadeIn 1.5s ease-in-out;
         }
 
         h1 {
             font-size: 2.2em;
             margin-bottom: 10px;
+            animation: fadeIn 2s ease-in-out;
         }
 
         p {
             font-size: 1.1em;
             color: #546e7a; /* Biru abu-abu */
             font-weight: 400;
+            animation: fadeIn 2.5s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <div class="loader"></div>
+        <img src="splash-image.png" alt="Engineer melihat dashboard" class="splash-image">
+        
         <h1>Dashboard Monitoring Energi</h1>
-        <p>Menginisialisasi data simulasi, harap tunggu...</p>
+        <p>Mempersiapkan data. Harap tunggu...</p>
     </div>
 
     <script>
-        // Pindah ke 'dashboard.html' setelah 3 detik (3000 ms)
+        // Pindah ke 'dashboard.html' setelah 4 detik (4000 ms)
+        // Dibuat sedikit lebih lama agar animasinya terlihat
         window.setTimeout(() => {
             window.location.href = 'dashboard.html';
-        }, 3000); 
+        }, 4000); 
     </script>
 
 </body>
