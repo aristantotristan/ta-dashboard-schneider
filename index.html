@@ -17,18 +17,42 @@
         .page { display: none; }
         .page.active { display: block; }
         .main-menu-grid { display: grid; grid-template-columns: 1fr; gap: 20px; max-width: 500px; margin: 20px auto; }
-        .main-menu-button { background: #fff; padding: 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: center; font-size: 1.5em; font-weight: 600; color: #0d47a1; border: 2px solid #fff; cursor: pointer; transition: all 0.2s ease; }
-        .main-menu-button:hover { transform: translateY(-5px); box-shadow: 0 5px 20px rgba(0,0,0,0.1); border-color: #0d47a1; }
         
-        /* --- PERUBAHAN DI SINI --- */
+        /* --- PERUBAHAN CSS 1: Tombol Menu Utama --- */
+        .main-menu-button {
+            background: #fff;
+            padding: 30px; /* <-- DIUBAH DARI 40px */
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            text-align: center;
+            font-size: 1.5em; /* Ukuran font judul tombol */
+            font-weight: 600;
+            color: #0d47a1;
+            border: 2px solid #fff;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        /* --- PERUBAHAN CSS 2: Deskripsi Tombol (Baru) --- */
+        .main-menu-desc {
+            display: block;
+            font-size: 0.6em; /* Relatif ke 1.5em di atas (jadi sekitar 0.9em) */
+            font-weight: 400;
+            color: #546e7a; /* Warna abu-abu seperti subjudul */
+            margin-top: 12px;
+            line-height: 1.4;
+        }
+        /* --- AKHIR PERUBAHAN CSS --- */
+
+        .main-menu-button:hover { transform: translateY(-5px); box-shadow: 0 5px 20px rgba(0,0,0,0.1); border-color: #0d47a1; }
         .menu-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); /* <-- DIUBAH DARI 150px */
-            gap: 10px; /* <-- DIUBAH DARI 15px */
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 10px;
         }
         .menu-card {
             background: #fff;
-            padding: 15px; /* <-- DIUBAH DARI 20px */
+            padding: 15px;
             border-radius: 12px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
             text-align: center;
@@ -39,8 +63,6 @@
             cursor: pointer;
             transition: all 0.2s ease;
         }
-        /* --- AKHIR PERUBAHAN --- */
-        
         .menu-card:hover { transform: translateY(-5px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
         .menu-card.online { border-top-color: #43a047; }
         .menu-badge { display: block; font-size: 0.7em; font-weight: 700; color: #b0bec5; margin-top: 5px; }
@@ -96,8 +118,21 @@
 
     <div id="page-main-menu" class="page active">
         <div class="main-menu-grid">
-            <div class="main-menu-button" onclick="showPage('page-monitor-menu')">1. Monitoring Mesin</div>
-            <div class="main-menu-button" onclick="showPage('page-tarif-menu')">2. Tarif Mesin</div>
+            
+            <div class="main-menu-button" onclick="showPage('page-monitor-menu')">
+                Monitoring Mesin
+                <span class="main-menu-desc">
+                    Lihat data real-time, status, voltase, arus, dan parameter teknis lainnya dari semua 18 mesin.
+                </span>
+            </div>
+            
+            <div class="main-menu-button" onclick="showPage('page-tarif-menu')">
+                Tarif Mesin
+                <span class="main-menu-desc">
+                    Lihat riwayat biaya, konsumsi kWh, dan total jam pemakaian. Ambil data dari database (mode dummy).
+                </span>
+            </div>
+
         </div>
     </div>
     <div id="page-monitor-menu" class="page">
