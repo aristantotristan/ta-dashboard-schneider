@@ -6,9 +6,11 @@
     <title>Dashboard Monitoring Energi</title>
     
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/gaugejs@1.3.6/dist/gauge.min.js"></script>
 
     <style>
-        /* CSS (Sama seperti sebelumnya) */
+        /* CSS Utama (Sama seperti sebelumnya) */
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: #f0f2f5;
@@ -22,7 +24,7 @@
         }
         h1 {
             text-align: center;
-            color: #1a237e; /* Biru tua */
+            color: #1a237e;
         }
         .dashboard-grid {
             display: grid;
@@ -44,52 +46,59 @@
             margin-top: 0;
             border-bottom: 2px solid #e0e0e0;
             padding-bottom: 10px;
-            color: #004d40; /* Hijau tua */
+            color: #004d40;
+            text-align: center; /* Pusatkan judul kartu gauge */
         }
-        .data-point {
-            margin-bottom: 15px;
-        }
-        .data-point label {
-            display: block;
-            font-size: 0.95em;
-            color: #555;
-            margin-bottom: 5px;
-        }
-        .data-point .value {
-            font-size: 2.3em;
-            font-weight: 600;
-            color: #0d47a1; /* Biru */
-        }
-        .data-point .unit {
-            font-size: 1.1em;
-            color: #444;
-            margin-left: 8px;
-        }
-        /* Tata letak khusus untuk P,Q,S */
-        .power-group {
-            display: flex;
-            justify-content: space-between;
-            gap: 15px;
-            text-align: center;
-        }
-        .power-group .data-point {
-            flex: 1;
-        }
-        .power-group .value {
-            font-size: 1.8em;
-        }
+        
+        /* Kartu Teks Biasa (Data Point) */
+        .data-point { margin-bottom: 15px; }
+        .data-point label { display: block; font-size: 0.95em; color: #555; margin-bottom: 5px; }
+        .data-point .value { font-size: 2.3em; font-weight: 600; color: #0d47a1; }
+        .data-point .unit { font-size: 1.1em; color: #444; margin-left: 8px; }
+
         /* Kartu yang lebih lebar */
         .card.wide {
             grid-column: span 2; 
         }
-        /* Style untuk chart canvas */
+
+        /* 2. CSS BARU UNTUK KARTU GAUGE */
+        .card.gauge-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .gauge-container {
+            width: 100%;
+            height: 150px; /* Beri tinggi agar konsisten */
+            position: relative; /* Diperlukan untuk Gauge.js */
+            display: flex;
+            justify-content: center;
+        }
+        .gauge-container canvas {
+            /* Biarkan Gauge.js mengatur ukuran */
+        }
+        .gauge-value {
+            font-size: 2.2em;
+            font-weight: 600;
+            color: #333;
+            margin-top: -30px; /* Tarik teks nilai sedikit ke atas */
+            text-align: center;
+        }
+        .gauge-value .unit {
+            font-size: 0.7em;
+            font-weight: normal;
+            color: #555;
+            margin-left: 5px;
+        }
+        
+        /* CSS untuk Chart */
         .chart-container {
             position: relative;
             height: 350px;
             width: 100%;
         }
 
-        /* Fallback untuk layar kecil */
         @media (max-width: 980px) {
             .card.wide {
                 grid-column: span 1;
@@ -100,7 +109,7 @@
 <body>
 
     <div class="container">
-        <h1>Dashboard Monitoring Energi Schneider</h1>
+        <h1>Dashboard Monitoring Energi Schneider ⚡</h1>
         
         <div class="dashboard-grid">
 
@@ -108,6 +117,76 @@
                 <h3>Tren Daya (Power)</h3>
                 <div class="chart-container">
                     <canvas id="powerTrendChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card gauge-card">
+                <h3>Tegangan</h3>
+                <div class="gauge-container">
+                    <canvas id="gauge-voltage"></canvas>
+                </div>
+                <div class="gauge-value">
+                    <span id="voltage-value">0.0</span><span class="unit">V</span>
+                </div>
+            </div>
+
+            <div class="card gauge-card">
+                <h3>Arus</h3>
+                <div class="gauge-container">
+                    <canvas id="gauge-current"></canvas>
+                </div>
+                <div class="gauge-value">
+                    <span id="current-value">0.00</span><span class="unit">A</span>
+                </div>
+            </div>
+
+            <div class="card gauge-card">
+                <h3>Active Power (P)</h3>
+                <div class="gauge-container">
+                    <canvas id="gauge-power-p"></canvas>
+                </div>
+                <div class="gauge-value">
+                    <span id="power-p-value">0</span><span class="unit">W</span>
+                </div>
+            </div>
+
+            <div class="card gauge-card">
+                <h3>Reactive Power (Q)</h3>
+                <div class="gauge-container">
+                    <canvas id="gauge-power-q"></canvas>
+                </div>
+                <div class="gauge-value">
+                    <span id="power-q-value">0</span><span class="unit">VAR</span>
+                </div>
+            </div>
+
+            <div class="card gauge-card">
+                <h3>Apparent Power (S)</h3>
+                <div class="gauge-container">
+                    <canvas id="gauge-power-s"></canvas>
+                </div>
+                <div class="gauge-value">
+                    <span id="power-s-value">0.00</span><span class="unit">kVA</span>
+                </div>
+            </div>
+            
+            <div class="card gauge-card">
+                <h3>Power Factor (PF)</h3>
+                <div class="gauge-container">
+                    <canvas id="gauge-pf"></canvas>
+                </div>
+                <div class="gauge-value">
+                    <span id="pf-value">0.00</span><span class="unit"></span>
+                </div>
+            </div>
+
+            <div class="card gauge-card">
+                <h3>Frekuensi (F)</h3>
+                <div class="gauge-container">
+                    <canvas id="gauge-freq"></canvas>
+                </div>
+                <div class="gauge-value">
+                    <span id="freq-value">0.0</span><span class="unit">Hz</span>
                 </div>
             </div>
 
@@ -146,69 +225,6 @@
                     </div>
                 </div>
             </div>
-
-            <div class="card">
-                <h3>Tegangan & Arus</h3>
-                <div class="data-point">
-                    <label>Voltage</label>
-                    <div>
-                        <span class="value" id="voltage">0.0</span>
-                        <span class="unit">V</span>
-                    </div>
-                </div>
-                <div class="data-point">
-                    <label>Current</label>
-                    <div>
-                        <span class="value" id="current">0.00</span>
-                        <span class="unit">A</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card wide">
-                <h3>Daya (Power) - Nilai Saat Ini</h3>
-                <div class="power-group">
-                    <div class="data-point">
-                        <label>Active Power (P)</label>
-                        <div>
-                            <span class="value" id="power-p">0</span>
-                            <span class="unit">W</span>
-                        </div>
-                    </div>
-                    <div class="data-point">
-                        <label>Reactive Power (Q)</label>
-                        <div>
-                            <span class="value" id="power-q">0</span>
-                            <span class="unit">VAR</span>
-                        </div>
-                    </div>
-                    <div class="data-point">
-                        <label>Apparent Power (S)</label>
-                        <div>
-                            <span class="value" id="power-s">0.00</span>
-                            <span class="unit">kVA</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card">
-                <h3>Faktor Daya & Frekuensi</h3>
-                <div class="data-point">
-                    <label>Power Factor (PF)</label>
-                    <div>
-                        <span class="value" id="pf">0.00</span>
-                        <span class="unit"></span>
-                    </div>
-                </div>
-                <div class="data-point">
-                    <label>Frequency (F)</label>
-                    <div>
-                        <span class="value" id="freq">0.0</span>
-                        <span class="unit">Hz</span>
-                    </div>
-                </div>
-            </div>
             
             <div class="card">
                 <h3>Waktu Operasi</h3>
@@ -243,11 +259,94 @@
     </div>
 
     <script>
-        // 3. TAMBAHKAN JAVASCRIPT UNTUK CHART
+        // 4. JAVASCRIPT BARU UNTUK SETUP GAUGE
         
-        // Variabel global untuk menyimpan instance chart
+        // --- Variabel Global ---
         let myPowerChart; 
-        const MAX_DATA_POINTS = 20; // Jumlah data di chart (20 data * 3 detik = 1 menit)
+        const MAX_DATA_POINTS = 20;
+        
+        // Variabel untuk menyimpan instance Gauge
+        let gaugeV, gaugeA, gaugeP, gaugeQ, gaugeS, gaugePF, gaugeF;
+
+        // Opsi default untuk semua gauge
+        const gaugeOptions = {
+            angle: 0.15, // Sudut lengkungan gauge
+            lineWidth: 0.3, // Lebar garis
+            radiusScale: 0.9, // Seberapa besar gauge mengisi container
+            pointer: {
+                length: 0.5, // Panjang jarum
+                strokeWidth: 0.035,
+                color: '#000000'
+            },
+            limitMax: false, // Jangan batasi nilai
+            limitMin: false,
+            colorStart: '#6FADCF', // Warna gradien
+            colorStop: '#8FC0DA',
+            strokeColor: '#E0E0E0', // Warna latar belakang
+            generateGradient: true,
+            highDpiSupport: true
+        };
+
+        /**
+         * Fungsi untuk inisialisasi SEMUA gauge
+         */
+        function setupGauges() {
+            // Gauge Tegangan (V)
+            const targetV = document.getElementById('gauge-voltage');
+            const optsV = { ...gaugeOptions, staticLabels: { font: "12px sans-serif", labels: [180, 200, 220, 240, 260], color: "#000" } };
+            gaugeV = new Gauge(targetV).setOptions(optsV);
+            gaugeV.maxValue = 260; // Set nilai max
+            gaugeV.setMinValue(180); // Set nilai min
+            gaugeV.animationSpeed = 32; 
+
+            // Gauge Arus (A)
+            const targetA = document.getElementById('gauge-current');
+            const optsA = { ...gaugeOptions, staticLabels: { font: "12px sans-serif", labels: [0, 5, 10, 15, 20], color: "#000" } };
+            gaugeA = new Gauge(targetA).setOptions(optsA);
+            gaugeA.maxValue = 20;
+            gaugeA.setMinValue(0);
+            gaugeA.animationSpeed = 32; 
+
+            // Gauge Active Power (P)
+            const targetP = document.getElementById('gauge-power-p');
+            const optsP = { ...gaugeOptions, staticLabels: { font: "12px sans-serif", labels: [0, 1000, 2000, 3000, 4000, 5000], color: "#000" } };
+            gaugeP = new Gauge(targetP).setOptions(optsP);
+            gaugeP.maxValue = 5000;
+            gaugeP.setMinValue(0);
+            gaugeP.animationSpeed = 32; 
+
+            // Gauge Reactive Power (Q)
+            const targetQ = document.getElementById('gauge-power-q');
+            const optsQ = { ...gaugeOptions, staticLabels: { font: "12px sans-serif", labels: [0, 250, 500, 750, 1000], color: "#000" } };
+            gaugeQ = new Gauge(targetQ).setOptions(optsQ);
+            gaugeQ.maxValue = 1000;
+            gaugeQ.setMinValue(0);
+            gaugeQ.animationSpeed = 32; 
+
+            // Gauge Apparent Power (S)
+            const targetS = document.getElementById('gauge-power-s');
+            const optsS = { ...gaugeOptions, staticLabels: { font: "12px sans-serif", labels: [0, 1, 2, 3, 4, 5], color: "#000" } };
+            gaugeS = new Gauge(targetS).setOptions(optsS);
+            gaugeS.maxValue = 5; // kVA
+            gaugeS.setMinValue(0);
+            gaugeS.animationSpeed = 32; 
+
+            // Gauge Power Factor (PF)
+            const targetPF = document.getElementById('gauge-pf');
+            const optsPF = { ...gaugeOptions, staticLabels: { font: "12px sans-serif", labels: [0.5, 0.75, 1], color: "#000" } };
+            gaugePF = new Gauge(targetPF).setOptions(optsPF);
+            gaugePF.maxValue = 1;
+            gaugePF.setMinValue(0.5);
+            gaugePF.animationSpeed = 32; 
+
+            // Gauge Frequency (F)
+            const targetF = document.getElementById('gauge-freq');
+            const optsF = { ...gaugeOptions, staticLabels: { font: "12px sans-serif", labels: [48, 49, 50, 51, 52], color: "#000" } };
+            gaugeF = new Gauge(targetF).setOptions(optsF);
+            gaugeF.maxValue = 52;
+            gaugeF.setMinValue(48);
+            gaugeF.animationSpeed = 32;
+        }
 
         /**
          * Fungsi untuk inisialisasi chart (dijalankan sekali)
@@ -255,13 +354,13 @@
         function setupChart() {
             const ctx = document.getElementById('powerTrendChart').getContext('2d');
             myPowerChart = new Chart(ctx, {
-                type: 'line', // Tipe chart
+                type: 'line', 
                 data: {
-                    labels: [], // Label waktu (sumbu X)
+                    labels: [], 
                     datasets: [
                         {
                             label: 'Active Power (W)',
-                            data: [], // Data nilai (sumbu Y)
+                            data: [], 
                             borderColor: 'rgb(75, 192, 192)',
                             backgroundColor: 'rgba(75, 192, 192, 0.2)',
                             tension: 0.2,
@@ -269,7 +368,7 @@
                         },
                         {
                             label: 'Reactive Power (VAR)',
-                            data: [], // Data nilai (sumbu Y)
+                            data: [], 
                             borderColor: 'rgb(255, 99, 132)',
                             backgroundColor: 'rgba(255, 99, 132, 0.2)',
                             tension: 0.2,
@@ -280,14 +379,8 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true // Mulai sumbu Y dari 0
-                        }
-                    },
-                    animation: {
-                        duration: 400 // Animasi update
-                    }
+                    scales: { y: { beginAtZero: true } },
+                    animation: { duration: 400 }
                 }
             });
         }
@@ -301,70 +394,81 @@
                 return (Math.random() * (max - min) + min).toFixed(decimals);
             }
 
-            // --- Update Nilai Angka (Sama seperti sebelumnya) ---
+            // --- Update Nilai Teks (Total & Parsial) ---
             document.getElementById('total-ea').textContent = rand(10000, 15000);
             document.getElementById('total-er').textContent = rand(5000, 7000);
             document.getElementById('partial-active').textContent = rand(10, 100);
             document.getElementById('partial-reactive').textContent = rand(5, 50);
-            document.getElementById('voltage').textContent = rand(218, 225, 1);
-            document.getElementById('current').textContent = rand(1, 15, 2);
-            document.getElementById('power-s').textContent = rand(2, 4, 2);
-            document.getElementById('pf').textContent = rand(0.85, 0.99, 2);
-            document.getElementById('freq').textContent = rand(49.8, 50.2, 1);
             
-            // Waktu operasi
-            if (!window.opDays) { 
-                window.opDays = 120;
-                window.opHrs = 5;
-            }
+            if (!window.opDays) { window.opDays = 120; window.opHrs = 5; }
             window.opHrs = (window.opHrs + 0.00083).toFixed(1); 
-            if (window.opHrs >= 24) {
-                window.opHrs = 0;
-                window.opDays += 1;
-            }
+            if (window.opHrs >= 24) { window.opHrs = 0; window.opDays += 1; }
             document.getElementById('op-days').textContent = window.opDays;
             document.getElementById('op-hrs').textContent = window.opHrs;
 
-            // --- Ambil data baru untuk Chart ---
+
+            // --- Ambil data baru untuk GAUGE & CHART ---
+            const newVoltage = rand(218, 225, 1);
+            const newCurrent = rand(1, 15, 2);
             const newActivePower = rand(1500, 3000, 0);
             const newReactivePower = rand(300, 800, 0);
+            const newApparentPower = rand(2, 4, 2);
+            const newPF = rand(0.85, 0.99, 2);
+            const newFreq = rand(49.8, 50.2, 1);
 
-            // Update juga kartu P dan Q
-            document.getElementById('power-p').textContent = newActivePower;
-            document.getElementById('power-q').textContent = newReactivePower;
+            // --- 5. UPDATE SEMUA GAUGE & TEKSNYA ---
+            if (gaugeV) {
+                gaugeV.set(newVoltage);
+                document.getElementById('voltage-value').textContent = newVoltage;
+            }
+            if (gaugeA) {
+                gaugeA.set(newCurrent);
+                document.getElementById('current-value').textContent = newCurrent;
+            }
+            if (gaugeP) {
+                gaugeP.set(newActivePower);
+                document.getElementById('power-p-value').textContent = newActivePower;
+            }
+            if (gaugeQ) {
+                gaugeQ.set(newReactivePower);
+                document.getElementById('power-q-value').textContent = newReactivePower;
+            }
+            if (gaugeS) {
+                gaugeS.set(newApparentPower);
+                document.getElementById('power-s-value').textContent = newApparentPower;
+            }
+            if (gaugePF) {
+                gaugePF.set(newPF);
+                document.getElementById('pf-value').textContent = newPF;
+            }
+            if (gaugeF) {
+                gaugeF.set(newFreq);
+                document.getElementById('freq-value').textContent = newFreq;
+            }
 
-            // --- Update Chart ---
+
+            // --- Update Chart (Sama seperti sebelumnya) ---
             if (myPowerChart) {
-                // Buat label waktu baru
-                const timeLabel = new Date().toLocaleTimeString('id-ID', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit'
-                });
+                const timeLabel = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
-                // Tambahkan data baru ke chart
                 myPowerChart.data.labels.push(timeLabel);
                 myPowerChart.data.datasets[0].data.push(newActivePower);
                 myPowerChart.data.datasets[1].data.push(newReactivePower);
 
-                // Batasi jumlah data di chart agar tidak berat
                 if (myPowerChart.data.labels.length > MAX_DATA_POINTS) {
-                    myPowerChart.data.labels.shift(); // Hapus data tertua
+                    myPowerChart.data.labels.shift(); 
                     myPowerChart.data.datasets[0].data.shift();
                     myPowerChart.data.datasets[1].data.shift();
                 }
-
-                // Perbarui (gambar ulang) chart
                 myPowerChart.update();
             }
         }
 
         // --- Event Listeners ---
-
-        // Saat halaman selesai dimuat
         document.addEventListener('DOMContentLoaded', () => {
-            setupChart(); // 1. Inisialisasi chart
-            updateDashboard(); // 2. Isi data pertama kali
+            setupChart();     // 1. Inisialisasi chart garis
+            setupGauges();    // 2. Inisialisasi semua gauge
+            updateDashboard(); // 3. Isi data pertama kali
         });
 
         // Atur interval untuk update data setiap 3000ms (3 detik)
