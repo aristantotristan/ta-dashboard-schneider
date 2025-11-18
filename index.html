@@ -3,52 +3,98 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Splash Screen</title>
+    <title>Dashboard Monitoring</title>
     <style>
         /* CSS untuk Halaman Penuh */
         body, html {
             height: 100%;
             margin: 0;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #e3f2fd; 
+            background-color: #e3f2fd; /* Warna biru muda untuk menyamarkan background gambar */
             display: flex;
+            flex-direction: column; /* Mengatur item secara vertikal */
             align-items: center;
             justify-content: center;
             text-align: center;
             color: #0d47a1; /* Biru tua */
-            overflow: hidden; /* Sembunyikan scrollbar */
+            overflow: hidden;
+            padding: 20px; /* Sedikit padding agar tidak terlalu mepet */
+            box-sizing: border-box; /* Padding tidak menambah ukuran total */
         }
 
         .container {
-            max-width: 600px;
-            padding: 20px;
+            max-width: 700px; /* Ukuran maksimal container */
+            width: 90%; /* Lebar responsif */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 30px; /* Jarak antara gambar/teks dengan tombol */
         }
 
         /* CSS untuk Gambar Ilustrasi */
         img.splash-image {
             width: 100%;
-            max-width: 450px;
+            max-width: 550px; /* Ukuran gambar yang lebih besar */
             height: auto;
-            margin-bottom: 20px;
-            animation: fadeIn 1.5s ease-in-out;
+            margin-bottom: 25px;
+            animation: fadeIn 1.5s ease-in-out forwards; /* 'forwards' agar tetap di akhir animasi */
         }
 
         h1 {
-            font-size: 2.2em;
-            margin-bottom: 10px;
-            animation: fadeIn 2s ease-in-out;
+            font-size: 2.8em; /* Ukuran teks lebih besar */
+            margin-bottom: 8px;
+            color: #1a237e; /* Biru yang lebih gelap */
+            animation: fadeIn 2s ease-in-out forwards;
         }
 
-        p {
-            font-size: 1.1em;
-            color: #546e7a; /* Biru abu-abu */
+        p.description {
+            font-size: 1.2em; /* Ukuran teks lebih besar */
+            color: #546e7a;
             font-weight: 400;
-            animation: fadeIn 2.5s ease-in-out;
+            margin-bottom: 30px; /* Jarak ke tombol */
+            animation: fadeIn 2.5s ease-in-out forwards;
+        }
+
+        /* Gaya Tombol */
+        .monitoring-button {
+            display: inline-block;
+            padding: 15px 35px;
+            font-size: 1.3em;
+            font-weight: 700;
+            color: #ffffff;
+            background-color: #2196f3; /* Biru cerah */
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none; /* Hilangkan underline jika menggunakan <a> */
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            animation: fadeIn 3s ease-in-out forwards;
+        }
+
+        .monitoring-button:hover {
+            background-color: #1976d2; /* Warna biru lebih gelap saat hover */
+            transform: translateY(-2px); /* Efek sedikit naik */
         }
         
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
+            from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Media queries untuk responsif di layar kecil */
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 2em;
+            }
+            p.description {
+                font-size: 1em;
+            }
+            .monitoring-button {
+                font-size: 1.1em;
+                padding: 12px 25px;
+            }
         }
     </style>
 </head>
@@ -57,9 +103,11 @@
     <div class="container">
         <img src="splash-image.png" alt="Engineer melihat dashboard" class="splash-image">
         
-        <h1>Dashboard Monitoring Energi</h1>
-        <p>Halaman splash screen statis.</p>
+        <h1>Pantau Data Energi Anda</h1>
+        <p class="description">Klik tombol di bawah ini untuk memantau parameter energi secara real-time.</p>
+        
+        <a href="dashboard.html" class="monitoring-button">MONITORING</a>
     </div>
 
-    </body>
+</body>
 </html>
