@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TA Monitoring Energi (v38 - DUMMY MODE)</title>
+    <title>TA Monitoring Energi (v38 - DUMMY RAPI)</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gauge.js/1.3.7/gauge.min.js"></script>
     
     <style>
-        /* ... (CSS SAMA PERSIS) ... */
+        /* ... (CSS Utama Sama) ... */
         body { font-family: 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; padding: 20px; color: #333; }
         h1 { text-align: center; color: #0d47a1; margin-bottom: 5px; }
         h2 { text-align: center; color: #546e7a; font-size: 1.1em; margin-top: 0; margin-bottom: 25px; font-weight: 400; }
@@ -38,7 +38,30 @@
         .gauge-wrapper canvas { width: 100%; height: auto; }
         .gauge-label { font-weight: 600; color: #0d47a1; margin-top: 10px; font-size: 1.1em; }
         .data-card { background: #fff; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); overflow: hidden; }
-        .data-table { width: 100%; font-size: 0.9em; border-collapse: separate; border-spacing: 0 5px; padding: 20px; }
+        
+        /* --- (DIUBAH) Bagian 1: CSS Baru & Modifikasi --- */
+        .param-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+        }
+        .data-card h3 {
+            font-size: 1.2em;
+            color: #0d47a1;
+            margin: 0;
+            padding: 15px 20px;
+            border-bottom: 2px solid #f0f2f5;
+        }
+        .data-table {
+            width: 100%;
+            font-size: 0.9em;
+            border-collapse: separate;
+            border-spacing: 0 5px;
+            /* padding: 20px; (diganti) */
+            padding: 10px 20px 20px 20px; /* Atur padding baru */
+        }
+        /* --- Akhir Bagian 1 --- */
+        
         .data-table td { vertical-align: middle; padding: 2px 4px; }
         .lbl { color: #78909c; font-weight: 500; }
         .val { text-align: right; font-weight: 700; color: #263238; font-size: 1.15em; }
@@ -73,11 +96,10 @@
             <button class="tab-button active" id="btn-full" onclick="showFullView()">Full Parameters</button>
             <button class="tab-button" id="btn-gauges" onclick="showGaugeView()">Core Parameters</button>
         </div>
+        
         <div class="tab-content active" id="full-params-view">
-            <div class="data-card">
-                <table class="data-table" id="monitor-data-table"></table>
             </div>
-        </div>
+        
         <div class="tab-content" id="core-gauges-view">
             <div class="gauge-grid">
                 <div class="gauge-wrapper"><canvas id="gauge-volt"></canvas><div class="gauge-label">Tegangan (V)</div></div>
@@ -116,111 +138,67 @@
 // ==========================================================
 // --- BAGIAN 1: KONFIGURASI & INISIALISASI (GLOBAL) ---
 // ==========================================================
-
-// (Variabel Global)
 let gaugeV, gaugeA, gaugeP, gaugeHz;
 let activeMachineId = 0; 
 let gaugesInitialized = false; 
 let latestDataCache = {}; 
-
-// (Helper)
 const fmt = (val, dig) => (val != null && !isNaN(val)) ? Number(val).toFixed(dig) : "-";
 const fmt_rp = (val) => (val != null && !isNaN(val)) ? 'Rp ' + Number(val).toLocaleString('id-ID', {minimumFractionDigits: 0, maximumFractionDigits: 0}) : "-";
-// (Helper Dummy)
 const rand = (min, max, dec = 0) => (Math.random() * (max - min) + min).toFixed(dec);
 
 // ======================================
 // --- BAGIAN 2: NAVIGASI & FUNGSI UTAMA (GLOBAL) ---
 // ======================================
-
-// Pindah Halaman
 window.showPage = (pageId) => {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.getElementById(pageId).classList.add('active');
-    
     if (pageId === 'page-main-menu') document.getElementById('page-title').textContent = "Menu Utama";
     if (pageId === 'page-monitor-menu') document.getElementById('page-title').textContent = "Pilih Mesin (Monitoring)";
     if (pageId === 'page-tarif-menu') document.getElementById('page-title').textContent = "Pilih Mesin (Tarif)";
 }
 
-// --- FUNGSI UTAMA (YANG JALAN SAAT AWAL) ---
 function initializeApp() {
-    // Membuat card untuk menu monitoring
     let monitorGridHtml = "";
     for (let i = 1; i <= 18; i++) {
-        monitorGridHtml += `
-        <div class="menu-card" id="monitor-card-${i}" onclick="showMonitorDetailView(${i})">
-            Mesin ${i}
-            <span class="menu-badge" id="monitor-badge-${i}">OFFLINE</span>
-        </div>`;
+        monitorGridHtml += `<div class="menu-card" id="monitor-card-${i}" onclick="showMonitorDetailView(${i})">Mesin ${i}<span class="menu-badge" id="monitor-badge-${i}">OFFLINE</span></div>`;
     }
     document.getElementById("monitor-grid-container").innerHTML = monitorGridHtml;
 
-    // Membuat card untuk menu tarif
     let tarifGridHtml = "";
     for (let i = 1; i <= 18; i++) {
-        tarifGridHtml += `
-        <div class="menu-card" id="tarif-card-${i}" onclick="showTarifDetailView(${i})">
-            Mesin ${i}
-        </div>`;
+        tarifGridHtml += `<div class="menu-card" id="tarif-card-${i}" onclick="showTarifDetailView(${i})">Mesin ${i}</div>`;
     }
     document.getElementById("tarif-grid-container").innerHTML = tarifGridHtml;
-
     showPage('page-main-menu');
-    // startConnection() DIHAPUS, diganti simulator di window.onload
 }
 
 // ======================================
 // --- (BARU) BAGIAN SIMULASI DATA DUMMY ---
 // ======================================
 function simulateDataUpdates() {
-    // Loop untuk semua 18 mesin
     for (let i = 1; i <= 18; i++) {
-        let d = {}; // Data dummy baru
-
-        // 15% kemungkinan offline
+        let d = {}; 
         if (Math.random() < 0.15) { 
             d = { id: i, status: "offline" };
         } else {
-            // Buat data online
             d = {
-                id: i,
-                status: "online",
-                e: rand(10000, 20000, 2),
-                q_tot: rand(5000, 9000, 2),
-                e_part: rand(1, 50, 2),
-                q_part: rand(1, 20, 2),
-                v: rand(218, 225, 1),
-                i: rand(10, 80, 3),
-                p: rand(10000, 20000, 0),
-                q: rand(3000, 5000, 0),
-                s: rand(11, 22, 2),
-                pf: rand(0.85, 0.99, 2),
-                hz: rand(49.8, 50.2, 1),
-                op_time: rand(100, 5000, 1)
+                id: i, status: "online",
+                e: rand(10000, 20000, 2), q_tot: rand(5000, 9000, 2),
+                e_part: rand(1, 50, 2), q_part: rand(1, 20, 2),
+                v: rand(218, 225, 1), i: rand(10, 80, 3),
+                p: rand(10000, 20000, 0), q: rand(3000, 5000, 0),
+                s: rand(11, 22, 2), pf: rand(0.85, 0.99, 2),
+                hz: rand(49.8, 50.2, 1), op_time: rand(100, 5000, 1)
             };
         }
-
-        // --- Logika ini disalin dari onMessageArrived ---
         latestDataCache[d.id] = d;
         updateMonitorMenuCard(d);
-        
-        // Cek apakah kita sedang melihat halaman detail mesin ini
         if (d.id === activeMachineId && document.getElementById('page-monitor-detail').classList.contains('active')) {
-            if (d.status === "offline") {
-                setMeterOffline();
-            } else {
-                setMeterOnline(d);
-            }
+            if (d.status === "offline") setMeterOffline();
+            else setMeterOnline(d);
         }
-        // --- Akhir logika onMessageArrived ---
     }
 }
-
-// ======================================
-// --- 5. LOGIKA MQTT (DIHAPUS) ---
-// ======================================
-// (Semua fungsi startConnection, onConnect, dll. Dihapus)
 
 function updateMonitorMenuCard(d) {
     const card = document.getElementById(`monitor-card-${d.id}`);
@@ -239,26 +217,54 @@ function updateMonitorMenuCard(d) {
 // --- 6. LOGIKA Halaman DETAIL MONITORING (GAUGE) ---
 // ======================================
 
-// (Semua fungsi di bagian ini SAMA PERSIS, tidak perlu diubah)
+// --- (DIUBAH) Bagian 2: Fungsi showMonitorDetailView ---
 window.showMonitorDetailView = (id) => {
     activeMachineId = id; 
     document.getElementById("monitor-detail-title").textContent = `Detail Mesin ${activeMachineId}`;
     
-    // Inisialisasi tabel (sama)
-    document.getElementById("monitor-data-table").innerHTML = `
-        <tr class="row-energy"><td class="lbl">1. Total ea import</td><td class="val" id="d-e">-</td><td class="unit">kWh</td></tr>
-        <tr class="row-energy"><td class="lbl">2. Total er import</td><td class="val" id="d-q_tot">-</td><td class="unit">kVARh</td></tr>
-        <tr class="row-energy"><td class="lbl">3. partial active E</td><td class="val" id="d-e_part">-</td><td class="unit">kWh</td></tr>
-        <tr class="row-energy"><td class="lbl">4. partial Reactive E</td><td class="val" id="d-q_part">-</td><td class="unit">kVARh</td></tr>
-        <tr><td class="lbl">5. Voltage (V)</td><td class="val" id="d-v">-</td><td class="unit">V</td></tr>
-        <tr><td class="lbl">6. Current (A)</td><td class="val" id="d-i">-</td><td class="unit">A</td></tr>
-        <tr><td class="lbl">7. Active power (P)</td><td class="val" id="d-p">-</td><td class="unit">W</td></tr>
-        <tr><td class="lbl">8. Reactive Power (Q)</td><td class="val" id="d-q">-</td><td class="unit">VAR</td></tr>
-        <tr><td class="lbl">9. Apparent power (S)</td><td class="val" id="d-s">-</td><td class="unit">kVA</td></tr>
-        <tr><td class="lbl">10. Power Factor (Pf)</td><td class="val" id="d-pf">-</td><td class="unit">PF</td></tr>
-        <tr><td class="lbl">11. Frequency (F)</td><td class="val" id="d-hz">-</td><td class="unit">Hz</td></tr>
-        <tr class="row-time"><td class="lbl">12. Operation time</td><td class="val time-val" id="d-op_time" colspan="2">-</td></tr>
+    // Mengisi div #full-params-view dengan layout grid baru
+    document.getElementById("full-params-view").innerHTML = `
+        <div class="param-grid">
+            
+            <div class="data-card">
+                <h3>Energi (Total & Parsial)</h3>
+                <table class="data-table">
+                    <tbody>
+                        <tr class="row-energy"><td class="lbl">1. Total ea import</td><td class="val" id="d-e">-</td><td class="unit">kWh</td></tr>
+                        <tr class="row-energy"><td class="lbl">2. Total er import</td><td class="val" id="d-q_tot">-</td><td class="unit">kVARh</td></tr>
+                        <tr class="row-energy"><td class="lbl">3. partial active E</td><td class="val" id="d-e_part">-</td><td class="unit">kWh</td></tr>
+                        <tr class="row-energy"><td class="lbl">4. partial Reactive E</td><td class="val" id="d-q_part">-</td><td class="unit">kVARh</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="data-card">
+                <h3>Parameter Daya</h3>
+                <table class="data-table">
+                    <tbody>
+                        <tr><td class="lbl">7. Active power (P)</td><td class="val" id="d-p">-</td><td class="unit">W</td></tr>
+                        <tr><td class="lbl">8. Reactive Power (Q)</td><td class="val" id="d-q">-</td><td class="unit">VAR</td></tr>
+                        <tr><td class="lbl">9. Apparent power (S)</td><td class="val" id="d-s">-</td><td class="unit">kVA</td></tr>
+                        <tr><td class="lbl">10. Power Factor (Pf)</td><td class="val" id="d-pf">-</td><td class="unit">PF</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="data-card">
+                <h3>Listrik & Waktu</h3>
+                <table class="data-table">
+                    <tbody>
+                        <tr><td class="lbl">5. Voltage (V)</td><td class="val" id="d-v">-</td><td class="unit">V</td></tr>
+                        <tr><td class="lbl">6. Current (A)</td><td class="val" id="d-i">-</td><td class="unit">A</td></tr>
+                        <tr><td class="lbl">11. Frequency (F)</td><td class="val" id="d-hz">-</td><td class="unit">Hz</td></tr>
+                        <tr class="row-time"><td class="lbl">12. Operation time</td><td class="val time-val" id="d-op_time" colspan="2">-</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
     `;
+    // --- Akhir Bagian 2 ---
     
     // Cek dari cache data dummy
     if (latestDataCache[id]) {
@@ -270,6 +276,7 @@ window.showMonitorDetailView = (id) => {
     showFullView(); 
     showPage('page-monitor-detail');
 }
+// --- Akhir Perubahan ---
 
 window.showFullView = () => {
     document.getElementById("full-params-view").style.display = "block";
@@ -296,55 +303,53 @@ window.showGaugeView = () => {
 }
 
 function setupGauges() {
-    // (Library 'Gauge' sudah ada di scope global)
     const baseOpts = { angle: 0.0, lineWidth: 0.3, radiusScale: 0.9, pointer: { length: 0.5, strokeWidth: 0.03, color: '#000000' }, limitMax: false, limitMin: false, colorStart: '#6FADCF', colorStop: '#8FC0DA', strokeColor: '#E0E0E0', generateGradient: true };
-    
     var optsV = { ...baseOpts }; 
     optsV.staticLabels = { font: "12px sans-serif", labels: [0, 50, 100, 150, 200, 220, 250, 300], color: "#555" };
     optsV.staticZones = [ {strokeStyle: "#30B32D", min: 200, max: 240}, {strokeStyle: "#FFDD00", min: 240, max: 260}, {strokeStyle: "#F03E3E", min: 260, max: 300} ];
     gaugeV = new Gauge(document.getElementById('gauge-volt')).setOptions(optsV);
     gaugeV.maxValue = 300; gaugeV.set(0);
-
     var optsA = { ...baseOpts }; 
     optsA.staticLabels = { font: "12px sans-serif", labels: [0, 20, 40, 60, 80, 100], color: "#555" };
     optsA.staticZones = [ {strokeStyle: "#30B32D", min: 0, max: 70}, {strokeStyle: "#FFDD00", min: 70, max: 90}, {strokeStyle: "#F03E3E", min: 90, max: 100} ];
     gaugeA = new Gauge(document.getElementById('gauge-amp')).setOptions(optsA);
     gaugeA.maxValue = 100; gaugeA.set(0);
-
     var optsP = { ...baseOpts }; 
     optsP.staticLabels = { font: "12px sans-serif", labels: [0, 5000, 10000, 15000, 20000, 25000], color: "#555" };
     optsP.staticZones = [ {strokeStyle: "#30B32D", min: 0, max: 15000}, {strokeStyle: "#FFDD00", min: 15000, max: 20000}, {strokeStyle: "#F03E3E", min: 20000, max: 25000} ];
     gaugeP = new Gauge(document.getElementById('gauge-power')).setOptions(optsP);
     gaugeP.maxValue = 25000; gaugeP.set(0);
-    
     var optsHz = { ...baseOpts }; 
     optsHz.staticLabels = { font: "12px sans-serif", labels: [45, 48, 50, 52, 55], color: "#555" };
     optsHz.staticZones = [ {strokeStyle: "#F03E3E", min: 45, max: 48}, {strokeStyle: "#30B32D", min: 48, max: 52}, {strokeStyle: "#F03E3E", min: 52, max: 55} ];
     gaugeHz = new Gauge(document.getElementById('gauge-freq')).setOptions(optsHz);
-    gaugeHz.maxValue = 55;
-    gaugeHz.minValue = 45;
-    gaugeHz.set(50);
+    gaugeHz.maxValue = 55; gaugeHz.minValue = 45; gaugeHz.set(50);
 }
 
 function setMeterOnline(d) {
-    document.getElementById(`d-e`).textContent  = fmt(d.e, 2);
-    document.getElementById(`d-q_tot`).textContent = fmt(d.q_tot, 2);
-    document.getElementById(`d-e_part`).textContent  = fmt(d.e_part, 2);
-    document.getElementById(`d-q_part`).textContent  = fmt(d.q_part, 2);
-    document.getElementById(`d-v`).textContent  = fmt(d.v, 1);
-    document.getElementById(`d-i`).textContent  = fmt(d.i, 3);
-    document.getElementById(`d-p`).textContent  = fmt(d.p, 0); 
-    document.getElementById(`d-q`).textContent  = fmt(d.q, 0); 
-    document.getElementById(`d-s`).textContent  = fmt(d.s, 2); 
-    document.getElementById(`d-pf`).textContent = fmt(d.pf, 2);
-    document.getElementById(`d-hz`).textContent = fmt(d.hz, 1);
-    const total_hours = d.op_time;
-    if (total_hours != null && !isNaN(total_hours)) {
-        const days = Math.floor(total_hours / 24);
-        const hours = (total_hours % 24).toFixed(1);
-        document.getElementById(`d-op_time`).textContent = `${days} hari & ${hours} jam`;
-    } else {
-        document.getElementById(`d-op_time`).textContent = "-";
+    // Fungsi ini sekarang akan mencari ID di *semua* kartu
+    const ids = ['e', 'q_tot', 'e_part', 'q_part', 'v', 'i', 'p', 'q', 's', 'pf', 'hz'];
+    ids.forEach(id => {
+        const el = document.getElementById(`d-${id}`);
+        if (el) el.textContent = fmt(d[id], (id === 'i' ? 3 : 2)); // Sesuaikan format
+    });
+    
+    // Format khusus
+    if (document.getElementById('d-v')) document.getElementById('d-v').textContent = fmt(d.v, 1);
+    if (document.getElementById('d-p')) document.getElementById('d-p').textContent = fmt(d.p, 0);
+    if (document.getElementById('d-q')) document.getElementById('d-q').textContent = fmt(d.q, 0);
+    if (document.getElementById('d-hz')) document.getElementById('d-hz').textContent = fmt(d.hz, 1);
+
+    const opTimeEl = document.getElementById(`d-op_time`);
+    if(opTimeEl) {
+        const total_hours = d.op_time;
+        if (total_hours != null && !isNaN(total_hours)) {
+            const days = Math.floor(total_hours / 24);
+            const hours = (total_hours % 24).toFixed(1);
+            opTimeEl.textContent = `${days} hari & ${hours} jam`;
+        } else {
+            opTimeEl.textContent = "-";
+        }
     }
     
     if (gaugesInitialized) {
@@ -353,18 +358,11 @@ function setMeterOnline(d) {
 }
 
 function setMeterOffline() {
-    document.getElementById(`d-e`).textContent  = "-";
-    document.getElementById(`d-q_tot`).textContent = "-";
-    document.getElementById(`d-e_part`).textContent  = "-";
-    document.getElementById(`d-q_part`).textContent  = "-";
-    document.getElementById(`d-v`).textContent  = "-";
-    document.getElementById(`d-i`).textContent  = "-";
-    document.getElementById(`d-p`).textContent  = "-";
-    document.getElementById(`d-q`).textContent  = "-";
-    document.getElementById(`d-s`).textContent  = "-";
-    document.getElementById(`d-pf`).textContent = "-";
-    document.getElementById(`d-hz`).textContent = "-";
-    document.getElementById(`d-op_time`).textContent = "-";
+    const ids = ['e', 'q_tot', 'e_part', 'q_part', 'v', 'i', 'p', 'q', 's', 'pf', 'hz', 'op_time'];
+    ids.forEach(id => {
+        const el = document.getElementById(`d-${id}`);
+        if (el) el.textContent = "-";
+    });
 
     if (gaugesInitialized) {
         gaugeV.set(0); gaugeA.set(0); gaugeP.set(0); gaugeHz.set(50);
@@ -372,13 +370,12 @@ function setMeterOffline() {
 }
 
 // ======================================
-// --- 7. LOGIKA Halaman DETAIL TARIF (DATABASE) ---
+// --- 7. LOGIKA Halaman DETAIL TARIF (DATABASE DUMMY) ---
 // ======================================
-
 window.showTarifDetailView = (id) => {
     activeMachineId = id; 
     document.getElementById("tarif-detail-title").textContent = `Detail Tarif Mesin ${activeMachineId}`;
-    setTarifRange('weekly'); // Default 7 hari
+    setTarifRange('weekly'); 
     showPage('page-tarif-detail');
     fetchTarifData();
 }
@@ -386,40 +383,26 @@ window.showTarifDetailView = (id) => {
 window.setTarifRange = (range) => {
     const endDate = new Date();
     const startDate = new Date();
-    
-    if (range === 'daily') {
-        startDate.setDate(startDate.getDate());
-    } else if (range === 'weekly') {
-        startDate.setDate(startDate.getDate() - 7);
-    } else if (range === 'monthly') {
-        startDate.setDate(startDate.getDate() - 30);
-    }
-    
+    if (range === 'daily') startDate.setDate(startDate.getDate());
+    else if (range === 'weekly') startDate.setDate(startDate.getDate() - 7);
+    else if (range === 'monthly') startDate.setDate(startDate.getDate() - 30);
     document.getElementById('tarif-datepicker-start').value = startDate.toISOString().split('T')[0];
     document.getElementById('tarif-datepicker-end').value = endDate.toISOString().split('T')[0];
 }
 
-// --- FUNGSI INI DIUBAH TOTAL MENJADI DUMMY ---
 window.fetchTarifData = async () => {
     const tableBody = document.getElementById("tarif-data-table");
     const loadingDiv = document.getElementById("tarif-loading");
-    
     tableBody.innerHTML = ""; 
     loadingDiv.style.display = "block"; 
-    
     const startDate = document.getElementById('tarif-datepicker-start').value;
     const endDate = document.getElementById('tarif-datepicker-end').value;
-
-    // Jeda simulasi (biar terlihat loading)
     await new Promise(resolve => setTimeout(resolve, 500)); 
-
     try {
-        // --- MULAI BAGIAN DATA DUMMY ---
         let data = [];
-        let totalRows = 7; // Default 7 hari
+        let totalRows = 7; 
         if (startDate === endDate) totalRows = 1;
         else if (new Date(endDate) - new Date(startDate) > (25 * 86400000)) totalRows = 30;
-
         for (let i = 0; i < totalRows; i++) {
             let d = new Date(startDate);
             d.setDate(d.getDate() + i);
@@ -431,62 +414,36 @@ window.fetchTarifData = async () => {
                 total_jam_standby: rand(2, 6, 1)
             });
         }
-        data.reverse(); // Urutkan dari terbaru
-        // --- AKHIR BAGIAN DATA DUMMY ---
-        
-        let html = `
-            <thead>
-                <tr>
-                    <th>Tanggal</th>
-                    <th>Biaya (Rp)</th>
-                    <th>Konsumsi (kWh)</th>
-                    <th>Jam Digunakan</th>
-                    <th>Jam Standby</th>
-                </tr>
-            </thead>
-            <tbody>
-        `;
-        
-        let totalBiaya = 0;
-        let totalKwh = 0;
-        let totalJamGuna = 0;
-        let totalJamStandby = 0;
-
+        data.reverse(); 
+        let html = `<thead><tr><th>Tanggal</th><th>Biaya (Rp)</th><th>Konsumsi (kWh)</th><th>Jam Digunakan</th><th>Jam Standby</th></tr></thead><tbody>`;
+        let totalBiaya = 0, totalKwh = 0, totalJamGuna = 0, totalJamStandby = 0;
         if (data.length === 0) {
             html += '<tr><td colspan="5" style="text-align:center; padding: 20px;">Tidak ada data riwayat untuk rentang tanggal ini.</td></tr>';
         } else {
             data.forEach(row => {
-                html += `
-                    <tr>
-                        <td>${new Date(row.tanggal + 'T00:00:00').toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' })}</td>
-                        <td class="val">${fmt_rp(row.total_biaya_rp)}</td>
-                        <td class="val">${fmt(row.total_kwh_harian, 2)}</td>
-                        <td class="val">${fmt(row.total_jam_digunakan, 1)} jam</td>
-                        <td class="val">${fmt(row.total_jam_standby, 1)} jam</td>
-                    </tr>
-                `;
+                html += `<tr>
+                    <td>${new Date(row.tanggal + 'T00:00:00').toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' })}</td>
+                    <td class="val">${fmt_rp(row.total_biaya_rp)}</td>
+                    <td class="val">${fmt(row.total_kwh_harian, 2)}</td>
+                    <td class="val">${fmt(row.total_jam_digunakan, 1)} jam</td>
+                    <td class="val">${fmt(row.total_jam_standby, 1)} jam</td>
+                </tr>`;
                 totalBiaya += parseFloat(row.total_biaya_rp);
                 totalKwh += parseFloat(row.total_kwh_harian);
                 totalJamGuna += parseFloat(row.total_jam_digunakan);
                 totalJamStandby += parseFloat(row.total_jam_standby);
             });
         }
-        
-        html += `
-            </tbody>
-            <tfoot style="font-weight: bold; background: #fafafa; border-top: 2px solid #ccc;">
-                <tr>
-                    <td>TOTAL</td>
-                    <td class="val">${fmt_rp(totalBiaya)}</td>
-                    <td class="val">${fmt(totalKwh, 2)}</td>
-                    <td class="val">${fmt(totalJamGuna, 1)} jam</td>
-                    <td class="val">${fmt(totalJamStandby, 1)} jam</td>
-                </tr>
-            </tfoot>
-        `;
-        
+        html += `</tbody><tfoot>
+            <tr>
+                <td>TOTAL</td>
+                <td class="val">${fmt_rp(totalBiaya)}</td>
+                <td class="val">${fmt(totalKwh, 2)}</td>
+                <td class="val">${fmt(totalJamGuna, 1)} jam</td>
+                <td class="val">${fmt(totalJamStandby, 1)} jam</td>
+            </tr>
+        </tfoot>`;
         tableBody.innerHTML = html;
-        
     } catch (error) {
         tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 20px; color: red;">Error: ${error.message}</td></tr>`;
     } finally {
@@ -496,10 +453,7 @@ window.fetchTarifData = async () => {
 
 function setStatus(msg, cls) { 
     const s = document.getElementById("status");
-    if (s) {
-        s.textContent = msg;
-        s.className = cls;
-    }
+    if (s) { s.textContent = msg; s.className = cls; }
 }
 
 // ==========================================================
@@ -507,14 +461,10 @@ function setStatus(msg, cls) {
 // ==========================================================
 window.onload = function() {
     try {
-        // 1. Mulai Aplikasi (membuat grid)
         initializeApp();
         setStatus("ONLINE - Mode Dummy Data (Simulasi)", "bg-ok");
-
-        // 2. Mulai simulator data dummy (pengganti MQTT)
-        simulateDataUpdates(); // Panggil sekali agar data langsung ada
-        setInterval(simulateDataUpdates, 2000); // Update tiap 2 detik
-        
+        simulateDataUpdates(); 
+        setInterval(simulateDataUpdates, 2000); 
     } catch (e) {
         console.error("Gagal total inisialisasi:", e);
         setStatus("CRITICAL ERROR: " + e.message, "bg-err");
