@@ -2,16 +2,57 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale-1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pilih Menu</title>
     <style>
-        /* (CSS SAMA SEPERTI SEBELUMNYA) */
-        body, html { height: 100%; margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f0f2f5; display: flex; align-items: center; justify-content: center; text-align: center; color: #0d47a1; }
+        /* --- 1. COPY PASTE VARIABEL TEMA INI KE SEMUA FILE --- */
+        :root {
+            --bg-body: #f0f2f5;
+            --bg-card: #ffffff;
+            --text-main: #0d47a1;
+            --text-sub: #546e7a;
+            --shadow: rgba(0,0,0,0.07);
+            --btn-bg: #ffffff;
+            --btn-border: #b0bec5;
+        }
+        [data-theme="dark"] {
+            --bg-body: #0a192f; /* Navy Gelap */
+            --bg-card: #172a45; /* Navy Terang */
+            --text-main: #64ffda; /* Tosca Neon */
+            --text-sub: #8892b0; /* Abu Kebiruan */
+            --shadow: rgba(0,0,0,0.5);
+            --btn-bg: #172a45;
+            --btn-border: #303C55;
+        }
+
+        body, html { 
+            height: 100%; margin: 0; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            background-color: var(--bg-body); 
+            color: var(--text-main);
+            display: flex; align-items: center; justify-content: center; text-align: center; 
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
         .main-menu-grid { display: grid; grid-template-columns: 1fr; gap: 25px; max-width: 500px; width: 90%; margin: 20px; }
-        .main-menu-button { display: block; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.07); text-align: center; font-size: 1.8em; font-weight: 700; color: #0d47a1; text-decoration: none; cursor: pointer; transition: all 0.2s ease; }
-        .main-menu-desc { display: block; font-size: 0.6em; font-weight: 400; color: #546e7a; margin-top: 12px; line-height: 1.4; }
-        .main-menu-button:hover { transform: translateY(-5px); box-shadow: 0 5px 20px rgba(0,0,0,0.12); }
-        .back-button { display: inline-block; position: absolute; top: 20px; left: 20px; background: #78909c; color: white; padding: 10px 15px; border-radius: 8px; text-decoration: none; font-weight: 600; }
+        
+        .main-menu-button { 
+            display: block; background: var(--bg-card); padding: 30px; 
+            border-radius: 12px; box-shadow: 0 4px 15px var(--shadow); 
+            text-align: center; font-size: 1.8em; font-weight: 700; 
+            color: var(--text-main); text-decoration: none; cursor: pointer; 
+            transition: all 0.2s ease; border: 1px solid var(--btn-border);
+        }
+        
+        .main-menu-desc { display: block; font-size: 0.6em; font-weight: 400; color: var(--text-sub); margin-top: 12px; line-height: 1.4; }
+        
+        .main-menu-button:hover { transform: translateY(-5px); filter: brightness(1.1); }
+        
+        .back-button { 
+            display: inline-block; position: absolute; top: 20px; left: 20px; 
+            background: #78909c; color: white; padding: 10px 15px; 
+            border-radius: 8px; text-decoration: none; font-weight: 600; 
+        }
         .back-button:hover { background: #546e7a; }
     </style>
 </head>
@@ -20,8 +61,7 @@
     <a href="index.html" class="back-button">&#8592; Kembali</a>
 
     <div class="main-menu-grid">
-        
-        <a href="monitoring-menu.html" class="main-menu-button">
+        <a href="dashboard.html" class="main-menu-button">
             Monitoring Real Time
             <span class="main-menu-desc">
                 Lihat data real-time, status, voltase, arus, dan parameter teknis lainnya dari semua 18 mesin.
@@ -34,8 +74,13 @@
                 Lihat riwayat biaya, konsumsi kWh, dan total jam pemakaian. Ambil data dari database (mode dummy).
             </span>
         </a>
-
     </div>
+
+    <script>
+        if (localStorage.getItem('theme') === 'dark') {
+            document.body.setAttribute('data-theme', 'dark');
+        }
+    </script>
 
 </body>
 </html>
