@@ -4,8 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Monitoring Energi</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <style>
-        /* CSS untuk Tampilan */
+        /* CSS (Sama seperti sebelumnya) */
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: #f0f2f5;
@@ -75,11 +78,17 @@
         .power-group .value {
             font-size: 1.8em;
         }
-        /* Kartu yang lebih lebar untuk Power */
+        /* Kartu yang lebih lebar */
         .card.wide {
-            /* Akan memakan 2 kolom jika ada ruang */
             grid-column: span 2; 
         }
+        /* Style untuk chart canvas */
+        .chart-container {
+            position: relative;
+            height: 350px;
+            width: 100%;
+        }
+
         /* Fallback untuk layar kecil */
         @media (max-width: 980px) {
             .card.wide {
@@ -94,7 +103,14 @@
         <h1>Dashboard Monitoring Energi Schneider</h1>
         
         <div class="dashboard-grid">
-            
+
+            <div class="card wide">
+                <h3>Tren Daya (Power)</h3>
+                <div class="chart-container">
+                    <canvas id="powerTrendChart"></canvas>
+                </div>
+            </div>
+
             <div class="card">
                 <h3>Total Energi</h3>
                 <div class="data-point">
@@ -150,7 +166,7 @@
             </div>
 
             <div class="card wide">
-                <h3>Daya (Power)</h3>
+                <h3>Daya (Power) - Nilai Saat Ini</h3>
                 <div class="power-group">
                     <div class="data-point">
                         <label>Active Power (P)</label>
@@ -227,43 +243,129 @@
     </div>
 
     <script>
-        // JavaScript untuk Simulasi Data
+        // 3. TAMBAHKAN JAVASCRIPT UNTUK CHART
+        
+        // Variabel global untuk menyimpan instance chart
+        let myPowerChart; 
+        const MAX_DATA_POINTS = 20; // Jumlah data di chart (20 data * 3 detik = 1 menit)
+
+        /**
+         * Fungsi untuk inisialisasi chart (dijalankan sekali)
+         */
+        function setupChart() {
+            const ctx = document.getElementById('powerTrendChart').getContext('2d');
+            myPowerChart = new Chart(ctx, {
+                type: 'line', // Tipe chart
+                data: {
+                    labels: [], // Label waktu (sumbu X)
+                    datasets: [
+                        {
+                            label: 'Active Power (W)',
+                            data: [], // Data nilai (sumbu Y)
+                            borderColor: 'rgb(75, 192, 192)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            tension: 0.2,
+                            fill: true
+                        },
+                        {
+                            label: 'Reactive Power (VAR)',
+                            data: [], // Data nilai (sumbu Y)
+                            borderColor: 'rgb(255, 99, 132)',
+                            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                            tension: 0.2,
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true // Mulai sumbu Y dari 0
+                        }
+                    },
+                    animation: {
+                        duration: 400 // Animasi update
+                    }
+                }
+            });
+        }
+
+        /**
+         * Fungsi untuk mengupdate semua data di dashboard
+         */
         function updateDashboard() {
             // Helper function untuk angka acak
             function rand(min, max, decimals = 2) {
                 return (Math.random() * (max - min) + min).toFixed(decimals);
             }
 
-            // Update nilai dengan ID yang sesuai
+            // --- Update Nilai Angka (Sama seperti sebelumnya) ---
             document.getElementById('total-ea').textContent = rand(10000, 15000);
             document.getElementById('total-er').textContent = rand(5000, 7000);
             document.getElementById('partial-active').textContent = rand(10, 100);
             document.getElementById('partial-reactive').textContent = rand(5, 50);
             document.getElementById('voltage').textContent = rand(218, 225, 1);
             document.getElementById('current').textContent = rand(1, 15, 2);
-            document.getElementById('power-p').textContent = rand(1500, 3000, 0);
-            document.getElementById('power-q').textContent = rand(300, 800, 0);
             document.getElementById('power-s').textContent = rand(2, 4, 2);
             document.getElementById('pf').textContent = rand(0.85, 0.99, 2);
             document.getElementById('freq').textContent = rand(49.8, 50.2, 1);
             
-            // Waktu operasi (biar tidak acak terus)
-            if (!window.opDays) { // Inisialisasi jika belum ada
+            // Waktu operasi
+            if (!window.opDays) { 
                 window.opDays = 120;
                 window.opHrs = 5;
             }
-            window.opHrs = (window.opHrs + 0.00083).toFixed(1); // Menambah sedikit setiap 3 detik
+            window.opHrs = (window.opHrs + 0.00083).toFixed(1); 
             if (window.opHrs >= 24) {
                 window.opHrs = 0;
                 window.opDays += 1;
             }
-            
             document.getElementById('op-days').textContent = window.opDays;
             document.getElementById('op-hrs').textContent = window.opHrs;
+
+            // --- Ambil data baru untuk Chart ---
+            const newActivePower = rand(1500, 3000, 0);
+            const newReactivePower = rand(300, 800, 0);
+
+            // Update juga kartu P dan Q
+            document.getElementById('power-p').textContent = newActivePower;
+            document.getElementById('power-q').textContent = newReactivePower;
+
+            // --- Update Chart ---
+            if (myPowerChart) {
+                // Buat label waktu baru
+                const timeLabel = new Date().toLocaleTimeString('id-ID', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+
+                // Tambahkan data baru ke chart
+                myPowerChart.data.labels.push(timeLabel);
+                myPowerChart.data.datasets[0].data.push(newActivePower);
+                myPowerChart.data.datasets[1].data.push(newReactivePower);
+
+                // Batasi jumlah data di chart agar tidak berat
+                if (myPowerChart.data.labels.length > MAX_DATA_POINTS) {
+                    myPowerChart.data.labels.shift(); // Hapus data tertua
+                    myPowerChart.data.datasets[0].data.shift();
+                    myPowerChart.data.datasets[1].data.shift();
+                }
+
+                // Perbarui (gambar ulang) chart
+                myPowerChart.update();
+            }
         }
 
-        // Panggil fungsi update pertama kali saat halaman dimuat
-        document.addEventListener('DOMContentLoaded', updateDashboard);
+        // --- Event Listeners ---
+
+        // Saat halaman selesai dimuat
+        document.addEventListener('DOMContentLoaded', () => {
+            setupChart(); // 1. Inisialisasi chart
+            updateDashboard(); // 2. Isi data pertama kali
+        });
 
         // Atur interval untuk update data setiap 3000ms (3 detik)
         setInterval(updateDashboard, 3000);
