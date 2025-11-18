@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics Dashboard (v40)</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        /* --- CSS BARU --- */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            margin: 0;
+            padding: 25px;
+        }
+        h1 {
+            text-align: left;
+            color: #1a237e;
+            margin-bottom: 5px;
+            font-size: 2.5em;
+        }
+        h2 {
+            text-align: left;
+            color: #546e7a;
+            font-size: 1.1em;
+            margin-top: 0;
+            margin-bottom: 25px;
+            font-weight: 400;
+        }
+
+        /* LAYOUT GRID UTAMA */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr); /* 4 kolom */
+            grid-auto-rows: auto;
+            gap: 20px;
+        }
+
+        /* KARTU UMUM */
+        .card {
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.07);
+            padding: 25px;
+        }
+
+        /* KARTU KPI (Key Performance Indicator) */
+        .kpi-card {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .kpi-card .label {
+            font-size: 1em;
+            font-weight: 600;
+            color: #546e7a;
+            margin-bottom: 8px;
+        }
+        .kpi-card .value {
+            font-size: 3.2em;
+            font-weight: 700;
+            color: #0d47a1;
+            line-height: 1;
+        }
+        .kpi-card .unit {
+            font-size: 1.5em;
+            font-weight: 500;
+            color: #444;
+            margin-left: 8px;
+        }
+        
+        /* KARTU CHART */
+        .chart-card {
+            /* Menentukan ukuran kartu di grid */
+            grid-column: span 2; /* Kartu ini memakan 2 kolom */
+        }
+        .chart-card.full {
+            grid-column: span 4; /* Kartu ini memakan 4 kolom */
+        }
+        .chart-card h3 {
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-size: 1.2em;
+            color: #333;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 300px; /* Tinggi default chart */
+        }
+        .chart-container.half-height {
+            height: 250px;
+        }
+
+        /* Responsive untuk HP */
+        @media (max-width: 1200px) {
+            .chart-card {
+                grid-column: span 2; /* Jadi 2 kolom */
+            }
+            .dashboard-grid {
+                grid-template-columns: 1fr 1fr; /* 2 kolom */
+            }
+        }
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr; /* 1 kolom */
+            }
+            .kpi-card, .chart-card, .chart-card.full {
+                grid-column: span 1; /* Semua jadi 1 kolom */
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Energy Dashboard</h1>
+    <h2>Data simulasi diperbarui setiap 2 detik</h2>
+
+    <div class="dashboard-grid">
+
+        <div class="card kpi-card">
+            <div class="label">TEGANGAN</div>
+            <div>
+                <span class="value" id="val-v">0.0</span>
+                <span class="unit">V</span>
+            </div>
+        </div>
+        
+        <div class="card kpi-card">
+            <div class="label">ARUS</div>
+            <div>
+                <span class="value" id="val-i">0.00</span>
+                <span class="unit">A</span>
+            </div>
+        </div>
+
+        <div class="card kpi-card">
+            <div class="label">FREKUENSI</div>
+            <div>
+                <span class="value" id="val-hz">0.0</span>
+                <span class="unit">Hz</span>
+            </div>
+        </div>
+        
+        <div class="card kpi-card">
+            <div class="label">POWER FACTOR</div>
+            <div>
+                <span class="value" id="val-pf">0.00</span>
+                <span class="unit"></span>
+            </div>
+        </div>
+        
+        <div class="card chart-card full">
+            <h3>Tren Tegangan (V) & Arus (A)</h3>
+            <div class="chart-container">
+                <canvas id="lineChart"></canvas>
+            </div>
+        </div>
+
+        <div class="card chart-card">
+            <h3>Komposisi Daya</h3>
+            <div class="chart-container half-height">
+                <canvas id="barChart"></canvas>
+            </div>
+        </div>
+
+        <div class="card chart-card">
+            <h3>Komposisi Energi (kWh)</h3>
+            <div class="chart-container half-height">
+                <canvas id="donutChart"></canvas>
+            </div>
+        </div>
+
+    </div>
+
+
+<script>
+// ==========================================================
+// --- JAVASCRIPT BARU (CHART.JS) ---
+// ==========================================================
+let lineChart, barChart, donutChart;
+const MAX_DATA_POINTS = 20; // Data di line chart
+
+// Helper
+const rand = (min, max, dec = 0) => (Math.random() * (max - min) + min).toFixed(dec);
+const getTimeLabel = () => new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+/**
+ * 1. Inisialisasi semua chart saat halaman dimuat
+ */
+function setupCharts() {
+    // --- LINE CHART (Tren) ---
+    const ctxLine = document.getElementById('lineChart').getContext('2d');
+    lineChart = new Chart(ctxLine, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [
+                {
+                    label: 'Tegangan (V)',
+                    data: [],
+                    borderColor: 'rgb(54, 162, 235)',
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    yAxisID: 'yV', // Sumbu Y kiri
+                    tension: 0.2,
+                    fill: true
+                },
+                {
+                    label: 'Arus (A)',
+                    data: [],
+                    borderColor: 'rgb(255, 99, 132)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    yAxisID: 'yA', // Sumbu Y kanan
+                    tension: 0.2,
+                    fill: true
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: { ticks: { display: false } }, // Sembunyikan label sumbu X
+                yV: { // Sumbu Y kiri untuk Tegangan
+                    type: 'linear',
+                    position: 'left',
+                    min: 200, max: 250,
+                    grid: { drawOnChartArea: false } // Sembunyikan grid
+                },
+                yA: { // Sumbu Y kanan untuk Arus
+                    type: 'linear',
+                    position: 'right',
+                    min: 0, max: 20
+                }
+            }
+        }
+    });
+
+    // --- BAR CHART (Daya P, Q, S) ---
+    const ctxBar = document.getElementById('barChart').getContext('2d');
+    barChart = new Chart(ctxBar, {
+        type: 'bar',
+        data: {
+            labels: ['Daya Aktif (W)', 'Daya Reaktif (VAR)', 'Daya Semu (VA)'],
+            datasets: [{
+                label: 'Komposisi Daya',
+                data: [0, 0, 0],
+                backgroundColor: [
+                    'rgba(75, 192, 192, 0.6)',
+                    'rgba(255, 206, 86, 0.6)',
+                    'rgba(153, 102, 255, 0.6)'
+                ],
+                borderColor: [
+                    'rgb(75, 192, 192)',
+                    'rgb(255, 206, 86)',
+                    'rgb(153, 102, 255)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } } // Sembunyikan legenda
+        }
+    });
+
+    // --- DONUT CHART (Energi) ---
+    const ctxDonut = document.getElementById('donutChart').getContext('2d');
+    donutChart = new Chart(ctxDonut, {
+        type: 'doughnut',
+        data: {
+            labels: ['Total EA Import (kWh)', 'Partial Active E (kWh)'],
+            datasets: [{
+                label: 'Komposisi Energi',
+                data: [1, 0], // Data awal
+                backgroundColor: [
+                    'rgba(54, 162, 235, 0.6)',
+                    'rgba(255, 99, 132, 0.6)'
+                ],
+                hoverOffset: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+        }
+    });
+}
+
+/**
+ * 2. Update data (dummy) secara berkala
+ */
+function updateDashboard() {
+    // --- Buat Data Dummy ---
+    const newV = rand(218, 225, 1);
+    const newI = rand(10, 15, 2);
+    const newHz = rand(49.8, 50.2, 1);
+    const newPF = rand(0.85, 0.95, 2);
+    
+    const newP = rand(2000, 3000, 0); // Active (W)
+    const newQ = rand(400, 800, 0);  // Reactive (VAR)
+    const newS = Math.sqrt(newP*newP + newQ*newQ).toFixed(0); // Apparent (VA)
+
+    const totalE = rand(10000, 11000, 2);
+    const partialE = rand(100, 200, 2);
+
+    // --- Update KPI Cards ---
+    document.getElementById('val-v').textContent = newV;
+    document.getElementById('val-i').textContent = newI;
+    document.getElementById('val-hz').textContent = newHz;
+    document.getElementById('val-pf').textContent = newPF;
+
+    // --- Update Line Chart ---
+    lineChart.data.labels.push(getTimeLabel());
+    lineChart.data.datasets[0].data.push(newV); // Data Tegangan
+    lineChart.data.datasets[1].data.push(newI); // Data Arus
+    
+    // Batasi jumlah data
+    if (lineChart.data.labels.length > MAX_DATA_POINTS) {
+        lineChart.data.labels.shift();
+        lineChart.data.datasets[0].data.shift();
+        lineChart.data.datasets[1].data.shift();
+    }
+    lineChart.update();
+
+    // --- Update Bar Chart ---
+    barChart.data.datasets[0].data = [newP, newQ, newS];
+    barChart.update();
+
+    // --- Update Donut Chart ---
+    // (Total E - Partial E) untuk mendapat sisa totalnya
+    donutChart.data.datasets[0].data = [totalE - partialE, partialE]; 
+    donutChart.update();
+}
+
+// ==========================================================
+// --- INISIALISASI ---
+// ==========================================================
+window.onload = function() {
+    try {
+        setupCharts(); // 1. Buat chart
+        updateDashboard(); // 2. Isi data pertama kali
+        setInterval(updateDashboard, 2000); // 3. Update tiap 2 detik
+    } catch (e) {
+        console.error("Gagal inisialisasi:", e);
+    }
+}
+
+</script>
+</body>
+</html>
