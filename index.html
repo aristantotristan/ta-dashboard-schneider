@@ -8,7 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/gaugejs@1.3.6/dist/gauge.min.js"></script>
 
     <style>
-        /* CSS Utama */
+        /* CSS Utama (Sama seperti sebelumnya) */
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: #f0f2f5;
@@ -53,9 +53,9 @@
         .data-point .value { font-size: 2.3em; font-weight: 600; color: #0d47a1; }
         .data-point .unit { font-size: 1.1em; color: #444; margin-left: 8px; }
 
-        /* 2. CSS UNTUK KARTU GAUGE */
+        /* CSS UNTUK KARTU GAUGE */
         .card.gauge-card h3 {
-             text-align: center; /* Pusatkan judul kartu gauge */
+             text-align: center; 
         }
         .card.gauge-card {
             display: flex;
@@ -65,7 +65,7 @@
         }
         .gauge-container {
             width: 100%;
-            height: 150px; /* Beri tinggi agar konsisten */
+            height: 150px; 
             position: relative; 
             display: flex;
             justify-content: center;
@@ -74,7 +74,7 @@
             font-size: 2.2em;
             font-weight: 600;
             color: #333;
-            margin-top: -30px; /* Tarik teks nilai sedikit ke atas */
+            margin-top: -30px; 
             text-align: center;
         }
         .gauge-value .unit {
@@ -231,27 +231,24 @@
     </div>
 
     <script>
-        // 4. JAVASCRIPT UNTUK SETUP GAUGE
+        // JAVASCRIPT UNTUK SETUP GAUGE
         
-        // --- Variabel Global ---
-        // Variabel untuk menyimpan instance Gauge
         let gaugeV, gaugeA, gaugeP, gaugeQ, gaugeS, gaugePF, gaugeF;
 
-        // Opsi default untuk semua gauge
         const gaugeOptions = {
-            angle: 0.15, // Sudut lengkungan gauge
-            lineWidth: 0.3, // Lebar garis
-            radiusScale: 0.9, // Seberapa besar gauge mengisi container
+            angle: 0.15, 
+            lineWidth: 0.3, 
+            radiusScale: 0.9, 
             pointer: {
-                length: 0.5, // Panjang jarum
+                length: 0.5, 
                 strokeWidth: 0.035,
                 color: '#000000'
             },
-            limitMax: false, // Jangan batasi nilai
+            limitMax: false, 
             limitMin: false,
-            colorStart: '#6FADCF', // Warna gradien
+            colorStart: '#6FADCF', 
             colorStop: '#8FC0DA',
-            strokeColor: '#E0E0E0', // Warna latar belakang
+            strokeColor: '#E0E0E0', 
             generateGradient: true,
             highDpiSupport: true
         };
@@ -267,6 +264,7 @@
             gaugeV.maxValue = 260; 
             gaugeV.setMinValue(180); 
             gaugeV.animationSpeed = 32; 
+            gaugeV.set(180); // <-- PERBAIKAN: Beri nilai awal
 
             // Gauge Arus (A)
             const targetA = document.getElementById('gauge-current');
@@ -275,6 +273,7 @@
             gaugeA.maxValue = 20;
             gaugeA.setMinValue(0);
             gaugeA.animationSpeed = 32; 
+            gaugeA.set(0); // <-- PERBAIKAN: Beri nilai awal
 
             // Gauge Active Power (P)
             const targetP = document.getElementById('gauge-power-p');
@@ -283,6 +282,7 @@
             gaugeP.maxValue = 5000;
             gaugeP.setMinValue(0);
             gaugeP.animationSpeed = 32; 
+            gaugeP.set(0); // <-- PERBAIKAN: Beri nilai awal
 
             // Gauge Reactive Power (Q)
             const targetQ = document.getElementById('gauge-power-q');
@@ -291,6 +291,7 @@
             gaugeQ.maxValue = 1000;
             gaugeQ.setMinValue(0);
             gaugeQ.animationSpeed = 32; 
+            gaugeQ.set(0); // <-- PERBAIKAN: Beri nilai awal
 
             // Gauge Apparent Power (S)
             const targetS = document.getElementById('gauge-power-s');
@@ -299,6 +300,7 @@
             gaugeS.maxValue = 5; // kVA
             gaugeS.setMinValue(0);
             gaugeS.animationSpeed = 32; 
+            gaugeS.set(0); // <-- PERBAIKAN: Beri nilai awal
 
             // Gauge Power Factor (PF)
             const targetPF = document.getElementById('gauge-pf');
@@ -307,6 +309,7 @@
             gaugePF.maxValue = 1;
             gaugePF.setMinValue(0.5);
             gaugePF.animationSpeed = 32; 
+            gaugePF.set(0.5); // <-- PERBAIKAN: Beri nilai awal
 
             // Gauge Frequency (F)
             const targetF = document.getElementById('gauge-freq');
@@ -315,6 +318,7 @@
             gaugeF.maxValue = 52;
             gaugeF.setMinValue(48);
             gaugeF.animationSpeed = 32;
+            gaugeF.set(48); // <-- PERBAIKAN: Beri nilai awal
         }
 
         /**
@@ -348,7 +352,7 @@
             const newPF = rand(0.85, 0.99, 2);
             const newFreq = rand(49.8, 50.2, 1);
 
-            // --- 5. UPDATE SEMUA GAUGE & TEKSNYA ---
+            // --- UPDATE SEMUA GAUGE & TEKSNYA ---
             if (gaugeV) {
                 gaugeV.set(newVoltage);
                 document.getElementById('voltage-value').textContent = newVoltage;
