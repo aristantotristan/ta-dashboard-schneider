@@ -3,182 +3,271 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Meteran (18-Meter)</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+    <title>Dashboard Monitoring Energi</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background-color: #f0f2f5; color: #333; }
-        h1 { text-align: center; color: #1a73e8; }
-        #status-container { text-align: center; margin-bottom: 30px; padding: 15px; background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        #status { font-weight: bold; transition: all 0.3s; }
-        .status-connected { color: #28a745; }
-        .status-disconnected { color: #dc3545; }
-        .status-connecting { color: #ffc107; }
-
-        .grid-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 20px;
-            padding: 10px;
-        }
-        .meter-card {
-            background-color: #fff;
-            border-radius: 12px;
+        /* CSS untuk Tampilan */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            margin: 0;
             padding: 20px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05), 0 1px 3px rgba(0,0,0,0.1);
-            transition: transform 0.2s, box-shadow 0.2s;
         }
-        .meter-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px rgba(0,0,0,0.1); }
-        .meter-card h3 { margin-top: 0; color: #444; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; font-size: 1.2em; }
-        .meter-card .row { display: flex; justify-content: space-between; margin: 8px 0; font-size: 0.95em; }
-        .meter-card .label { color: #666; }
-        .meter-card .value { font-weight: 600; color: #222; }
-        .meter-card .unit { color: #888; font-size: 0.9em; margin-left: 4px; }
-        .highlight-update { animation: highlight-fade 1s ease-out; }
-        @keyframes highlight-fade {
-            0% { background-color: rgba(40, 167, 69, 0.2); }
-            100% { background-color: #fff; }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            color: #1a237e; /* Biru tua */
+        }
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .card {
+            background: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            padding: 25px;
+            transition: all 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+        }
+        .card h3 {
+            margin-top: 0;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 10px;
+            color: #004d40; /* Hijau tua */
+        }
+        .data-point {
+            margin-bottom: 15px;
+        }
+        .data-point label {
+            display: block;
+            font-size: 0.95em;
+            color: #555;
+            margin-bottom: 5px;
+        }
+        .data-point .value {
+            font-size: 2.3em;
+            font-weight: 600;
+            color: #0d47a1; /* Biru */
+        }
+        .data-point .unit {
+            font-size: 1.1em;
+            color: #444;
+            margin-left: 8px;
+        }
+        /* Tata letak khusus untuk P,Q,S */
+        .power-group {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+            text-align: center;
+        }
+        .power-group .data-point {
+            flex: 1;
+        }
+        .power-group .value {
+            font-size: 1.8em;
+        }
+        /* Kartu yang lebih lebar untuk Power */
+        .card.wide {
+            /* Akan memakan 2 kolom jika ada ruang */
+            grid-column: span 2; 
+        }
+        /* Fallback untuk layar kecil */
+        @media (max-width: 980px) {
+            .card.wide {
+                grid-column: span 1;
+            }
         }
     </style>
 </head>
 <body>
 
-    <h1>Live Dashboard Schneider (18 Meter)</h1>
-    <div id="status-container">
-        Status Koneksi MQTT: <span id="status" class="status-connecting">Menghubungkan...</span>
+    <div class="container">
+        <h1>Dashboard Monitoring Energi Schneider</h1>
+        
+        <div class="dashboard-grid">
+            
+            <div class="card">
+                <h3>Total Energi</h3>
+                <div class="data-point">
+                    <label>Total EA Import (Active)</label>
+                    <div>
+                        <span class="value" id="total-ea">0.00</span>
+                        <span class="unit">kWh</span>
+                    </div>
+                </div>
+                <div class="data-point">
+                    <label>Total ER Import (Reactive)</label>
+                    <div>
+                        <span class="value" id="total-er">0.00</span>
+                        <span class="unit">kVARh</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Energi Parsial</h3>
+                <div class="data-point">
+                    <label>Partial Active E</label>
+                    <div>
+                        <span class="value" id="partial-active">0.00</span>
+                        <span class="unit">kWh</span>
+                    </div>
+                </div>
+                <div class="data-point">
+                    <label>Partial Reactive E</label>
+                    <div>
+                        <span class="value" id="partial-reactive">0.00</span>
+                        <span class="unit">kVARh</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Tegangan & Arus</h3>
+                <div class="data-point">
+                    <label>Voltage</label>
+                    <div>
+                        <span class="value" id="voltage">0.0</span>
+                        <span class="unit">V</span>
+                    </div>
+                </div>
+                <div class="data-point">
+                    <label>Current</label>
+                    <div>
+                        <span class="value" id="current">0.00</span>
+                        <span class="unit">A</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card wide">
+                <h3>Daya (Power)</h3>
+                <div class="power-group">
+                    <div class="data-point">
+                        <label>Active Power (P)</label>
+                        <div>
+                            <span class="value" id="power-p">0</span>
+                            <span class="unit">W</span>
+                        </div>
+                    </div>
+                    <div class="data-point">
+                        <label>Reactive Power (Q)</label>
+                        <div>
+                            <span class="value" id="power-q">0</span>
+                            <span class="unit">VAR</span>
+                        </div>
+                    </div>
+                    <div class="data-point">
+                        <label>Apparent Power (S)</label>
+                        <div>
+                            <span class="value" id="power-s">0.00</span>
+                            <span class="unit">kVA</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Faktor Daya & Frekuensi</h3>
+                <div class="data-point">
+                    <label>Power Factor (PF)</label>
+                    <div>
+                        <span class="value" id="pf">0.00</span>
+                        <span class="unit"></span>
+                    </div>
+                </div>
+                <div class="data-point">
+                    <label>Frequency (F)</label>
+                    <div>
+                        <span class="value" id="freq">0.0</span>
+                        <span class="unit">Hz</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3>Waktu Operasi</h3>
+                <div class="data-point">
+                    <label>Hari</label>
+                    <div>
+                        <span class="value" id="op-days">0</span>
+                        <span class="unit">Days</span>
+                    </div>
+                </div>
+                <div class="data-point">
+                    <label>Jam</label>
+                    <div>
+                        <span class="value" id="op-hrs">0</span>
+                        <span class="unit">Hrs</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Tariffs</h3>
+                <div class="data-point">
+                    <label>Status</label>
+                    <div>
+                        <span class="value" id="tariffs">-</span>
+                        <span class="unit"></span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
     </div>
 
-    <div class="grid-container" id="dashboard-grid">
-        </div>
+    <script>
+        // JavaScript untuk Simulasi Data
+        function updateDashboard() {
+            // Helper function untuk angka acak
+            function rand(min, max, decimals = 2) {
+                return (Math.random() * (max - min) + min).toFixed(decimals);
+            }
 
-<script>
-    // --- KONFIGURASI MQTT ---
-    const MQTT_HOST = "701d32236feb43b38c22855a611f4d42.s1.eu.hivemq.cloud";
-    const MQTT_PORT = 8884; // WSS Port
-    const MQTT_USER = "web_dashboard";
-    const MQTT_PASS = "Tristan12";
-    const MQTT_TOPIC = "politeknik/meter/data";
-    // ------------------------
-
-    let client;
-    let reconnectTimeout = 5000;
-
-    // Fungsi inisialisasi awal
-    function init() {
-        createMeterCards();
-        connectMQTT();
-    }
-
-    function connectMQTT() {
-        const clientId = "web_dash_" + Math.random().toString(16).substr(2, 8);
-        client = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, clientId);
-
-        client.onConnectionLost = onConnectionLost;
-        client.onMessageArrived = onMessageArrived;
-
-        const options = {
-            useSSL: true,
-            userName: MQTT_USER,
-            password: MQTT_PASS,
-            onSuccess: onConnect,
-            onFailure: onFail,
-            keepAliveInterval: 60,
-            timeout: 10
-        };
-
-        updateStatus("Menghubungkan ke HiveMQ...", "status-connecting");
-        try {
-            client.connect(options);
-        } catch (e) {
-            console.error("Error saat connect:", e);
-            onFail({ errorMessage: e.message });
+            // Update nilai dengan ID yang sesuai
+            document.getElementById('total-ea').textContent = rand(10000, 15000);
+            document.getElementById('total-er').textContent = rand(5000, 7000);
+            document.getElementById('partial-active').textContent = rand(10, 100);
+            document.getElementById('partial-reactive').textContent = rand(5, 50);
+            document.getElementById('voltage').textContent = rand(218, 225, 1);
+            document.getElementById('current').textContent = rand(1, 15, 2);
+            document.getElementById('power-p').textContent = rand(1500, 3000, 0);
+            document.getElementById('power-q').textContent = rand(300, 800, 0);
+            document.getElementById('power-s').textContent = rand(2, 4, 2);
+            document.getElementById('pf').textContent = rand(0.85, 0.99, 2);
+            document.getElementById('freq').textContent = rand(49.8, 50.2, 1);
+            
+            // Waktu operasi (biar tidak acak terus)
+            if (!window.opDays) { // Inisialisasi jika belum ada
+                window.opDays = 120;
+                window.opHrs = 5;
+            }
+            window.opHrs = (window.opHrs + 0.00083).toFixed(1); // Menambah sedikit setiap 3 detik
+            if (window.opHrs >= 24) {
+                window.opHrs = 0;
+                window.opDays += 1;
+            }
+            
+            document.getElementById('op-days').textContent = window.opDays;
+            document.getElementById('op-hrs').textContent = window.opHrs;
         }
-    }
 
-    function onConnect() {
-        console.log("MQTT Terhubung!");
-        updateStatus("Terhubung ✅", "status-connected");
-        client.subscribe(MQTT_TOPIC);
-    }
+        // Panggil fungsi update pertama kali saat halaman dimuat
+        document.addEventListener('DOMContentLoaded', updateDashboard);
 
-    function onFail(responseObject) {
-        let msg = "Koneksi Gagal ❌";
-        if (responseObject.errorCode === 8) {
-             msg += ": Tidak diizinkan (Cek User/Pass atau Web Client setting di HiveMQ)";
-        } else {
-             msg += ": " + responseObject.errorMessage;
-        }
-        console.error("MQTT Gagal:", responseObject);
-        updateStatus(msg, "status-disconnected");
-        setTimeout(connectMQTT, reconnectTimeout); // Coba lagi nanti
-    }
+        // Atur interval untuk update data setiap 3000ms (3 detik)
+        setInterval(updateDashboard, 3000);
+    </script>
 
-    function onConnectionLost(responseObject) {
-        if (responseObject.errorCode !== 0) {
-            console.warn("Koneksi Terputus:", responseObject.errorMessage);
-            updateStatus("Terputus ⚠️. Mencoba lagi...", "status-connecting");
-            setTimeout(connectMQTT, reconnectTimeout);
-        }
-    }
-
-    function updateStatus(text, className) {
-        const el = document.getElementById("status");
-        el.textContent = text;
-        el.className = className;
-    }
-
-    function createMeterCards() {
-        const grid = document.getElementById("dashboard-grid");
-        grid.innerHTML = "";
-        for (let i = 1; i <= 18; i++) {
-            const card = document.createElement("div");
-            card.className = "meter-card";
-            card.id = `meter_${i}`;
-            card.innerHTML = `
-                <h3>Meter ID: ${i.toString().padStart(2, '0')}</h3>
-                <div class="row"><span class="label">Status:</span> <span class="value" id="s_${i}" style="color: orange">Menunggu...</span></div>
-                <div class="row"><span class="label">Voltage:</span> <div><span class="value" id="v_${i}">-</span><span class="unit">V</span></div></div>
-                <div class="row"><span class="label">Current:</span> <div><span class="value" id="a_${i}">-</span><span class="unit">A</span></div></div>
-                <div class="row"><span class="label">Active Power:</span> <div><span class="value" id="p_${i}">-</span><span class="unit">W</span></div></div>
-                <div class="row"><span class="label">Total Energy:</span> <div><span class="value" id="e_${i}">-</span><span class="unit">kWh</span></div></div>
-                <div class="row"><span class="label">Frequency:</span> <div><span class="value" id="f_${i}">-</span><span class="unit">Hz</span></div></div>
-            `;
-            grid.appendChild(card);
-        }
-    }
-
-    function onMessageArrived(message) {
-        try {
-            const data = JSON.parse(message.payloadString);
-            updateCard(data);
-        } catch (e) {
-            console.error("Data JSON rusak:", e);
-        }
-    }
-
-    function updateCard(data) {
-        const id = data.id;
-        if (!id || id < 1 || id > 18) return;
-
-        // Helper untuk format angka desimal
-        const fmt = (val, d) => (val !== undefined && val !== null) ? Number(val).toFixed(d) : "-";
-
-        document.getElementById(`s_${id}`).textContent = "Online ●";
-        document.getElementById(`s_${id}`).style.color = "#28a745";
-        document.getElementById(`v_${id}`).textContent = fmt(data.v_avg, 1);
-        document.getElementById(`a_${id}`).textContent = fmt(data.a_avg, 3);
-        document.getElementById(`p_${id}`).textContent = fmt(data.p_total, 1);
-        document.getElementById(`e_${id}`).textContent = fmt(data.energy, 3); // Total Ea Import
-        document.getElementById(`f_${id}`).textContent = fmt(data.freq, 2);
-
-        // Efek kedip saat update
-        const card = document.getElementById(`meter_${id}`);
-        card.classList.remove("highlight-update");
-        void card.offsetWidth; // Trigger reflow
-        card.classList.add("highlight-update");
-    }
-
-    // Mulai aplikasi
-    init();
-</script>
 </body>
 </html>
