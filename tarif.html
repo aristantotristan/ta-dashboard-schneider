@@ -5,85 +5,62 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pilih Mesin (Tarif)</title>
     <style>
+        /* --- TEMA --- */
+        :root {
+            --bg-body: #f0f2f5;
+            --text-main: #0d47a1;
+            --card-bg: #ffffff;
+            --card-text: #455a64;
+            --border-top: #b0bec5;
+        }
+        [data-theme="dark"] {
+            --bg-body: #0a192f;
+            --text-main: #64ffda;
+            --card-bg: #172a45;
+            --card-text: #8892b0;
+            --border-top: #303C55;
+        }
+
         body, html {
-            height: 100%;
-            margin: 0;
+            height: 100%; margin: 0; 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #f0f2f5;
-            color: #333;
-            padding: 20px;
-            box-sizing: border-box;
+            background-color: var(--bg-body); color: var(--text-main);
+            padding: 20px; box-sizing: border-box; transition: background-color 0.3s;
         }
-        h2 {
-            text-align: center;
-            color: #0d47a1;
-            font-size: 1.8em;
-            margin-top: 50px; /* Beri jarak dari tombol kembali */
-            margin-bottom: 30px;
-        }
-        .menu-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-            gap: 10px;
-            max-width: 1400px;
-            margin: 0 auto;
-        }
+        h2 { text-align: center; font-size: 1.8em; margin-top: 50px; margin-bottom: 30px; color: var(--text-main); }
+        
+        .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; max-width: 1400px; margin: 0 auto; }
+        
         .menu-card {
-            display: block; /* Agar bisa diklik full */
-            background: #fff;
-            padding: 20px 15px; /* Dibuat sedikit lebih tinggi padding-nya */
-            border-radius: 12px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            text-align: center;
-            font-size: 1.1em;
-            font-weight: 600;
-            color: #455a64;
-            border-top: 5px solid #b0bec5;
-            cursor: pointer;
-            text-decoration: none;
-            transition: all 0.2s ease;
+            display: block; background: var(--card-bg); padding: 20px 15px; 
+            border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
+            text-align: center; font-size: 1.1em; font-weight: 600; 
+            color: var(--card-text); border-top: 5px solid var(--border-top); 
+            cursor: pointer; text-decoration: none; transition: all 0.2s ease;
         }
-        .menu-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            border-top-color: #0d47a1; /* Ganti warna saat hover */
-        }
-        .back-button {
-            display: inline-block;
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            background: #78909c;
-            color: white;
-            padding: 10px 15px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-weight: 600;
-        }
+        .menu-card:hover { transform: translateY(-5px); border-top-color: var(--text-main); }
+        
+        .back-button { display: inline-block; position: absolute; top: 20px; left: 20px; background: #78909c; color: white; padding: 10px 15px; border-radius: 8px; text-decoration: none; font-weight: 600; }
         .back-button:hover { background: #546e7a; }
     </style>
 </head>
 <body>
 
-    <a href="menu.html" class="back-button">&#8592; Kembali ke Menu</a>
+    <a href="menu.html" class="back-button">&#8592; Kembali</a>
     <h2>Pilih Mesin (Tarif)</h2>
     
-    <div class="menu-grid" id="tarif-grid-container">
-        </div>
+    <div class="menu-grid" id="tarif-grid-container"></div>
 
 <script>
-    // Langsung buat 18 tombol mesin
+    // Cek Tema Dulu
+    if (localStorage.getItem('theme') === 'dark') { document.body.setAttribute('data-theme', 'dark'); }
+
+    // Render Grid
     window.onload = function() {
         const container = document.getElementById("tarif-grid-container");
         let tarifGridHtml = "";
-        
         for (let i = 1; i <= 18; i++) {
-            // Setiap tombol akan mengarah ke tarif-detail.html
-            // dan mengirimkan "id" mesin di URL
-            tarifGridHtml += `
-            <a href="tarif-detail.html?id=${i}" class="menu-card">
-                Mesin ${i}
-            </a>`;
+            tarifGridHtml += `<a href="tarif-detail.html?id=${i}" class="menu-card">Mesin ${i}</a>`;
         }
         container.innerHTML = tarifGridHtml;
     }
