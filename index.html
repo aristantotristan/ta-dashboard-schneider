@@ -259,66 +259,70 @@
         function setupGauges() {
             // Gauge Tegangan (V)
             const targetV = document.getElementById('gauge-voltage');
-            const optsV = { ...gaugeOptions, staticLabels: { font: "12px sans-serif", labels: [180, 200, 220, 240, 260], color: "#000" } };
+            // <-- DIUBAH: Label statis baru 0-500
+            const optsV = { ...gaugeOptions, staticLabels: { font: "12px sans-serif", labels: [0, 100, 250, 400, 500], color: "#000" } };
             gaugeV = new Gauge(targetV).setOptions(optsV);
-            gaugeV.maxValue = 260; 
-            gaugeV.setMinValue(180); 
+            gaugeV.maxValue = 500; // <-- DIUBAH
+            gaugeV.setMinValue(0); // <-- DIUBAH
             gaugeV.animationSpeed = 32; 
-            gaugeV.set(180); // <-- PERBAIKAN: Beri nilai awal
+            gaugeV.set(0); // <-- DIUBAH: Nilai awal
 
             // Gauge Arus (A)
             const targetA = document.getElementById('gauge-current');
-            const optsA = { ...gaugeOptions, staticLabels: { font: "12px sans-serif", labels: [0, 5, 10, 15, 20], color: "#000" } };
+            // <-- DIUBAH: Label statis baru 0-5
+            const optsA = { ...gaugeOptions, staticLabels: { font: "12px sans-serif", labels: [0, 1, 2, 3, 4, 5], color: "#000" } };
             gaugeA = new Gauge(targetA).setOptions(optsA);
-            gaugeA.maxValue = 20;
+            gaugeA.maxValue = 5; // <-- DIUBAH
             gaugeA.setMinValue(0);
             gaugeA.animationSpeed = 32; 
-            gaugeA.set(0); // <-- PERBAIKAN: Beri nilai awal
+            gaugeA.set(0); 
 
             // Gauge Active Power (P)
             const targetP = document.getElementById('gauge-power-p');
-            const optsP = { ...gaugeOptions, staticLabels: { font: "12px sans-serif", labels: [0, 1000, 2000, 3000, 4000, 5000], color: "#000" } };
+            // <-- DIUBAH: Label statis baru 0-1000
+            const optsP = { ...gaugeOptions, staticLabels: { font: "12px sans-serif", labels: [0, 250, 500, 750, 1000], color: "#000" } };
             gaugeP = new Gauge(targetP).setOptions(optsP);
-            gaugeP.maxValue = 5000;
+            gaugeP.maxValue = 1000; // <-- DIUBAH
             gaugeP.setMinValue(0);
             gaugeP.animationSpeed = 32; 
-            gaugeP.set(0); // <-- PERBAIKAN: Beri nilai awal
+            gaugeP.set(0);
 
-            // Gauge Reactive Power (Q)
+            // Gauge Reactive Power (Q) - (Tetap)
             const targetQ = document.getElementById('gauge-power-q');
             const optsQ = { ...gaugeOptions, staticLabels: { font: "12px sans-serif", labels: [0, 250, 500, 750, 1000], color: "#000" } };
             gaugeQ = new Gauge(targetQ).setOptions(optsQ);
             gaugeQ.maxValue = 1000;
             gaugeQ.setMinValue(0);
             gaugeQ.animationSpeed = 32; 
-            gaugeQ.set(0); // <-- PERBAIKAN: Beri nilai awal
+            gaugeQ.set(0); 
 
-            // Gauge Apparent Power (S)
+            // Gauge Apparent Power (S) - (Tetap)
             const targetS = document.getElementById('gauge-power-s');
             const optsS = { ...gaugeOptions, staticLabels: { font: "12px sans-serif", labels: [0, 1, 2, 3, 4, 5], color: "#000" } };
             gaugeS = new Gauge(targetS).setOptions(optsS);
             gaugeS.maxValue = 5; // kVA
             gaugeS.setMinValue(0);
             gaugeS.animationSpeed = 32; 
-            gaugeS.set(0); // <-- PERBAIKAN: Beri nilai awal
+            gaugeS.set(0); 
 
-            // Gauge Power Factor (PF)
+            // Gauge Power Factor (PF) - (Tetap)
             const targetPF = document.getElementById('gauge-pf');
             const optsPF = { ...gaugeOptions, staticLabels: { font: "12px sans-serif", labels: [0.5, 0.75, 1], color: "#000" } };
             gaugePF = new Gauge(targetPF).setOptions(optsPF);
             gaugePF.maxValue = 1;
             gaugePF.setMinValue(0.5);
             gaugePF.animationSpeed = 32; 
-            gaugePF.set(0.5); // <-- PERBAIKAN: Beri nilai awal
+            gaugePF.set(0.5); 
 
             // Gauge Frequency (F)
             const targetF = document.getElementById('gauge-freq');
-            const optsF = { ...gaugeOptions, staticLabels: { font: "12px sans-serif", labels: [48, 49, 50, 51, 52], color: "#000" } };
+             // <-- DIUBAH: Label statis baru 0-100
+            const optsF = { ...gaugeOptions, staticLabels: { font: "12px sans-serif", labels: [0, 25, 50, 75, 100], color: "#000" } };
             gaugeF = new Gauge(targetF).setOptions(optsF);
-            gaugeF.maxValue = 52;
-            gaugeF.setMinValue(48);
+            gaugeF.maxValue = 100; // <-- DIUBAH
+            gaugeF.setMinValue(0); // <-- DIUBAH
             gaugeF.animationSpeed = 32;
-            gaugeF.set(48); // <-- PERBAIKAN: Beri nilai awal
+            gaugeF.set(0); // <-- DIUBAH: Nilai awal
         }
 
         /**
@@ -344,13 +348,14 @@
 
 
             // --- Ambil data DUMMY baru untuk GAUGE ---
-            const newVoltage = rand(218, 225, 1);
-            const newCurrent = rand(1, 15, 2);
-            const newActivePower = rand(1500, 3000, 0);
-            const newReactivePower = rand(300, 800, 0);
-            const newApparentPower = rand(2, 4, 2);
-            const newPF = rand(0.85, 0.99, 2);
-            const newFreq = rand(49.8, 50.2, 1);
+            // Data dummy disesuaikan agar realistis di dalam rentang gauge baru
+            const newVoltage = rand(218, 225, 1);       // Simulasi voltase normal (gauge 0-500)
+            const newCurrent = rand(1, 4.5, 2);         // Simulasi arus (gauge 0-5) <-- DIUBAH
+            const newActivePower = rand(300, 800, 0);   // Simulasi daya (gauge 0-1000) <-- DIUBAH
+            const newReactivePower = rand(300, 800, 0); // (Tetap)
+            const newApparentPower = rand(2, 4, 2);     // (Tetap)
+            const newPF = rand(0.85, 0.99, 2);        // (Tetap)
+            const newFreq = rand(49.8, 50.2, 1);        // Simulasi frekuensi normal (gauge 0-100)
 
             // --- UPDATE SEMUA GAUGE & TEKSNYA ---
             if (gaugeV) {
