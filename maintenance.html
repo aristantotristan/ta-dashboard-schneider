@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Maintenance Log</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* TEMA (Sama) */
+        :root { --bg: #f0f2f5; --card: #fff; --text: #333; --red: #c62828; --green: #2e7d32; }
+        [data-theme="dark"] { --bg: #0a192f; --card: #172a45; --text: #e0e0e0; }
+        
+        body { font-family: sans-serif; background: var(--bg); color: var(--text); padding: 20px; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .btn-back { background: #78909c; color: white; padding: 10px 20px; text-decoration: none; border-radius: 8px; font-weight: bold; }
+        
+        .log-card { background: var(--card); border-radius: 12px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #ccc; }
+        th { background: rgba(0,0,0,0.05); }
+        
+        .badge { padding: 5px 10px; border-radius: 4px; color: white; font-size: 0.8em; font-weight: bold; }
+        .badge-timeout { background: var(--red); }
+        .badge-recovery { background: var(--green); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <a href="menu.html" class="btn-back">&#8592; Menu Utama</a>
+        <h1>Maintenance Log (System Error)</h1>
+        <button onclick="fetchLogs()" style="padding:10px; cursor:pointer;">🔄 Refresh</button>
+    </div>
+
+    <div class="log-card">
+        <table id="log-table">
+            <thead>
+                <tr>
+                    <th>Waktu</th>
+                    <th>Mesin</th>
+                    <th>Status</th>
+                    <th>Keterangan</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td colspan="4" style="text-align:center;">Memuat data...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // CONFIG SUPABASE (SAMA)
+    const SUPABASE_URL = "MASUKKAN_URL_SUPABASE_ANDA";
+    const SUPABASE_KEY = "MASUKKAN_ANON_KEY_SUPABASE_ANDA";
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // Cek Tema
+    if (localStorage.getItem('theme') === 'dark') document.body.setAttribute('data-theme', 'dark');
+
+    window.onload = fetchLogs;
+
+    async function fetchLogs() {
+        const tbody = document.querySelector("#log-table tbody");
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Loading...</td></tr>';
+
+        // Ambil 50 log terakhir
+        const { data, error } = await supabase
+            .from('system_logs')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(50);
+
+        if (error) {
+            tbody.innerHTML = `<tr><td colspan="4" style="color:red;">Error: ${error.message}</td></tr>`;
+            return;
+        }
+
+        if (data.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;">Sistem Sehat! Tidak ada log error.</td></tr>`;
+            return;
+        }
+
+        let html = "";
+        data.forEach(row => {
+            const time = new Date(row.created_at).toLocaleString('id-ID');
+            const badgeClass = row.event_type === 'TIMEOUT' ? 'badge-timeout' : 'badge-recovery';
+            
+            html += `
+                <tr>
+                    <td>${time}</td>
+                    <td style="font-weight:bold;">Mesin ${row.machine_id}</td>
+                    <td><span class="badge ${badgeClass}">${row.event_type}</span></td>
+                    <td>${row.description}</td>
+                </tr>
+            `;
+        });
+        tbody.innerHTML = html;
+    }
+</script>
+
+</body>
+</html>
