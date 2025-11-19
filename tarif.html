@@ -4,71 +4,36 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pilih Mesin (Tarif)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
     <style>
         /* --- TEMA --- */
-        :root {
-            --bg-body: #f0f2f5; --text-main: #0d47a1; --card-bg: #ffffff;
-            --card-text: #455a64; --border-top: #b0bec5; --overlay: rgba(0,0,0,0.5);
-            --accent: #1a237e; --btn-text: #fff;
-        }
-        [data-theme="dark"] {
-            --bg-body: #0a192f; --text-main: #64ffda; --card-bg: #172a45;
-            --card-text: #8892b0; --border-top: #303C55; --overlay: rgba(0,0,0,0.8);
-            --accent: #64ffda; --btn-text: #0a192f;
-        }
-
-        body, html {
-            height: 100%; margin: 0; 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: var(--bg-body); color: var(--text-main);
-            padding: 20px; box-sizing: border-box; transition: 0.3s;
-        }
+        :root { --bg-body: #f0f2f5; --text-main: #0d47a1; --card-bg: #ffffff; --card-text: #455a64; --border-top: #b0bec5; --overlay: rgba(0,0,0,0.5); --accent: #1a237e; --btn-text: #fff; }
+        [data-theme="dark"] { --bg-body: #0a192f; --text-main: #64ffda; --card-bg: #172a45; --card-text: #8892b0; --border-top: #303C55; --overlay: rgba(0,0,0,0.8); --accent: #64ffda; --btn-text: #0a192f; }
         
-        /* Header Area */
+        body, html { height: 100%; margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg-body); color: var(--text-main); padding: 20px; box-sizing: border-box; transition: 0.3s; }
         .header-area { text-align: center; margin-top: 40px; margin-bottom: 30px; }
         h2 { margin: 0 0 10px 0; font-size: 2em; }
         
-        /* CARD TARIF AKTIF */
-        .tarif-info-card {
-            background: var(--card-bg);
-            padding: 15px 25px;
-            border-radius: 50px; /* Bentuk kapsul */
-            display: inline-flex;
-            align-items: center;
-            gap: 15px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-            border: 1px solid var(--text-main);
-        }
-        .tarif-value { font-size: 1.2em; font-weight: bold; color: var(--text-main); }
-        .btn-change {
-            background: var(--text-main); color: var(--bg-body);
-            border: none; padding: 8px 15px; border-radius: 20px;
-            cursor: pointer; font-weight: bold; font-size: 0.9em;
-        }
-        .btn-change:hover { opacity: 0.9; transform: scale(1.05); }
-
-        /* GRID MESIN */
-        .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; max-width: 1400px; margin: 30px auto 0 auto; }
-        .menu-card {
-            display: block; background: var(--card-bg); padding: 20px 15px; 
-            border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
-            text-align: center; font-size: 1.1em; font-weight: 600; 
-            color: var(--card-text); border-top: 5px solid var(--border-top); 
-            cursor: pointer; text-decoration: none; transition: all 0.2s ease;
-        }
-        .menu-card:hover { transform: translateY(-5px); border-top-color: var(--text-main); }
+        /* INFO CARD */
+        .tarif-info-card { background: var(--card-bg); padding: 20px 30px; border-radius: 20px; display: inline-flex; flex-direction: column; align-items: center; gap: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border: 1px solid var(--text-main); min-width: 300px; }
+        .tarif-value { font-size: 1.5em; font-weight: bold; color: var(--text-main); }
+        .tarif-updater { font-size: 0.8em; color: var(--card-text); font-style: italic; }
+        .btn-change { background: var(--text-main); color: var(--bg-body); border: none; padding: 8px 20px; border-radius: 20px; cursor: pointer; font-weight: bold; margin-top: 5px; }
         
+        .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; max-width: 1400px; margin: 30px auto 0 auto; }
+        .menu-card { display: block; background: var(--card-bg); padding: 20px 15px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; font-size: 1.1em; font-weight: 600; color: var(--card-text); border-top: 5px solid var(--border-top); cursor: pointer; text-decoration: none; transition: all 0.2s ease; }
+        .menu-card:hover { transform: translateY(-5px); border-top-color: var(--text-main); }
         .back-button { display: inline-block; position: absolute; top: 20px; left: 20px; background: #78909c; color: white; padding: 10px 15px; border-radius: 8px; text-decoration: none; font-weight: 600; }
-        .back-button:hover { background: #546e7a; }
-
-        /* MODAL (POPUP) */
+        
+        /* MODAL */
         .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: var(--overlay); align-items: center; justify-content: center; }
         .modal.show { display: flex; animation: fadeIn 0.3s; }
-        .modal-content { background-color: var(--card-bg); padding: 30px; border-radius: 12px; width: 300px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
-        .modal-content h3 { margin-top: 0; color: var(--card-text); }
-        .input-rp { width: 100%; padding: 10px; margin: 15px 0; font-size: 1.2em; border-radius: 8px; border: 1px solid #ccc; text-align: center; }
-        .btn-save { background: var(--accent); color: var(--btn-text); border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; }
-        
+        .modal-content { background-color: var(--card-bg); padding: 30px; border-radius: 12px; width: 300px; text-align: left; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .modal-content h3 { margin-top: 0; color: var(--card-text); text-align: center; }
+        .input-group { margin-bottom: 15px; }
+        .input-group label { display: block; font-size: 0.85em; margin-bottom: 5px; color: var(--card-text); }
+        .input-rp { width: 100%; padding: 10px; font-size: 1.1em; border-radius: 8px; border: 1px solid #ccc; box-sizing: border-box; }
+        .btn-save { background: var(--accent); color: var(--btn-text); border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; }
         @keyframes fadeIn { from {opacity: 0;} to {opacity: 1;} }
     </style>
 </head>
@@ -80,7 +45,11 @@
         <h2>Pilih Mesin (Tarif)</h2>
         
         <div class="tarif-info-card">
-            <span id="display-tarif">Tarif: Rp - / kWh</span>
+            <div style="display:flex; align-items:center; gap:5px;">
+                <span id="mqtt-status" style="font-size:0.6em;">🔴</span>
+                <span id="display-tarif" class="tarif-value">Rp - / kWh</span>
+            </div>
+            <span id="display-updater" class="tarif-updater">Menunggu data...</span>
             <button class="btn-change" onclick="openModal()">Ubah Tarif</button>
         </div>
     </div>
@@ -89,59 +58,112 @@
 
     <div id="tarifModal" class="modal">
         <div class="modal-content">
-            <h3>Input Tarif Dasar Listrik</h3>
-            <p style="color:#888; font-size:0.9em;">Masukkan harga per kWh (Rupiah)</p>
-            <input type="number" id="input-tarif" class="input-rp" placeholder="Contoh: 1445">
-            <button class="btn-save" onclick="saveTarif()">SIMPAN REFERENSI</button>
-            <button onclick="closeModal()" style="background:none; border:none; color:#888; margin-top:10px; cursor:pointer;">Batal</button>
+            <h3>Update Tarif</h3>
+            
+            <div class="input-group">
+                <label>Harga Baru (Rp/kWh)</label>
+                <input type="number" id="input-tarif" class="input-rp" placeholder="1445">
+            </div>
+
+            <div class="input-group">
+                <label>Nama Anda (Wajib Diisi)</label>
+                <input type="text" id="input-name" class="input-rp" placeholder="Misal: Budi">
+            </div>
+
+            <button class="btn-save" onclick="publishNewTariff()">SIMPAN & SEBARKAN</button>
+            <button onclick="closeModal()" style="background:none; border:none; color:#888; margin-top:15px; cursor:pointer; width:100%;">Batal</button>
         </div>
     </div>
 
 <script>
-    // 1. Cek Tema
-    if (localStorage.getItem('theme') === 'dark') { document.body.setAttribute('data-theme', 'dark'); }
+    const MQTT_HOST = "701d32236feb43b38c22855a611f4d42.s1.eu.hivemq.cloud";
+    const MQTT_PORT = 8884;
+    const MQTT_USER = "web_dashboard";
+    const MQTT_PASS = "Tristan12";
+    const TOPIC_TARIF = "politeknik/setting/tarif_v2"; // Ganti topik biar bersih
+    
+    let mqttClient;
+    let globalTarif = localStorage.getItem('global_tarif_val') || 1445;
+    let lastUpdater = localStorage.getItem('global_tarif_user') || "System";
 
-    // 2. Load Tarif dari Memori (Global)
-    let globalTarif = localStorage.getItem('global_tarif_reference') || 1445; // Default 1445 jika belum ada
+    if (localStorage.getItem('theme') === 'dark') document.body.setAttribute('data-theme', 'dark');
 
     window.onload = function() {
-        updateTarifDisplay(); // Tampilkan tarif saat ini
-        
-        // Render Tombol Mesin
+        updateDisplayUI(globalTarif, lastUpdater);
+        renderGrid();
+        connectMqtt();
+    }
+
+    function renderGrid() {
         const container = document.getElementById("tarif-grid-container");
-        let tarifGridHtml = "";
-        for (let i = 1; i <= 18; i++) {
-            tarifGridHtml += `<a href="tarif-detail.html?id=${i}" class="menu-card">Mesin ${i}</a>`;
-        }
-        container.innerHTML = tarifGridHtml;
+        let html = "";
+        for (let i = 1; i <= 18; i++) { html += `<a href="tarif-detail.html?id=${i}" class="menu-card">Mesin ${i}</a>`; }
+        container.innerHTML = html;
     }
 
-    function updateTarifDisplay() {
-        // Format angka jadi Rupiah (contoh: 1.445)
-        let formatted = parseInt(globalTarif).toLocaleString('id-ID');
-        document.getElementById('display-tarif').textContent = `Tarif Acuan: Rp ${formatted} / kWh`;
+    function updateDisplayUI(price, user) {
+        let formatted = parseInt(price).toLocaleString('id-ID');
+        document.getElementById('display-tarif').textContent = `Rp ${formatted} / kWh`;
+        document.getElementById('display-updater').textContent = `Diupdate oleh: ${user}`;
     }
 
-    // --- LOGIKA MODAL ---
-    function openModal() {
-        document.getElementById('input-tarif').value = globalTarif;
-        document.getElementById('tarifModal').classList.add('show');
+    // --- MQTT ---
+    function connectMqtt() {
+        mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_tarif_adm_" + Date.now());
+        mqttClient.onConnectionLost = () => { document.getElementById('mqtt-status').textContent = "🔴"; setTimeout(connectMqtt, 5000); };
+        mqttClient.onMessageArrived = (m) => {
+            try {
+                // Terima Format JSON: {"price": 1500, "by": "Budi"}
+                const d = JSON.parse(m.payloadString);
+                if(d.price && d.by) {
+                    globalTarif = d.price;
+                    lastUpdater = d.by;
+                    
+                    // Simpan Lokal
+                    localStorage.setItem('global_tarif_val', globalTarif);
+                    localStorage.setItem('global_tarif_user', lastUpdater);
+                    
+                    updateDisplayUI(globalTarif, lastUpdater);
+                }
+            } catch(e) { console.log("Format data lama/salah", e); }
+        };
+        mqttClient.connect({
+            useSSL: true, userName: MQTT_USER, password: MQTT_PASS,
+            onSuccess: () => {
+                document.getElementById('mqtt-status').textContent = "🟢";
+                mqttClient.subscribe(TOPIC_TARIF);
+            }
+        });
     }
-    function closeModal() {
-        document.getElementById('tarifModal').classList.remove('show');
+
+    // --- PUBLISH DATA ---
+    function publishNewTariff() {
+        let price = document.getElementById('input-tarif').value;
+        let name = document.getElementById('input-name').value;
+
+        if(!price || price <= 0) { alert("Isi harga dengan benar!"); return; }
+        if(!name || name.trim() === "") { alert("Isi nama Anda!"); return; }
+
+        // Bungkus jadi JSON
+        const payload = JSON.stringify({
+            price: price,
+            by: name,
+            time: new Date().toISOString()
+        });
+
+        let message = new Paho.MQTT.Message(payload);
+        message.destinationName = TOPIC_TARIF;
+        message.retained = true; // Simpan di server
+        mqttClient.send(message);
+        
+        closeModal();
     }
-    function saveTarif() {
-        let val = document.getElementById('input-tarif').value;
-        if(val && val > 0) {
-            globalTarif = val;
-            // SIMPAN KE MEMORI BROWSER (Kunci: global_tarif_reference)
-            localStorage.setItem('global_tarif_reference', globalTarif);
-            updateTarifDisplay();
-            closeModal();
-            alert("Tarif berhasil diperbarui! Semua perhitungan mesin akan menggunakan tarif ini.");
-        }
+
+    function openModal() { 
+        document.getElementById('input-tarif').value = globalTarif; 
+        document.getElementById('tarifModal').classList.add('show'); 
     }
+    function closeModal() { document.getElementById('tarifModal').classList.remove('show'); }
 </script>
-
 </body>
 </html>
