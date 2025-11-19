@@ -6,26 +6,20 @@
     <title>Pilih Mesin (Tarif)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
     <style>
-        /* --- TEMA --- */
+        /* (CSS TEMA SAMA SEPERTI SEBELUMNYA) */
         :root { --bg-body: #f0f2f5; --text-main: #0d47a1; --card-bg: #ffffff; --card-text: #455a64; --border-top: #b0bec5; --overlay: rgba(0,0,0,0.5); --accent: #1a237e; --btn-text: #fff; }
         [data-theme="dark"] { --bg-body: #0a192f; --text-main: #64ffda; --card-bg: #172a45; --card-text: #8892b0; --border-top: #303C55; --overlay: rgba(0,0,0,0.8); --accent: #64ffda; --btn-text: #0a192f; }
-        
         body, html { height: 100%; margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg-body); color: var(--text-main); padding: 20px; box-sizing: border-box; transition: 0.3s; }
         .header-area { text-align: center; margin-top: 40px; margin-bottom: 30px; }
         h2 { margin: 0 0 10px 0; font-size: 2em; }
-        
-        /* INFO CARD */
         .tarif-info-card { background: var(--card-bg); padding: 20px 30px; border-radius: 20px; display: inline-flex; flex-direction: column; align-items: center; gap: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border: 1px solid var(--text-main); min-width: 300px; }
         .tarif-value { font-size: 1.5em; font-weight: bold; color: var(--text-main); }
         .tarif-updater { font-size: 0.8em; color: var(--card-text); font-style: italic; }
         .btn-change { background: var(--text-main); color: var(--bg-body); border: none; padding: 8px 20px; border-radius: 20px; cursor: pointer; font-weight: bold; margin-top: 5px; }
-        
         .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; max-width: 1400px; margin: 30px auto 0 auto; }
         .menu-card { display: block; background: var(--card-bg); padding: 20px 15px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; font-size: 1.1em; font-weight: 600; color: var(--card-text); border-top: 5px solid var(--border-top); cursor: pointer; text-decoration: none; transition: all 0.2s ease; }
         .menu-card:hover { transform: translateY(-5px); border-top-color: var(--text-main); }
         .back-button { display: inline-block; position: absolute; top: 20px; left: 20px; background: #78909c; color: white; padding: 10px 15px; border-radius: 8px; text-decoration: none; font-weight: 600; }
-        
-        /* MODAL */
         .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: var(--overlay); align-items: center; justify-content: center; }
         .modal.show { display: flex; animation: fadeIn 0.3s; }
         .modal-content { background-color: var(--card-bg); padding: 30px; border-radius: 12px; width: 300px; text-align: left; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
@@ -43,7 +37,6 @@
     
     <div class="header-area">
         <h2>Pilih Mesin (Tarif)</h2>
-        
         <div class="tarif-info-card">
             <div style="display:flex; align-items:center; gap:5px;">
                 <span id="mqtt-status" style="font-size:0.6em;">🔴</span>
@@ -62,12 +55,13 @@
             
             <div class="input-group">
                 <label>Harga Baru (Rp/kWh)</label>
-                <input type="number" id="input-tarif" class="input-rp" placeholder="1445">
+                <input type="number" step="0.01" id="input-tarif" class="input-rp" placeholder="Contoh: 996.74">
+                <small style="color:#888; font-size:0.8em;">Gunakan titik (.) untuk desimal</small>
             </div>
 
             <div class="input-group">
-                <label>Nama Anda (Wajib Diisi)</label>
-                <input type="text" id="input-name" class="input-rp" placeholder="Misal: Budi">
+                <label>Nama Anda</label>
+                <input type="text" id="input-name" class="input-rp" placeholder="Nama Anda">
             </div>
 
             <button class="btn-save" onclick="publishNewTariff()">SIMPAN & SEBARKAN</button>
@@ -80,10 +74,11 @@
     const MQTT_PORT = 8884;
     const MQTT_USER = "web_dashboard";
     const MQTT_PASS = "Tristan12";
-    const TOPIC_TARIF = "politeknik/setting/tarif_v2"; // Ganti topik biar bersih
+    const TOPIC_TARIF = "politeknik/setting/tarif_v2"; 
     
     let mqttClient;
-    let globalTarif = localStorage.getItem('global_tarif_val') || 1445;
+    // PERBAIKAN 2: Menggunakan Float untuk desimal
+    let globalTarif = parseFloat(localStorage.getItem('global_tarif_val')) || 1445.00;
     let lastUpdater = localStorage.getItem('global_tarif_user') || "System";
 
     if (localStorage.getItem('theme') === 'dark') document.body.setAttribute('data-theme', 'dark');
@@ -102,30 +97,29 @@
     }
 
     function updateDisplayUI(price, user) {
-        let formatted = parseInt(price).toLocaleString('id-ID');
+        // PERBAIKAN 3: Tampilkan desimal (maksimal 2 angka belakang koma)
+        let formatted = parseFloat(price).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
         document.getElementById('display-tarif').textContent = `Rp ${formatted} / kWh`;
         document.getElementById('display-updater').textContent = `Diupdate oleh: ${user}`;
     }
 
-    // --- MQTT ---
     function connectMqtt() {
         mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_tarif_adm_" + Date.now());
         mqttClient.onConnectionLost = () => { document.getElementById('mqtt-status').textContent = "🔴"; setTimeout(connectMqtt, 5000); };
         mqttClient.onMessageArrived = (m) => {
             try {
-                // Terima Format JSON: {"price": 1500, "by": "Budi"}
                 const d = JSON.parse(m.payloadString);
                 if(d.price && d.by) {
-                    globalTarif = d.price;
+                    // PERBAIKAN 4: Parse sebagai Float
+                    globalTarif = parseFloat(d.price);
                     lastUpdater = d.by;
                     
-                    // Simpan Lokal
                     localStorage.setItem('global_tarif_val', globalTarif);
                     localStorage.setItem('global_tarif_user', lastUpdater);
                     
                     updateDisplayUI(globalTarif, lastUpdater);
                 }
-            } catch(e) { console.log("Format data lama/salah", e); }
+            } catch(e) { console.log("Format data lama", e); }
         };
         mqttClient.connect({
             useSSL: true, userName: MQTT_USER, password: MQTT_PASS,
@@ -136,33 +130,33 @@
         });
     }
 
-    // --- PUBLISH DATA ---
     function publishNewTariff() {
-        let price = document.getElementById('input-tarif').value;
+        // PERBAIKAN 5: Ambil value, ganti koma jadi titik (jika user salah ketik)
+        let rawPrice = document.getElementById('input-tarif').value;
         let name = document.getElementById('input-name').value;
 
-        if(!price || price <= 0) { alert("Isi harga dengan benar!"); return; }
+        // Jaga-jaga user ngetik koma
+        rawPrice = rawPrice.replace(',', '.');
+        let price = parseFloat(rawPrice);
+
+        if(!price || price <= 0) { alert("Isi harga dengan benar (gunakan titik untuk desimal)!"); return; }
         if(!name || name.trim() === "") { alert("Isi nama Anda!"); return; }
 
-        // Bungkus jadi JSON
         const payload = JSON.stringify({
-            price: price,
+            price: price, // Kirim sebagai angka/float
             by: name,
             time: new Date().toISOString()
         });
 
         let message = new Paho.MQTT.Message(payload);
         message.destinationName = TOPIC_TARIF;
-        message.retained = true; // Simpan di server
+        message.retained = true; 
         mqttClient.send(message);
         
         closeModal();
     }
 
-    function openModal() { 
-        document.getElementById('input-tarif').value = globalTarif; 
-        document.getElementById('tarifModal').classList.add('show'); 
-    }
+    function openModal() { document.getElementById('input-tarif').value = globalTarif; document.getElementById('tarifModal').classList.add('show'); }
     function closeModal() { document.getElementById('tarifModal').classList.remove('show'); }
 </script>
 </body>
