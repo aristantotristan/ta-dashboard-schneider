@@ -3,286 +3,124 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Energy Dashboard (Pro)</title>
-    
+    <title>Energy Dashboard (Pro + Notif)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
-
     <style>
-        /* --- 1. DEFINISI TEMA (CSS VARIABLES) --- */
-        :root {
-            /* Tema Terang (Default) */
-            --bg-body: #f0f2f5;
-            --bg-card: #ffffff;
-            --text-main: #333333;
-            --text-sub: #546e7a;
-            --text-value: #0d47a1;
-            --border-card: #e0e0e0;
-            --accent: #1a237e;
-            --shadow: rgba(0, 0, 0, 0.07);
-            --nav-bg: #ffffff;
-            --status-bar-text: #ffffff;
-        }
-
-        /* Tema Gelap (Dark Mode) */
-        [data-theme="dark"] {
-            --bg-body: #121212;       /* Hitam pekat */
-            --bg-card: #1e1e1e;       /* Abu gelap */
-            --text-main: #e0e0e0;     /* Putih gading */
-            --text-sub: #b0bec5;      /* Abu terang */
-            --text-value: #64b5f6;    /* Biru neon */
-            --border-card: #333333;   /* Garis halus */
-            --accent: #82b1ff;        /* Aksen terang */
-            --shadow: rgba(0, 0, 0, 0.5);
-            --nav-bg: #2c2c2c;
-        }
-
-        /* --- CSS UTAMA --- */
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
-            background-color: var(--bg-body); 
-            color: var(--text-main); 
-            margin: 0; 
-            padding: 25px; 
-            padding-top: 70px; 
-            transition: background-color 0.3s ease, color 0.3s ease; /* Animasi transisi */
-        }
+        /* (CSS SAMA - Saya persingkat) */
+        :root { --bg-body: #f0f2f5; --bg-card: #ffffff; --text-main: #333333; --text-sub: #546e7a; --text-value: #0d47a1; --border-card: #e0e0e0; --accent: #1a237e; --nav-bg: #ffffff; }
+        [data-theme="dark"] { --bg-body: #121212; --bg-card: #1e1e1e; --text-main: #e0e0e0; --text-sub: #b0bec5; --text-value: #64b5f6; --border-card: #333333; --accent: #82b1ff; --nav-bg: #2c2c2c; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg-body); color: var(--text-main); margin: 0; padding: 25px; padding-top: 70px; transition: 0.3s; }
         
-        /* TOMBOL TEMA (MATAHARI/BULAN) */
-        .theme-switch {
-            position: fixed;
-            top: 15px;
-            right: 20px;
-            z-index: 1000;
-            background: var(--bg-card);
-            border: 2px solid var(--border-card);
-            border-radius: 50%;
-            width: 45px;
-            height: 45px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.2em;
-            box-shadow: 0 4px 10px var(--shadow);
-            transition: all 0.3s ease;
-        }
-        .theme-switch:hover { transform: scale(1.1); }
+        /* TOAST STYLE */
+        #toast-container { position: fixed; top: 80px; right: 20px; z-index: 2000; display: flex; flex-direction: column; gap: 10px; }
+        .toast { background-color: #323232; color: #fff; padding: 15px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); font-size: 0.95em; display: flex; align-items: flex-start; gap: 15px; min-width: 300px; animation: slideIn 0.5s ease forwards; border-left: 5px solid #ff9800; }
+        .toast.hide { animation: fadeOut 0.5s ease forwards; }
+        @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+        @keyframes fadeOut { to { transform: translateX(100%); } }
 
-        /* STATUS BAR */
-        #status { position: fixed; top: 0; left: 0; width: 100%; text-align: center; padding: 10px; font-weight: 600; color: white; z-index: 100; transition: background-color 0.5s ease; }
-        .bg-ok { background: #2e7d32; } .bg-err { background: #c62828; } .bg-wait { background: #f57c00; }
-
-        /* LAYOUT SPA */
-        .view-section { display: none; animation: fadeIn 0.4s ease; }
-        .view-section.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-        /* --- VIEW 1: MENU GRID --- */
-        .menu-container { max-width: 1200px; margin: 0 auto; text-align: center; }
-        .menu-title { color: var(--accent); font-size: 2em; margin-bottom: 30px; transition: color 0.3s; }
-        .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; }
-        .menu-card { 
-            background: var(--bg-card); padding: 25px 15px; border-radius: 12px; 
-            box-shadow: 0 2px 5px var(--shadow); text-align: center; font-size: 1.1em; 
-            font-weight: 600; color: var(--text-sub); border-top: 5px solid var(--border-card); 
-            cursor: pointer; transition: all 0.2s ease, background-color 0.3s; 
-        }
-        .menu-card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px var(--shadow); }
-        .menu-card.online { border-top-color: #43a047; color: #2e7d32; } 
-        [data-theme="dark"] .menu-card.online { color: #66bb6a; } /* Hijau lebih terang di dark mode */
-        
-        .menu-badge { display: block; font-size: 0.7em; font-weight: 400; margin-top: 5px; color: var(--text-sub); }
-        .menu-card.online .menu-badge { color: inherit; font-weight: bold; }
-
-        /* --- VIEW 2: DETAIL --- */
-        .header-container { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px; }
-        .back-button { background: #78909c; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: 600; cursor: pointer; border: none; }
-        .back-button:hover { background: #546e7a; }
-        
-        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); grid-auto-rows: auto; gap: 20px; }
-        .card { 
-            background: var(--bg-card); border-radius: 12px; 
-            box-shadow: 0 4px 12px var(--shadow); padding: 20px 25px; 
-            transition: background-color 0.3s;
-        }
-        .card h3 { margin-top: 0; border-bottom: 2px solid var(--bg-body); padding-bottom: 10px; color: #00897b; /* Teal yang netral */ }
-        [data-theme="dark"] .card h3 { color: #4db6ac; }
-        
-        .data-point { margin-bottom: 18px; }
-        .data-point .label { display: block; font-size: 0.95em; color: var(--text-sub); margin-bottom: 4px; }
-        .data-point .value { font-size: 2.4em; font-weight: 700; color: var(--text-value); text-shadow: 0 0 2px rgba(0,0,0,0.1); }
-        .data-point .unit { font-size: 1.1em; color: var(--text-main); margin-left: 8px; opacity: 0.7; }
-        
-        .power-group { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
-        .power-group .value { font-size: 1.8em; }
-        .dual-group { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        
-        .machine-select { 
-            padding: 10px; border-radius: 8px; border: 2px solid var(--accent); 
-            font-weight: bold; color: var(--accent); cursor: pointer; background: var(--bg-card);
-        }
+        /* CSS GRID & DETAIL SAMA */
+        .theme-switch { position: fixed; top: 15px; right: 20px; z-index: 1000; background: var(--bg-card); border-radius: 50%; width: 45px; height: 45px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2em; box-shadow: 0 4px 10px rgba(0,0,0,0.1); transition: 0.3s; border: 1px solid var(--text-sub); color: var(--text-main); }
+        .view-section { display: none; } .view-section.active { display: block; }
+        .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; max-width: 1200px; margin: 0 auto; }
+        .menu-card { background: var(--bg-card); padding: 25px 15px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); text-align: center; font-weight: 600; border-top: 5px solid var(--border-card); cursor: pointer; color: var(--text-sub); }
+        .menu-card.online { border-top-color: #43a047; color: #2e7d32; } [data-theme="dark"] .menu-card.online { color: #66bb6a; }
+        .menu-badge { font-size: 0.7em; font-weight: 400; display: block; margin-top: 5px; color: var(--text-sub); }
+        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        .card { background: var(--bg-card); border-radius: 12px; padding: 20px 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .card h3 { margin-top: 0; border-bottom: 1px solid var(--bg-body); padding-bottom: 10px; color: #00897b; } [data-theme="dark"] .card h3 { color: #4db6ac; }
+        .data-point .value { font-size: 2.4em; font-weight: 700; color: var(--text-value); }
+        .data-point .label { color: var(--text-sub); } .data-point .unit { color: var(--text-main); opacity: 0.7; }
+        .dual-group, .power-group { display: grid; gap: 10px; } .dual-group { grid-template-columns: 1fr 1fr; } .power-group { grid-template-columns: 1fr 1fr 1fr; } .power-group .value { font-size: 1.8em; }
+        .header-container { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        .back-button { background: #78909c; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: 600; border: none; cursor: pointer; }
+        .machine-select { padding: 10px; border-radius: 8px; border: 2px solid var(--accent); color: var(--accent); background: var(--bg-card); font-weight: bold; }
+        #status { position: fixed; top: 0; left: 0; width: 100%; text-align: center; padding: 10px; font-weight: 600; color: white; z-index: 100; transition: 0.5s; }
+        .bg-wait { background: #f57c00; } .bg-ok { background: #2e7d32; } .bg-err { background: #c62828; }
     </style>
 </head>
 <body>
     
-    <div id="status" class="bg-wait">Menghubungkan ke MQTT Broker...</div>
-
-    <button class="theme-switch" onclick="toggleTheme()" title="Ganti Tema">
-        <span id="theme-icon">🌙</span>
-    </button>
+    <div id="status" class="bg-wait">Menghubungkan...</div>
+    <div id="toast-container"></div>
+    <button class="theme-switch" onclick="toggleTheme()"><span id="theme-icon">🌙</span></button>
 
     <div id="view-grid" class="view-section active">
         <div class="menu-container">
-            <div style="text-align: left; margin-bottom: 20px;">
-                <a href="menu.html" class="back-button">&#8592; Menu Utama</a>
-            </div>
-            <h1 class="menu-title">Pilih Mesin (Live)</h1>
-            <div class="menu-grid" id="machine-grid">
-                </div>
+            <div style="text-align:left; margin-bottom:20px;"><a href="menu.html" class="back-button">&#8592; Menu Utama</a></div>
+            <h1 style="color:var(--accent); text-align:center; margin-bottom:30px;">Pilih Mesin (Live)</h1>
+            <div class="menu-grid" id="machine-grid"></div>
         </div>
     </div>
 
     <div id="view-detail" class="view-section">
         <div class="header-container">
-            <div style="display: flex; gap: 10px; align-items: center;">
-                <button onclick="showGrid()" class="back-button">&#8592; home</button>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <button onclick="showGrid()" class="back-button">&#8592; Kembali</button>
                 <select id="machineSelector" class="machine-select" onchange="switchMachine(this.value)"></select>
             </div>
-            <div class="header-text" style="text-align: right;">
-                <h1 id="page-title" style="margin:0; font-size: 2em; color: var(--accent);">Mesin 1</h1>
-                <h2 style="margin:5px 0 0 0; font-size: 1em; font-weight:400; color:var(--text-sub);">Real-time Data</h2>
+            <div style="text-align:right;">
+                <h1 id="page-title" style="margin:0; font-size:2em; color:var(--accent);">Mesin 1</h1>
+                <h2 style="margin:5px 0 0 0; font-size:1em; font-weight:400; color:var(--text-sub);">Real-time Data</h2>
             </div>
         </div>
-
         <div class="dashboard-grid">
-            <div class="card">
-                <h3>Energi Total</h3>
-                <div class="data-point"><span class="label">1. Total EA Import</span><div><span class="value" id="val-total-ea">-</span><span class="unit">kWh</span></div></div>
-                <div class="data-point"><span class="label">2. Total ER Import</span><div><span class="value" id="val-total-er">-</span><span class="unit">kVARh</span></div></div>
-            </div>
-            <div class="card">
-                <h3>Energi Parsial</h3>
-                <div class="data-point"><span class="label">3. Partial Active E</span><div><span class="value" id="val-part-e">-</span><span class="unit">kWh</span></div></div>
-                <div class="data-point"><span class="label">4. Partial Reactive E</span><div><span class="value" id="val-part-r">-</span><span class="unit">kVARh</span></div></div>
-            </div>
-            <div class="card">
-                <h3>Listrik Dasar</h3>
-                <div class="dual-group">
-                    <div class="data-point"><span class="label">V (Volt)</span><div><span class="value" id="val-v">-</span><span class="unit">V</span></div></div>
-                    <div class="data-point"><span class="label">I (Ampere)</span><div><span class="value" id="val-i">-</span><span class="unit">A</span></div></div>
-                    <div class="data-point"><span class="label">Power Factor</span><div><span class="value" id="val-pf">-</span><span class="unit"></span></div></div>
-                    <div class="data-point"><span class="label">Frequency</span><div><span class="value" id="val-hz">-</span><span class="unit">Hz</span></div></div>
-                </div>
-            </div>
-            <div class="card">
-                <h3>Daya</h3>
-                <div class="power-group">
-                    <div class="data-point"><span class="label">P (Active)</span><div><span class="value" id="val-p">-</span><span class="unit">W</span></div></div>
-                    <div class="data-point"><span class="label">Q (Reactive)</span><div><span class="value" id="val-q">-</span><span class="unit">VAR</span></div></div>
-                    <div class="data-point"><span class="label">S (Apparent)</span><div><span class="value" id="val-s">-</span><span class="unit">kVA</span></div></div>
-                </div>
-            </div>
-            <div class="card">
-                <h3>Waktu Operasi</h3>
-                <div class="dual-group">
-                    <div class="data-point"><span class="label">Hari</span><div><span class="value" id="val-op-days">-</span><span class="unit">d</span></div></div>
-                    <div class="data-point"><span class="label">Jam</span><div><span class="value" id="val-op-hrs">-</span><span class="unit">h</span></div></div>
-                </div>
-            </div>
-            <div class="card">
-                <h3>Tariff</h3>
-                <div class="data-point"><span class="label">Status Tarif</span><div><span class="value" id="val-tariff">-</span><span class="unit"></span></div></div>
-            </div>
+            <div class="card"><h3>Energi Total</h3><div class="data-point"><span class="label">1. Total EA Import</span><div><span class="value" id="val-total-ea">-</span><span class="unit">kWh</span></div></div><div class="data-point"><span class="label">2. Total ER Import</span><div><span class="value" id="val-total-er">-</span><span class="unit">kVARh</span></div></div></div>
+            <div class="card"><h3>Energi Parsial</h3><div class="data-point"><span class="label">3. Partial Active E</span><div><span class="value" id="val-part-e">-</span><span class="unit">kWh</span></div></div><div class="data-point"><span class="label">4. Partial Reactive E</span><div><span class="value" id="val-part-r">-</span><span class="unit">kVARh</span></div></div></div>
+            <div class="card"><h3>Listrik Dasar</h3><div class="dual-group"><div class="data-point"><span class="label">V (Volt)</span><div><span class="value" id="val-v">-</span><span class="unit">V</span></div></div><div class="data-point"><span class="label">I (Ampere)</span><div><span class="value" id="val-i">-</span><span class="unit">A</span></div></div><div class="data-point"><span class="label">Power Factor</span><div><span class="value" id="val-pf">-</span><span class="unit"></span></div></div><div class="data-point"><span class="label">Frequency</span><div><span class="value" id="val-hz">-</span><span class="unit">Hz</span></div></div></div></div>
+            <div class="card"><h3>Daya</h3><div class="power-group"><div class="data-point"><span class="label">P (Active)</span><div><span class="value" id="val-p">-</span><span class="unit">W</span></div></div><div class="data-point"><span class="label">Q (Reactive)</span><div><span class="value" id="val-q">-</span><span class="unit">VAR</span></div></div><div class="data-point"><span class="label">S (Apparent)</span><div><span class="value" id="val-s">-</span><span class="unit">kVA</span></div></div></div></div>
+            <div class="card"><h3>Waktu Operasi</h3><div class="dual-group"><div class="data-point"><span class="label">Hari</span><div><span class="value" id="val-op-days">-</span><span class="unit">d</span></div></div><div class="data-point"><span class="label">Jam</span><div><span class="value" id="val-op-hrs">-</span><span class="unit">h</span></div></div></div></div>
+            <div class="card"><h3>Tariff</h3><div class="data-point"><span class="label">Status Tarif</span><div><span class="value" id="val-tariff">-</span><span class="unit"></span></div></div></div>
         </div>
     </div>
 
-
 <script>
-// ================= LOGIKA TEMA =================
 function toggleTheme() {
-    const body = document.body;
-    const icon = document.getElementById('theme-icon');
-    
-    // Cek tema saat ini
-    const current = body.getAttribute('data-theme');
-    
-    if (current === 'dark') {
-        body.removeAttribute('data-theme'); // Balik ke Light
-        icon.textContent = '🌙';
-        localStorage.setItem('theme', 'light');
-    } else {
-        body.setAttribute('data-theme', 'dark'); // Set ke Dark
-        icon.textContent = '☀️';
-        localStorage.setItem('theme', 'dark');
-    }
+    const body = document.body; const icon = document.getElementById('theme-icon');
+    if (body.getAttribute('data-theme') === 'dark') { body.removeAttribute('data-theme'); icon.textContent = '🌙'; localStorage.setItem('theme', 'light'); } 
+    else { body.setAttribute('data-theme', 'dark'); icon.textContent = '☀️'; localStorage.setItem('theme', 'dark'); }
 }
+if (localStorage.getItem('theme') === 'dark') { document.body.setAttribute('data-theme', 'dark'); document.getElementById('theme-icon').textContent = '☀️'; }
 
-// Cek preferensi tersimpan saat load
-const savedTheme = localStorage.getItem('theme');
-if (savedTheme === 'dark') {
-    document.body.setAttribute('data-theme', 'dark');
-    document.getElementById('theme-icon').textContent = '☀️';
-}
-
-// ================= LOGIKA SPA & MQTT =================
-let activeMachineId = 1; 
-let mqttClient; 
-let latestDataCache = {}; 
-
+let activeMachineId = 1; let mqttClient; let latestDataCache = {}; 
 const MQTT_HOST = "701d32236feb43b38c22855a611f4d42.s1.eu.hivemq.cloud";
 const MQTT_PORT = 8884;
 const MQTT_USER = "web_dashboard";
 const MQTT_PASS = "Tristan12";
-const MQTT_TOPIC = "politeknik/meter/data";
+const MQTT_TOPIC_DATA = "politeknik/meter/data";
+const MQTT_TOPIC_TARIF = "politeknik/setting/tarif_v2";
 
 const fmt = (val, dig) => (val != null && !isNaN(val)) ? Number(val).toFixed(dig) : "-";
 function setStatus(msg, cls) { const s = document.getElementById("status"); if (s) { s.textContent = msg; s.className = cls; } }
 
-function showGrid() {
-    document.getElementById('view-detail').classList.remove('active');
-    document.getElementById('view-grid').classList.add('active');
-    window.history.pushState({}, '', window.location.pathname);
+// --- NOTIFIKASI ---
+function showNotification(price, user, timeISO) {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    const formattedPrice = parseFloat(price).toLocaleString('id-ID', {minimumFractionDigits: 0, maximumFractionDigits: 2});
+    
+    let timeDisplay = "Baru saja";
+    if (timeISO) {
+        timeDisplay = new Date(timeISO).toLocaleString('id-ID', { weekday:'short', hour:'2-digit', minute:'2-digit' });
+    }
+    
+    toast.innerHTML = `<span style="font-size:1.5em;">⚙️</span><div style="flex-grow:1;"><div style="font-weight:bold; color:#ffb74d; margin-bottom:2px;">Update Tarif Baru</div><div style="font-size:1.1em; font-weight:bold; margin-bottom:2px;">Rp ${formattedPrice} / kWh</div><div style="font-size:0.85em; color:#ccc; display:flex; justify-content:space-between;"><span>Oleh: ${user}</span><span>${timeDisplay}</span></div></div>`;
+    container.appendChild(toast);
+    setTimeout(() => { toast.classList.add('hide'); setTimeout(() => toast.remove(), 500); }, 8000);
 }
 
-function showDetail(id) {
-    activeMachineId = parseInt(id);
-    document.getElementById("machineSelector").value = activeMachineId;
-    document.getElementById('page-title').textContent = `Energy Dashboard - Mesin ${activeMachineId}`;
-    document.getElementById('view-grid').classList.remove('active');
-    document.getElementById('view-detail').classList.add('active');
-    refreshDetailView();
-}
-
-function switchMachine(id) {
-    activeMachineId = parseInt(id);
-    document.getElementById('page-title').textContent = `Energy Dashboard - Mesin ${activeMachineId}`;
-    refreshDetailView();
-}
+function showGrid() { document.getElementById('view-detail').classList.remove('active'); document.getElementById('view-grid').classList.add('active'); window.history.pushState({}, '', window.location.pathname); }
+function showDetail(id) { activeMachineId = parseInt(id); document.getElementById("machineSelector").value = activeMachineId; document.getElementById('page-title').textContent = `Energy Dashboard - Mesin ${activeMachineId}`; document.getElementById('view-grid').classList.remove('active'); document.getElementById('view-detail').classList.add('active'); refreshDetailView(); }
+function switchMachine(id) { activeMachineId = parseInt(id); document.getElementById('page-title').textContent = `Energy Dashboard - Mesin ${activeMachineId}`; refreshDetailView(); }
 
 function updateGridCard(d) {
-    const card = document.getElementById(`grid-card-${d.id}`);
-    const badge = document.getElementById(`grid-badge-${d.id}`);
-    if (card && badge) {
-        if (d.status === "online") {
-            card.classList.add("online");
-            badge.textContent = "ONLINE";
-        } else {
-            card.classList.remove("online");
-            badge.textContent = "OFFLINE";
-        }
-    }
+    const card = document.getElementById(`grid-card-${d.id}`); const badge = document.getElementById(`grid-badge-${d.id}`);
+    if (card && badge) { if (d.status === "online") { card.classList.add("online"); badge.textContent = "ONLINE"; } else { card.classList.remove("online"); badge.textContent = "OFFLINE"; } }
 }
-
 function refreshDetailView() {
     const d = latestDataCache[activeMachineId];
-    if (d) {
-        if (d.status === "offline") setMeterOffline();
-        else setMeterOnline(d);
-    } else {
-        setMeterOffline();
-    }
+    if (d) { d.status === "offline" ? setMeterOffline() : setMeterOnline(d); } else { setMeterOffline(); }
 }
-
 function setMeterOnline(d) {
     document.getElementById('val-total-ea').textContent = fmt(d.e, 2);
     document.getElementById('val-total-er').textContent = fmt(d.q_tot, 2);
@@ -301,38 +139,33 @@ function setMeterOnline(d) {
     document.getElementById(`val-op-days`).textContent = days;
     document.getElementById(`val-op-hrs`).textContent = hours;
 }
-
 function setMeterOffline() {
     const ids = ['total-ea', 'total-er', 'part-e', 'part-r', 'tariff', 'v', 'i', 'p', 'q', 's', 'pf', 'hz', 'op-days', 'op-hrs'];
     ids.forEach(id => { document.getElementById(`val-${id}`).textContent = "-"; });
 }
 
 function startConnection() {
-    setStatus("Menghubungkan ke MQTT Broker...", "bg-wait");
+    setStatus("Menghubungkan...", "bg-wait");
     mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_spa_" + Date.now());
-    mqttClient.onConnectionLost = (r) => { if (r.errorCode !== 0) { setStatus("⚠️ Koneksi Putus. Reconnecting...", "bg-wait"); setTimeout(startConnection, 5000); } };
+    mqttClient.onConnectionLost = (r) => { if (r.errorCode !== 0) { setStatus("⚠️ Putus. Reconnecting...", "bg-wait"); setTimeout(startConnection, 5000); } };
     mqttClient.onMessageArrived = (m) => {
         try {
+            if (m.destinationName === MQTT_TOPIC_TARIF) {
+                const t = JSON.parse(m.payloadString);
+                if (t.price && t.by) showNotification(t.price, t.by, t.time);
+                return;
+            }
             const d = JSON.parse(m.payloadString);
             if (d.id_mesin) d.id = d.id_mesin; 
             if (!d.id) return;
             latestDataCache[d.id] = d;
             updateGridCard(d);
             if (d.id === activeMachineId && document.getElementById('view-detail').classList.contains('active')) {
-                if (d.status === "offline") setMeterOffline();
-                else setMeterOnline(d);
+                if (d.status === "offline") setMeterOffline(); else setMeterOnline(d);
             }
         } catch (e) { console.error("JSON Error", e); }
     };
-    mqttClient.connect({
-        useSSL: true, userName: MQTT_USER, password: MQTT_PASS,
-        onSuccess: () => { 
-            setStatus("ONLINE - Terhubung ke System", "bg-ok"); 
-            mqttClient.subscribe(MQTT_TOPIC); 
-            setTimeout(() => { document.getElementById("status").style.top = "-50px"; }, 3000);
-        },
-        onFailure: (e) => { setStatus("Gagal Terhubung: " + e.errorMessage, "bg-err"); setTimeout(startConnection, 5000); }
-    });
+    mqttClient.connect({ useSSL: true, userName: MQTT_USER, password: MQTT_PASS, onSuccess: () => { setStatus("ONLINE", "bg-ok"); mqttClient.subscribe(MQTT_TOPIC_DATA); mqttClient.subscribe(MQTT_TOPIC_TARIF); setTimeout(() => { document.getElementById("status").style.top = "-50px"; }, 3000); }, onFailure: (e) => { setStatus("Gagal: " + e.errorMessage, "bg-err"); setTimeout(startConnection, 5000); } });
 }
 
 window.onload = function() {
@@ -341,10 +174,7 @@ window.onload = function() {
     let gridHtml = "";
     for (let i = 1; i <= 18; i++) {
         gridHtml += `<div class="menu-card" id="grid-card-${i}" onclick="showDetail(${i})">Mesin ${i}<span class="menu-badge" id="grid-badge-${i}">OFFLINE</span></div>`;
-        let option = document.createElement("option");
-        option.value = i;
-        option.text = "Mesin " + i;
-        selectContainer.appendChild(option);
+        let option = document.createElement("option"); option.value = i; option.text = "Mesin " + i; selectContainer.appendChild(option);
     }
     gridContainer.innerHTML = gridHtml;
     startConnection();
