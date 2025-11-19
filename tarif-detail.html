@@ -5,30 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Detail Tarif Mesin</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
 
     <style>
-        /* (CSS SAMA PERSIS SEPERTI SEBELUMNYA - Saya singkat biar ringkas) */
-        :root { --bg-body: #f0f2f5; --bg-card: #ffffff; --text-main: #333333; --text-sub: #546e7a; --accent: #1a237e; --shadow: rgba(0, 0, 0, 0.07); --btn-bg: #ffffff; }
-        [data-theme="dark"] { --bg-body: #121212; --bg-card: #1e1e1e; --text-main: #e0e0e0; --text-sub: #b0bec5; --accent: #82b1ff; --shadow: rgba(0, 0, 0, 0.5); --btn-bg: #2c2c2c; }
+        /* (CSS SAMA - Saya singkat) */
+        :root { --bg-body: #f0f2f5; --bg-card: #ffffff; --text-main: #333333; --text-sub: #546e7a; --text-val: #0d47a1; --border: #e0e0e0; --accent: #1a237e; --shadow: rgba(0, 0, 0, 0.07); --btn-bg: #ffffff; }
+        [data-theme="dark"] { --bg-body: #121212; --bg-card: #1e1e1e; --text-main: #e0e0e0; --text-sub: #b0bec5; --text-val: #64b5f6; --border: #333333; --accent: #82b1ff; --shadow: rgba(0, 0, 0, 0.5); --btn-bg: #2c2c2c; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg-body); color: var(--text-main); margin: 0; padding: 25px; padding-top: 70px; transition: 0.3s; }
-        .header-container { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .header-container { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px; }
         .back-button { background: #78909c; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: 600; }
         h1 { margin: 0; font-size: 2em; color: var(--accent); }
         h2 { margin: 5px 0 0 0; font-size: 1em; font-weight: 400; color: var(--text-sub); }
         .theme-switch { position: fixed; top: 15px; right: 20px; z-index: 1000; background: var(--bg-card); border-radius: 50%; width: 45px; height: 45px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2em; box-shadow: 0 4px 10px var(--shadow); color: var(--text-main); border: 1px solid var(--text-sub); }
         .controls-card { background: var(--bg-card); padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px var(--shadow); margin-bottom: 25px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
-        input[type="date"] { padding: 10px; border-radius: 8px; border: 1px solid #ccc; background: var(--bg-body); color: var(--text-main); }
+        input[type="date"] { padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-body); color: var(--text-main); }
         .btn-action { padding: 10px 20px; border-radius: 8px; border: none; background: var(--accent); color: white; font-weight: 600; cursor: pointer; }
-        .btn-filter { padding: 8px 15px; border-radius: 6px; border: 1px solid #ccc; background: var(--btn-bg); color: var(--text-main); cursor: pointer; }
+        .btn-filter { padding: 8px 15px; border-radius: 6px; border: 1px solid var(--border); background: var(--btn-bg); color: var(--text-main); cursor: pointer; }
         .chart-container { background: var(--bg-card); padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px var(--shadow); margin-bottom: 25px; height: 350px; position: relative; }
         .table-container { background: var(--bg-card); border-radius: 12px; box-shadow: 0 4px 12px var(--shadow); overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; }
-        th { text-align: left; padding: 15px 20px; border-bottom: 2px solid #ccc; }
-        td { padding: 15px 20px; border-bottom: 1px solid #eee; }
+        th { text-align: left; padding: 15px 20px; background-color: var(--bg-body); color: var(--text-sub); border-bottom: 2px solid var(--border); }
+        td { padding: 15px 20px; border-bottom: 1px solid var(--border); color: var(--text-main); }
         .val-money { font-weight: 700; color: #43a047; text-align: right; }
         .val-num { text-align: right; font-family: 'Consolas', monospace; }
-        tfoot td { font-weight: bold; border-top: 2px solid #ccc; }
-        @media (max-width: 768px) { .controls-card { flex-direction: column; align-items: stretch; } }
+        tfoot td { font-weight: bold; background-color: var(--bg-body); border-top: 2px solid var(--border); }
+        @media (max-width: 768px) { .controls-card { flex-direction: column; align-items: stretch; } .btn-filter { width: 100%; margin-bottom: 5px; } }
     </style>
 </head>
 <body>
@@ -39,7 +40,7 @@
         <a href="tarif.html" class="back-button">&#8592; Pilih Mesin</a>
         <div style="text-align: right;">
             <h1 id="page-title">Detail Tarif Mesin 1</h1>
-            <h2 id="current-price-display">Tarif Aktif: ...</h2>
+            <h2 id="current-price-display">Memuat Tarif...</h2>
         </div>
     </div>
 
@@ -70,31 +71,58 @@
     // --- TEMA ---
     function toggleTheme() {
         const body = document.body; const icon = document.getElementById('theme-icon');
-        if (body.getAttribute('data-theme') === 'dark') { body.removeAttribute('data-theme'); icon.textContent = '🌙'; localStorage.setItem('theme', 'light'); updateChartColor('light'); } 
+        if (body.getAttribute('data-theme') === 'dark') { body.removeAttribute('data-theme'); icon.textContent = '🌙'; localStorage.setItem('theme', 'light'); updateChartColor('light'); }
         else { body.setAttribute('data-theme', 'dark'); icon.textContent = '☀️'; localStorage.setItem('theme', 'dark'); updateChartColor('dark'); }
     }
     if (localStorage.getItem('theme') === 'dark') { document.body.setAttribute('data-theme', 'dark'); document.getElementById('theme-icon').textContent = '☀️'; }
 
-    // --- LOGIKA HITUNGAN ---
+    // --- MQTT CONFIG ---
+    const MQTT_HOST = "701d32236feb43b38c22855a611f4d42.s1.eu.hivemq.cloud";
+    const MQTT_PORT = 8884;
+    const MQTT_USER = "web_dashboard";
+    const MQTT_PASS = "Tristan12";
+    const TOPIC_TARIF = "politeknik/setting/tarif_v2"; // Topik baru
+    let mqttClient;
+
+    // --- LOGIKA ---
     let activeMachineId = 1;
     let myChart = null;
-    
-    // 1. AMBIL TARIF DARI MEMORI GLOBAL (Inilah kuncinya)
-    // Jika tidak ada (belum pernah diset), pakai default 1445
-    let globalTarif = localStorage.getItem('global_tarif_reference') || 1445;
+    let globalTarif = localStorage.getItem('global_tarif_val') || 1445;
 
     window.onload = function() {
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('id')) activeMachineId = urlParams.get('id');
-        
         document.getElementById('page-title').textContent = `Detail Tarif Mesin ${activeMachineId}`;
         
-        // Tampilkan tarif yang dipakai
-        document.getElementById('current-price-display').textContent = `Tarif Referensi: Rp ${parseInt(globalTarif).toLocaleString('id-ID')} / kWh`;
-        
+        updateDisplayPrice();
         setRange('weekly');
+        connectMqtt();
     };
 
+    function updateDisplayPrice() {
+        document.getElementById('current-price-display').textContent = `Tarif Ref: Rp ${parseInt(globalTarif).toLocaleString('id-ID')} / kWh`;
+    }
+
+    // --- MQTT CONNECT ---
+    function connectMqtt() {
+        mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_detail_client_" + Date.now());
+        mqttClient.onMessageArrived = (m) => {
+            try {
+                // Terima JSON
+                const d = JSON.parse(m.payloadString);
+                if(d.price) {
+                    globalTarif = d.price;
+                    localStorage.setItem('global_tarif_val', globalTarif);
+                    // Tampilkan notifikasi kecil di judul?
+                    updateDisplayPrice();
+                    fetchData(); // Hitung ulang otomatis!
+                }
+            } catch(e) { console.error("JSON Error", e); }
+        };
+        mqttClient.connect({ useSSL: true, userName: MQTT_USER, password: MQTT_PASS, onSuccess: () => mqttClient.subscribe(TOPIC_TARIF) });
+    }
+
+    // --- DATA & GRAFIK (Logic sama, hanya variabel tarif ikut globalTarif) ---
     function setRange(type) {
         const end = new Date(); const start = new Date();
         if (type === 'daily') start.setDate(end.getDate());
@@ -121,7 +149,7 @@
             const kwh = (Math.random() * (150 - 50) + 50).toFixed(2);
             const hours = (Math.random() * (24 - 8) + 8).toFixed(1);
             
-            // KALKULASI: kWh * TARIF GLOBAL
+            // PAKE TARIF DARI MQTT/LOKAL
             const cost = Math.round(kwh * globalTarif);
             
             const dateStr = d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
@@ -130,17 +158,11 @@
             grandTotalCost += cost;
             grandTotalKwh += parseFloat(kwh);
 
-            tableRows = `<tr>
-                <td>${d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</td>
-                <td class="val-num">${kwh} kWh</td>
-                <td class="val-num">${hours} Jam</td>
-                <td class="val-money">Rp ${cost.toLocaleString('id-ID')}</td>
-            </tr>` + tableRows;
+            tableRows = `<tr><td>${d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</td><td class="val-num">${kwh} kWh</td><td class="val-num">${hours} Jam</td><td class="val-money">Rp ${cost.toLocaleString('id-ID')}</td></tr>` + tableRows;
         }
 
         document.querySelector("#dataTable tbody").innerHTML = tableRows;
         document.querySelector("#dataTable tfoot").innerHTML = `<tr><td>TOTAL</td><td class="val-num">${grandTotalKwh.toFixed(2)} kWh</td><td></td><td class="val-money">Rp ${grandTotalCost.toLocaleString('id-ID')}</td></tr>`;
-
         renderChart(labels, dataCost);
     }
 
