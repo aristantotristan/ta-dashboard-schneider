@@ -5,8 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pilih Mesin (Tarif)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
     <style>
-        /* (CSS TEMA SAMA SEPERTI SEBELUMNYA) */
         :root { --bg-body: #f0f2f5; --text-main: #0d47a1; --card-bg: #ffffff; --card-text: #455a64; --border-top: #b0bec5; --overlay: rgba(0,0,0,0.5); --accent: #1a237e; --btn-text: #fff; }
         [data-theme="dark"] { --bg-body: #0a192f; --text-main: #64ffda; --card-bg: #172a45; --card-text: #8892b0; --border-top: #303C55; --overlay: rgba(0,0,0,0.8); --accent: #64ffda; --btn-text: #0a192f; }
         body, html { height: 100%; margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg-body); color: var(--text-main); padding: 20px; box-sizing: border-box; transition: 0.3s; }
@@ -32,61 +33,101 @@
     </style>
 </head>
 <body>
-
     <a href="menu.html" class="back-button">&#8592; Kembali</a>
-    
     <div class="header-area">
         <h2>Pilih Mesin (Tarif)</h2>
         <div class="tarif-info-card">
             <div style="display:flex; align-items:center; gap:5px;">
-                <span id="mqtt-status" style="font-size:0.6em;">🔴</span>
-                <span id="display-tarif" class="tarif-value">Rp - / kWh</span>
+                <span id="db-status" style="font-size:0.6em;">🟠</span>
+                <span id="display-tarif" class="tarif-value">Loading...</span>
             </div>
-            <span id="display-updater" class="tarif-updater">Menunggu data...</span>
+            <span id="display-updater" class="tarif-updater">...</span>
             <button class="btn-change" onclick="openModal()">Ubah Tarif</button>
         </div>
     </div>
-    
     <div class="menu-grid" id="tarif-grid-container"></div>
 
     <div id="tarifModal" class="modal">
         <div class="modal-content">
-            <h3>Update Tarif</h3>
-            
+            <h3>Update Tarif Database</h3>
             <div class="input-group">
                 <label>Harga Baru (Rp/kWh)</label>
-                <input type="number" step="0.01" id="input-tarif" class="input-rp" placeholder="Contoh: 996.74">
-                <small style="color:#888; font-size:0.8em;">Gunakan titik (.) untuk desimal</small>
+                <input type="number" step="0.01" id="input-tarif" class="input-rp" placeholder="Contoh: 1445">
             </div>
-
             <div class="input-group">
                 <label>Nama Anda</label>
                 <input type="text" id="input-name" class="input-rp" placeholder="Nama Anda">
             </div>
-
-            <button class="btn-save" onclick="publishNewTariff()">SIMPAN & SEBARKAN</button>
+            <button class="btn-save" onclick="saveTarifToDB()">SIMPAN PERMANEN</button>
             <button onclick="closeModal()" style="background:none; border:none; color:#888; margin-top:15px; cursor:pointer; width:100%;">Batal</button>
         </div>
     </div>
 
 <script>
+    // --- 1. KONFIGURASI SUPABASE (WAJIB DIISI) ---
+    const SUPABASE_URL = "https://xxxxxxxx.supabase.co"; // GANTI INI
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."; // GANTI INI
+
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // MQTT Config
     const MQTT_HOST = "701d32236feb43b38c22855a611f4d42.s1.eu.hivemq.cloud";
     const MQTT_PORT = 8884;
     const MQTT_USER = "web_dashboard";
     const MQTT_PASS = "Tristan12";
-    const TOPIC_TARIF = "politeknik/setting/tarif_v2"; 
-    
+    const TOPIC_TARIF = "politeknik/setting/tarif_v2";
     let mqttClient;
-    // PERBAIKAN 2: Menggunakan Float untuk desimal
-    let globalTarif = parseFloat(localStorage.getItem('global_tarif_val')) || 1445.00;
-    let lastUpdater = localStorage.getItem('global_tarif_user') || "System";
+    let globalTarif = 1445.00;
+    let lastUpdater = "-";
 
     if (localStorage.getItem('theme') === 'dark') document.body.setAttribute('data-theme', 'dark');
 
-    window.onload = function() {
-        updateDisplayUI(globalTarif, lastUpdater);
+    window.onload = async function() {
         renderGrid();
+        await loadTarifFromDB();
         connectMqtt();
+    }
+
+    async function loadTarifFromDB() {
+        document.getElementById('db-status').textContent = "🟠";
+        const { data, error } = await supabase.from('settings').select('*').eq('id', 1).single();
+        if (data) {
+            globalTarif = data.tarif_value;
+            lastUpdater = data.updated_by;
+            updateDisplayUI(globalTarif, lastUpdater);
+            document.getElementById('db-status').textContent = "🟢";
+        }
+    }
+
+    async function saveTarifToDB() {
+        let rawPrice = document.getElementById('input-tarif').value.replace(',', '.');
+        let price = parseFloat(rawPrice);
+        let name = document.getElementById('input-name').value;
+        if(!price || price <= 0 || !name) { alert("Isi data dengan benar!"); return; }
+
+        const btn = document.querySelector('.btn-save');
+        btn.textContent = "Menyimpan..."; btn.disabled = true;
+
+        const { error } = await supabase.from('settings').update({ tarif_value: price, updated_by: name }).eq('id', 1);
+
+        if (!error) {
+            publishUpdateSignal(price, name);
+            globalTarif = price;
+            lastUpdater = name;
+            updateDisplayUI(globalTarif, lastUpdater);
+            closeModal();
+            btn.textContent = "SIMPAN PERMANEN"; btn.disabled = false;
+            alert("Berhasil disimpan ke Database!");
+        } else {
+            alert("Gagal menyimpan!");
+            btn.disabled = false;
+        }
+    }
+
+    function updateDisplayUI(price, user) {
+        let formatted = parseFloat(price).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+        document.getElementById('display-tarif').textContent = `Rp ${formatted} / kWh`;
+        document.getElementById('display-updater').textContent = `Diupdate oleh: ${user}`;
     }
 
     function renderGrid() {
@@ -96,64 +137,18 @@
         container.innerHTML = html;
     }
 
-    function updateDisplayUI(price, user) {
-        // PERBAIKAN 3: Tampilkan desimal (maksimal 2 angka belakang koma)
-        let formatted = parseFloat(price).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-        document.getElementById('display-tarif').textContent = `Rp ${formatted} / kWh`;
-        document.getElementById('display-updater').textContent = `Diupdate oleh: ${user}`;
-    }
-
     function connectMqtt() {
-        mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_tarif_adm_" + Date.now());
-        mqttClient.onConnectionLost = () => { document.getElementById('mqtt-status').textContent = "🔴"; setTimeout(connectMqtt, 5000); };
-        mqttClient.onMessageArrived = (m) => {
-            try {
-                const d = JSON.parse(m.payloadString);
-                if(d.price && d.by) {
-                    // PERBAIKAN 4: Parse sebagai Float
-                    globalTarif = parseFloat(d.price);
-                    lastUpdater = d.by;
-                    
-                    localStorage.setItem('global_tarif_val', globalTarif);
-                    localStorage.setItem('global_tarif_user', lastUpdater);
-                    
-                    updateDisplayUI(globalTarif, lastUpdater);
-                }
-            } catch(e) { console.log("Format data lama", e); }
-        };
-        mqttClient.connect({
-            useSSL: true, userName: MQTT_USER, password: MQTT_PASS,
-            onSuccess: () => {
-                document.getElementById('mqtt-status').textContent = "🟢";
-                mqttClient.subscribe(TOPIC_TARIF);
-            }
-        });
+        mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_tarif_db_" + Date.now());
+        mqttClient.onMessageArrived = () => { loadTarifFromDB(); };
+        mqttClient.connect({ useSSL: true, userName: MQTT_USER, password: MQTT_PASS, onSuccess: () => mqttClient.subscribe(TOPIC_TARIF) });
     }
 
-    function publishNewTariff() {
-        // PERBAIKAN 5: Ambil value, ganti koma jadi titik (jika user salah ketik)
-        let rawPrice = document.getElementById('input-tarif').value;
-        let name = document.getElementById('input-name').value;
-
-        // Jaga-jaga user ngetik koma
-        rawPrice = rawPrice.replace(',', '.');
-        let price = parseFloat(rawPrice);
-
-        if(!price || price <= 0) { alert("Isi harga dengan benar (gunakan titik untuk desimal)!"); return; }
-        if(!name || name.trim() === "") { alert("Isi nama Anda!"); return; }
-
-        const payload = JSON.stringify({
-            price: price, // Kirim sebagai angka/float
-            by: name,
-            time: new Date().toISOString()
-        });
-
+    function publishUpdateSignal(price, name) {
+        const payload = JSON.stringify({ price: price, by: name, time: new Date().toISOString() });
         let message = new Paho.MQTT.Message(payload);
         message.destinationName = TOPIC_TARIF;
-        message.retained = true; 
+        message.retained = true;
         mqttClient.send(message);
-        
-        closeModal();
     }
 
     function openModal() { document.getElementById('input-tarif').value = globalTarif; document.getElementById('tarifModal').classList.add('show'); }
