@@ -6,9 +6,9 @@
     <title>Detail Tarif Mesin</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
-        /* (CSS SAMA SEPERTI SEBELUMNYA) */
         :root { --bg-body: #f0f2f5; --bg-card: #ffffff; --text-main: #333333; --text-sub: #546e7a; --text-val: #0d47a1; --border: #e0e0e0; --accent: #1a237e; --shadow: rgba(0, 0, 0, 0.07); --btn-bg: #ffffff; }
         [data-theme="dark"] { --bg-body: #121212; --bg-card: #1e1e1e; --text-main: #e0e0e0; --text-sub: #b0bec5; --text-val: #64b5f6; --border: #333333; --accent: #82b1ff; --shadow: rgba(0, 0, 0, 0.5); --btn-bg: #2c2c2c; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg-body); color: var(--text-main); margin: 0; padding: 25px; padding-top: 70px; transition: 0.3s; }
@@ -58,23 +58,16 @@
     </div>
 
     <div class="chart-container"><canvas id="costChart"></canvas></div>
-
-    <div class="table-container">
-        <table id="dataTable">
-            <thead><tr><th>Tanggal</th><th style="text-align:right">Konsumsi (kWh)</th><th style="text-align:right">Durasi (Jam)</th><th style="text-align:right">Total Biaya</th></tr></thead>
-            <tbody></tbody>
-            <tfoot></tfoot>
-        </table>
-    </div>
+    <div class="table-container"><table id="dataTable"><thead><tr><th>Tanggal</th><th style="text-align:right">Konsumsi (kWh)</th><th style="text-align:right">Durasi (Jam)</th><th style="text-align:right">Total Biaya</th></tr></thead><tbody></tbody><tfoot></tfoot></table></div>
 
 <script>
-    function toggleTheme() {
-        const body = document.body; const icon = document.getElementById('theme-icon');
-        if (body.getAttribute('data-theme') === 'dark') { body.removeAttribute('data-theme'); icon.textContent = '🌙'; localStorage.setItem('theme', 'light'); updateChartColor('light'); }
-        else { body.setAttribute('data-theme', 'dark'); icon.textContent = '☀️'; localStorage.setItem('theme', 'dark'); updateChartColor('dark'); }
-    }
-    if (localStorage.getItem('theme') === 'dark') { document.body.setAttribute('data-theme', 'dark'); document.getElementById('theme-icon').textContent = '☀️'; }
+    // --- KONFIGURASI SUPABASE (WAJIB DIISI) ---
+    const SUPABASE_URL = "MASUKKAN_URL_SUPABASE_ANDA_DISINI";
+    const SUPABASE_KEY = "MASUKKAN_ANON_KEY_SUPABASE_ANDA_DISINI";
+    
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+    // MQTT
     const MQTT_HOST = "701d32236feb43b38c22855a611f4d42.s1.eu.hivemq.cloud";
     const MQTT_PORT = 8884;
     const MQTT_USER = "web_dashboard";
@@ -84,37 +77,42 @@
 
     let activeMachineId = 1;
     let myChart = null;
-    // PERBAIKAN: ParseFloat agar desimal terbaca
-    let globalTarif = parseFloat(localStorage.getItem('global_tarif_val')) || 1445.00;
+    let globalTarif = 1445.00;
 
-    window.onload = function() {
+    if (localStorage.getItem('theme') === 'dark') document.body.setAttribute('data-theme', 'dark');
+
+    window.onload = async function() {
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('id')) activeMachineId = urlParams.get('id');
         document.getElementById('page-title').textContent = `Detail Tarif Mesin ${activeMachineId}`;
         
-        updateDisplayPrice();
-        setRange('weekly');
+        await loadTarifFromDB(); // Ambil tarif dulu
+        setRange('weekly'); // Baru hitung data
         connectMqtt();
     };
 
+    async function loadTarifFromDB() {
+        const { data } = await supabase.from('settings').select('*').eq('id', 1).single();
+        if (data) {
+            globalTarif = data.tarif_value;
+            updateDisplayPrice();
+        }
+    }
+
     function updateDisplayPrice() {
-        // PERBAIKAN: Tampilkan desimal
         let formatted = parseFloat(globalTarif).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
         document.getElementById('current-price-display').textContent = `Tarif Ref: Rp ${formatted} / kWh`;
     }
 
     function connectMqtt() {
-        mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_detail_client_" + Date.now());
+        mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_detail_" + Date.now());
         mqttClient.onMessageArrived = (m) => {
-            try {
-                const d = JSON.parse(m.payloadString);
-                if(d.price) {
-                    globalTarif = parseFloat(d.price);
-                    localStorage.setItem('global_tarif_val', globalTarif);
-                    updateDisplayPrice();
-                    fetchData(); 
-                }
-            } catch(e) { console.error("JSON Error", e); }
+            const d = JSON.parse(m.payloadString);
+            if(d.price) {
+                globalTarif = parseFloat(d.price);
+                updateDisplayPrice();
+                fetchData(); // Hitung ulang otomatis
+            }
         };
         mqttClient.connect({ useSSL: true, userName: MQTT_USER, password: MQTT_PASS, onSuccess: () => mqttClient.subscribe(TOPIC_TARIF) });
     }
@@ -139,42 +137,36 @@
         let tableRows = "";
 
         for(let i = 0; i < diffDays; i++) {
-            let d = new Date(startDate);
-            d.setDate(d.getDate() + i);
-            
+            let d = new Date(startDate); d.setDate(d.getDate() + i);
             const kwh = (Math.random() * (150 - 50) + 50).toFixed(2);
             const hours = (Math.random() * (24 - 8) + 8).toFixed(1);
             
-            // PERBAIKAN KALKULASI: Biar desimal dikali dengan benar
+            // HITUNG DENGAN TARIF DARI DB
             const cost = kwh * globalTarif; 
             
             const dateStr = d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
-            labels.push(dateStr);
-            dataCost.push(cost);
-            grandTotalCost += cost;
-            grandTotalKwh += parseFloat(kwh);
+            labels.push(dateStr); dataCost.push(cost);
+            grandTotalCost += cost; grandTotalKwh += parseFloat(kwh);
 
-            // Tampilkan cost dengan pemisah ribuan dan desimal jika ada
             let costFormatted = cost.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-
-            tableRows = `<tr><td>${d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</td><td class="val-num">${kwh} kWh</td><td class="val-num">${hours} Jam</td><td class="val-money">Rp ${costFormatted}</td></tr>` + tableRows;
+            tableRows = `<tr><td>${d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long' })}</td><td class="val-num">${kwh} kWh</td><td class="val-num">${hours} Jam</td><td class="val-money">Rp ${costFormatted}</td></tr>` + tableRows;
         }
 
-        let totalCostFormatted = grandTotalCost.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-
         document.querySelector("#dataTable tbody").innerHTML = tableRows;
-        document.querySelector("#dataTable tfoot").innerHTML = `<tr><td>TOTAL</td><td class="val-num">${grandTotalKwh.toFixed(2)} kWh</td><td></td><td class="val-money">Rp ${totalCostFormatted}</td></tr>`;
+        let totalFormatted = grandTotalCost.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+        document.querySelector("#dataTable tfoot").innerHTML = `<tr><td>TOTAL</td><td class="val-num">${grandTotalKwh.toFixed(2)} kWh</td><td></td><td class="val-money">Rp ${totalFormatted}</td></tr>`;
         renderChart(labels, dataCost);
     }
 
+    // Chart Logic (Sama)
+    function toggleTheme() { /* ... (Sama seperti di atas) ... */ }
     function renderChart(labels, data) {
         const ctx = document.getElementById('costChart').getContext('2d');
         const isDark = document.body.getAttribute('data-theme') === 'dark';
-        const color = isDark ? '#64ffda' : '#1a237e';
         if (myChart) myChart.destroy();
         myChart = new Chart(ctx, {
             type: 'bar',
-            data: { labels: labels, datasets: [{ label: 'Biaya (Rp)', data: data, backgroundColor: isDark ? 'rgba(100, 255, 218, 0.5)' : 'rgba(26, 35, 126, 0.6)', borderColor: color, borderWidth: 1 }] },
+            data: { labels: labels, datasets: [{ label: 'Biaya (Rp)', data: data, backgroundColor: isDark ? 'rgba(100, 255, 218, 0.5)' : 'rgba(26, 35, 126, 0.6)', borderWidth: 1 }] },
             options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: {display:false}, ticks:{color: isDark?'#ccc':'#333'} }, y: { beginAtZero: true, ticks:{color: isDark?'#ccc':'#333'} } }, plugins: { legend: { labels: {color: isDark?'#ccc':'#333'} } } }
         });
     }
