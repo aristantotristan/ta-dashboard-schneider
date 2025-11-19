@@ -2,26 +2,33 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Maintenance Log</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* TEMA (Sama) */
+        /* TEMA */
         :root { --bg: #f0f2f5; --card: #fff; --text: #333; --red: #c62828; --green: #2e7d32; }
         [data-theme="dark"] { --bg: #0a192f; --card: #172a45; --text: #e0e0e0; }
         
-        body { font-family: sans-serif; background: var(--bg); color: var(--text); padding: 20px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); padding: 20px; transition: 0.3s; }
         .container { max-width: 1000px; margin: 0 auto; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap:10px;}
         .btn-back { background: #78909c; color: white; padding: 10px 20px; text-decoration: none; border-radius: 8px; font-weight: bold; }
+        .btn-refresh { background: #0d47a1; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
         
         .log-card { background: var(--card); border-radius: 12px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         table { width: 100%; border-collapse: collapse; }
         th, td { padding: 15px; text-align: left; border-bottom: 1px solid #ccc; }
-        th { background: rgba(0,0,0,0.05); }
+        th { background: rgba(0,0,0,0.05); font-weight: bold; }
         
         .badge { padding: 5px 10px; border-radius: 4px; color: white; font-size: 0.8em; font-weight: bold; }
-        .badge-timeout { background: var(--red); }
-        .badge-recovery { background: var(--green); }
+        .badge-TIMEOUT { background: var(--red); }
+        .badge-RECOVERY { background: var(--green); }
+        
+        @media (max-width: 600px) {
+            th, td { padding: 10px; font-size: 0.9em; }
+            h1 { font-size: 1.5em; }
+        }
     </style>
 </head>
 <body>
@@ -29,8 +36,8 @@
 <div class="container">
     <div class="header">
         <a href="menu.html" class="btn-back">&#8592; Menu Utama</a>
-        <h1>Maintenance Log (System Error)</h1>
-        <button onclick="fetchLogs()" style="padding:10px; cursor:pointer;">🔄 Refresh</button>
+        <h1 style="margin:0;">Maintenance Log</h1>
+        <button onclick="fetchLogs()" class="btn-refresh">🔄 Refresh Data</button>
     </div>
 
     <div class="log-card">
@@ -44,17 +51,19 @@
                 </tr>
             </thead>
             <tbody>
-                <tr><td colspan="4" style="text-align:center;">Memuat data...</td></tr>
+                <tr><td colspan="4" style="text-align:center; padding:30px;">Menghubungkan ke Database...</td></tr>
             </tbody>
         </table>
     </div>
 </div>
 
 <script>
-    // CONFIG SUPABASE (SAMA)
-    const SUPABASE_URL = "MASUKKAN_URL_SUPABASE_ANDA";
-    const SUPABASE_KEY = "MASUKKAN_ANON_KEY_SUPABASE_ANDA";
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    // --- 1. KONFIGURASI SUPABASE (WAJIB DIISI!) ---
+    const SUPABASE_URL = "https://khevzqqtswbdatbkkmme.supabase.co"; 
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtoZXZ6cXF0c3diZGF0YmtrbW1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1MTY4MDgsImV4cCI6MjA3OTA5MjgwOH0.N28mnbk8tTAJkm47DS2pzvsHHChlyCovT6vi2Z4aqHc"; 
+    
+    // Inisialisasi Client (PERBAIKAN NAMA VARIABEL)
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     // Cek Tema
     if (localStorage.getItem('theme') === 'dark') document.body.setAttribute('data-theme', 'dark');
@@ -63,40 +72,52 @@
 
     async function fetchLogs() {
         const tbody = document.querySelector("#log-table tbody");
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Loading...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">Sedang memuat data...</td></tr>';
 
-        // Ambil 50 log terakhir
-        const { data, error } = await supabase
-            .from('system_logs')
-            .select('*')
-            .order('created_at', { ascending: false })
-            .limit(50);
+        try {
+            // Ambil 50 log terakhir dari tabel 'system_logs'
+            const { data, error } = await supabaseClient
+                .from('system_logs')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(50);
 
-        if (error) {
-            tbody.innerHTML = `<tr><td colspan="4" style="color:red;">Error: ${error.message}</td></tr>`;
-            return;
+            if (error) {
+                console.error("Supabase Error:", error);
+                tbody.innerHTML = `<tr><td colspan="4" style="color:red; text-align:center;">Gagal mengambil data: ${error.message}</td></tr>`;
+                return;
+            }
+
+            if (!data || data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:30px; color:green;">✅ Sistem Sehat! Tidak ada log error yang tercatat.</td></tr>`;
+                return;
+            }
+
+            let html = "";
+            data.forEach(row => {
+                // Format Waktu
+                const time = new Date(row.created_at).toLocaleString('id-ID', {
+                    day: 'numeric', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit'
+                });
+                
+                // Badge Warna
+                const badgeClass = row.event_type === 'TIMEOUT' ? 'badge-TIMEOUT' : 'badge-RECOVERY';
+                
+                html += `
+                    <tr>
+                        <td>${time}</td>
+                        <td style="font-weight:bold;">Mesin ${row.machine_id}</td>
+                        <td><span class="badge ${badgeClass}">${row.event_type}</span></td>
+                        <td>${row.description}</td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+
+        } catch (err) {
+            console.error("System Error:", err);
+            tbody.innerHTML = `<tr><td colspan="4" style="color:red; text-align:center;">Terjadi kesalahan sistem. Cek Console.</td></tr>`;
         }
-
-        if (data.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;">Sistem Sehat! Tidak ada log error.</td></tr>`;
-            return;
-        }
-
-        let html = "";
-        data.forEach(row => {
-            const time = new Date(row.created_at).toLocaleString('id-ID');
-            const badgeClass = row.event_type === 'TIMEOUT' ? 'badge-timeout' : 'badge-recovery';
-            
-            html += `
-                <tr>
-                    <td>${time}</td>
-                    <td style="font-weight:bold;">Mesin ${row.machine_id}</td>
-                    <td><span class="badge ${badgeClass}">${row.event_type}</span></td>
-                    <td>${row.description}</td>
-                </tr>
-            `;
-        });
-        tbody.innerHTML = html;
     }
 </script>
 
