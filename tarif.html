@@ -1,74 +1,10 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pilih Mesin (Tarif)</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-    <style>
-        :root { --bg-body: #f0f2f5; --text-main: #0d47a1; --card-bg: #ffffff; --card-text: #455a64; --border-top: #b0bec5; --overlay: rgba(0,0,0,0.5); --accent: #1a237e; --btn-text: #fff; }
-        [data-theme="dark"] { --bg-body: #0a192f; --text-main: #64ffda; --card-bg: #172a45; --card-text: #8892b0; --border-top: #303C55; --overlay: rgba(0,0,0,0.8); --accent: #64ffda; --btn-text: #0a192f; }
-        body, html { height: 100%; margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg-body); color: var(--text-main); padding: 20px; box-sizing: border-box; transition: 0.3s; }
-        .header-area { text-align: center; margin-top: 40px; margin-bottom: 30px; }
-        h2 { margin: 0 0 10px 0; font-size: 2em; }
-        .tarif-info-card { background: var(--card-bg); padding: 20px 30px; border-radius: 20px; display: inline-flex; flex-direction: column; align-items: center; gap: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border: 1px solid var(--text-main); min-width: 300px; }
-        .tarif-value { font-size: 1.5em; font-weight: bold; color: var(--text-main); }
-        .tarif-updater { font-size: 0.8em; color: var(--card-text); font-style: italic; }
-        .btn-change { background: var(--text-main); color: var(--bg-body); border: none; padding: 8px 20px; border-radius: 20px; cursor: pointer; font-weight: bold; margin-top: 5px; }
-        .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; max-width: 1400px; margin: 30px auto 0 auto; }
-        .menu-card { display: block; background: var(--card-bg); padding: 20px 15px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; font-size: 1.1em; font-weight: 600; color: var(--card-text); border-top: 5px solid var(--border-top); cursor: pointer; text-decoration: none; transition: all 0.2s ease; }
-        .menu-card:hover { transform: translateY(-5px); border-top-color: var(--text-main); }
-        .back-button { display: inline-block; position: absolute; top: 20px; left: 20px; background: #78909c; color: white; padding: 10px 15px; border-radius: 8px; text-decoration: none; font-weight: 600; }
-        .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: var(--overlay); align-items: center; justify-content: center; }
-        .modal.show { display: flex; animation: fadeIn 0.3s; }
-        .modal-content { background-color: var(--card-bg); padding: 30px; border-radius: 12px; width: 300px; text-align: left; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
-        .modal-content h3 { margin-top: 0; color: var(--card-text); text-align: center; }
-        .input-group { margin-bottom: 15px; }
-        .input-group label { display: block; font-size: 0.85em; margin-bottom: 5px; color: var(--card-text); }
-        .input-rp { width: 100%; padding: 10px; font-size: 1.1em; border-radius: 8px; border: 1px solid #ccc; box-sizing: border-box; }
-        .btn-save { background: var(--accent); color: var(--btn-text); border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; }
-        @keyframes fadeIn { from {opacity: 0;} to {opacity: 1;} }
-    </style>
-</head>
-<body>
-    <a href="menu.html" class="back-button">&#8592; Kembali</a>
-    <div class="header-area">
-        <h2>Pilih Mesin (Tarif)</h2>
-        <div class="tarif-info-card">
-            <div style="display:flex; align-items:center; gap:5px;">
-                <span id="db-status" style="font-size:0.6em;">🟠</span>
-                <span id="display-tarif" class="tarif-value">Loading...</span>
-            </div>
-            <span id="display-updater" class="tarif-updater">...</span>
-            <button class="btn-change" onclick="openModal()">Ubah Tarif</button>
-        </div>
-    </div>
-    <div class="menu-grid" id="tarif-grid-container"></div>
-
-    <div id="tarifModal" class="modal">
-        <div class="modal-content">
-            <h3>Update Tarif Database</h3>
-            <div class="input-group">
-                <label>Harga Baru (Rp/kWh)</label>
-                <input type="number" step="0.01" id="input-tarif" class="input-rp" placeholder="Contoh: 1445">
-            </div>
-            <div class="input-group">
-                <label>Nama Anda</label>
-                <input type="text" id="input-name" class="input-rp" placeholder="Nama Anda">
-            </div>
-            <button class="btn-save" onclick="saveTarifToDB()">SIMPAN PERMANEN</button>
-            <button onclick="closeModal()" style="background:none; border:none; color:#888; margin-top:15px; cursor:pointer; width:100%;">Batal</button>
-        </div>
-    </div>
-
 <script>
-    // --- 1. KONFIGURASI SUPABASE (WAJIB DIISI) ---
-    const SUPABASE_URL = "https://khevzqqtswbdatbkkmme.supabase.co"; // GANTI INI
-    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtoZXZ6cXF0c3diZGF0YmtrbW1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1MTY4MDgsImV4cCI6MjA3OTA5MjgwOH0.N28mnbk8tTAJkm47DS2pzvsHHChlyCovT6vi2Z4aqHc"; // GANTI INI
+    // --- 1. KONFIGURASI SUPABASE ---
+    const SUPABASE_URL = "https://khevzqqtswbdatbkkmme.supabase.co"; 
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtoZXZ6cXF0c3diZGF0YmtrbW1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1MTY4MDgsImV4cCI6MjA3OTA5MjgwOH0.N28mnbk8tTAJkm47DS2pzvsHHChlyCovT6vi2Z4aqHc"; 
 
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    // PERBAIKAN DISINI: Ganti nama variabel jadi 'supabaseClient'
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     // MQTT Config
     const MQTT_HOST = "701d32236feb43b38c22855a611f4d42.s1.eu.hivemq.cloud";
@@ -83,19 +19,24 @@
     if (localStorage.getItem('theme') === 'dark') document.body.setAttribute('data-theme', 'dark');
 
     window.onload = async function() {
-        renderGrid();
-        await loadTarifFromDB();
+        renderGrid(); // Render Grid Dulu
+        await loadTarifFromDB(); // Baru ambil data
         connectMqtt();
     }
 
     async function loadTarifFromDB() {
         document.getElementById('db-status').textContent = "🟠";
-        const { data, error } = await supabase.from('settings').select('*').eq('id', 1).single();
+        // Panggil pakai nama baru 'supabaseClient'
+        const { data, error } = await supabaseClient.from('settings').select('*').eq('id', 1).single();
+        
         if (data) {
             globalTarif = data.tarif_value;
             lastUpdater = data.updated_by;
             updateDisplayUI(globalTarif, lastUpdater);
             document.getElementById('db-status').textContent = "🟢";
+        } else if (error) {
+            console.error("Error DB:", error);
+            document.getElementById('db-status').textContent = "🔴";
         }
     }
 
@@ -108,7 +49,8 @@
         const btn = document.querySelector('.btn-save');
         btn.textContent = "Menyimpan..."; btn.disabled = true;
 
-        const { error } = await supabase.from('settings').update({ tarif_value: price, updated_by: name }).eq('id', 1);
+        // Panggil pakai nama baru 'supabaseClient'
+        const { error } = await supabaseClient.from('settings').update({ tarif_value: price, updated_by: name }).eq('id', 1);
 
         if (!error) {
             publishUpdateSignal(price, name);
@@ -119,8 +61,8 @@
             btn.textContent = "SIMPAN PERMANEN"; btn.disabled = false;
             alert("Berhasil disimpan ke Database!");
         } else {
-            alert("Gagal menyimpan!");
-            btn.disabled = false;
+            alert("Gagal menyimpan: " + error.message);
+            btn.textContent = "SIMPAN PERMANEN"; btn.disabled = false;
         }
     }
 
@@ -154,5 +96,3 @@
     function openModal() { document.getElementById('input-tarif').value = globalTarif; document.getElementById('tarifModal').classList.add('show'); }
     function closeModal() { document.getElementById('tarifModal').classList.remove('show'); }
 </script>
-</body>
-</html>
