@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Energy Dashboard (Pro + Log)</title>
+    <title>Energy Dashboard (Final Pro)</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
-        /* --- TEMA (Konsisten dengan file lain) --- */
+        /* --- TEMA --- */
         :root { 
             --bg-body: #f0f2f5; --bg-card: #ffffff; --text-main: #333333; 
             --text-sub: #546e7a; --text-value: #0d47a1; --border-card: #e0e0e0; 
@@ -94,9 +94,7 @@
 <body>
     
     <div id="status" class="bg-wait">Menghubungkan ke MQTT...</div>
-    
     <div id="toast-container"></div>
-
     <button class="theme-switch" onclick="toggleTheme()" title="Ganti Tema"><span id="theme-icon">🌙</span></button>
 
     <div id="view-grid" class="view-section active">
@@ -119,51 +117,22 @@
             </div>
         </div>
         <div class="dashboard-grid">
-            <div class="card">
-                <h3>Energi Total</h3>
-                <div class="data-point"><span class="label">1. Total EA Import</span><div><span class="value" id="val-total-ea">-</span><span class="unit">kWh</span></div></div>
-                <div class="data-point"><span class="label">2. Total ER Import</span><div><span class="value" id="val-total-er">-</span><span class="unit">kVARh</span></div></div>
-            </div>
-            <div class="card">
-                <h3>Energi Parsial</h3>
-                <div class="data-point"><span class="label">3. Partial Active E</span><div><span class="value" id="val-part-e">-</span><span class="unit">kWh</span></div></div>
-                <div class="data-point"><span class="label">4. Partial Reactive E</span><div><span class="value" id="val-part-r">-</span><span class="unit">kVARh</span></div></div>
-            </div>
-            <div class="card">
-                <h3>Listrik Dasar</h3>
-                <div class="dual-group">
-                    <div class="data-point"><span class="label">V (Volt)</span><div><span class="value" id="val-v">-</span><span class="unit">V</span></div></div>
-                    <div class="data-point"><span class="label">I (Ampere)</span><div><span class="value" id="val-i">-</span><span class="unit">A</span></div></div>
-                    <div class="data-point"><span class="label">Power Factor</span><div><span class="value" id="val-pf">-</span><span class="unit"></span></div></div>
-                    <div class="data-point"><span class="label">Frequency</span><div><span class="value" id="val-hz">-</span><span class="unit">Hz</span></div></div>
-                </div>
-            </div>
-            <div class="card">
-                <h3>Daya</h3>
-                <div class="power-group">
-                    <div class="data-point"><span class="label">P (Active)</span><div><span class="value" id="val-p">-</span><span class="unit">W</span></div></div>
-                    <div class="data-point"><span class="label">Q (Reactive)</span><div><span class="value" id="val-q">-</span><span class="unit">VAR</span></div></div>
-                    <div class="data-point"><span class="label">S (Apparent)</span><div><span class="value" id="val-s">-</span><span class="unit">kVA</span></div></div>
-                </div>
-            </div>
-            <div class="card">
-                <h3>Waktu Operasi</h3>
-                <div class="dual-group">
-                    <div class="data-point"><span class="label">Hari</span><div><span class="value" id="val-op-days">-</span><span class="unit">d</span></div></div>
-                    <div class="data-point"><span class="label">Jam</span><div><span class="value" id="val-op-hrs">-</span><span class="unit">h</span></div></div>
-                </div>
-            </div>
-            <div class="card">
-                <h3>Tariff</h3>
-                <div class="data-point"><span class="label">Status Tarif</span><div><span class="value" id="val-tariff">-</span><span class="unit"></span></div></div>
-            </div>
+            <div class="card"><h3>Energi Total</h3><div class="data-point"><span class="label">1. Total EA Import</span><div><span class="value" id="val-total-ea">-</span><span class="unit">kWh</span></div></div><div class="data-point"><span class="label">2. Total ER Import</span><div><span class="value" id="val-total-er">-</span><span class="unit">kVARh</span></div></div></div>
+            <div class="card"><h3>Energi Parsial</h3><div class="data-point"><span class="label">3. Partial Active E</span><div><span class="value" id="val-part-e">-</span><span class="unit">kWh</span></div></div><div class="data-point"><span class="label">4. Partial Reactive E</span><div><span class="value" id="val-part-r">-</span><span class="unit">kVARh</span></div></div></div>
+            <div class="card"><h3>Listrik Dasar</h3><div class="dual-group"><div class="data-point"><span class="label">V (Volt)</span><div><span class="value" id="val-v">-</span><span class="unit">V</span></div></div><div class="data-point"><span class="label">I (Ampere)</span><div><span class="value" id="val-i">-</span><span class="unit">A</span></div></div><div class="data-point"><span class="label">Power Factor</span><div><span class="value" id="val-pf">-</span><span class="unit"></span></div></div><div class="data-point"><span class="label">Frequency</span><div><span class="value" id="val-hz">-</span><span class="unit">Hz</span></div></div></div></div>
+            <div class="card"><h3>Daya</h3><div class="power-group"><div class="data-point"><span class="label">P (Active)</span><div><span class="value" id="val-p">-</span><span class="unit">W</span></div></div><div class="data-point"><span class="label">Q (Reactive)</span><div><span class="value" id="val-q">-</span><span class="unit">VAR</span></div></div><div class="data-point"><span class="label">S (Apparent)</span><div><span class="value" id="val-s">-</span><span class="unit">kVA</span></div></div></div></div>
+            <div class="card"><h3>Waktu Operasi</h3><div class="dual-group"><div class="data-point"><span class="label">Hari</span><div><span class="value" id="val-op-days">-</span><span class="unit">d</span></div></div><div class="data-point"><span class="label">Jam</span><div><span class="value" id="val-op-hrs">-</span><span class="unit">h</span></div></div></div></div>
+            <div class="card"><h3>Tariff</h3><div class="data-point"><span class="label">Status Tarif</span><div><span class="value" id="val-tariff">-</span><span class="unit"></span></div></div></div>
         </div>
     </div>
 
 <script>
-// --- CONFIG: WAJIB DIISI ---
-const SUPABASE_URL = "https://khevzqqtswbdatbkkmme.supabase.co"; // << GANTI DENGAN URL SUPABASE ANDA
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtoZXZ6cXF0c3diZGF0YmtrbW1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1MTY4MDgsImV4cCI6MjA3OTA5MjgwOH0.N28mnbk8tTAJkm47DS2pzvsHHChlyCovT6vi2Z4aqHc"; // << GANTI DENGAN KEY SUPABASE ANDA
+// --- CONFIG SUPABASE ANDA ---
+const SUPABASE_URL = "https://khevzqqtswbdatbkkmme.supabase.co"; 
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtoZXZ6cXF0c3diZGF0YmtrbW1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1MTY4MDgsImV4cCI6MjA3OTA5MjgwOH0.N28mnbk8tTAJkm47DS2pzvsHHChlyCovT6vi2Z4aqHc"; 
+
+// Inisialisasi Client
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // --- CONFIG MQTT ---
 const MQTT_HOST = "701d32236feb43b38c22855a611f4d42.s1.eu.hivemq.cloud";
@@ -173,16 +142,14 @@ const MQTT_PASS = "Tristan12";
 const MQTT_TOPIC_DATA = "politeknik/meter/data";
 const MQTT_TOPIC_TARIF = "politeknik/setting/tarif_v2";
 
-// --- CONFIG WATCHDOG (10 MENIT) ---
-const WATCHDOG_TIMEOUT = 180000; // 3 Menit (untuk trial)
+// WATCHDOG (3 Menit = 180000 ms)
+const WATCHDOG_TIMEOUT = 180000; 
+// DB THROTTLE (30 Detik sekali update 'last_seen')
+const DB_UPDATE_INTERVAL = 30000; 
 
-// --- VARIABLES ---
-let activeMachineId = 1; 
-let mqttClient; 
-let latestDataCache = {}; 
-let lastUpdateTimes = {}; 
-let hasReportedError = {};
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let activeMachineId = 1; let mqttClient; 
+let latestDataCache = {}; let lastUpdateTimes = {}; let hasReportedError = {};
+let lastDBUpdate = {}; // Menyimpan waktu terakhir update ke DB
 
 const fmt = (val, dig) => (val != null && !isNaN(val)) ? Number(val).toFixed(dig) : "-";
 function setStatus(msg, cls) { const s = document.getElementById("status"); if (s) { s.textContent = msg; s.className = cls; } }
@@ -198,8 +165,7 @@ if (localStorage.getItem('theme') === 'dark') { document.body.setAttribute('data
 // --- NOTIFIKASI ---
 function showNotification(price, user, timeISO) {
     const container = document.getElementById('toast-container');
-    const toast = document.createElement('div');
-    toast.className = 'toast';
+    const toast = document.createElement('div'); toast.className = 'toast';
     const formattedPrice = parseFloat(price).toLocaleString('id-ID', {minimumFractionDigits: 0, maximumFractionDigits: 2});
     let timeDisplay = timeISO ? new Date(timeISO).toLocaleString('id-ID', { hour:'2-digit', minute:'2-digit' }) : "Baru saja";
     toast.innerHTML = `<span style="font-size:1.5em;">⚙️</span><div style="flex-grow:1;"><div style="font-weight:bold; color:#ffb74d;">Update Tarif</div><div style="font-weight:bold;">Rp ${formattedPrice} / kWh</div><div style="font-size:0.8em; color:#ccc;">${user} - ${timeDisplay}</div></div>`;
@@ -212,7 +178,7 @@ function showGrid() { document.getElementById('view-detail').classList.remove('a
 function showDetail(id) { activeMachineId = parseInt(id); document.getElementById("machineSelector").value = activeMachineId; document.getElementById('page-title').textContent = `Energy Dashboard - Mesin ${activeMachineId}`; document.getElementById('view-grid').classList.remove('active'); document.getElementById('view-detail').classList.add('active'); refreshDetailView(); }
 function switchMachine(id) { activeMachineId = parseInt(id); document.getElementById('page-title').textContent = `Energy Dashboard - Mesin ${activeMachineId}`; refreshDetailView(); }
 
-// --- LOGIKA UPDATE UI ---
+// --- UPDATE UI ---
 function updateGridCard(id, isOnline) {
     const card = document.getElementById(`grid-card-${id}`); const badge = document.getElementById(`grid-badge-${id}`);
     if (card && badge) { 
@@ -220,69 +186,55 @@ function updateGridCard(id, isOnline) {
         else { card.classList.remove("online"); badge.textContent = "OFFLINE"; } 
     }
 }
-
 function refreshDetailView() {
     const d = latestDataCache[activeMachineId];
     const now = Date.now();
-    // Cek watchdog: Jika data ada DAN belum kadaluarsa
     if (d && lastUpdateTimes[activeMachineId] && (now - lastUpdateTimes[activeMachineId] < WATCHDOG_TIMEOUT)) {
         d.status === "offline" ? setMeterZero() : setMeterOnline(d);
-    } else { 
-        setMeterZero(); 
-    }
+    } else { setMeterZero(); }
 }
-
 function setMeterOnline(d) {
-    document.getElementById('val-total-ea').textContent = fmt(d.e, 2); 
-    document.getElementById('val-total-er').textContent = fmt(d.q_tot, 2);
-    document.getElementById('val-part-e').textContent = fmt(d.e_part, 2); 
-    document.getElementById('val-part-r').textContent = fmt(d.q_part, 2);
-    document.getElementById('val-tariff').textContent = d.tariff || "T1"; 
-    document.getElementById('val-v').textContent = fmt(d.v, 1);
-    document.getElementById('val-i').textContent = fmt(d.i, 3); 
-    document.getElementById('val-p').textContent = fmt(d.p, 0);
-    document.getElementById('val-q').textContent = fmt(d.q, 0); 
-    document.getElementById('val-s').textContent = fmt(d.s, 2);
-    document.getElementById('val-pf').textContent = fmt(d.pf, 2); 
-    document.getElementById('val-hz').textContent = fmt(d.hz, 1);
-    const days = d.op_time ? Math.floor(d.op_time / 24) : "0"; 
-    const hours = d.op_time ? (d.op_time % 24).toFixed(1) : "0";
-    document.getElementById(`val-op-days`).textContent = days; 
-    document.getElementById(`val-op-hrs`).textContent = hours;
+    document.getElementById('val-total-ea').textContent = fmt(d.e, 2); document.getElementById('val-total-er').textContent = fmt(d.q_tot, 2);
+    document.getElementById('val-part-e').textContent = fmt(d.e_part, 2); document.getElementById('val-part-r').textContent = fmt(d.q_part, 2);
+    document.getElementById('val-tariff').textContent = d.tariff || "T1"; document.getElementById('val-v').textContent = fmt(d.v, 1);
+    document.getElementById('val-i').textContent = fmt(d.i, 3); document.getElementById('val-p').textContent = fmt(d.p, 0);
+    document.getElementById('val-q').textContent = fmt(d.q, 0); document.getElementById('val-s').textContent = fmt(d.s, 2);
+    document.getElementById('val-pf').textContent = fmt(d.pf, 2); document.getElementById('val-hz').textContent = fmt(d.hz, 1);
+    const days = d.op_time ? Math.floor(d.op_time / 24) : "0"; const hours = d.op_time ? (d.op_time % 24).toFixed(1) : "0";
+    document.getElementById(`val-op-days`).textContent = days; document.getElementById(`val-op-hrs`).textContent = hours;
 }
-
 function setMeterZero() {
     const ids = ['total-ea', 'total-er', 'part-e', 'part-r', 'v', 'i', 'p', 'q', 's', 'pf', 'hz', 'op-days', 'op-hrs'];
     ids.forEach(id => { document.getElementById(`val-${id}`).textContent = "0"; });
     document.getElementById('val-tariff').textContent = "-";
 }
 
-// --- LOGGING ERROR (SUPABASE) ---
+// --- DB FUNCTIONS ---
+async function updateHeartbeatDB(id) {
+    const now = Date.now();
+    // Cek agar tidak spam DB terlalu sering (Throttling)
+    if (!lastDBUpdate[id] || (now - lastDBUpdate[id] > DB_UPDATE_INTERVAL)) {
+        await supabaseClient.from('machine_status').update({ last_seen: new Date().toISOString() }).eq('machine_id', id);
+        lastDBUpdate[id] = now;
+    }
+}
+
 async function logErrorToDB(machineId, type, desc) {
     const { error } = await supabaseClient.from('system_logs').insert({ machine_id: machineId, event_type: type, description: desc });
     if(error) console.error("Gagal lapor error:", error);
 }
 
-// --- WATCHDOG LOOP ---
 function checkWatchdog() {
     const now = Date.now();
     for (let i = 1; i <= 18; i++) {
         const lastTime = lastUpdateTimes[i] || 0;
         const diff = now - lastTime;
-        
-        // Jika timeout > Batas (3 Menit) dan belum dilaporkan
         if (lastTime > 0 && diff > WATCHDOG_TIMEOUT && !hasReportedError[i]) {
-            const timeStr = new Date().toLocaleString('id-ID', {
-                weekday: 'long', day: 'numeric', month: 'short', year: 'numeric',
-                hour: '2-digit', minute: '2-digit'
-            });
-            
-            logErrorToDB(i, "TIMEOUT", `Lost Connection (> 3 Menit). Terdeteksi: ${timeStr}`);
-            hasReportedError[i] = true; // Tandai sudah lapor
-            
-            updateGridCard(i, false); // Ubah UI jadi Offline
-            
-            if (i === activeMachineId) setMeterZero(); // Jika sedang dilihat, nolkan
+            const timeStr = new Date().toLocaleString('id-ID', { hour: '2-digit', minute: '2-digit' });
+            logErrorToDB(i, "TIMEOUT", `Lost Connection (> 3 Menit). Web detect: ${timeStr}`);
+            hasReportedError[i] = true; 
+            updateGridCard(i, false);
+            if (i === activeMachineId) setMeterZero();
         }
     }
 }
@@ -292,53 +244,36 @@ function startConnection() {
     setStatus("Menghubungkan...", "bg-wait");
     mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_dash_" + Date.now());
     mqttClient.onConnectionLost = (r) => { if (r.errorCode !== 0) { setStatus("⚠️ Putus. Reconnecting...", "bg-wait"); setTimeout(startConnection, 5000); } };
-    
     mqttClient.onMessageArrived = (m) => {
         try {
-            // 1. Notifikasi Tarif
             if (m.destinationName === MQTT_TOPIC_TARIF) {
                 const t = JSON.parse(m.payloadString);
                 if (t.price && t.by) showNotification(t.price, t.by, t.time);
                 return;
             }
-            
-            // 2. Data Meter
             const d = JSON.parse(m.payloadString);
-            if (d.id_mesin) d.id = d.id_mesin; 
             if (!d.id) return;
             
             latestDataCache[d.id] = d;
             lastUpdateTimes[d.id] = Date.now();
-            
-            // Reset Error jika kembali online
+
+            // [FITUR PENTING] Update Absen ke Database
+            updateHeartbeatDB(d.id); 
+
             if (hasReportedError[d.id]) { 
                 const timeStr = new Date().toLocaleString('id-ID', { hour: '2-digit', minute: '2-digit' });
                 logErrorToDB(d.id, "RECOVERY", `Koneksi kembali normal pada ${timeStr}`); 
                 hasReportedError[d.id] = false; 
             }
-
             updateGridCard(d.id, true);
-            
-            // Update detail view jika sedang dibuka
             if (d.id === activeMachineId && document.getElementById('view-detail').classList.contains('active')) {
-                if (d.status === "offline") setMeterZero(); else setMeterOnline(d);
+                d.status === "offline" ? setMeterZero() : setMeterOnline(d);
             }
-        } catch (e) { console.error("JSON Error", e); }
+        } catch (e) { console.error(e); }
     };
-
-    mqttClient.connect({ 
-        useSSL: true, userName: MQTT_USER, password: MQTT_PASS, 
-        onSuccess: () => { 
-            setStatus("ONLINE", "bg-ok"); 
-            mqttClient.subscribe(MQTT_TOPIC_DATA); 
-            mqttClient.subscribe(MQTT_TOPIC_TARIF); 
-            setTimeout(() => { document.getElementById("status").style.top = "-50px"; }, 3000);
-        }, 
-        onFailure: (e) => { setStatus("Gagal: " + e.errorMessage, "bg-err"); setTimeout(startConnection, 5000); } 
-    });
+    mqttClient.connect({ useSSL: true, userName: MQTT_USER, password: MQTT_PASS, onSuccess: () => { setStatus("ONLINE", "bg-ok"); mqttClient.subscribe(MQTT_TOPIC_DATA); mqttClient.subscribe(MQTT_TOPIC_TARIF); setTimeout(() => { document.getElementById("status").style.top = "-50px"; }, 3000); }, onFailure: (e) => { setStatus("Gagal: " + e.errorMessage, "bg-err"); setTimeout(startConnection, 5000); } });
 }
 
-// --- INIT ---
 window.onload = function() {
     const gridContainer = document.getElementById("machine-grid");
     const selectContainer = document.getElementById("machineSelector");
@@ -348,17 +283,8 @@ window.onload = function() {
         let option = document.createElement("option"); option.value = i; option.text = "Mesin " + i; selectContainer.appendChild(option);
     }
     gridContainer.innerHTML = gridHtml;
-    
     startConnection();
-    
-    // Watchdog cek setiap 5 detik
-    setInterval(checkWatchdog, 5000); 
-    
-    // Heartbeat ke Database (Lapor "Saya Hidup" tiap 1 menit)
-    // Ini opsional, tapi bagus untuk monitoring jangka panjang
-    setInterval(() => {
-        // (Kode updateHeartbeatDB bisa ditambahkan di sini jika diperlukan)
-    }, 60000);
+    setInterval(checkWatchdog, 5000);
 }
 </script>
 </body>
