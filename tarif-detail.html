@@ -4,81 +4,158 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Detail Tarif Mesin</title>
-    <style>
-        /* --- TEMA --- */
-        :root {
-            --bg: #f0f2f5; --text: #333; --accent: #0d47a1; 
-            --card: #fff; --border: #ccc; --th-bg: #f9f9f9;
-        }
-        [data-theme="dark"] {
-            --bg: #0a192f; --text: #e6f1ff; --accent: #64ffda; 
-            --card: #172a45; --border: #303C55; --th-bg: #112240;
-        }
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg); color: var(--text); padding: 25px; transition: 0.3s; }
-        .back-button { display: inline-block; position: absolute; top: 25px; left: 25px; background: #78909c; color: white; padding: 10px 15px; border-radius: 8px; text-decoration: none; font-weight: 600; }
-        
-        h2 { text-align: center; color: var(--accent); font-size: 1.8em; margin-top: 50px; margin-bottom: 30px; }
-        
-        .data-card { background: var(--card); border-radius: 12px; overflow: hidden; max-width: 1200px; margin: 0 auto; border: 1px solid var(--border); }
-        .data-table { width: 100%; border-collapse: collapse; color: var(--text); }
-        .data-table th { text-align: left; padding: 12px 20px; border-bottom: 2px solid var(--border); background-color: var(--th-bg); color: var(--accent); }
-        .data-table td { padding: 12px 20px; border-bottom: 1px solid var(--border); }
-        .data-table .val { text-align: right; font-weight: 600; }
-        
-        .tarif-controls { background: var(--card); padding: 20px; border-radius: 12px; margin-bottom: 20px; max-width: 1200px; margin: 20px auto; color: var(--text); }
+    <style>
+        /* (CSS SAMA PERSIS SEPERTI SEBELUMNYA - Saya singkat biar ringkas) */
+        :root { --bg-body: #f0f2f5; --bg-card: #ffffff; --text-main: #333333; --text-sub: #546e7a; --accent: #1a237e; --shadow: rgba(0, 0, 0, 0.07); --btn-bg: #ffffff; }
+        [data-theme="dark"] { --bg-body: #121212; --bg-card: #1e1e1e; --text-main: #e0e0e0; --text-sub: #b0bec5; --accent: #82b1ff; --shadow: rgba(0, 0, 0, 0.5); --btn-bg: #2c2c2c; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg-body); color: var(--text-main); margin: 0; padding: 25px; padding-top: 70px; transition: 0.3s; }
+        .header-container { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .back-button { background: #78909c; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: 600; }
+        h1 { margin: 0; font-size: 2em; color: var(--accent); }
+        h2 { margin: 5px 0 0 0; font-size: 1em; font-weight: 400; color: var(--text-sub); }
+        .theme-switch { position: fixed; top: 15px; right: 20px; z-index: 1000; background: var(--bg-card); border-radius: 50%; width: 45px; height: 45px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2em; box-shadow: 0 4px 10px var(--shadow); color: var(--text-main); border: 1px solid var(--text-sub); }
+        .controls-card { background: var(--bg-card); padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px var(--shadow); margin-bottom: 25px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
+        input[type="date"] { padding: 10px; border-radius: 8px; border: 1px solid #ccc; background: var(--bg-body); color: var(--text-main); }
+        .btn-action { padding: 10px 20px; border-radius: 8px; border: none; background: var(--accent); color: white; font-weight: 600; cursor: pointer; }
+        .btn-filter { padding: 8px 15px; border-radius: 6px; border: 1px solid #ccc; background: var(--btn-bg); color: var(--text-main); cursor: pointer; }
+        .chart-container { background: var(--bg-card); padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px var(--shadow); margin-bottom: 25px; height: 350px; position: relative; }
+        .table-container { background: var(--bg-card); border-radius: 12px; box-shadow: 0 4px 12px var(--shadow); overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; padding: 15px 20px; border-bottom: 2px solid #ccc; }
+        td { padding: 15px 20px; border-bottom: 1px solid #eee; }
+        .val-money { font-weight: 700; color: #43a047; text-align: right; }
+        .val-num { text-align: right; font-family: 'Consolas', monospace; }
+        tfoot td { font-weight: bold; border-top: 2px solid #ccc; }
+        @media (max-width: 768px) { .controls-card { flex-direction: column; align-items: stretch; } }
     </style>
 </head>
 <body>
-    
-    <a href="tarif.html" class="back-button">&#8592; Kembali</a>
-    <h2 id="tarif-detail-title">Detail Tarif Mesin...</h2>
-    
-    <div class="tarif-controls">
-        <label>Rentang Waktu: </label>
-        <button onclick="setTarifRange('daily')">Hari Ini</button>
-        <button onclick="setTarifRange('weekly')">Minggu Ini</button>
-        <button onclick="fetchTarifData()">Refresh Data</button>
-        <input type="hidden" id="tarif-datepicker-start"><input type="hidden" id="tarif-datepicker-end">
+
+    <button class="theme-switch" onclick="toggleTheme()"><span id="theme-icon">🌙</span></button>
+
+    <div class="header-container">
+        <a href="tarif.html" class="back-button">&#8592; Pilih Mesin</a>
+        <div style="text-align: right;">
+            <h1 id="page-title">Detail Tarif Mesin 1</h1>
+            <h2 id="current-price-display">Tarif Aktif: ...</h2>
+        </div>
     </div>
-    
-    <div id="tarif-loading" style="text-align:center; display:none;">Memuat data...</div>
-    <div class="data-card">
-        <table class="data-table" id="tarif-data-table"></table>
+
+    <div class="controls-card">
+        <div style="flex-grow: 1; display: flex; gap: 10px; flex-wrap: wrap;">
+            <div><span style="display:block; font-size:0.8em; color:var(--text-sub); margin-bottom:5px;">Dari:</span><input type="date" id="date-start"></div>
+            <div><span style="display:block; font-size:0.8em; color:var(--text-sub); margin-bottom:5px;">Sampai:</span><input type="date" id="date-end"></div>
+            <div style="display:flex; align-items:flex-end;"><button class="btn-action" onclick="fetchData()">Tampilkan</button></div>
+        </div>
+        <div style="display:flex; gap:5px; align-items:flex-end; flex-wrap: wrap;">
+            <button class="btn-filter" onclick="setRange('daily')">Hari Ini</button>
+            <button class="btn-filter" onclick="setRange('weekly')">7 Hari</button>
+            <button class="btn-filter" onclick="setRange('monthly')">30 Hari</button>
+        </div>
+    </div>
+
+    <div class="chart-container"><canvas id="costChart"></canvas></div>
+
+    <div class="table-container">
+        <table id="dataTable">
+            <thead><tr><th>Tanggal</th><th style="text-align:right">Konsumsi (kWh)</th><th style="text-align:right">Durasi (Jam)</th><th style="text-align:right">Total Biaya</th></tr></thead>
+            <tbody></tbody>
+            <tfoot></tfoot>
+        </table>
     </div>
 
 <script>
-    // CEK TEMA
-    if (localStorage.getItem('theme') === 'dark') document.body.setAttribute('data-theme', 'dark');
+    // --- TEMA ---
+    function toggleTheme() {
+        const body = document.body; const icon = document.getElementById('theme-icon');
+        if (body.getAttribute('data-theme') === 'dark') { body.removeAttribute('data-theme'); icon.textContent = '🌙'; localStorage.setItem('theme', 'light'); updateChartColor('light'); } 
+        else { body.setAttribute('data-theme', 'dark'); icon.textContent = '☀️'; localStorage.setItem('theme', 'dark'); updateChartColor('dark'); }
+    }
+    if (localStorage.getItem('theme') === 'dark') { document.body.setAttribute('data-theme', 'dark'); document.getElementById('theme-icon').textContent = '☀️'; }
 
-    // ... (LOGIKA JS LAINNYA SAMA SEPERTI SEBELUMNYA) ...
-    // Saya singkat untuk fokus ke tema, tapi pastikan logika fetchTarifData() dari kode sebelumnya tetap ada
+    // --- LOGIKA HITUNGAN ---
     let activeMachineId = 1;
-    const fmt_rp = (val) => 'Rp ' + Number(val).toLocaleString('id-ID');
-    const rand = (min, max) => (Math.random() * (max - min) + min).toFixed(0);
+    let myChart = null;
+    
+    // 1. AMBIL TARIF DARI MEMORI GLOBAL (Inilah kuncinya)
+    // Jika tidak ada (belum pernah diset), pakai default 1445
+    let globalTarif = localStorage.getItem('global_tarif_reference') || 1445;
 
     window.onload = function() {
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('id')) activeMachineId = urlParams.get('id');
-        document.getElementById("tarif-detail-title").textContent = `Detail Tarif Mesin ${activeMachineId}`;
-        setTarifRange('weekly');
-        fetchTarifData();
+        
+        document.getElementById('page-title').textContent = `Detail Tarif Mesin ${activeMachineId}`;
+        
+        // Tampilkan tarif yang dipakai
+        document.getElementById('current-price-display').textContent = `Tarif Referensi: Rp ${parseInt(globalTarif).toLocaleString('id-ID')} / kWh`;
+        
+        setRange('weekly');
     };
 
-    window.setTarifRange = (range) => { /* Logika tanggal sama */ };
-
-    window.fetchTarifData = async () => {
-        const table = document.getElementById("tarif-data-table");
-        // ... (Generate dummy data seperti sebelumnya) ...
-        // Contoh output singkat:
-        let html = `<thead><tr><th>Tanggal</th><th class="val">Biaya</th><th class="val">kWh</th></tr></thead><tbody>`;
-        for(let i=0; i<5; i++) {
-            html += `<tr><td>2023-11-${18-i}</td><td class="val">${fmt_rp(rand(50000,100000))}</td><td class="val">${rand(50,100)}</td></tr>`;
-        }
-        html += `</tbody>`;
-        table.innerHTML = html;
+    function setRange(type) {
+        const end = new Date(); const start = new Date();
+        if (type === 'daily') start.setDate(end.getDate());
+        if (type === 'weekly') start.setDate(end.getDate() - 6);
+        if (type === 'monthly') start.setDate(end.getDate() - 29);
+        document.getElementById('date-start').valueAsDate = start;
+        document.getElementById('date-end').valueAsDate = end;
+        fetchData();
     }
-</script>
 
+    function fetchData() {
+        const startDate = new Date(document.getElementById('date-start').value);
+        const endDate = new Date(document.getElementById('date-end').value);
+        const diffTime = Math.abs(endDate - startDate);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+        let labels = [], dataCost = [], grandTotalCost = 0, grandTotalKwh = 0;
+        let tableRows = "";
+
+        for(let i = 0; i < diffDays; i++) {
+            let d = new Date(startDate);
+            d.setDate(d.getDate() + i);
+            
+            const kwh = (Math.random() * (150 - 50) + 50).toFixed(2);
+            const hours = (Math.random() * (24 - 8) + 8).toFixed(1);
+            
+            // KALKULASI: kWh * TARIF GLOBAL
+            const cost = Math.round(kwh * globalTarif);
+            
+            const dateStr = d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+            labels.push(dateStr);
+            dataCost.push(cost);
+            grandTotalCost += cost;
+            grandTotalKwh += parseFloat(kwh);
+
+            tableRows = `<tr>
+                <td>${d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</td>
+                <td class="val-num">${kwh} kWh</td>
+                <td class="val-num">${hours} Jam</td>
+                <td class="val-money">Rp ${cost.toLocaleString('id-ID')}</td>
+            </tr>` + tableRows;
+        }
+
+        document.querySelector("#dataTable tbody").innerHTML = tableRows;
+        document.querySelector("#dataTable tfoot").innerHTML = `<tr><td>TOTAL</td><td class="val-num">${grandTotalKwh.toFixed(2)} kWh</td><td></td><td class="val-money">Rp ${grandTotalCost.toLocaleString('id-ID')}</td></tr>`;
+
+        renderChart(labels, dataCost);
+    }
+
+    function renderChart(labels, data) {
+        const ctx = document.getElementById('costChart').getContext('2d');
+        const isDark = document.body.getAttribute('data-theme') === 'dark';
+        const color = isDark ? '#64ffda' : '#1a237e';
+        if (myChart) myChart.destroy();
+        myChart = new Chart(ctx, {
+            type: 'bar',
+            data: { labels: labels, datasets: [{ label: 'Biaya (Rp)', data: data, backgroundColor: isDark ? 'rgba(100, 255, 218, 0.5)' : 'rgba(26, 35, 126, 0.6)', borderColor: color, borderWidth: 1 }] },
+            options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: {display:false}, ticks:{color: isDark?'#ccc':'#333'} }, y: { beginAtZero: true, ticks:{color: isDark?'#ccc':'#333'} } }, plugins: { legend: { labels: {color: isDark?'#ccc':'#333'} } } }
+        });
+    }
+    function updateChartColor() { if(myChart) fetchData(); }
+</script>
 </body>
 </html>
