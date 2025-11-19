@@ -8,7 +8,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
 
     <style>
-        /* (CSS SAMA - Saya singkat) */
+        /* (CSS SAMA SEPERTI SEBELUMNYA) */
         :root { --bg-body: #f0f2f5; --bg-card: #ffffff; --text-main: #333333; --text-sub: #546e7a; --text-val: #0d47a1; --border: #e0e0e0; --accent: #1a237e; --shadow: rgba(0, 0, 0, 0.07); --btn-bg: #ffffff; }
         [data-theme="dark"] { --bg-body: #121212; --bg-card: #1e1e1e; --text-main: #e0e0e0; --text-sub: #b0bec5; --text-val: #64b5f6; --border: #333333; --accent: #82b1ff; --shadow: rgba(0, 0, 0, 0.5); --btn-bg: #2c2c2c; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg-body); color: var(--text-main); margin: 0; padding: 25px; padding-top: 70px; transition: 0.3s; }
@@ -68,7 +68,6 @@
     </div>
 
 <script>
-    // --- TEMA ---
     function toggleTheme() {
         const body = document.body; const icon = document.getElementById('theme-icon');
         if (body.getAttribute('data-theme') === 'dark') { body.removeAttribute('data-theme'); icon.textContent = '🌙'; localStorage.setItem('theme', 'light'); updateChartColor('light'); }
@@ -76,18 +75,17 @@
     }
     if (localStorage.getItem('theme') === 'dark') { document.body.setAttribute('data-theme', 'dark'); document.getElementById('theme-icon').textContent = '☀️'; }
 
-    // --- MQTT CONFIG ---
     const MQTT_HOST = "701d32236feb43b38c22855a611f4d42.s1.eu.hivemq.cloud";
     const MQTT_PORT = 8884;
     const MQTT_USER = "web_dashboard";
     const MQTT_PASS = "Tristan12";
-    const TOPIC_TARIF = "politeknik/setting/tarif_v2"; // Topik baru
+    const TOPIC_TARIF = "politeknik/setting/tarif_v2";
     let mqttClient;
 
-    // --- LOGIKA ---
     let activeMachineId = 1;
     let myChart = null;
-    let globalTarif = localStorage.getItem('global_tarif_val') || 1445;
+    // PERBAIKAN: ParseFloat agar desimal terbaca
+    let globalTarif = parseFloat(localStorage.getItem('global_tarif_val')) || 1445.00;
 
     window.onload = function() {
         const urlParams = new URLSearchParams(window.location.search);
@@ -100,29 +98,27 @@
     };
 
     function updateDisplayPrice() {
-        document.getElementById('current-price-display').textContent = `Tarif Ref: Rp ${parseInt(globalTarif).toLocaleString('id-ID')} / kWh`;
+        // PERBAIKAN: Tampilkan desimal
+        let formatted = parseFloat(globalTarif).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+        document.getElementById('current-price-display').textContent = `Tarif Ref: Rp ${formatted} / kWh`;
     }
 
-    // --- MQTT CONNECT ---
     function connectMqtt() {
         mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_detail_client_" + Date.now());
         mqttClient.onMessageArrived = (m) => {
             try {
-                // Terima JSON
                 const d = JSON.parse(m.payloadString);
                 if(d.price) {
-                    globalTarif = d.price;
+                    globalTarif = parseFloat(d.price);
                     localStorage.setItem('global_tarif_val', globalTarif);
-                    // Tampilkan notifikasi kecil di judul?
                     updateDisplayPrice();
-                    fetchData(); // Hitung ulang otomatis!
+                    fetchData(); 
                 }
             } catch(e) { console.error("JSON Error", e); }
         };
         mqttClient.connect({ useSSL: true, userName: MQTT_USER, password: MQTT_PASS, onSuccess: () => mqttClient.subscribe(TOPIC_TARIF) });
     }
 
-    // --- DATA & GRAFIK (Logic sama, hanya variabel tarif ikut globalTarif) ---
     function setRange(type) {
         const end = new Date(); const start = new Date();
         if (type === 'daily') start.setDate(end.getDate());
@@ -149,8 +145,8 @@
             const kwh = (Math.random() * (150 - 50) + 50).toFixed(2);
             const hours = (Math.random() * (24 - 8) + 8).toFixed(1);
             
-            // PAKE TARIF DARI MQTT/LOKAL
-            const cost = Math.round(kwh * globalTarif);
+            // PERBAIKAN KALKULASI: Biar desimal dikali dengan benar
+            const cost = kwh * globalTarif; 
             
             const dateStr = d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
             labels.push(dateStr);
@@ -158,11 +154,16 @@
             grandTotalCost += cost;
             grandTotalKwh += parseFloat(kwh);
 
-            tableRows = `<tr><td>${d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</td><td class="val-num">${kwh} kWh</td><td class="val-num">${hours} Jam</td><td class="val-money">Rp ${cost.toLocaleString('id-ID')}</td></tr>` + tableRows;
+            // Tampilkan cost dengan pemisah ribuan dan desimal jika ada
+            let costFormatted = cost.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+
+            tableRows = `<tr><td>${d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</td><td class="val-num">${kwh} kWh</td><td class="val-num">${hours} Jam</td><td class="val-money">Rp ${costFormatted}</td></tr>` + tableRows;
         }
 
+        let totalCostFormatted = grandTotalCost.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+
         document.querySelector("#dataTable tbody").innerHTML = tableRows;
-        document.querySelector("#dataTable tfoot").innerHTML = `<tr><td>TOTAL</td><td class="val-num">${grandTotalKwh.toFixed(2)} kWh</td><td></td><td class="val-money">Rp ${grandTotalCost.toLocaleString('id-ID')}</td></tr>`;
+        document.querySelector("#dataTable tfoot").innerHTML = `<tr><td>TOTAL</td><td class="val-num">${grandTotalKwh.toFixed(2)} kWh</td><td></td><td class="val-money">Rp ${totalCostFormatted}</td></tr>`;
         renderChart(labels, dataCost);
     }
 
