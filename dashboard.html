@@ -3,170 +3,64 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Energy Dashboard (Final v50)</title>
-    
+    <title>Energy Dashboard (3-Phase)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
     <style>
-        :root { --bg-body: #f0f2f5; --bg-card: #ffffff; --text-main: #333333; --text-sub: #546e7a; --text-value: #0d47a1; --border-card: #e0e0e0; --accent: #1a237e; --nav-bg: #ffffff; }
-        [data-theme="dark"] { --bg-body: #121212; --bg-card: #1e1e1e; --text-main: #e0e0e0; --text-sub: #b0bec5; --text-value: #64b5f6; --border-card: #333333; --accent: #82b1ff; --nav-bg: #2c2c2c; }
+        /* Paste CSS dashboard sebelumnya disini agar tidak kepanjangan */
+        /* Intinya CSS Dark Mode, Grid, Card, dll */
+        :root { --bg-body: #f0f2f5; --bg-card: #ffffff; --text-main: #333333; --text-sub: #546e7a; --text-value: #0d47a1; --border-card: #e0e0e0; --accent: #1a237e; --shadow: rgba(0, 0, 0, 0.07); --nav-bg: #ffffff; }
+        [data-theme="dark"] { --bg-body: #121212; --bg-card: #1e1e1e; --text-main: #e0e0e0; --text-sub: #b0bec5; --text-value: #64b5f6; --border-card: #333333; --accent: #82b1ff; --shadow: rgba(0, 0, 0, 0.5); --nav-bg: #2c2c2c; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg-body); color: var(--text-main); margin: 0; padding: 25px; padding-top: 70px; transition: 0.3s; }
-        .card { background: var(--bg-card); border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
-        .data-point { margin-bottom: 15px; }
-        .value { font-size: 2em; font-weight: bold; color: var(--text-value); }
-        .label { font-size: 0.9em; color: var(--text-sub); display: block; }
-        .header-container { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .back-button { background: #78909c; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; }
-        .machine-select { padding: 10px; border-radius: 8px; border: 2px solid var(--accent); }
-        .phase-box { display: flex; justify-content: space-between; background: rgba(0,0,0,0.03); padding: 10px; border-radius: 8px; margin-top: 5px; }
-        .phase-item { text-align: center; } .phase-val { font-weight: bold; color: var(--text-value); }
-        /* Toast & Status */
-        #status { position: fixed; top: 0; left: 0; width: 100%; text-align: center; padding: 10px; color: white; font-weight: bold; z-index: 100; transition: 0.5s; }
-        .bg-ok { background: #2e7d32; } .bg-wait { background: #f57c00; } .bg-err { background: #c62828; }
-        /* Menu Grid */
-        .view-section { display: none; } .view-section.active { display: block; }
-        .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; }
-        .menu-card { background: var(--bg-card); padding: 20px; text-align: center; border-radius: 12px; cursor: pointer; border-top: 5px solid #ccc; }
-        .menu-card.online { border-top-color: #2e7d32; }
+        /* ... (Lanjutkan CSS lainnya) ... */
     </style>
 </head>
 <body>
+    <div id="status" class="bg-wait">Menghubungkan...</div>
+    <script>
+// CONFIG SUPABASE & MQTT SAMA
+const SUPABASE_URL = "https://khevzqqtswbdatbkkmme.supabase.co"; 
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtoZXZ6cXF0c3diZGF0YmtrbW1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1MTY4MDgsImV4cCI6MjA3OTA5MjgwOH0.N28mnbk8tTAJkm47DS2pzvsHHChlyCovT6vi2Z4aqHc";
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-<div id="status" class="bg-wait">Connecting...</div>
-
-<div id="view-grid" class="view-section active">
-    <div style="max-width:1200px; margin:0 auto;">
-        <a href="menu.html" class="back-button">&#8592; Menu</a>
-        <h1 style="text-align:center; color:var(--accent);">Pilih Mesin</h1>
-        <div class="menu-grid" id="machine-grid"></div>
-    </div>
-</div>
-
-<div id="view-detail" class="view-section">
-    <div class="header-container">
-        <div style="display:flex; gap:10px;">
-            <button onclick="showGrid()" class="back-button">&#8592; Back</button>
-            <select id="machineSelector" class="machine-select" onchange="switchMachine(this.value)"></select>
-        </div>
-        <h1 id="page-title" style="margin:0; font-size:1.5em;">Mesin 1</h1>
-    </div>
-
-    <div class="dashboard-grid">
-        <div class="card">
-            <div class="data-point"><span class="label">Total EA Import</span><span class="value" id="val-e">-</span> kWh</div>
-            <div class="data-point"><span class="label">Total ER Import</span><span class="value" id="val-q_tot">-</span> kVARh</div>
-        </div>
-        <div class="card">
-            <div class="data-point"><span class="label">Voltage (Avg)</span><span class="value" id="val-v">-</span> V</div>
-            <div class="data-point"><span class="label">Current (Avg)</span><span class="value" id="val-i">-</span> A</div>
-            <div class="phase-box">
-                <div class="phase-item"><span>R</span><br><span class="phase-val" id="val-i1">-</span></div>
-                <div class="phase-item"><span>S</span><br><span class="phase-val" id="val-i2">-</span></div>
-                <div class="phase-item"><span>T</span><br><span class="phase-val" id="val-i3">-</span></div>
-            </div>
-        </div>
-        <div class="card">
-            <div class="data-point"><span class="label">Active Power</span><span class="value" id="val-p">-</span> W</div>
-            <div class="data-point"><span class="label">Power Factor</span><span class="value" id="val-pf">-</span></div>
-            <div class="data-point"><span class="label">Frequency</span><span class="value" id="val-hz">-</span> Hz</div>
-        </div>
-        <div class="card">
-            <div class="data-point"><span class="label">Op Time</span><span class="value" id="val-op">-</span> Hours</div>
-        </div>
-    </div>
-</div>
-
-<script>
 const MQTT_HOST = "701d32236feb43b38c22855a611f4d42.s1.eu.hivemq.cloud";
 const MQTT_PORT = 8884;
 const MQTT_USER = "web_dashboard";
 const MQTT_PASS = "Tristan12";
-const TOPIC = "politeknik/meter/data";
-const WATCHDOG_TIMEOUT = 300000; // 5 Menit
+const MQTT_TOPIC_DATA = "politeknik/meter/data";
+const WATCHDOG_TIMEOUT = 180000; 
 
-let activeId = 1;
-let lastUpdate = {};
-let client;
+// ... (VARIABLE DAN FUNGSI LAIN SAMA) ...
 
-function fmt(v, d) { return (v != null && !isNaN(v)) ? Number(v).toFixed(d) : "-"; }
-
-function showGrid() { document.getElementById('view-detail').classList.remove('active'); document.getElementById('view-grid').classList.add('active'); }
-function switchMachine(id) { activeId = parseInt(id); document.getElementById('page-title').textContent = "Mesin " + id; showDetail(); }
-function showDetail(id) { 
-    if(id) activeId = id; 
-    document.getElementById('view-grid').classList.remove('active'); 
-    document.getElementById('view-detail').classList.add('active'); 
-    document.getElementById("machineSelector").value = activeId;
-    updateUI(activeId);
-}
-
-function updateUI(id) {
-    // Cek Watchdog
-    const now = Date.now();
-    if (!lastUpdate[id] || (now - lastUpdate[id].time > WATCHDOG_TIMEOUT)) {
-        // Offline -> Zero
-        document.getElementById('val-e').textContent = "-";
-        document.getElementById('val-v').textContent = "0";
-        return;
-    }
+// FUNGSI UPDATE NILAI (PENTING: Sesuai JSON v51)
+function setMeterOnline(d) {
+    // ENERGI
+    document.getElementById('val-total-ea').textContent = fmt(d.e, 2); 
+    document.getElementById('val-total-er').textContent = fmt(d.q_tot, 2);
+    document.getElementById('val-part-e').textContent = fmt(d.e_part, 2); 
+    document.getElementById('val-part-r').textContent = fmt(d.q_part, 2);
     
-    const d = lastUpdate[id].data;
-    document.getElementById('val-e').textContent = fmt(d.e, 2);
-    document.getElementById('val-q_tot').textContent = fmt(d.q_tot, 2);
+    // LISTRIK
     document.getElementById('val-v').textContent = fmt(d.v, 1);
-    document.getElementById('val-i').textContent = fmt(d.i, 2);
+    document.getElementById('val-i').textContent = fmt(d.i, 2); // Avg
+    
+    // 3 FASA
     document.getElementById('val-i1').textContent = fmt(d.i1, 1);
     document.getElementById('val-i2').textContent = fmt(d.i2, 1);
     document.getElementById('val-i3').textContent = fmt(d.i3, 1);
+
     document.getElementById('val-p').textContent = fmt(d.p, 0);
-    document.getElementById('val-pf').textContent = fmt(d.pf, 2);
+    document.getElementById('val-q').textContent = fmt(d.q, 0); 
+    document.getElementById('val-s').textContent = fmt(d.s, 0); // kVA -> VA
+    document.getElementById('val-pf').textContent = fmt(d.pf, 3); 
     document.getElementById('val-hz').textContent = fmt(d.hz, 1);
-    document.getElementById('val-op').textContent = fmt(d.op_time, 1);
+    
+    // OPSI WAKTU
+    document.getElementById(`val-op-days`).textContent = Math.floor(d.op_time / 24); 
+    document.getElementById(`val-op-hrs`).textContent = (d.op_time % 24).toFixed(1);
 }
 
-function startMQTT() {
-    client = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_" + Date.now());
-    client.onConnectionLost = () => { document.getElementById('status').className = 'bg-err'; setTimeout(startMQTT, 5000); };
-    client.onMessageArrived = (m) => {
-        try {
-            const d = JSON.parse(m.payloadString);
-            if (!d.id) return;
-            
-            // Update Cache
-            lastUpdate[d.id] = { time: Date.now(), data: d };
-            
-            // Update Grid Badge
-            const card = document.getElementById(`card-${d.id}`);
-            if (card) {
-                if(d.status === "online") card.classList.add("online");
-                else card.classList.remove("online");
-            }
-
-            // Update Detail View
-            if (activeId == d.id) updateUI(d.id);
-            
-        } catch(e) {}
-    };
-    client.connect({ useSSL: true, userName: MQTT_USER, password: MQTT_PASS, onSuccess: () => { 
-        document.getElementById('status').className = 'bg-ok'; 
-        document.getElementById('status').innerText = "ONLINE";
-        setTimeout(()=>document.getElementById('status').style.top="-50px", 2000);
-        client.subscribe(TOPIC); 
-    }});
-}
-
-window.onload = () => {
-    const grid = document.getElementById('machine-grid');
-    const sel = document.getElementById('machineSelector');
-    for(let i=1; i<=18; i++) {
-        grid.innerHTML += `<div class="menu-card" id="card-${i}" onclick="showDetail(${i})">Mesin ${i}</div>`;
-        sel.innerHTML += `<option value="${i}">Mesin ${i}</option>`;
-    }
-    startMQTT();
-    setInterval(() => { if(document.getElementById('view-detail').classList.contains('active')) updateUI(activeId); }, 5000);
-};
+// ... (SISA LOGIKA MQTT DAN WATCHDOG SAMA PERSIS SEPERTI SEBELUMNYA) ...
 </script>
 </body>
 </html>
