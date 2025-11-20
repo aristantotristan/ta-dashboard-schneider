@@ -9,7 +9,7 @@
 
     <style>
         /* TEMA */
-        :root { --bg: #f0f2f5; --card: #fff; --text: #333; --red: #c62828; --green: #2e7d32; --blue: #1565c0; }
+        :root { --bg: #f0f2f5; --card: #fff; --text: #333; --red: #c62828; --green: #2e7d32; --blue: #1565c0; --gray: #546e7a; }
         [data-theme="dark"] { --bg: #0a192f; --card: #172a45; --text: #e0e0e0; }
         
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); padding: 20px; transition: 0.3s; }
@@ -23,15 +23,12 @@
             display: flex; align-items: center; gap: 15px; flex-wrap: wrap;
         }
         
-        /* Input Date Style */
-        input[type="date"] {
-            padding: 8px 12px; border: 1px solid #ccc; border-radius: 6px;
-            font-family: inherit; color: #333;
-        }
+        input[type="date"] { padding: 8px 12px; border: 1px solid #ccc; border-radius: 6px; font-family: inherit; color: #333; }
 
         .btn { padding: 10px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; border: none; text-decoration: none; font-size: 0.9em; display: flex; align-items: center; gap: 5px; }
         .btn-back { background: #78909c; color: white; }
         .btn-refresh { background: var(--blue); color: white; }
+        .btn-all { background: var(--gray); color: white; }
         .btn-export { background: var(--green); color: white; }
         .btn:hover { opacity: 0.9; transform: translateY(-2px); transition: 0.2s; }
 
@@ -64,12 +61,13 @@
     </div>
 
     <div class="controls-bar">
+        <button onclick="fetchRecentLogs()" class="btn btn-all">📂 Lihat Semua Riwayat</button>
+        <div style="width: 1px; height: 30px; background: #ccc; margin: 0 10px;"></div>
         <div style="display:flex; flex-direction:column; gap:5px;">
-            <label style="font-size:0.85em; font-weight:bold;">Pilih Tanggal:</label>
+            <label style="font-size:0.85em; font-weight:bold;">Cari Tanggal:</label>
             <input type="date" id="filter-date">
         </div>
-        <button onclick="fetchLogs()" class="btn btn-refresh" style="margin-top:auto;">🔍 Tampilkan Data</button>
-        <button onclick="fetchAllLogs()" class="btn btn-back" style="margin-top:auto; background:#546e7a;">Lihat Semua (Max 100)</button>
+        <button onclick="fetchLogsByDate()" class="btn btn-refresh" style="margin-top:auto;">🔍 Cari</button>
     </div>
 
     <div class="log-card">
@@ -91,7 +89,6 @@
 
 <script>
     // --- CONFIG SUPABASE ---
-    // GANTI DENGAN URL & KEY MILIK ANDA YANG BENAR
     const SUPABASE_URL = "https://khevzqqtswbdatbkkmme.supabase.co"; 
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtoZXZ6cXF0c3diZGF0YmtrbW1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1MTY4MDgsImV4cCI6MjA3OTA5MjgwOH0.N28mnbk8tTAJkm47DS2pzvsHHChlyCovT6vi2Z4aqHc"; 
     
@@ -99,31 +96,52 @@
 
     if (localStorage.getItem('theme') === 'dark') document.body.setAttribute('data-theme', 'dark');
 
-    // Saat load, set tanggal hari ini dan ambil data
-    window.onload = function() {
-        const today = new Date().toISOString().split('T')[0];
-        document.getElementById('filter-date').value = today;
-        fetchLogs();
-    };
-
     let rawLogData = [];
 
-    // --- FUNGSI AMBIL DATA PER TANGGAL ---
-    async function fetchLogs() {
-        const dateVal = document.getElementById('filter-date').value;
+    // --- 1. SAAT DIBUKA, LANGSUNG AMBIL SEMUA DATA (TANPA FILTER TANGGAL) ---
+    window.onload = function() {
+        fetchRecentLogs();
+    };
+
+    // Fungsi ambil data TERBARU (Bebas Tanggal)
+    async function fetchRecentLogs() {
         const tbody = document.querySelector("#log-table tbody");
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">Sedang memuat data...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">Memuat semua riwayat...</td></tr>';
 
         try {
-            // Filter query berdasarkan tanggal yang dipilih (00:00 sampai 23:59)
+            // Ambil 100 data terakhir dari database
+            const { data, error } = await supabaseClient
+                .from('system_logs')
+                .select('*')
+                .order('created_at', { ascending: false }) // Urutkan dari yang paling baru
+                .limit(100); 
+
+            if (error) throw error;
+            renderTable(data, "Database Kosong / Bersih.");
+
+        } catch (err) {
+            console.error("Error:", err);
+            tbody.innerHTML = `<tr><td colspan="4" style="color:red; text-align:center;">Gagal: ${err.message}</td></tr>`;
+        }
+    }
+
+    // Fungsi ambil data SPESIFIK TANGGAL
+    async function fetchLogsByDate() {
+        const dateVal = document.getElementById('filter-date').value;
+        if(!dateVal) { alert("Pilih tanggal dulu!"); return; }
+
+        const tbody = document.querySelector("#log-table tbody");
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">Mencari data...</td></tr>';
+
+        try {
             const startOfDay = dateVal + "T00:00:00";
             const endOfDay = dateVal + "T23:59:59";
 
             const { data, error } = await supabaseClient
                 .from('system_logs')
                 .select('*')
-                .gte('created_at', startOfDay) // Lebih besar dari jam 00:00
-                .lte('created_at', endOfDay)   // Lebih kecil dari jam 23:59
+                .gte('created_at', startOfDay)
+                .lte('created_at', endOfDay)
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
@@ -133,20 +151,6 @@
             console.error("Error:", err);
             tbody.innerHTML = `<tr><td colspan="4" style="color:red; text-align:center;">Gagal: ${err.message}</td></tr>`;
         }
-    }
-
-    // --- FUNGSI LIHAT SEMUA (MAX 100 TERAKHIR) ---
-    async function fetchAllLogs() {
-        const tbody = document.querySelector("#log-table tbody");
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">Memuat semua data...</td></tr>';
-        
-        const { data, error } = await supabaseClient
-            .from('system_logs')
-            .select('*')
-            .order('created_at', { ascending: false })
-            .limit(100); // Batasi 100 biar browser gak berat
-            
-        if (!error) renderTable(data, "Database Kosong / Bersih.");
     }
 
     function renderTable(data, emptyMsg) {
@@ -161,7 +165,10 @@
         let html = "";
         data.forEach(row => {
             const time = new Date(row.created_at).toLocaleString('id-ID', { day: 'numeric', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' });
-            const badgeClass = row.event_type.includes('TIMEOUT') ? 'badge-TIMEOUT' : 'badge-RECOVERY';
+            // Warna badge
+            let badgeClass = 'badge-RECOVERY';
+            if (row.event_type.includes('TIMEOUT')) badgeClass = 'badge-TIMEOUT';
+            if (row.event_type.includes('CLOUD')) badgeClass = 'badge-TIMEOUT_CLOUD';
             
             html += `
                 <tr>
@@ -175,7 +182,6 @@
         tbody.innerHTML = html;
     }
 
-    // --- FUNGSI EXPORT ---
     async function exportAndReset() {
         if (rawLogData.length === 0) { alert("Tidak ada data di tampilan saat ini untuk diekspor!"); return; }
         if (!confirm("Yakin mau Export ke Excel lalu MENGHAPUS database?")) return;
@@ -190,9 +196,9 @@
             XLSX.utils.book_append_sheet(wb, ws, "Logs");
             XLSX.writeFile(wb, `Maintenance_Log.xlsx`);
 
-            // Hapus setelah download (Opsional: Aktifkan baris bawah ini jika ingin auto-delete)
+            // Opsional: Hapus data setelah download
             // await supabaseClient.from('system_logs').delete().gt('id', 0);
-            // fetchLogs();
+            // fetchRecentLogs(); 
 
         } catch (err) { alert("Error: " + err.message); }
     }
