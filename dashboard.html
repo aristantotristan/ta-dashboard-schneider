@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Energy Dashboard (3-Phase Fix)</title>
-    
+    <title>Energy Dashboard (Final)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -76,55 +75,19 @@
             </div>
         </div>
         <div class="dashboard-grid">
-            <div class="card">
-                <h3>Energi Total</h3>
-                <div class="data-point"><span class="label">1. Total EA Import</span><div><span class="value" id="val-total-ea">-</span><span class="unit">kWh</span></div></div>
-                <div class="data-point"><span class="label">2. Total ER Import</span><div><span class="value" id="val-total-er">-</span><span class="unit">kVARh</span></div></div>
-            </div>
-            <div class="card">
-                <h3>Energi Parsial</h3>
-                <div class="data-point"><span class="label">3. Partial Active E</span><div><span class="value" id="val-part-e">-</span><span class="unit">kWh</span></div></div>
-                <div class="data-point"><span class="label">4. Partial Reactive E</span><div><span class="value" id="val-part-r">-</span><span class="unit">kVARh</span></div></div>
-            </div>
-            
-            <div class="card">
-                <h3>Listrik Dasar</h3>
-                <div class="dual-group">
-                    <div class="data-point"><span class="label">V (L-L Avg)</span><div><span class="value" id="val-v">-</span><span class="unit">V</span></div></div>
-                    <div class="data-point"><span class="label">I (Amp Avg)</span><div><span class="value" id="val-i">-</span><span class="unit">A</span></div></div>
-                    <div class="phase-box">
-                        <div class="phase-item"><span class="phase-label">I Fasa R</span><span class="phase-val" id="val-i1">-</span> <span style="font-size:0.8em;">A</span></div>
-                        <div class="phase-item"><span class="phase-label">I Fasa S</span><span class="phase-val" id="val-i2">-</span> <span style="font-size:0.8em;">A</span></div>
-                        <div class="phase-item"><span class="phase-label">I Fasa T</span><span class="phase-val" id="val-i3">-</span> <span style="font-size:0.8em;">A</span></div>
-                    </div>
-                    <div class="data-point"><span class="label">Power Factor</span><div><span class="value" id="val-pf">-</span><span class="unit"></span></div></div>
-                    <div class="data-point"><span class="label">Frequency</span><div><span class="value" id="val-hz">-</span><span class="unit">Hz</span></div></div>
-                </div>
-            </div>
-            
-            <div class="card">
-                <h3>Daya</h3>
-                <div class="power-group">
-                    <div class="data-point"><span class="label">P (Active)</span><div><span class="value" id="val-p">-</span><span class="unit">W</span></div></div>
-                    <div class="data-point"><span class="label">Q (Reactive)</span><div><span class="value" id="val-q">-</span><span class="unit">VAR</span></div></div>
-                    <div class="data-point"><span class="label">S (Apparent)</span><div><span class="value" id="val-s">-</span><span class="unit">VA</span></div></div>
-                </div>
-            </div>
-            
-            <div class="card">
-                <h3>Waktu & Tarif</h3>
-                <div class="dual-group">
-                    <div class="data-point"><span class="label">Waktu Operasi</span><div><span class="value" id="val-op-days">-</span><span class="unit">d</span> <span class="value" id="val-op-hrs">-</span><span class="unit">h</span></div></div>
-                    <div class="data-point"><span class="label">Status Tarif</span><div><span class="value" id="val-tariff">-</span><span class="unit"></span></div></div>
-                </div>
-            </div>
+            <div class="card"><h3>Energi Total</h3><div class="data-point"><span class="label">1. Total EA Import</span><div><span class="value" id="val-total-ea">-</span><span class="unit">kWh</span></div></div><div class="data-point"><span class="label">2. Total ER Import</span><div><span class="value" id="val-total-er">-</span><span class="unit">kVARh</span></div></div></div>
+            <div class="card"><h3>Energi Parsial</h3><div class="data-point"><span class="label">3. Partial Active E</span><div><span class="value" id="val-part-e">-</span><span class="unit">kWh</span></div></div><div class="data-point"><span class="label">4. Partial Reactive E</span><div><span class="value" id="val-part-r">-</span><span class="unit">kVARh</span></div></div></div>
+            <div class="card"><h3>Listrik Dasar</h3><div class="dual-group"><div class="data-point"><span class="label">V (Avg Volt)</span><div><span class="value" id="val-v">-</span><span class="unit">V</span></div></div><div class="data-point"><span class="label">I (Avg Amp)</span><div><span class="value" id="val-i">-</span><span class="unit">A</span></div></div><div class="phase-box"><div class="phase-item"><span class="phase-label">I Fasa R</span><span class="phase-val" id="val-i1">-</span> <span style="font-size:0.8em;">A</span></div><div class="phase-item"><span class="phase-label">I Fasa S</span><span class="phase-val" id="val-i2">-</span> <span style="font-size:0.8em;">A</span></div><div class="phase-item"><span class="phase-label">I Fasa T</span><span class="phase-val" id="val-i3">-</span> <span style="font-size:0.8em;">A</span></div></div><div class="data-point"><span class="label">Power Factor</span><div><span class="value" id="val-pf">-</span><span class="unit"></span></div></div><div class="data-point"><span class="label">Frequency</span><div><span class="value" id="val-hz">-</span><span class="unit">Hz</span></div></div></div></div>
+            <div class="card"><h3>Daya</h3><div class="power-group"><div class="data-point"><span class="label">P (Active)</span><div><span class="value" id="val-p">-</span><span class="unit">W</span></div></div><div class="data-point"><span class="label">Q (Reactive)</span><div><span class="value" id="val-q">-</span><span class="unit">VAR</span></div></div><div class="data-point"><span class="label">S (Apparent)</span><div><span class="value" id="val-s">-</span><span class="unit">VA</span></div></div></div></div>
+            <div class="card"><h3>Waktu Operasi</h3><div class="dual-group"><div class="data-point"><span class="label">Waktu Operasi</span><div><span class="value" id="val-op-days">-</span><span class="unit">d</span> <span class="value" id="val-op-hrs">-</span><span class="unit">h</span></div></div><div class="data-point"><span class="label">Status Tarif</span><div><span class="value" id="val-tariff">-</span><span class="unit"></span></div></div></div></div>
+            <div class="card"><h3>Tariff</h3><div class="data-point"><span class="label">Status Tarif</span><div><span class="value" id="val-tariff">-</span><span class="unit"></span></div></div></div>
         </div>
     </div>
 
 <script>
-// CONFIG (SAYA SUDAH MASUKKAN URL & KEY ANDA)
+// CONFIG SUPABASE
 const SUPABASE_URL = "https://khevzqqtswbdatbkkmme.supabase.co"; 
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtoZXZ6cXF0c3diZGF0YmtrbW1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1MTY4MDgsImV4cCI6MjA3OTA5MjgwOH0.N28mnbk8tTAJkm47DS2pzvsHHChlyCovT6vi2Z4aqHc";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtoZXZ6cXF0c3diZGF0YmtrbW1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1MTY4MDgsImV4cCI6MjA3OTA5MjgwOH0.N28mnbk8tTAJkm47DS2pzvsHHChlyCovT6vi2Z4aqHc"; 
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const MQTT_HOST = "701d32236feb43b38c22855a611f4d42.s1.eu.hivemq.cloud";
@@ -134,7 +97,6 @@ const MQTT_PASS = "Tristan12";
 const MQTT_TOPIC_DATA = "politeknik/meter/data";
 const MQTT_TOPIC_TARIF = "politeknik/setting/tarif_v2";
 
-// Watchdog 3 Menit
 const WATCHDOG_TIMEOUT = 180000; 
 
 let activeMachineId = 1; let mqttClient; 
@@ -142,7 +104,6 @@ let latestDataCache = {}; let lastUpdateTimes = {}; let hasReportedError = {};
 const fmt = (val, dig) => (val != null && !isNaN(val)) ? Number(val).toFixed(dig) : "-";
 function setStatus(msg, cls) { const s = document.getElementById("status"); if (s) { s.textContent = msg; s.className = cls; } }
 
-// TEMA & NOTIF
 function toggleTheme() {
     const body = document.body; const icon = document.getElementById('theme-icon');
     if (body.getAttribute('data-theme') === 'dark') { body.removeAttribute('data-theme'); icon.textContent = '🌙'; localStorage.setItem('theme', 'light'); } 
@@ -160,12 +121,10 @@ function showNotification(price, user, timeISO) {
     setTimeout(() => { toast.classList.add('hide'); setTimeout(() => toast.remove(), 500); }, 8000);
 }
 
-// NAVIGASI SPA
 function showGrid() { document.getElementById('view-detail').classList.remove('active'); document.getElementById('view-grid').classList.add('active'); window.history.pushState({}, '', window.location.pathname); }
 function showDetail(id) { activeMachineId = parseInt(id); document.getElementById("machineSelector").value = activeMachineId; document.getElementById('page-title').textContent = `Energy Dashboard - Mesin ${activeMachineId}`; document.getElementById('view-grid').classList.remove('active'); document.getElementById('view-detail').classList.add('active'); refreshDetailView(); }
 function switchMachine(id) { activeMachineId = parseInt(id); document.getElementById('page-title').textContent = `Energy Dashboard - Mesin ${activeMachineId}`; refreshDetailView(); }
 
-// UPDATE UI
 function updateGridCard(id, isOnline) {
     const card = document.getElementById(`grid-card-${id}`); const badge = document.getElementById(`grid-badge-${id}`);
     if (card && badge) { if (isOnline) { card.classList.add("online"); badge.textContent = "ONLINE"; } else { card.classList.remove("online"); badge.textContent = "OFFLINE"; } }
@@ -183,26 +142,22 @@ function setMeterOnline(d) {
     document.getElementById('val-part-e').textContent = fmt(d.e_part, 2); 
     document.getElementById('val-part-r').textContent = fmt(d.q_part, 2);
     document.getElementById('val-tariff').textContent = d.tariff || "T1"; 
-    
     document.getElementById('val-v').textContent = fmt(d.v, 1);
-    document.getElementById('val-i').textContent = fmt(d.i, 3); // I Avg
-    
+    document.getElementById('val-i').textContent = fmt(d.i, 3); 
     document.getElementById('val-i1').textContent = fmt(d.i1, 2);
     document.getElementById('val-i2').textContent = fmt(d.i2, 2);
     document.getElementById('val-i3').textContent = fmt(d.i3, 2);
-
     document.getElementById('val-p').textContent = fmt(d.p, 0);
     document.getElementById('val-q').textContent = fmt(d.q, 0); 
     document.getElementById('val-s').textContent = fmt(d.s, 2);
     document.getElementById('val-pf').textContent = fmt(d.pf, 2); 
     document.getElementById('val-hz').textContent = fmt(d.hz, 1);
-    
     const hours = d.op_time ? parseFloat(d.op_time) : 0;
     document.getElementById(`val-op-days`).textContent = Math.floor(hours / 24);
     document.getElementById(`val-op-hrs`).textContent = (hours % 24).toFixed(1);
 }
 function setMeterZero() {
-    const ids = ['total-ea', 'total-er', 'part-e', 'part-r', 'v', 'i', 'i1', 'i2', 'i3', 'p', 'q', 's', 'pf', 'hz', 'op-days', 'op-hrs'];
+    const ids = ['total-ea', 'total-er', 'part-e', 'part-r', 'v', 'i', 'i1', 'i2', 'i3', 'p', 'q', 's', 'pf', 'hz', 'op-time', 'op-days'];
     ids.forEach(id => { 
         const el = document.getElementById(`val-${id}`);
         if(el) el.textContent = "-"; 
@@ -210,7 +165,6 @@ function setMeterZero() {
     document.getElementById('val-tariff').textContent = "-";
 }
 
-// ERROR LOGGING
 async function logErrorToDB(machineId, type, desc) {
     const { error } = await supabaseClient.from('system_logs').insert({ machine_id: machineId, event_type: type, description: desc });
     if(error) console.error("Log Error:", error);
@@ -230,7 +184,6 @@ function checkWatchdog() {
     }
 }
 
-// MQTT
 function startConnection() {
     setStatus("Menghubungkan...", "bg-wait");
     mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_dash_" + Date.now());
@@ -244,10 +197,8 @@ function startConnection() {
             }
             const d = JSON.parse(m.payloadString);
             if (!d.id) return;
-            
             latestDataCache[d.id] = d;
             lastUpdateTimes[d.id] = Date.now();
-
             if (hasReportedError[d.id]) { 
                 const timeStr = new Date().toLocaleString('id-ID', { hour: '2-digit', minute: '2-digit' });
                 logErrorToDB(d.id, "RECOVERY", `Koneksi kembali normal pada ${timeStr}`); 
