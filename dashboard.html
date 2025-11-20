@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Energy Dashboard (Pro)</title>
+    <title>Energy Dashboard (3-Phase)</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
-        /* --- TEMA --- */
+        /* --- TEMA & CSS UTAMA --- */
         :root { 
             --bg-body: #f0f2f5; --bg-card: #ffffff; --text-main: #333333; 
             --text-sub: #546e7a; --text-value: #0d47a1; --border-card: #e0e0e0; 
@@ -21,75 +21,51 @@
             --accent: #82b1ff; --shadow: rgba(0, 0, 0, 0.5); --nav-bg: #2c2c2c; 
         }
 
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-            background-color: var(--bg-body); color: var(--text-main); 
-            margin: 0; padding: 25px; padding-top: 70px; transition: 0.3s; 
-        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg-body); color: var(--text-main); margin: 0; padding: 25px; padding-top: 70px; transition: 0.3s; }
         
         /* TOAST NOTIFIKASI */
         #toast-container { position: fixed; top: 80px; right: 20px; z-index: 2000; display: flex; flex-direction: column; gap: 10px; }
-        .toast { 
-            background-color: #323232; color: #fff; padding: 15px 20px; 
-            border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); 
-            font-size: 0.95em; display: flex; align-items: flex-start; gap: 15px; 
-            min-width: 300px; animation: slideIn 0.5s ease forwards; border-left: 5px solid #ff9800; 
-        }
+        .toast { background-color: #323232; color: #fff; padding: 15px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); font-size: 0.95em; display: flex; align-items: flex-start; gap: 15px; min-width: 300px; animation: slideIn 0.5s ease forwards; border-left: 5px solid #ff9800; }
         .toast.hide { animation: fadeOut 0.5s ease forwards; }
         @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
         @keyframes fadeOut { to { transform: translateX(100%); } }
 
-        /* KOMPONEN UI */
-        .theme-switch { 
-            position: fixed; top: 15px; right: 20px; z-index: 1000; 
-            background: var(--bg-card); border: 2px solid var(--border-card); 
-            border-radius: 50%; width: 45px; height: 45px; cursor: pointer; 
-            display: flex; align-items: center; justify-content: center; 
-            font-size: 1.2em; box-shadow: 0 4px 10px var(--shadow); 
-            transition: all 0.3s ease; color: var(--text-main); 
-        }
-        #status { 
-            position: fixed; top: 0; left: 0; width: 100%; text-align: center; 
-            padding: 10px; font-weight: 600; color: white; z-index: 100; 
-            transition: background-color 0.5s ease; 
-        }
+        /* NAVIGASI & LAYOUT */
+        .theme-switch { position: fixed; top: 15px; right: 20px; z-index: 1000; background: var(--bg-card); border: 2px solid var(--border-card); border-radius: 50%; width: 45px; height: 45px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2em; box-shadow: 0 4px 10px var(--shadow); transition: all 0.3s ease; color: var(--text-main); }
+        #status { position: fixed; top: 0; left: 0; width: 100%; text-align: center; padding: 10px; font-weight: 600; color: white; z-index: 100; transition: background-color 0.5s ease; }
         .bg-ok { background: #2e7d32; } .bg-err { background: #c62828; } .bg-wait { background: #f57c00; }
         
         .view-section { display: none; animation: fadeIn 0.4s ease; } .view-section.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
-        /* MENU GRID */
         .menu-container { max-width: 1200px; margin: 0 auto; text-align: center; }
         .menu-title { color: var(--accent); font-size: 2em; margin-bottom: 30px; }
         .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; }
-        .menu-card { 
-            background: var(--bg-card); padding: 25px 15px; border-radius: 12px; 
-            box-shadow: 0 2px 5px var(--shadow); text-align: center; font-size: 1.1em; 
-            font-weight: 600; color: var(--text-sub); border-top: 5px solid var(--border-card); 
-            cursor: pointer; transition: all 0.2s ease; 
-        }
+        .menu-card { background: var(--bg-card); padding: 25px 15px; border-radius: 12px; box-shadow: 0 2px 5px var(--shadow); text-align: center; font-size: 1.1em; font-weight: 600; color: var(--text-sub); border-top: 5px solid var(--border-card); cursor: pointer; transition: all 0.2s ease; }
         .menu-card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px var(--shadow); }
         .menu-card.online { border-top-color: #43a047; color: #2e7d32; } [data-theme="dark"] .menu-card.online { color: #66bb6a; }
         .menu-badge { display: block; font-size: 0.7em; font-weight: 400; margin-top: 5px; color: var(--text-sub); }
         .menu-card.online .menu-badge { color: inherit; font-weight: bold; }
         
-        /* DASHBOARD DETAIL */
         .header-container { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px; }
         .back-button { background: #78909c; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: 600; cursor: pointer; border: none; }
         .back-button:hover { background: #546e7a; }
+        
         .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); grid-auto-rows: auto; gap: 20px; }
         .card { background: var(--bg-card); border-radius: 12px; box-shadow: 0 4px 12px var(--shadow); padding: 20px 25px; transition: background-color 0.3s; }
         .card h3 { margin-top: 0; border-bottom: 2px solid var(--bg-body); padding-bottom: 10px; color: #00897b; } [data-theme="dark"] .card h3 { color: #4db6ac; }
+        
         .data-point { margin-bottom: 18px; }
         .data-point .label { display: block; font-size: 0.95em; color: var(--text-sub); margin-bottom: 4px; }
         .data-point .value { font-size: 2.4em; font-weight: 700; color: var(--text-value); }
         .data-point .unit { font-size: 1.1em; color: var(--text-main); margin-left: 8px; opacity: 0.7; }
+        
         .power-group { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
         .power-group .value { font-size: 1.8em; }
         .dual-group { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .machine-select { padding: 10px; border-radius: 8px; border: 2px solid var(--accent); font-weight: bold; color: var(--accent); cursor: pointer; background: var(--bg-card); }
         
-        /* STYLE 3 FASA */
+        /* 3 PHASE STYLE */
         .phase-box { grid-column: span 2; display: flex; justify-content: space-between; background: var(--bg-body); padding: 12px; border-radius: 8px; margin-bottom: 15px; }
         .phase-item { text-align: center; flex: 1; }
         .phase-label { display: block; font-size: 0.8em; color: var(--text-sub); margin-bottom: 2px; }
@@ -121,6 +97,7 @@
                 <h2 style="margin:5px 0 0 0; font-size: 1em; font-weight:400; color:var(--text-sub);">Real-time Data</h2>
             </div>
         </div>
+        
         <div class="dashboard-grid">
             <div class="card">
                 <h3>Energi Total</h3>
@@ -153,29 +130,24 @@
             <div class="card">
                 <h3>Daya</h3>
                 <div class="power-group">
-                    <div class="data-point"><span class="label">P (W)</span><div><span class="value" id="val-p">-</span><span class="unit">W</span></div></div>
-                    <div class="data-point"><span class="label">Q (VAR)</span><div><span class="value" id="val-q">-</span><span class="unit">VAR</span></div></div>
-                    <div class="data-point"><span class="label">S (VA)</span><div><span class="value" id="val-s">-</span><span class="unit">VA</span></div></div>
+                    <div class="data-point"><span class="label">P (Active)</span><div><span class="value" id="val-p">-</span><span class="unit">W</span></div></div>
+                    <div class="data-point"><span class="label">Q (Reactive)</span><div><span class="value" id="val-q">-</span><span class="unit">VAR</span></div></div>
+                    <div class="data-point"><span class="label">S (Apparent)</span><div><span class="value" id="val-s">-</span><span class="unit">VA</span></div></div>
                 </div>
             </div>
             
             <div class="card">
-                <h3>Waktu Operasi</h3>
+                <h3>Waktu & Tarif</h3>
                 <div class="dual-group">
-                    <div class="data-point"><span class="label">Total Jam</span><div><span class="value" id="val-op-time">-</span><span class="unit">Jam</span></div></div>
-                    <div class="data-point"><span class="label">Hari</span><div><span class="value" id="val-op-days">-</span><span class="unit">Hari</span></div></div>
+                    <div class="data-point"><span class="label">Waktu Operasi</span><div><span class="value" id="val-op-days">-</span><span class="unit">Hari</span> <span class="value" id="val-op-hrs" style="font-size: 1.5em;">-</span><span class="unit">Jam</span></div></div>
+                    <div class="data-point"><span class="label">Status Tarif</span><div><span class="value" id="val-tariff">-</span><span class="unit"></span></div></div>
                 </div>
-            </div>
-            
-            <div class="card">
-                <h3>Tariff</h3>
-                <div class="data-point"><span class="label">Status Tarif</span><div><span class="value" id="val-tariff">T1</span><span class="unit"></span></div></div>
             </div>
         </div>
     </div>
 
 <script>
-// --- KONFIGURASI (SUPABASE & MQTT) ---
+// --- CONFIG ---
 const SUPABASE_URL = "https://khevzqqtswbdatbkkmme.supabase.co"; 
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtoZXZ6cXF0c3diZGF0YmtrbW1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1MTY4MDgsImV4cCI6MjA3OTA5MjgwOH0.N28mnbk8tTAJkm47DS2pzvsHHChlyCovT6vi2Z4aqHc";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -194,7 +166,7 @@ let latestDataCache = {}; let lastUpdateTimes = {}; let hasReportedError = {};
 const fmt = (val, dig) => (val != null && !isNaN(val)) ? Number(val).toFixed(dig) : "-";
 function setStatus(msg, cls) { const s = document.getElementById("status"); if (s) { s.textContent = msg; s.className = cls; } }
 
-// --- TEMA ---
+// --- TEMA & NOTIF ---
 function toggleTheme() {
     const body = document.body; const icon = document.getElementById('theme-icon');
     if (body.getAttribute('data-theme') === 'dark') { body.removeAttribute('data-theme'); icon.textContent = '🌙'; localStorage.setItem('theme', 'light'); } 
@@ -202,7 +174,6 @@ function toggleTheme() {
 }
 if (localStorage.getItem('theme') === 'dark') { document.body.setAttribute('data-theme', 'dark'); document.getElementById('theme-icon').textContent = '☀️'; }
 
-// --- NOTIFIKASI ---
 function showNotification(price, user, timeISO) {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div'); toast.className = 'toast';
@@ -213,12 +184,12 @@ function showNotification(price, user, timeISO) {
     setTimeout(() => { toast.classList.add('hide'); setTimeout(() => toast.remove(), 500); }, 8000);
 }
 
-// --- NAVIGASI ---
+// --- NAVIGASI SPA ---
 function showGrid() { document.getElementById('view-detail').classList.remove('active'); document.getElementById('view-grid').classList.add('active'); window.history.pushState({}, '', window.location.pathname); }
 function showDetail(id) { activeMachineId = parseInt(id); document.getElementById("machineSelector").value = activeMachineId; document.getElementById('page-title').textContent = `Energy Dashboard - Mesin ${activeMachineId}`; document.getElementById('view-grid').classList.remove('active'); document.getElementById('view-detail').classList.add('active'); refreshDetailView(); }
 function switchMachine(id) { activeMachineId = parseInt(id); document.getElementById('page-title').textContent = `Energy Dashboard - Mesin ${activeMachineId}`; refreshDetailView(); }
 
-// --- LOGIKA UPDATE UI ---
+// --- LOGIKA UPDATE ---
 function updateGridCard(id, isOnline) {
     const card = document.getElementById(`grid-card-${id}`); const badge = document.getElementById(`grid-badge-${id}`);
     if (card && badge) { if (isOnline) { card.classList.add("online"); badge.textContent = "ONLINE"; } else { card.classList.remove("online"); badge.textContent = "OFFLINE"; } }
@@ -233,44 +204,53 @@ function refreshDetailView() {
 }
 
 function setMeterOnline(d) {
+    // ENERGI
     document.getElementById('val-total-ea').textContent = fmt(d.e, 2); 
     document.getElementById('val-total-er').textContent = fmt(d.q_tot, 2);
     document.getElementById('val-part-e').textContent = fmt(d.e_part, 2); 
     document.getElementById('val-part-r').textContent = fmt(d.q_part, 2);
     
+    // LISTRIK
     document.getElementById('val-v').textContent = fmt(d.v, 1);
-    document.getElementById('val-i').textContent = fmt(d.i, 3); // I Rata-rata
-    
-    // 3 FASA (Data baru dari v44)
+    document.getElementById('val-i').textContent = fmt(d.i, 3); // I Avg
+    // 3 FASA (D.I1, D.I2, D.I3 DARI ESP32)
     document.getElementById('val-i1').textContent = fmt(d.i1, 2);
     document.getElementById('val-i2').textContent = fmt(d.i2, 2);
     document.getElementById('val-i3').textContent = fmt(d.i3, 2);
+    
+    document.getElementById('val-pf').textContent = fmt(d.pf, 2); 
+    document.getElementById('val-hz').textContent = fmt(d.hz, 1);
 
+    // DAYA
     document.getElementById('val-p').textContent = fmt(d.p, 0);
     document.getElementById('val-q').textContent = fmt(d.q, 0); 
     document.getElementById('val-s').textContent = fmt(d.s, 2);
-    document.getElementById('val-pf').textContent = fmt(d.pf, 2); 
-    document.getElementById('val-hz').textContent = fmt(d.hz, 1);
+
+    // LAINNYA
+    document.getElementById('val-tariff').textContent = "T1"; // Default dr ESP
     
+    // WAKTU OPERASI
     const hours = d.op_time ? parseFloat(d.op_time) : 0;
-    document.getElementById(`val-op-time`).textContent = fmt(hours, 1);
-    document.getElementById(`val-op-days`).textContent = Math.floor(hours / 24);
+    const days = Math.floor(hours / 24);
+    const remainHours = (hours % 24).toFixed(1);
+    document.getElementById(`val-op-days`).textContent = days; 
+    document.getElementById(`val-op-hrs`).textContent = remainHours;
 }
 
 function setMeterZero() {
-    const ids = ['total-ea', 'total-er', 'part-e', 'part-r', 'v', 'i', 'i1', 'i2', 'i3', 'p', 'q', 's', 'pf', 'hz', 'op-time', 'op-days'];
+    const ids = ['total-ea', 'total-er', 'part-e', 'part-r', 'v', 'i', 'i1', 'i2', 'i3', 'p', 'q', 's', 'pf', 'hz', 'op-days', 'op-hrs'];
     ids.forEach(id => { 
         const el = document.getElementById(`val-${id}`);
         if(el) el.textContent = "-"; 
     });
+    document.getElementById('val-tariff').textContent = "-";
 }
 
-// --- ERROR LOGGING (WATCHDOG) ---
+// --- WATCHDOG ERROR LOG ---
 async function logErrorToDB(machineId, type, desc) {
     const { error } = await supabaseClient.from('system_logs').insert({ machine_id: machineId, event_type: type, description: desc });
     if(error) console.error("Gagal lapor error:", error);
 }
-
 function checkWatchdog() {
     const now = Date.now();
     for (let i = 1; i <= 18; i++) {
@@ -290,7 +270,7 @@ function checkWatchdog() {
 function startConnection() {
     setStatus("Menghubungkan...", "bg-wait");
     mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_dash_" + Date.now());
-    mqttClient.onConnectionLost = (r) => { if (r.errorCode !== 0) { setStatus("⚠️ Putus. Reconnecting...", "bg-wait"); setTimeout(startConnection, 5000); } };
+    mqttClient.onConnectionLost = (r) => { if (r.errorCode !== 0) { setStatus("⚠️ Reconnecting...", "bg-wait"); setTimeout(startConnection, 5000); } };
     mqttClient.onMessageArrived = (m) => {
         try {
             if (m.destinationName === MQTT_TOPIC_TARIF) {
@@ -304,7 +284,6 @@ function startConnection() {
             latestDataCache[d.id] = d;
             lastUpdateTimes[d.id] = Date.now();
 
-            // RESET ERROR JIKA KONEK LAGI
             if (hasReportedError[d.id]) { 
                 const timeStr = new Date().toLocaleString('id-ID', { hour: '2-digit', minute: '2-digit' });
                 logErrorToDB(d.id, "RECOVERY", `Koneksi kembali normal pada ${timeStr}`); 
