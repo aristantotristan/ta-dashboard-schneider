@@ -3,78 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Energy Dashboard (Final Pro)</title>
-    
+    <title>Energy Dashboard (Viewer Only)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
     <style>
-        /* --- TEMA --- */
-        :root { 
-            --bg-body: #f0f2f5; --bg-card: #ffffff; --text-main: #333333; 
-            --text-sub: #546e7a; --text-value: #0d47a1; --border-card: #e0e0e0; 
-            --accent: #1a237e; --shadow: rgba(0, 0, 0, 0.07); --nav-bg: #ffffff; 
-        }
-        [data-theme="dark"] { 
-            --bg-body: #121212; --bg-card: #1e1e1e; --text-main: #e0e0e0; 
-            --text-sub: #b0bec5; --text-value: #64b5f6; --border-card: #333333; 
-            --accent: #82b1ff; --shadow: rgba(0, 0, 0, 0.5); --nav-bg: #2c2c2c; 
-        }
-
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-            background-color: var(--bg-body); color: var(--text-main); 
-            margin: 0; padding: 25px; padding-top: 70px; transition: 0.3s; 
-        }
-        
-        /* NOTIFIKASI (TOAST) */
+        /* ... (STYLE SAMA PERSIS - COPY DARI SEBELUMNYA) ... */
+        /* Agar ringkas, saya tidak paste CSS panjang disini. 
+           Pakai CSS dari dashboard.html sebelumnya */
+           
+        /* PASTE STYLE ANDA DISINI */
+        :root { --bg-body: #f0f2f5; --bg-card: #ffffff; --text-main: #333333; --text-sub: #546e7a; --text-value: #0d47a1; --border-card: #e0e0e0; --accent: #1a237e; --shadow: rgba(0, 0, 0, 0.07); --nav-bg: #ffffff; }
+        [data-theme="dark"] { --bg-body: #121212; --bg-card: #1e1e1e; --text-main: #e0e0e0; --text-sub: #b0bec5; --text-value: #64b5f6; --border-card: #333333; --accent: #82b1ff; --shadow: rgba(0, 0, 0, 0.5); --nav-bg: #2c2c2c; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg-body); color: var(--text-main); margin: 0; padding: 25px; padding-top: 70px; transition: 0.3s; }
         #toast-container { position: fixed; top: 80px; right: 20px; z-index: 2000; display: flex; flex-direction: column; gap: 10px; }
-        .toast { 
-            background-color: #323232; color: #fff; padding: 15px 20px; 
-            border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); 
-            font-size: 0.95em; display: flex; align-items: flex-start; gap: 15px; 
-            min-width: 300px; animation: slideIn 0.5s ease forwards; border-left: 5px solid #ff9800; 
-        }
+        .toast { background-color: #323232; color: #fff; padding: 15px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); font-size: 0.95em; display: flex; align-items: flex-start; gap: 15px; min-width: 300px; animation: slideIn 0.5s ease forwards; border-left: 5px solid #ff9800; }
         .toast.hide { animation: fadeOut 0.5s ease forwards; }
         @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
         @keyframes fadeOut { to { transform: translateX(100%); } }
-
-        /* TOMBOL & NAVIGASI */
-        .theme-switch { 
-            position: fixed; top: 15px; right: 20px; z-index: 1000; 
-            background: var(--bg-card); border: 2px solid var(--border-card); 
-            border-radius: 50%; width: 45px; height: 45px; cursor: pointer; 
-            display: flex; align-items: center; justify-content: center; 
-            font-size: 1.2em; box-shadow: 0 4px 10px var(--shadow); 
-            transition: all 0.3s ease; color: var(--text-main); 
-        }
-        #status { 
-            position: fixed; top: 0; left: 0; width: 100%; text-align: center; 
-            padding: 10px; font-weight: 600; color: white; z-index: 100; 
-            transition: background-color 0.5s ease; 
-        }
+        .theme-switch { position: fixed; top: 15px; right: 20px; z-index: 1000; background: var(--bg-card); border: 2px solid var(--border-card); border-radius: 50%; width: 45px; height: 45px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2em; box-shadow: 0 4px 10px var(--shadow); transition: all 0.3s ease; color: var(--text-main); }
+        #status { position: fixed; top: 0; left: 0; width: 100%; text-align: center; padding: 10px; font-weight: 600; color: white; z-index: 100; transition: background-color 0.5s ease; }
         .bg-ok { background: #2e7d32; } .bg-err { background: #c62828; } .bg-wait { background: #f57c00; }
-        
-        /* LAYOUT SPA */
         .view-section { display: none; animation: fadeIn 0.4s ease; } .view-section.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        
-        /* VIEW 1: MENU GRID */
         .menu-container { max-width: 1200px; margin: 0 auto; text-align: center; }
         .menu-title { color: var(--accent); font-size: 2em; margin-bottom: 30px; }
         .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; }
-        .menu-card { 
-            background: var(--bg-card); padding: 25px 15px; border-radius: 12px; 
-            box-shadow: 0 2px 5px var(--shadow); text-align: center; font-size: 1.1em; 
-            font-weight: 600; color: var(--text-sub); border-top: 5px solid var(--border-card); 
-            cursor: pointer; transition: all 0.2s ease; 
-        }
+        .menu-card { background: var(--bg-card); padding: 25px 15px; border-radius: 12px; box-shadow: 0 2px 5px var(--shadow); text-align: center; font-size: 1.1em; font-weight: 600; color: var(--text-sub); border-top: 5px solid var(--border-card); cursor: pointer; transition: all 0.2s ease; }
         .menu-card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px var(--shadow); }
         .menu-card.online { border-top-color: #43a047; color: #2e7d32; } [data-theme="dark"] .menu-card.online { color: #66bb6a; }
         .menu-badge { display: block; font-size: 0.7em; font-weight: 400; margin-top: 5px; color: var(--text-sub); }
         .menu-card.online .menu-badge { color: inherit; font-weight: bold; }
-        
-        /* VIEW 2: DASHBOARD DETAIL */
         .header-container { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px; }
         .back-button { background: #78909c; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: 600; cursor: pointer; border: none; }
         .back-button:hover { background: #546e7a; }
@@ -95,7 +53,7 @@
     
     <div id="status" class="bg-wait">Menghubungkan ke MQTT...</div>
     <div id="toast-container"></div>
-    <button class="theme-switch" onclick="toggleTheme()" title="Ganti Tema"><span id="theme-icon">🌙</span></button>
+    <button class="theme-switch" onclick="toggleTheme()"><span id="theme-icon">🌙</span></button>
 
     <div id="view-grid" class="view-section active">
         <div class="menu-container">
@@ -127,11 +85,9 @@
     </div>
 
 <script>
-// --- CONFIG SUPABASE ANDA ---
-const SUPABASE_URL = "https://khevzqqtswbdatbkkmme.supabase.co"; 
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtoZXZ6cXF0c3diZGF0YmtrbW1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1MTY4MDgsImV4cCI6MjA3OTA5MjgwOH0.N28mnbk8tTAJkm47DS2pzvsHHChlyCovT6vi2Z4aqHc"; 
-
-// Inisialisasi Client
+// --- CONFIG SUPABASE ---
+const SUPABASE_URL = "https://khevzqqtswbdatbkkmme.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtoZXZ6cXF0c3diZGF0YmtrbW1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1MTY4MDgsImV4cCI6MjA3OTA5MjgwOH0.N28mnbk8tTAJkm47DS2pzvsHHChlyCovT6vi2Z4aqHc";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // --- CONFIG MQTT ---
@@ -142,27 +98,15 @@ const MQTT_PASS = "Tristan12";
 const MQTT_TOPIC_DATA = "politeknik/meter/data";
 const MQTT_TOPIC_TARIF = "politeknik/setting/tarif_v2";
 
-// WATCHDOG (3 Menit = 180000 ms)
+// Watchdog (3 Menit)
 const WATCHDOG_TIMEOUT = 180000; 
-// DB THROTTLE (30 Detik sekali update 'last_seen')
-const DB_UPDATE_INTERVAL = 30000; 
 
 let activeMachineId = 1; let mqttClient; 
 let latestDataCache = {}; let lastUpdateTimes = {}; let hasReportedError = {};
-let lastDBUpdate = {}; // Menyimpan waktu terakhir update ke DB
-
 const fmt = (val, dig) => (val != null && !isNaN(val)) ? Number(val).toFixed(dig) : "-";
 function setStatus(msg, cls) { const s = document.getElementById("status"); if (s) { s.textContent = msg; s.className = cls; } }
 
-// --- TEMA ---
-function toggleTheme() {
-    const body = document.body; const icon = document.getElementById('theme-icon');
-    if (body.getAttribute('data-theme') === 'dark') { body.removeAttribute('data-theme'); icon.textContent = '🌙'; localStorage.setItem('theme', 'light'); } 
-    else { body.setAttribute('data-theme', 'dark'); icon.textContent = '☀️'; localStorage.setItem('theme', 'dark'); }
-}
-if (localStorage.getItem('theme') === 'dark') { document.body.setAttribute('data-theme', 'dark'); document.getElementById('theme-icon').textContent = '☀️'; }
-
-// --- NOTIFIKASI ---
+// --- NOTIFIKASI & TEMA ---
 function showNotification(price, user, timeISO) {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div'); toast.className = 'toast';
@@ -172,8 +116,14 @@ function showNotification(price, user, timeISO) {
     container.appendChild(toast);
     setTimeout(() => { toast.classList.add('hide'); setTimeout(() => toast.remove(), 500); }, 8000);
 }
+function toggleTheme() {
+    const body = document.body; const icon = document.getElementById('theme-icon');
+    if (body.getAttribute('data-theme') === 'dark') { body.removeAttribute('data-theme'); icon.textContent = '🌙'; localStorage.setItem('theme', 'light'); } 
+    else { body.setAttribute('data-theme', 'dark'); icon.textContent = '☀️'; localStorage.setItem('theme', 'dark'); }
+}
+if (localStorage.getItem('theme') === 'dark') { document.body.setAttribute('data-theme', 'dark'); document.getElementById('theme-icon').textContent = '☀️'; }
 
-// --- NAVIGASI SPA ---
+// --- NAVIGASI ---
 function showGrid() { document.getElementById('view-detail').classList.remove('active'); document.getElementById('view-grid').classList.add('active'); window.history.pushState({}, '', window.location.pathname); }
 function showDetail(id) { activeMachineId = parseInt(id); document.getElementById("machineSelector").value = activeMachineId; document.getElementById('page-title').textContent = `Energy Dashboard - Mesin ${activeMachineId}`; document.getElementById('view-grid').classList.remove('active'); document.getElementById('view-detail').classList.add('active'); refreshDetailView(); }
 function switchMachine(id) { activeMachineId = parseInt(id); document.getElementById('page-title').textContent = `Energy Dashboard - Mesin ${activeMachineId}`; refreshDetailView(); }
@@ -181,10 +131,7 @@ function switchMachine(id) { activeMachineId = parseInt(id); document.getElement
 // --- UPDATE UI ---
 function updateGridCard(id, isOnline) {
     const card = document.getElementById(`grid-card-${id}`); const badge = document.getElementById(`grid-badge-${id}`);
-    if (card && badge) { 
-        if (isOnline) { card.classList.add("online"); badge.textContent = "ONLINE"; } 
-        else { card.classList.remove("online"); badge.textContent = "OFFLINE"; } 
-    }
+    if (card && badge) { if (isOnline) { card.classList.add("online"); badge.textContent = "ONLINE"; } else { card.classList.remove("online"); badge.textContent = "OFFLINE"; } }
 }
 function refreshDetailView() {
     const d = latestDataCache[activeMachineId];
@@ -205,30 +152,21 @@ function setMeterOnline(d) {
 }
 function setMeterZero() {
     const ids = ['total-ea', 'total-er', 'part-e', 'part-r', 'v', 'i', 'p', 'q', 's', 'pf', 'hz', 'op-days', 'op-hrs'];
-    ids.forEach(id => { document.getElementById(`val-${id}`).textContent = "0"; });
+    ids.forEach(id => { document.getElementById(`val-${id}`).textContent = "-"; });
     document.getElementById('val-tariff').textContent = "-";
 }
 
-// --- DB FUNCTIONS ---
-async function updateHeartbeatDB(id) {
-    const now = Date.now();
-    // Cek agar tidak spam DB terlalu sering (Throttling)
-    if (!lastDBUpdate[id] || (now - lastDBUpdate[id] > DB_UPDATE_INTERVAL)) {
-        await supabaseClient.from('machine_status').update({ last_seen: new Date().toISOString() }).eq('machine_id', id);
-        lastDBUpdate[id] = now;
-    }
-}
-
+// --- LOGGING ERROR ---
 async function logErrorToDB(machineId, type, desc) {
     const { error } = await supabaseClient.from('system_logs').insert({ machine_id: machineId, event_type: type, description: desc });
     if(error) console.error("Gagal lapor error:", error);
 }
-
 function checkWatchdog() {
     const now = Date.now();
     for (let i = 1; i <= 18; i++) {
         const lastTime = lastUpdateTimes[i] || 0;
         const diff = now - lastTime;
+        // Logika: Jika mati > 3 Menit DAN belum dilaporkan
         if (lastTime > 0 && diff > WATCHDOG_TIMEOUT && !hasReportedError[i]) {
             const timeStr = new Date().toLocaleString('id-ID', { hour: '2-digit', minute: '2-digit' });
             logErrorToDB(i, "TIMEOUT", `Lost Connection (> 3 Menit). Web detect: ${timeStr}`);
@@ -239,7 +177,7 @@ function checkWatchdog() {
     }
 }
 
-// --- MQTT START ---
+// --- MQTT ---
 function startConnection() {
     setStatus("Menghubungkan...", "bg-wait");
     mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_dash_" + Date.now());
@@ -257,14 +195,13 @@ function startConnection() {
             latestDataCache[d.id] = d;
             lastUpdateTimes[d.id] = Date.now();
 
-            // [FITUR PENTING] Update Absen ke Database
-            updateHeartbeatDB(d.id); 
-
+            // Reset error flag saat connect kembali
             if (hasReportedError[d.id]) { 
                 const timeStr = new Date().toLocaleString('id-ID', { hour: '2-digit', minute: '2-digit' });
                 logErrorToDB(d.id, "RECOVERY", `Koneksi kembali normal pada ${timeStr}`); 
                 hasReportedError[d.id] = false; 
             }
+
             updateGridCard(d.id, true);
             if (d.id === activeMachineId && document.getElementById('view-detail').classList.contains('active')) {
                 d.status === "offline" ? setMeterZero() : setMeterOnline(d);
