@@ -3,178 +3,179 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Monitoring</title>
+    <title>Monitoring Energi (18 Mesin)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
     <style>
-        /* --- 1. DEFINISI TEMA --- */
-        :root {
-            /* Tema Terang (Default) */
-            --bg-body: #e3f2fd; /* Biru muda */
-            --text-main: #0d47a1; /* Biru tua */
-            --text-sub: #546e7a; /* Abu kebiruan */
-            --btn-bg: #2196f3;
-            --btn-text: #ffffff;
-            --switch-bg: #ffffff;
-            --shadow: rgba(0, 0, 0, 0.1);
-        }
-
-        [data-theme="dark"] {
-            /* Tema Gelap */
-            --bg-body: #0a192f; /* Biru gelap pekat (Navy) */
-            --text-main: #e6f1ff; /* Putih kebiruan */
-            --text-sub: #8892b0; /* Abu muda */
-            --btn-bg: #64ffda; /* Tosca neon (Cyberpunk style) */
-            --btn-text: #0a192f; /* Teks tombol jadi gelap */
-            --switch-bg: #172a45;
-            --shadow: rgba(0, 0, 0, 0.5);
-        }
-
-        /* --- CSS UTAMA --- */
-        body, html {
-            height: 100%;
-            margin: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg-body);
-            color: var(--text-main);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            overflow: hidden;
-            padding: 20px;
-            box-sizing: border-box;
-            transition: background-color 0.3s ease, color 0.3s ease;
-        }
-
-        .container {
-            max-width: 700px;
-            width: 90%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 30px;
-        }
-
-        img.splash-image {
-            width: 100%;
-            max-width: 550px;
-            height: auto;
-            margin-bottom: 25px;
-            animation: fadeIn 1.5s ease-in-out forwards;
-        }
-
-        h1 {
-            font-size: 2.8em;
-            margin-bottom: 8px;
-            color: var(--text-main);
-            animation: fadeIn 2s ease-in-out forwards;
-        }
-
-        p.description {
-            font-size: 1.2em;
-            color: var(--text-sub);
-            font-weight: 400;
-            margin-bottom: 30px;
-            animation: fadeIn 2.5s ease-in-out forwards;
-        }
-
-        /* Tombol Monitoring */
-        .monitoring-button {
-            display: inline-block;
-            padding: 15px 35px;
-            font-size: 1.3em;
-            font-weight: 700;
-            color: var(--btn-text);
-            background-color: var(--btn-bg);
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            text-decoration: none;
-            box-shadow: 0 4px 10px var(--shadow);
-            transition: transform 0.2s ease, background-color 0.3s;
-            animation: fadeIn 3s ease-in-out forwards;
-        }
-
-        .monitoring-button:hover {
-            transform: translateY(-2px);
-            filter: brightness(1.1);
-        }
-
-        /* TOMBOL SWITCH TEMA (Pojok Kanan Atas) */
-        .theme-switch {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 1000;
-            background: var(--switch-bg);
-            border: none;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5em;
-            box-shadow: 0 4px 10px var(--shadow);
-            transition: all 0.3s ease;
-            animation: fadeIn 1s ease;
-        }
-        .theme-switch:hover { transform: scale(1.1); }
+        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; padding: 20px; margin: 0; }
+        h1 { text-align: center; color: #2c3e50; margin-bottom: 10px; }
+        .status-bar { text-align: center; padding: 10px; background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; font-weight: bold; color: #666; }
+        .status-bar.connected { color: #27ae60; }
         
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        .grid-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; }
+        
+        .card { background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-top: 5px solid #bdc3c7; transition: transform 0.2s; }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 8px 15px rgba(0,0,0,0.1); }
+        .card.online { border-top-color: #27ae60; }
+        .card.offline { border-top-color: #e74c3c; }
 
-        @media (max-width: 600px) {
-            h1 { font-size: 2em; }
-            p.description { font-size: 1em; }
-            .monitoring-button { font-size: 1.1em; padding: 12px 25px; }
-        }
+        .card-header { padding: 15px; background: #f8f9fa; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .card-title { font-weight: bold; font-size: 1.1em; color: #34495e; margin: 0; }
+        .badge { font-size: 0.8em; padding: 4px 8px; border-radius: 12px; background: #eee; color: #999; }
+        .badge.on { background: #e8f5e9; color: #27ae60; }
+
+        .card-body { padding: 15px; }
+        .data-table { width: 100%; font-size: 0.9em; border-collapse: collapse; }
+        .data-table td { padding: 4px 0; border-bottom: 1px dashed #f0f0f0; }
+        .lbl { color: #7f8c8d; }
+        .val { font-weight: bold; text-align: right; color: #2c3e50; }
+        .unit { color: #95a5a6; font-size: 0.8em; width: 40px; text-align: right; }
+        
+        .section-title { font-size: 0.85em; font-weight: bold; color: #3498db; margin-top: 10px; margin-bottom: 5px; text-transform: uppercase; }
+        .highlight { color: #2980b9; }
     </style>
 </head>
 <body>
 
-    <button class="theme-switch" onclick="toggleTheme()" title="Ganti Tema">
-        <span id="theme-icon">🌙</span>
-    </button>
+    <h1>DASHBOARD ENERGI</h1>
+    <div id="status-conn" class="status-bar">Menunggu Koneksi MQTT...</div>
+    
+    <div class="grid-container" id="main-grid"></div>
 
-    <div class="container">
-        <img src="splash-image.png" alt="Engineer melihat dashboard" class="splash-image">
-        
-        <h1>Pantau Data Energi Anda</h1>
-        <p class="description">Klik tombol di bawah ini untuk memantau parameter energi secara real-time.</p>
-        
-        <a href="menu.html" class="monitoring-button">MONITORING</a>
-    </div>
+<script>
+    // --- KONFIGURASI MQTT ---
+    const HOST = "701d32236feb43b38c22855a611f4d42.s1.eu.hivemq.cloud";
+    const PORT = 8884;
+    const USER = "web_dashboard";
+    const PASS = "Tristan12";
+    const TOPIC = "politeknik/meter/data";
 
-    <script>
-        // --- LOGIKA TEMA (Copy-Paste ini ke semua halaman agar konsisten) ---
-        function toggleTheme() {
-            const body = document.body;
-            const icon = document.getElementById('theme-icon');
-            const current = body.getAttribute('data-theme');
-            
-            if (current === 'dark') {
-                body.removeAttribute('data-theme'); // Jadi Terang
-                icon.textContent = '🌙';
-                localStorage.setItem('theme', 'light');
-            } else {
-                body.setAttribute('data-theme', 'dark'); // Jadi Gelap
-                icon.textContent = '☀️';
-                localStorage.setItem('theme', 'dark');
+    const client = new Paho.MQTT.Client(HOST, PORT, "web_" + new Date().getTime());
+
+    // --- INISIALISASI GRID 18 KARTU ---
+    function initGrid() {
+        const container = document.getElementById("main-grid");
+        let html = "";
+        for (let i = 1; i <= 18; i++) {
+            html += `
+            <div class="card" id="card-${i}">
+                <div class="card-header">
+                    <h3 class="card-title">Mesin ${i}</h3>
+                    <span class="badge" id="status-${i}">OFFLINE</span>
+                </div>
+                <div class="card-body">
+                    <div class="section-title">Energi (Akumulasi)</div>
+                    <table class="data-table">
+                        <tr><td class="lbl">Total Ea</td><td class="val highlight" id="e_act-${i}">-</td><td class="unit">kWh</td></tr>
+                        <tr><td class="lbl">Total Er</td><td class="val" id="e_reac-${i}">-</td><td class="unit">kVARh</td></tr>
+                        <tr><td class="lbl">Partial Ea</td><td class="val" id="e_pa-${i}">-</td><td class="unit">kWh</td></tr>
+                        <tr><td class="lbl">Partial Er</td><td class="val" id="e_pr-${i}">-</td><td class="unit">kVARh</td></tr>
+                    </table>
+
+                    <div class="section-title">Kelistrikan</div>
+                    <table class="data-table">
+                        <tr><td class="lbl">Voltage (Avg)</td><td class="val highlight" id="v-${i}">-</td><td class="unit">V</td></tr>
+                        <tr><td class="lbl">Current I1</td><td class="val" id="i1-${i}">-</td><td class="unit">A</td></tr>
+                        <tr><td class="lbl">Current I2</td><td class="val" id="i2-${i}">-</td><td class="unit">A</td></tr>
+                        <tr><td class="lbl">Current I3</td><td class="val" id="i3-${i}">-</td><td class="unit">A</td></tr>
+                    </table>
+
+                    <div class="section-title">Daya & Kualitas</div>
+                    <table class="data-table">
+                        <tr><td class="lbl">Active Power</td><td class="val" id="p-${i}">-</td><td class="unit">W</td></tr>
+                        <tr><td class="lbl">React Power</td><td class="val" id="q-${i}">-</td><td class="unit">VAR</td></tr>
+                        <tr><td class="lbl">Appar Power</td><td class="val" id="s-${i}">-</td><td class="unit">kVA</td></tr>
+                        <tr><td class="lbl">Power Factor</td><td class="val" id="pf-${i}">-</td><td class="unit"></td></tr>
+                        <tr><td class="lbl">Frequency</td><td class="val" id="hz-${i}">-</td><td class="unit">Hz</td></tr>
+                    </table>
+                    
+                    <div class="section-title" style="color:#27ae60">Operasional</div>
+                    <table class="data-table">
+                        <tr><td class="lbl">Waktu Jalan</td><td class="val" id="op-${i}">-</td><td class="unit">Jam</td></tr>
+                    </table>
+                </div>
+            </div>`;
+        }
+        container.innerHTML = html;
+    }
+
+    // --- KONEKSI MQTT ---
+    function connect() {
+        client.connect({
+            useSSL: true, userName: USER, password: PASS,
+            onSuccess: () => {
+                document.getElementById("status-conn").innerText = "✅ Terhubung ke Sistem Monitoring";
+                document.getElementById("status-conn").className = "status-bar connected";
+                client.subscribe(TOPIC);
+            },
+            onFailure: (e) => {
+                document.getElementById("status-conn").innerText = "❌ Gagal Konek: " + e.errorMessage;
             }
+        });
+    }
+
+    client.onConnectionLost = (r) => {
+        if (r.errorCode !== 0) {
+            document.getElementById("status-conn").innerText = "⚠️ Putus. Menyambung ulang...";
+            setTimeout(connect, 3000);
+        }
+    };
+
+    // --- TERIMA DATA ---
+    client.onMessageArrived = (m) => {
+        try {
+            const d = JSON.parse(m.payloadString);
+            updateCard(d);
+        } catch (e) { console.error(e); }
+    };
+
+    // --- UPDATE UI ---
+    function updateCard(d) {
+        const id = d.id;
+        if (!id || id > 18) return;
+
+        const card = document.getElementById(`card-${id}`);
+        const badge = document.getElementById(`status-${id}`);
+
+        if (d.status === "offline") {
+            card.className = "card offline";
+            badge.className = "badge";
+            badge.innerText = "OFFLINE";
+            return; // Jangan update angka kalau offline
         }
 
-        // Cek tema tersimpan saat loading
-        const savedTheme = localStorage.getItem('theme');
-        if (savedTheme === 'dark') {
-            document.body.setAttribute('data-theme', 'dark');
-            document.getElementById('theme-icon').textContent = '☀️';
-        }
-    </script>
+        // Jika Online
+        card.className = "card online";
+        badge.className = "badge on";
+        badge.innerText = "ONLINE";
 
+        // Helper Format
+        const f = (n, dec) => (n !== undefined && n !== null) ? Number(n).toFixed(dec) : "-";
+
+        // Isi Data
+        document.getElementById(`e_act-${id}`).innerText = f(d.e, 2);
+        document.getElementById(`e_reac-${id}`).innerText = f(d.q_tot, 2);
+        document.getElementById(`e_pa-${id}`).innerText = f(d.e_part, 2);
+        document.getElementById(`e_pr-${id}`).innerText = f(d.e_part, 2); // Typo fix: q_part di json
+        
+        document.getElementById(`v-${id}`).innerText = f(d.v, 1);
+        document.getElementById(`i1-${id}`).innerText = f(d.i1, 2);
+        document.getElementById(`i2-${id}`).innerText = f(d.i2, 2);
+        document.getElementById(`i3-${id}`).innerText = f(d.i3, 2);
+        
+        document.getElementById(`p-${id}`).innerText = f(d.p, 0);
+        document.getElementById(`q-${id}`).innerText = f(d.q, 0);
+        document.getElementById(`s-${id}`).innerText = f(d.s, 2);
+        
+        document.getElementById(`pf-${id}`).innerText = f(d.pf, 3);
+        document.getElementById(`hz-${id}`).innerText = f(d.hz, 1);
+        
+        document.getElementById(`op-${id}`).innerText = f(d.op_time, 1);
+    }
+
+    // --- MULAI ---
+    initGrid();
+    connect();
+
+</script>
 </body>
 </html>
