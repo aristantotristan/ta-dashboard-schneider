@@ -3,14 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MONITORING ENERGI (v45 - FINAL)</title>
-    
+    <title>MONITORING ENERGI (v46 - ID FIX)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gauge.js/1.3.7/gauge.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
     <style>
-        body { font-family: 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; padding: 20px; color: #333; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; padding: 20px; color: #333; }
         h1 { text-align: center; color: #0d47a1; margin-bottom: 5px; }
         h2 { text-align: center; color: #546e7a; margin-top: 0; margin-bottom: 25px; }
         #status { text-align: center; padding: 10px; margin-bottom: 20px; font-weight: bold; color: white; border-radius: 5px; }
@@ -18,18 +16,18 @@
         
         .page { display: none; } .page.active { display: block; }
         
-        /* MENU GRID */
-        .main-menu-grid { display: grid; grid-template-columns: 1fr; gap: 20px; max-width: 500px; margin: 20px auto; }
-        .main-menu-button { background: #fff; padding: 30px; border-radius: 10px; text-align: center; font-size: 1.2em; font-weight: bold; color: #0d47a1; border: 2px solid #fff; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        .main-menu-button:hover { border-color: #0d47a1; }
-
-        /* MONITOR GRID */
+        /* MENU */
         .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; }
         .menu-card { background: #fff; padding: 20px; border-radius: 10px; text-align: center; font-weight: 600; color: #555; border-top: 5px solid #bdc3c7; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .menu-card:hover { transform: translateY(-5px); }
         .menu-card.online { border-top-color: #27ae60; }
         .menu-badge { display: block; font-size: 0.75em; margin-top: 5px; color: #95a5a6; }
         .menu-card.online .menu-badge { color: #27ae60; font-weight: bold; }
+
+        /* TOMBOL UTAMA */
+        .main-menu-grid { display: grid; grid-template-columns: 1fr; gap: 20px; max-width: 500px; margin: 20px auto; }
+        .main-menu-button { background: #fff; padding: 30px; border-radius: 10px; text-align: center; font-size: 1.2em; font-weight: bold; color: #0d47a1; border: 2px solid #fff; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .main-menu-button:hover { border-color: #0d47a1; }
 
         /* DETAIL */
         .back-btn { display: inline-block; padding: 8px 20px; background: #34495e; color: white; border-radius: 5px; cursor: pointer; margin-bottom: 20px; }
@@ -95,11 +93,11 @@
                     <tr><td class="lbl">Partial Reactive E</td><td class="val" id="v-qpart">0</td><td class="unit">kVARh</td></tr>
                     
                     <tr class="row-head"><td colspan="3">2. Kelistrikan</td></tr>
-                    <tr><td class="lbl">Voltage (L-L Avg)</td><td class="val" id="v-v">0</td><td class="unit">V</td></tr>
+                    <tr><td class="lbl">Voltage (Avg)</td><td class="val" id="v-v">0</td><td class="unit">V</td></tr>
                     <tr><td class="lbl">Current (Avg)</td><td class="val" id="v-i">0</td><td class="unit">A</td></tr>
-                    <tr class="row-sub"><td class="lbl" style="padding-left:30px">Phase L1</td><td class="val" id="v-i1">0</td><td class="unit">A</td></tr>
-                    <tr class="row-sub"><td class="lbl" style="padding-left:30px">Phase L2</td><td class="val" id="v-i2">0</td><td class="unit">A</td></tr>
-                    <tr class="row-sub"><td class="lbl" style="padding-left:30px">Phase L3</td><td class="val" id="v-i3">0</td><td class="unit">A</td></tr>
+                    <tr class="row-sub"><td class="lbl" style="padding-left:30px">Phase 1 (I1)</td><td class="val" id="v-i1">0</td><td class="unit">A</td></tr>
+                    <tr class="row-sub"><td class="lbl" style="padding-left:30px">Phase 2 (I2)</td><td class="val" id="v-i2">0</td><td class="unit">A</td></tr>
+                    <tr class="row-sub"><td class="lbl" style="padding-left:30px">Phase 3 (I3)</td><td class="val" id="v-i3">0</td><td class="unit">A</td></tr>
                     
                     <tr class="row-head"><td colspan="3">3. Daya & Kualitas</td></tr>
                     <tr><td class="lbl">Active Power</td><td class="val" id="v-p">0</td><td class="unit">W</td></tr>
@@ -134,9 +132,9 @@
         <div class="tarif-controls">
             <input type="date" id="tarif-datepicker-start"> <input type="date" id="tarif-datepicker-end">
             <button onclick="fetchTarifData()">Tampilkan</button>
-            <hr>
-            <button onclick="setRange('daily')">Hari Ini</button>
-            <button onclick="setRange('weekly')">7 Hari</button>
+            <hr style="border:0; border-top:1px solid #eee; margin: 15px 0;">
+            <button onclick="setTarifRange('daily')">Hari Ini</button>
+            <button onclick="setTarifRange('weekly')">7 Hari Terakhir</button>
         </div>
         <div id="tarif-loading" style="display: none; text-align: center;">Memuat data...</div>
         <div class="data-card">
@@ -145,7 +143,7 @@
     </div>
 
 <script>
-// --- CONFIG & GLOBALS ---
+// --- CONFIG ---
 const SUPABASE_URL = "https://rojhcadtqfynlqzubftx.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs";
 const MQTT_HOST = "701d32236feb43b38c22855a611f4d42.s1.eu.hivemq.cloud";
@@ -154,44 +152,42 @@ const MQTT_USER = "web_dashboard";
 const MQTT_PASS = "Tristan12";
 const MQTT_TOPIC = "politeknik/meter/data";
 
-// Variabel di Scope Global (Biar bisa diakses HTML)
 let supabaseClient, mqttClient;
 let gaugeV, gaugeA, gaugeP, gaugeHz;
 let activeMachineId = 0;
 let gaugesInitialized = false;
 let latestDataCache = {};
-let lastUpdateTimes = {}; 
+let lastUpdateTimes = {};
 
-const fmt = (n, d) => (n != null && !isNaN(n)) ? Number(n).toFixed(d) : "0";
-const fmt_rp = (n) => (n != null && !isNaN(n)) ? 'Rp ' + Number(n).toLocaleString('id-ID') : "0";
+const fmt = (val, dig) => (val != null && !isNaN(val)) ? Number(val).toFixed(dig) : "0";
+const fmt_rp = (val) => (val != null && !isNaN(val)) ? 'Rp ' + Number(val).toLocaleString('id-ID') : "0";
 function fmtTime(val) {
     if (val == null || isNaN(val) || val == 0) return "0 Hari 0 Jam";
     return `${Math.floor(val / 24)} Hari ${(val % 24).toFixed(1)} Jam`;
 }
 
-// --- INISIALISASI ---
 window.onload = function() {
     try {
-        // Init Supabase
         supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        
-        // Init MQTT
         mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_" + Date.now());
-        mqttClient.onConnectionLost = (r) => { 
-            if(r.errorCode!==0) { setStatus("Putus, Reconnecting...", "bg-err"); setTimeout(connectMQTT, 3000); }
+        
+        mqttClient.onConnectionLost = (r) => { if (r.errorCode !== 0) { setStatus("Koneksi Putus...", "bg-err"); setTimeout(connectMQTT, 3000); } };
+        mqttClient.onMessageArrived = (m) => {
+            const d = JSON.parse(m.payloadString);
+            if(d.id_mesin) d.id = d.id_mesin;
+            if(!d.id) return;
+            latestDataCache[d.id] = d;
+            lastUpdateTimes[d.id] = Date.now();
+            updateCardStatus(d);
+            if(d.id === activeMachineId) updateDetailView(d);
         };
-        mqttClient.onMessageArrived = onMessage;
 
         initApp();
-        
-        // --- SATPAM WAKTU (1 Detik) ---
         setInterval(checkTimeouts, 1000);
-        
-    } catch (e) { setStatus("Init Error: " + e.message, "bg-err"); }
+    } catch (e) { setStatus("Error Init: " + e.message, "bg-err"); }
 };
 
 function initApp() {
-    // Buat Grid Menu
     let gM = "", gT = "";
     for(let i=1; i<=18; i++) {
         gM += `<div class="menu-card" id="mon-${i}" onclick="goMonitor(${i})">Mesin ${i}<span class="menu-badge">OFFLINE</span></div>`;
@@ -199,59 +195,35 @@ function initApp() {
     }
     document.getElementById("monitor-grid-container").innerHTML = gM;
     document.getElementById("tarif-grid-container").innerHTML = gT;
-    
     showPage('page-main-menu');
     connectMQTT();
+}
+
+function checkTimeouts() {
+    const now = Date.now();
+    // TIMEOUT 3 MENIT (180000 ms) SESUAI PERMINTAAN
+    const TIMEOUT = 180000; 
+
+    for(let i=1; i<=18; i++) {
+        if(lastUpdateTimes[i] && (now - lastUpdateTimes[i] > TIMEOUT)) {
+            const off = {id: i, status: 'offline'};
+            latestDataCache[i] = off;
+            updateCardStatus(off);
+            if(activeMachineId === i) updateDetailView(off);
+            delete lastUpdateTimes[i];
+        }
+    }
 }
 
 function connectMQTT() {
     setStatus("Menghubungkan...", "bg-wait");
     mqttClient.connect({
         useSSL: true, userName: MQTT_USER, password: MQTT_PASS,
-        onSuccess: () => { 
-            setStatus("ONLINE", "bg-ok"); 
-            mqttClient.subscribe(MQTT_TOPIC); 
-        },
-        onFailure: () => { setStatus("Gagal Konek MQTT", "bg-err"); }
+        onSuccess: () => { setStatus("ONLINE", "bg-ok"); mqttClient.subscribe(MQTT_TOPIC); },
+        onFailure: () => { setStatus("Gagal Konek", "bg-err"); }
     });
 }
 
-function onMessage(m) {
-    try {
-        const d = JSON.parse(m.payloadString);
-        if(d.id_mesin) d.id = d.id_mesin;
-        if(!d.id) return;
-        
-        // Terima Data Baru
-        latestDataCache[d.id] = d;
-        lastUpdateTimes[d.id] = Date.now(); // Catat jam masuk
-        
-        updateCardStatus(d);
-        if(d.id === activeMachineId) updateDetailView(d);
-    } catch(e) {}
-}
-
-// --- SATPAM WAKTU (3 MENIT) ---
-function checkTimeouts() {
-    const now = Date.now();
-    // 3 Menit = 180 * 1000 = 180000 ms
-    const TIMEOUT = 180000; 
-
-    for(let i=1; i<=18; i++) {
-        // Jika ada data terakhir, TAPI selisihnya > 3 menit
-        if(lastUpdateTimes[i] && (now - lastUpdateTimes[i] > TIMEOUT)) {
-            const offData = { id: i, status: 'offline' };
-            latestDataCache[i] = offData;
-            
-            updateCardStatus(offData);
-            if(activeMachineId === i) updateDetailView(offData);
-            
-            delete lastUpdateTimes[i]; // Stop checking
-        }
-    }
-}
-
-// --- NAVIGASI & TAMPILAN ---
 window.showPage = (id) => {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.getElementById(id).classList.add('active');
@@ -259,13 +231,27 @@ window.showPage = (id) => {
 
 window.goMonitor = (id) => {
     activeMachineId = id;
-    document.getElementById("monitor-detail-title").innerText = "Detail Mesin " + id;
+    document.getElementById("monitor-detail-title").textContent = "Detail Mesin " + id;
     
+    // Reset tampilan (supaya bersih)
+    // Kalau ada data terakhir, pakai. Kalau tidak, anggap offline.
     if(latestDataCache[id]) updateDetailView(latestDataCache[id]);
-    else updateDetailView({status:'offline'}); // Default 0
+    else updateDetailView({status:'offline'});
 
+    // Default Tab: Full Parameters
     window.switchTab('full');
     showPage('page-monitor-detail');
+};
+
+window.goTarif = (id) => {
+    activeMachineId = id;
+    document.getElementById("tarif-detail-title").textContent = "Tarif Mesin " + id;
+    const d = new Date();
+    document.getElementById('tarif-datepicker-end').value = d.toISOString().split('T')[0];
+    d.setDate(d.getDate() - 7);
+    document.getElementById('tarif-datepicker-start').value = d.toISOString().split('T')[0];
+    showPage('page-tarif-detail');
+    window.fetchTarifData();
 };
 
 function updateCardStatus(d) {
@@ -281,17 +267,16 @@ function updateCardStatus(d) {
 }
 
 function updateDetailView(d) {
-    // JIKA OFFLINE -> PAKSA 0
+    // OFFLINE -> RESET 0
     if(d.status === 'offline') {
         ['v-e','v-qtot','v-epart','v-qpart','v-v','v-i','v-i1','v-i2','v-i3','v-p','v-q','v-s','v-pf','v-hz']
         .forEach(k => { if(document.getElementById(k)) document.getElementById(k).innerText = "0"; });
-        
         if(document.getElementById('v-op')) document.getElementById('v-op').innerText = "0 Hari 0 Jam";
         if(gaugesInitialized) { gaugeV.set(0); gaugeA.set(0); gaugeP.set(0); gaugeHz.set(0); }
         return;
     }
 
-    // JIKA ONLINE
+    // ONLINE -> UPDATE
     document.getElementById('v-e').innerText = fmt(d.e, 2);
     document.getElementById('v-qtot').innerText = fmt(d.q_tot, 2);
     document.getElementById('v-epart').innerText = fmt(d.e_part, 2);
@@ -313,46 +298,36 @@ function updateDetailView(d) {
     }
 }
 
+// --- FUNGSI GANTI TAB & SETUP GAUGE (INI YANG DIPERBAIKI) ---
 window.switchTab = (tab) => {
     if(tab === 'full') {
-        document.getElementById('full-params-view').style.display = 'block';
-        document.getElementById('core-gauges-view').style.display = 'none';
+        document.getElementById('view-full').style.display = 'block';
+        document.getElementById('view-gauge').style.display = 'none';
         document.getElementById('btn-full').classList.add('active');
         document.getElementById('btn-gauge').classList.remove('active');
     } else {
-        document.getElementById('full-params-view').style.display = 'none';
-        document.getElementById('core-gauges-view').style.display = 'block';
+        document.getElementById('view-full').style.display = 'none';
+        document.getElementById('view-gauge').style.display = 'block';
         document.getElementById('btn-full').classList.remove('active');
         document.getElementById('btn-gauge').classList.add('active');
-        if(!gaugesInitialized) setupGauges();
+        
+        // Setup gauge hanya jika tab ini dibuka pertama kali
+        if(!gaugesInitialized) { 
+            setupGauges(); 
+            gaugesInitialized = true; 
+            // Langsung update nilai gauge jika data tersedia
+            if(latestDataCache[activeMachineId]) updateDetailView(latestDataCache[activeMachineId]);
+        }
     }
 };
 
 function setupGauges() {
     var opts = { angle: 0, lineWidth: 0.2, radiusScale: 1, pointer: { length: 0.5, strokeWidth: 0.03, color: '#000' }, limitMax: false, limitMin: false, colorStart: '#6FADCF', colorStop: '#8FC0DA', strokeColor: '#E0E0E0', generateGradient: true, highDpiSupport: true };
-    gaugeV = new Gauge(document.getElementById("g-v")).setOptions(opts); gaugeV.maxValue = 450; gaugeV.setMinValue(0);
-    gaugeA = new Gauge(document.getElementById("g-a")).setOptions(opts); gaugeA.maxValue = 100; gaugeA.setMinValue(0);
-    gaugeP = new Gauge(document.getElementById("g-p")).setOptions(opts); gaugeP.maxValue = 20000; gaugeP.setMinValue(0);
-    gaugeHz = new Gauge(document.getElementById("g-f")).setOptions(opts); gaugeHz.maxValue = 60; gaugeHz.setMinValue(40);
-    gaugesInitialized = true;
-    if(latestDataCache[activeMachineId]) updateDetailView(latestDataCache[activeMachineId]);
-}
-
-// --- TARIF ---
-window.goTarif = (id) => {
-    activeMachineId = id;
-    document.getElementById("tarif-detail-title").innerText = "Tarif Mesin " + id;
-    window.setRange('weekly');
-    showPage('page-tarif-detail');
-};
-
-window.setRange = (type) => {
-    const d = new Date();
-    document.getElementById('tarif-datepicker-end').value = d.toISOString().split('T')[0];
-    if(type==='daily') d.setDate(d.getDate());
-    if(type==='weekly') d.setDate(d.getDate() - 7);
-    document.getElementById('tarif-datepicker-start').value = d.toISOString().split('T')[0];
-    window.fetchTarifData();
+    
+    gaugeV = new Gauge(document.getElementById("g-v")).setOptions(opts); gaugeV.maxValue = 450; gaugeV.setMinValue(0); gaugeV.set(0);
+    gaugeA = new Gauge(document.getElementById("g-a")).setOptions(opts); gaugeA.maxValue = 100; gaugeA.setMinValue(0); gaugeA.set(0);
+    gaugeP = new Gauge(document.getElementById("g-p")).setOptions(opts); gaugeP.maxValue = 20000; gaugeP.setMinValue(0); gaugeP.set(0);
+    gaugeHz = new Gauge(document.getElementById("g-f")).setOptions(opts); gaugeHz.maxValue = 60; gaugeHz.setMinValue(40); gaugeHz.set(0);
 }
 
 window.fetchTarifData = async () => {
@@ -378,8 +353,10 @@ window.fetchTarifData = async () => {
     tBody.innerHTML = html + "</tbody>";
 };
 
-function setStatus(msg, cls) { const s=document.getElementById("status"); if(s){ s.innerText=msg; s.className=cls; } }
-
+function setStatus(msg, cls) { 
+    const s = document.getElementById("status");
+    if(s) { s.textContent = msg; s.className = cls; }
+}
 </script>
 </body>
 </html>
