@@ -3,301 +3,341 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Analytics Dashboard Pro</title>
+    <title>Energy Dashboard (Classic)</title>
     
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
     <style>
-        /* --- CSS MODERN UI --- */
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #f0f2f5;
-            color: #333;
-            margin: 0;
-            padding: 25px;
+        /* --- TEMA --- */
+        :root { 
+            --bg-body: #f4f7f6; --bg-card: #ffffff; --text-main: #333333; 
+            --text-sub: #546e7a; --text-val: #0d47a1; --border-card: #e0e0e0; 
+            --accent: #007bff; --shadow: 0 2px 10px rgba(0,0,0,0.05); 
+        }
+        [data-theme="dark"] { 
+            --bg-body: #121212; --bg-card: #1e1e1e; --text-main: #e0e0e0; 
+            --text-sub: #b0bec5; --text-val: #64b5f6; --border-card: #333333; 
+            --accent: #82b1ff; --shadow: 0 2px 10px rgba(0,0,0,0.3); 
+        }
+
+        body { 
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            background-color: var(--bg-body); color: var(--text-main); 
+            margin: 0; padding: 20px; padding-top: 70px; transition: 0.3s; 
+        }
+
+        /* NOTIFIKASI */
+        #toast-container { position: fixed; top: 80px; right: 20px; z-index: 2000; display: flex; flex-direction: column; gap: 10px; }
+        .toast { background-color: #323232; color: #fff; padding: 15px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); font-size: 0.95em; display: flex; align-items: flex-start; gap: 15px; min-width: 300px; animation: slideIn 0.5s ease forwards; border-left: 5px solid #ff9800; }
+        .toast.hide { animation: fadeOut 0.5s ease forwards; }
+        @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+        @keyframes fadeOut { to { transform: translateX(100%); } }
+
+        /* NAVIGASI */
+        .header-container { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px; }
+        .back-button { background: var(--bg-card); border: 1px solid var(--border-card); padding: 10px 20px; border-radius: 8px; text-decoration: none; color: var(--text-sub); font-weight: 600; transition: 0.2s; }
+        .back-button:hover { background: var(--accent); color: white; border-color: var(--accent); }
+        
+        h1 { margin: 0; font-size: 2em; color: var(--accent); }
+        h2 { margin: 5px 0 0 0; font-size: 1em; font-weight: 400; color: var(--text-sub); }
+        
+        /* GRID UTAMA */
+        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+        
+        /* CARD STYLE (YANG SIMPEL) */
+        .card { 
+            background: var(--bg-card); border-radius: 12px; 
+            box-shadow: var(--shadow); padding: 20px; border: 1px solid var(--border-card);
+        }
+        .card h3 { 
+            margin: 0 0 15px 0; padding-bottom: 10px; 
+            border-bottom: 2px solid var(--bg-body); color: var(--text-sub); font-size: 1.1em; 
         }
         
-        /* Header dengan Dropdown */
-        .header-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 25px;
-        }
-        .header-title h1 { text-align: left; color: #1a237e; margin: 0; font-size: 2.2em; }
-        .header-title h2 { text-align: left; color: #546e7a; font-size: 1em; margin: 5px 0 0 0; font-weight: 400; }
+        /* DATA POINT (Angka Besar) */
+        .data-point { margin-bottom: 15px; }
+        .label { display: block; font-size: 0.9em; color: var(--text-sub); margin-bottom: 5px; }
+        .value { font-size: 2.2em; font-weight: 700; color: var(--text-val); letter-spacing: -1px; }
+        .unit { font-size: 1rem; color: var(--text-main); margin-left: 5px; font-weight: 500; opacity: 0.7; }
+
+        /* Grouping Grid di dalam Card */
+        .dual-group { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .power-group { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+        .power-group .value { font-size: 1.6em; } /* Agak kecil dikit biar muat */
         
-        select#machine-selector {
-            padding: 10px 15px;
-            font-size: 1.1em;
-            border-radius: 8px;
-            border: 1px solid #ccc;
-            background-color: white;
-            cursor: pointer;
-            font-weight: bold;
-            color: #1a237e;
+        /* 3 Fasa Style */
+        .phase-box { 
+            grid-column: span 2; display: flex; justify-content: space-between; 
+            background: var(--bg-body); padding: 10px; border-radius: 8px; margin-bottom: 15px; 
         }
+        .phase-item { text-align: center; flex: 1; }
+        .phase-label { font-size: 0.75em; color: var(--text-sub); display: block; }
+        .phase-val { font-weight: bold; color: var(--text-val); font-size: 1.1em; }
 
-        /* Grid Layout */
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            grid-auto-rows: auto;
-            gap: 20px;
-        }
+        /* Kontrol Lain */
+        .theme-switch { position: fixed; bottom: 20px; right: 20px; z-index: 1000; background: var(--bg-card); border: 1px solid var(--text-sub); border-radius: 50%; width: 45px; height: 45px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2em; box-shadow: var(--shadow); color: var(--text-main); }
+        #status { position: fixed; top: 0; left: 0; width: 100%; text-align: center; padding: 8px; font-weight: 600; color: white; z-index: 100; transition: 0.5s; font-size: 0.9em; }
+        .bg-ok { background: #28a745; transform: translateY(-100%); } .bg-wait { background: #ffc107; color: #333; } .bg-err { background: #dc3545; }
 
-        /* Kartu */
-        .card {
-            background: #ffffff;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.07);
-            padding: 25px;
-        }
-
-        /* KPI Card Style */
-        .kpi-card { display: flex; flex-direction: column; justify-content: space-between; }
-        .kpi-card .label { font-size: 0.9em; font-weight: 600; color: #546e7a; margin-bottom: 8px; text-transform: uppercase; }
-        .kpi-card .value { font-size: 2.8em; font-weight: 700; color: #0d47a1; line-height: 1; }
-        .kpi-card .unit { font-size: 1.2em; font-weight: 500; color: #444; margin-left: 5px; }
-        
-        /* Chart Card Style */
-        .chart-card { grid-column: span 2; }
-        .chart-card.full { grid-column: span 4; }
-        .chart-card h3 { margin-top: 0; margin-bottom: 20px; font-size: 1.1em; color: #333; }
-        .chart-container { position: relative; width: 100%; height: 300px; }
-        .chart-container.half-height { height: 250px; }
-
-        /* Status Bar */
-        #status {
-            position: fixed; bottom: 20px; right: 20px;
-            padding: 10px 20px; border-radius: 50px;
-            color: white; font-weight: bold; font-size: 0.9em;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-            z-index: 1000;
-        }
-        .bg-ok { background: #2e7d32; }
-        .bg-wait { background: #f57c00; }
-        .bg-err { background: #c62828; }
-
-        /* Responsive */
-        @media (max-width: 1200px) {
-            .chart-card { grid-column: span 2; }
-            .dashboard-grid { grid-template-columns: 1fr 1fr; }
-        }
-        @media (max-width: 768px) {
-            .header-container { flex-direction: column; align-items: flex-start; gap: 15px; }
-            .dashboard-grid { grid-template-columns: 1fr; }
-            .kpi-card, .chart-card, .chart-card.full { grid-column: span 1; }
-        }
+        .view-section { display: none; } .view-section.active { display: block; }
+        .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; max-width: 1200px; margin: 0 auto; }
+        .menu-card { background: var(--bg-card); padding: 25px; border-radius: 12px; text-align: center; cursor: pointer; border: 1px solid var(--border-card); box-shadow: var(--shadow); transition: 0.2s; }
+        .menu-card:hover { transform: translateY(-5px); border-color: var(--accent); }
+        .menu-card.online { border-bottom: 4px solid #28a745; } 
+        .menu-card.offline { border-bottom: 4px solid #dc3545; opacity: 0.7; }
+        .badge { font-size: 0.7em; font-weight: bold; display: block; margin-top: 5px; color: var(--text-sub); }
+        .online .badge { color: #28a745; } .offline .badge { color: #dc3545; }
+        .machine-select { padding: 8px; border-radius: 6px; border: 1px solid var(--accent); color: var(--accent); background: var(--bg-card); font-weight: bold; }
     </style>
 </head>
 <body>
+    
+    <div id="status" class="bg-wait">Connecting...</div>
+    <div id="toast-container"></div>
+    <button class="theme-switch" onclick="toggleTheme()"><i class="fas fa-adjust"></i></button>
 
-    <div id="status" class="bg-wait">Connecting MQTT...</div>
-
-    <div class="header-container">
-        <div class="header-title">
-            <h1>Energy Dashboard</h1>
-            <h2 id="machine-label">Data Real-time - Mesin 1</h2>
+    <div id="view-grid" class="view-section active">
+        <div class="menu-container" style="max-width:1200px; margin:0 auto;">
+            <div style="margin-bottom: 30px; display:flex; align-items:center; justify-content:space-between;">
+                <a href="menu.html" class="back-button">&#8592; Menu Utama</a>
+                <h1 style="font-size:1.8em;">Pilih Mesin</h1>
+                <div style="width:100px;"></div> </div>
+            <div class="menu-grid" id="machine-grid"></div>
         </div>
-        
-        <select id="machine-selector" onchange="changeMachine(this.value)">
-            </select>
     </div>
 
-    <div class="dashboard-grid">
-
-        <div class="card kpi-card">
-            <div class="label">TEGANGAN</div>
-            <div><span class="value" id="val-v">0.0</span><span class="unit">V</span></div>
-        </div>
-        <div class="card kpi-card">
-            <div class="label">ARUS</div>
-            <div><span class="value" id="val-i">0.00</span><span class="unit">A</span></div>
-        </div>
-        <div class="card kpi-card">
-            <div class="label">FREKUENSI</div>
-            <div><span class="value" id="val-hz">0.0</span><span class="unit">Hz</span></div>
-        </div>
-        <div class="card kpi-card">
-            <div class="label">POWER FACTOR</div>
-            <div><span class="value" id="val-pf">0.00</span><span class="unit"></span></div>
-        </div>
-        
-        <div class="card chart-card full">
-            <h3>Tren Tegangan (V) & Arus (A)</h3>
-            <div class="chart-container">
-                <canvas id="lineChart"></canvas>
+    <div id="view-detail" class="view-section">
+        <div class="header-container">
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <button onclick="showGrid()" class="back-button">&#8592; Kembali</button>
+                <select id="machineSelector" class="machine-select" onchange="switchMachine(this.value)"></select>
+            </div>
+            <div style="text-align: right;">
+                <h1 id="page-title">Mesin 1</h1>
+                <h2 id="data-status-text">Live Monitoring</h2>
             </div>
         </div>
 
-        <div class="card chart-card">
-            <h3>Komposisi Daya</h3>
-            <div class="chart-container half-height">
-                <canvas id="barChart"></canvas>
+        <div class="dashboard-grid">
+            <div class="card">
+                <h3>Total Energi</h3>
+                <div class="data-point">
+                    <span class="label">Total Active Import</span>
+                    <div><span class="value" id="val-e">-</span><span class="unit">kWh</span></div>
+                </div>
+                <div class="data-point">
+                    <span class="label">Total Reactive Import</span>
+                    <div><span class="value" id="val-q_tot">-</span><span class="unit">kVARh</span></div>
+                </div>
             </div>
-        </div>
-        <div class="card chart-card">
-            <h3>Komposisi Energi (kWh)</h3>
-            <div class="chart-container half-height">
-                <canvas id="donutChart"></canvas>
-            </div>
-        </div>
 
+            <div class="card">
+                <h3>Energi Parsial</h3>
+                <div class="data-point">
+                    <span class="label">Partial Active</span>
+                    <div><span class="value" id="val-e_part">-</span><span class="unit">kWh</span></div>
+                </div>
+                <div class="data-point">
+                    <span class="label">Partial Reactive</span>
+                    <div><span class="value" id="val-q_part">-</span><span class="unit">kVARh</span></div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3>Kelistrikan</h3>
+                <div class="dual-group">
+                    <div class="data-point">
+                        <span class="label">Voltage (Avg)</span>
+                        <div><span class="value" id="val-v">-</span><span class="unit">V</span></div>
+                    </div>
+                    <div class="data-point">
+                        <span class="label">Current (Avg)</span>
+                        <div><span class="value" id="val-i">-</span><span class="unit">A</span></div>
+                    </div>
+                    
+                    <div class="phase-box">
+                        <div class="phase-item"><span class="phase-label">R (L1)</span><span class="phase-val" id="val-i1">-</span> <small>A</small></div>
+                        <div class="phase-item"><span class="phase-label">S (L2)</span><span class="phase-val" id="val-i2">-</span> <small>A</small></div>
+                        <div class="phase-item"><span class="phase-label">T (L3)</span><span class="phase-val" id="val-i3">-</span> <small>A</small></div>
+                    </div>
+
+                    <div class="data-point">
+                        <span class="label">Power Factor</span>
+                        <div><span class="value" id="val-pf">-</span></div>
+                    </div>
+                    <div class="data-point">
+                        <span class="label">Frequency</span>
+                        <div><span class="value" id="val-hz">-</span><span class="unit">Hz</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Daya (Power)</h3>
+                <div class="power-group">
+                    <div class="data-point">
+                        <span class="label">Active (P)</span>
+                        <div><span class="value" id="val-p">-</span><span class="unit">W</span></div>
+                    </div>
+                    <div class="data-point">
+                        <span class="label">Reactive (Q)</span>
+                        <div><span class="value" id="val-q">-</span><span class="unit">VAR</span></div>
+                    </div>
+                    <div class="data-point">
+                        <span class="label">Apparent (S)</span>
+                        <div><span class="value" id="val-s">-</span><span class="unit">kVA</span></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3>Operasional</h3>
+                <div class="dual-group">
+                    <div class="data-point">
+                        <span class="label">Running Time</span>
+                        <div><span class="value" id="val-op_days">-</span><span class="unit">d</span> <span class="value" id="val-op_hrs">-</span><span class="unit">h</span></div>
+                    </div>
+                    <div class="data-point">
+                        <span class="label">Active Tariff</span>
+                        <div><span class="value" id="val-tariff">T1</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
 <script>
-// --- 1. CONFIG ---
+// CONFIG
+const SUPABASE_URL = "https://khevzqqtswbdatbkkmme.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtoZXZ6cXF0c3diZGF0YmtrbW1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1MTY4MDgsImV4cCI6MjA3OTA5MjgwOH0.N28mnbk8tTAJkm47DS2pzvsHHChlyCovT6vi2Z4aqHc";
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const MQTT_HOST = "701d32236feb43b38c22855a611f4d42.s1.eu.hivemq.cloud";
 const MQTT_PORT = 8884;
 const MQTT_USER = "web_dashboard";
 const MQTT_PASS = "Tristan12";
-const MQTT_TOPIC = "politeknik/meter/data";
+const MQTT_TOPIC_DATA = "politeknik/meter/data";
+const MQTT_TOPIC_TARIF = "politeknik/setting/tarif_v2";
+const WATCHDOG_TIMEOUT = 180000; // 3 Menit
 
-let client;
-let activeMachineId = 1; // Default Mesin 1
-let machineData = {}; // Menyimpan data terakhir setiap mesin
-const MAX_DATA_POINTS = 20;
-let lineChart, barChart, donutChart;
+let activeId = 1, client, cache = {}, lastUpd = {}, reported = {};
+const fmt = (n, d) => (n!=null && !isNaN(n)) ? Number(n).toFixed(d) : "-";
 
-// --- 2. INISIALISASI CHART ---
-function setupCharts() {
-    // Line Chart
-    const ctxLine = document.getElementById('lineChart').getContext('2d');
-    lineChart = new Chart(ctxLine, {
-        type: 'line',
-        data: { labels: [], datasets: [
-            { label: 'Tegangan (V)', data: [], borderColor: '#2196f3', yAxisID: 'yV', tension: 0.2, fill: false },
-            { label: 'Arus (A)', data: [], borderColor: '#e91e63', yAxisID: 'yA', tension: 0.2, fill: false }
-        ]},
-        options: { responsive: true, maintainAspectRatio: false, scales: { x: { display: false }, yV: { position: 'left', min: 200, max: 250 }, yA: { position: 'right', min: 0 } } }
-    });
+function toggleTheme() {
+    const body = document.body; 
+    if (body.getAttribute('data-theme') === 'dark') { body.removeAttribute('data-theme'); localStorage.setItem('theme', 'light'); } 
+    else { body.setAttribute('data-theme', 'dark'); localStorage.setItem('theme', 'dark'); }
+}
+if (localStorage.getItem('theme') === 'dark') document.body.setAttribute('data-theme', 'dark');
 
-    // Bar Chart
-    const ctxBar = document.getElementById('barChart').getContext('2d');
-    barChart = new Chart(ctxBar, {
-        type: 'bar',
-        data: { labels: ['P (W)', 'Q (VAR)', 'S (VA)'], datasets: [{ label: 'Daya', data: [0,0,0], backgroundColor: ['#4caf50', '#ff9800', '#9c27b0'] }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
-    });
-
-    // Donut Chart
-    const ctxDonut = document.getElementById('donutChart').getContext('2d');
-    donutChart = new Chart(ctxDonut, {
-        type: 'doughnut',
-        data: { labels: ['Total EA', 'Partial EA'], datasets: [{ data: [1, 0], backgroundColor: ['#03a9f4', '#ff5722'] }] },
-        options: { responsive: true, maintainAspectRatio: false }
-    });
+function showNotification(price, user) {
+    const box = document.getElementById('toast-container');
+    const div = document.createElement('div'); div.className = 'toast';
+    div.innerHTML = `<div><b>Update Tarif</b><br>Rp ${parseInt(price).toLocaleString()}<br><small>${user}</small></div>`;
+    box.appendChild(div); setTimeout(() => div.remove(), 5000);
 }
 
-// --- 3. FUNGSI UPDATE UI ---
-function updateDashboard(id) {
-    // Hanya update jika data mesin yg dipilih tersedia
-    if (!machineData[id]) return; 
-    const d = machineData[id];
+function showGrid() { document.getElementById('view-detail').classList.remove('active'); document.getElementById('view-grid').classList.add('active'); }
+function switchMachine(id) { activeId = parseInt(id); document.getElementById('page-title').innerText = "Mesin "+id; refreshUI(); }
+function openDetail(id) { activeId = id; document.getElementById('page-title').innerText = "Mesin "+id; document.getElementById('view-grid').classList.remove('active'); document.getElementById('view-detail').classList.add('active'); document.getElementById("machineSelector").value = id; refreshUI(); }
 
-    // Update Angka
-    document.getElementById('val-v').textContent = d.v.toFixed(1);
-    document.getElementById('val-i').textContent = d.i.toFixed(2);
-    document.getElementById('val-hz').textContent = d.hz.toFixed(1);
-    document.getElementById('val-pf').textContent = d.pf.toFixed(2);
-
-    // Update Grafik Line (Realtime push)
-    const timeLabel = new Date().toLocaleTimeString();
-    lineChart.data.labels.push(timeLabel);
-    lineChart.data.datasets[0].data.push(d.v);
-    lineChart.data.datasets[1].data.push(d.i);
-    if(lineChart.data.labels.length > MAX_DATA_POINTS) {
-        lineChart.data.labels.shift();
-        lineChart.data.datasets[0].data.shift();
-        lineChart.data.datasets[1].data.shift();
-    }
-    lineChart.update('none'); // 'none' biar animasi gak berat
-
-    // Update Grafik Bar
-    barChart.data.datasets[0].data = [d.p, d.q, d.s];
-    barChart.update();
-
-    // Update Grafik Donut
-    donutChart.data.datasets[0].data = [d.e, d.e_part];
-    donutChart.update();
-}
-
-// --- 4. LOGIKA GANTI MESIN ---
-function changeMachine(id) {
-    activeMachineId = parseInt(id);
-    document.getElementById('machine-label').textContent = "Data Real-time - Mesin " + id;
-    
-    // Reset Grafik saat ganti mesin (biar tidak nyampur)
-    lineChart.data.labels = [];
-    lineChart.data.datasets[0].data = [];
-    lineChart.data.datasets[1].data = [];
-    lineChart.update();
-    
-    // Paksa update jika data cache ada
-    if (machineData[activeMachineId]) {
-        updateDashboard(activeMachineId);
+function updateGridCard(id, isOnline) {
+    const c = document.getElementById(`card-${id}`); 
+    if(c) {
+        if(isOnline) { c.classList.add('online'); c.classList.remove('offline'); c.querySelector('.badge').innerText="ONLINE"; }
+        else { c.classList.remove('online'); c.classList.add('offline'); c.querySelector('.badge').innerText="OFFLINE"; }
     }
 }
 
-// --- 5. KONEKSI MQTT ---
+function refreshUI() {
+    const d = cache[activeId]; const now = Date.now();
+    if(d && lastUpd[activeId] && (now - lastUpd[activeId] < WATCHDOG_TIMEOUT)) {
+        if(d.status === 'offline') setZero(true); else setVal(d);
+    } else { setZero(true); }
+}
+
+function setVal(d) {
+    document.getElementById('val-e').innerText = fmt(d.e, 2);
+    document.getElementById('val-q_tot').innerText = fmt(d.q_tot, 2);
+    document.getElementById('val-e_part').innerText = fmt(d.e_part, 2);
+    document.getElementById('val-q_part').innerText = fmt(d.q_part, 2);
+    document.getElementById('val-v').innerText = fmt(d.v, 1);
+    document.getElementById('val-i').innerText = fmt(d.i, 2);
+    document.getElementById('val-i1').innerText = fmt(d.i1, 2);
+    document.getElementById('val-i2').innerText = fmt(d.i2, 2);
+    document.getElementById('val-i3').innerText = fmt(d.i3, 2);
+    document.getElementById('val-p').innerText = fmt(d.p, 0);
+    document.getElementById('val-q').innerText = fmt(d.q, 0);
+    document.getElementById('val-s').innerText = fmt(d.s, 0); 
+    document.getElementById('val-pf').innerText = fmt(d.pf, 3);
+    document.getElementById('val-hz').innerText = fmt(d.hz, 1);
+    const h = d.op_time ? parseFloat(d.op_time) : 0;
+    document.getElementById('val-op_days').innerText = Math.floor(h / 24);
+    document.getElementById('val-op_hrs').innerText = (h % 24).toFixed(1);
+    document.getElementById('data-status-text').innerText = "Live Data";
+    document.getElementById('data-status-text').style.color = "var(--success)";
+}
+
+function setZero(isOffline) {
+    ['e','q_tot','e_part','q_part','v','i','i1','i2','i3','p','q','s','pf','hz','op_days','op_hrs'].forEach(k => document.getElementById('val-'+k).innerText = "-");
+    if(isOffline) {
+        document.getElementById('data-status-text').innerText = "OFFLINE";
+        document.getElementById('data-status-text').style.color = "var(--danger)";
+    }
+}
+
+async function logError(id, desc) {
+    await supabaseClient.from('system_logs').insert({ machine_id: id, event_type: 'TIMEOUT', description: desc });
+}
+
 function startMQTT() {
-    const clientId = "WebClient-" + new Date().getTime();
-    client = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, clientId);
-
-    client.onConnectionLost = (responseObject) => {
-        document.getElementById("status").className = "bg-err";
-        document.getElementById("status").textContent = "Connection Lost";
-        setTimeout(startMQTT, 5000);
-    };
-
-    client.onMessageArrived = (message) => {
+    client = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_" + Date.now());
+    client.onConnectionLost = (r) => { if(r.errorCode!==0) { document.getElementById('status').className='bg-err'; setTimeout(startMQTT, 5000); } };
+    client.onMessageArrived = (m) => {
         try {
-            const d = JSON.parse(message.payloadString);
-            // Simpan data ke cache (berdasarkan ID mesin)
-            if (d.id) {
-                machineData[d.id] = d;
-                // Jika data yg masuk = mesin yg sedang dilihat, update UI
-                if (d.id === activeMachineId) {
-                    updateDashboard(d.id);
-                }
+            if(m.destinationName.includes("tarif")) {
+                const t = JSON.parse(m.payloadString);
+                showNotification(t.price, t.by); return;
             }
-        } catch (e) { console.error(e); }
+            const d = JSON.parse(m.payloadString);
+            if(!d.id) return;
+            cache[d.id] = d; lastUpd[d.id] = Date.now();
+            if(reported[d.id]) reported[d.id] = false; // Reset error flag
+            
+            updateGridCard(d.id, true);
+            if(activeId === d.id) refreshUI();
+        } catch(e) {}
     };
-
-    client.connect({
-        useSSL: true,
-        userName: MQTT_USER,
-        password: MQTT_PASS,
-        onSuccess: () => {
-            document.getElementById("status").className = "bg-ok";
-            document.getElementById("status").textContent = "System Online";
-            client.subscribe(MQTT_TOPIC);
-        },
-        onFailure: () => {
-            document.getElementById("status").className = "bg-err";
-            document.getElementById("status").textContent = "Failed to Connect";
-            setTimeout(startMQTT, 5000);
-        }
-    });
+    client.connect({ useSSL: true, userName: MQTT_USER, password: MQTT_PASS, onSuccess: () => { 
+        document.getElementById('status').className = 'bg-ok'; 
+        client.subscribe(MQTT_TOPIC_DATA); 
+        client.subscribe(MQTT_TOPIC_TARIF); 
+    }});
 }
 
-// --- INIT ---
-window.onload = function() {
-    // 1. Isi Dropdown
-    const select = document.getElementById("machine-selector");
-    for (let i = 1; i <= 18; i++) {
-        let option = document.createElement("option");
-        option.value = i;
-        option.text = "Mesin " + i;
-        select.appendChild(option);
+// Watchdog Loop
+setInterval(() => {
+    const now = Date.now();
+    for(let i=1; i<=18; i++) {
+        if(lastUpd[i] && (now - lastUpd[i] > WATCHDOG_TIMEOUT) && !reported[i]) {
+            updateGridCard(i, false);
+            if(activeId === i) setZero(true);
+            logError(i, "Lost Connection > 3 Min");
+            reported[i] = true;
+        }
     }
+}, 5000);
 
-    setupCharts();
+window.onload = () => {
+    const g = document.getElementById('machine-grid');
+    const sel = document.getElementById('machineSelector');
+    for(let i=1; i<=18; i++) {
+        g.innerHTML += `<div class="menu-card offline" id="card-${i}" onclick="openDetail(${i})"><i class="fas fa-industry fa-2x" style="color:#ccc; margin-bottom:10px;"></i><div style="font-weight:700">Mesin ${i}</div><div class="badge">OFFLINE</div></div>`;
+        sel.innerHTML += `<option value="${i}">Mesin ${i}</option>`;
+    }
     startMQTT();
 };
 </script>
-
 </body>
 </html>
