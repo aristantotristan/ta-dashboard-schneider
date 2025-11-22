@@ -3,329 +3,300 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Schneider 18 Mesin - Energy Monitor</title>
+    <title>Schneider 18 Mesin - Realtime Dashboard</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js" type="text/javascript"></script>
 
     <style>
-        body { background-color: #f0f2f5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .header-title { padding: 20px 0; color: #2c3e50; font-weight: bold; }
+        body { background-color: #eef2f7; font-family: 'Segoe UI', sans-serif; }
+        .header-title { padding: 20px 0; color: #1a1a1a; font-weight: 800; letter-spacing: -0.5px; }
         
-        /* Card Styling */
+        /* Styling Kartu Mesin */
         .machine-card {
             border: none;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
             margin-bottom: 20px;
             background: white;
-            transition: transform 0.2s;
+            overflow: hidden;
         }
-        .machine-card:hover { transform: translateY(-3px); }
-        
-        .card-header {
+        .card-header-custom {
             background-color: #fff;
-            border-bottom: 2px solid #f0f0f0;
-            border-radius: 12px 12px 0 0 !important;
-            padding: 15px;
+            border-bottom: 1px solid #eee;
+            padding: 12px 15px;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-
-        .param-box {
-            text-align: center;
-            padding: 8px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            margin-bottom: 8px;
-        }
-        .param-label { font-size: 0.75rem; color: #6c757d; text-transform: uppercase; letter-spacing: 0.5px; }
-        .param-value { font-size: 1.1rem; font-weight: 700; color: #212529; }
-        .param-unit { font-size: 0.7rem; color: #adb5bd; }
+        .machine-name { font-weight: 700; font-size: 1rem; margin: 0; color: #333; }
         
-        /* Colors for specific params */
-        .val-p { color: #2ecc71; } /* Active Power Green */
-        .val-q { color: #e67e22; } /* Reactive Power Orange */
-        .val-s { color: #3498db; } /* Apparent Power Blue */
-        .val-e { color: #9b59b6; } /* Energy Purple */
-
-        .status-dot {
-            height: 12px; width: 12px;
-            background-color: #bbb;
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: 5px;
+        /* Kotak Parameter Kecil */
+        .param-box {
+            background: #f8f9fa;
+            border-radius: 6px;
+            padding: 6px 4px;
+            text-align: center;
+            border: 1px solid #eee;
         }
-        .status-online { background-color: #2ecc71; box-shadow: 0 0 8px #2ecc71; }
-        .status-offline { background-color: #e74c3c; }
+        .lbl { font-size: 0.65rem; color: #888; text-transform: uppercase; font-weight: 600; display: block; margin-bottom: 2px; }
+        .val { font-size: 0.95rem; font-weight: 700; color: #222; line-height: 1.1; }
+        .unit { font-size: 0.65rem; color: #aaa; }
+
+        /* Indikator Status Bulat */
+        .status-indicator {
+            font-size: 0.7rem; font-weight: bold; 
+            padding: 3px 8px; border-radius: 20px;
+            display: flex; align-items: center; gap: 5px;
+        }
+        .dot { height: 8px; width: 8px; border-radius: 50%; display: inline-block; }
+        .st-online { color: #198754; background: #d1e7dd; }
+        .st-online .dot { background: #198754; box-shadow: 0 0 5px #198754; }
+        .st-offline { color: #dc3545; background: #f8d7da; }
+        .st-offline .dot { background: #dc3545; }
+
+        /* Warna Khusus Parameter */
+        .color-p { color: #27ae60; } /* Watt Hijau */
+        .color-q { color: #d35400; } /* VAR Orange */
+        .color-s { color: #2980b9; } /* kVA Biru */
     </style>
 </head>
 <body>
 
-<div class="container-fluid">
+<div class="container-fluid px-4">
     <div class="row">
         <div class="col-12 text-center">
-            <h2 class="header-title">MONITORING ENERGI - 18 MESIN SCHNEIDER</h2>
-            <p id="connection-status" class="badge bg-warning text-dark">Connecting to MQTT...</p>
+            <h3 class="header-title">DASHBOARD ENERGI - 18 MESIN</h3>
+            <div id="mqtt-status" class="badge bg-secondary mb-3">Connecting to Cloud...</div>
         </div>
     </div>
 
-    <div class="row" id="machine-container">
-        </div>
+    <div class="row" id="machine-container"></div>
 </div>
 
 <script>
-    // --- 1. KONFIGURASI MQTT ---
-    // Gunakan WSS (Secure WebSocket) untuk HiveMQ Cloud di Browser
+    // ==========================================
+    // 1. KONFIGURASI KONEKSI (JANGAN DIUBAH)
+    // ==========================================
     const MQTT_HOST = "701d32236feb43b38c22855a611f4d42.s1.eu.hivemq.cloud";
-    const MQTT_PORT = 8884; // Port standar WSS HiveMQ
-    const MQTT_CLIENT_ID = "Web_Dashboard_" + new Date().getTime();
+    const MQTT_PORT = 8884; // Port WSS (Secure WebSocket)
+    const MQTT_CLIENT_ID = "WebClient_" + Math.random().toString(16).substr(2, 8);
     const MQTT_TOPIC = "politeknik/meter/data";
     
-    // Masukkan User/Pass sama seperti di Arduino
+    // Credential
     const MQTT_USER = "vercel_client"; 
     const MQTT_PASS = "VercelPass123!";
 
-    // Inisialisasi 18 Slot Mesin Kosong saat start
-    const machineContainer = document.getElementById("machine-container");
-    
-    function initCards() {
-        let html = "";
-        for(let i=1; i<=18; i++) {
-            html += `
-            <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
-                <div class="machine-card" id="card-${i}">
-                    <div class="card-header">
-                        <h6 class="m-0 fw-bold">Mesin ${i}</h6>
-                        <div><span class="status-dot" id="status-dot-${i}"></span> <small id="status-text-${i}" style="font-size:0.7rem;">WAIT</small></div>
-                    </div>
-                    <div class="card-body p-2">
-                        
-                        <div class="row g-1">
-                            <div class="col-6">
-                                <div class="param-box">
-                                    <div class="param-label">Voltage</div>
-                                    <div class="param-value" id="val-v-${i}">-</div>
-                                    <div class="param-unit">V</div>
-                                </div>
-                            </div>
-                            <div class="col-6">
-                                <div class="param-box">
-                                    <div class="param-label">Current</div>
-                                    <div class="param-value" id="val-i-${i}">-</div>
-                                    <div class="param-unit">A</div>
-                                </div>
-                            </div>
-                        </div>
+    // ==========================================
+    // 2. GENERATE 18 KARTU OTOMATIS
+    // ==========================================
+    const container = document.getElementById("machine-container");
+    let cardsHTML = "";
 
-                        <div class="row g-1 mt-1">
-                            <div class="col-4">
-                                <div class="param-box">
-                                    <div class="param-label">Active</div> <div class="param-value val-p" id="val-p-${i}">-</div>
-                                    <div class="param-unit">W</div>
-                                </div>
-                            </div>
-                            <div class="col-4">
-                                <div class="param-box">
-                                    <div class="param-label">React</div> <div class="param-value val-q" id="val-q-${i}">-</div>
-                                    <div class="param-unit">VAR</div>
-                                </div>
-                            </div>
-                            <div class="col-4">
-                                <div class="param-box">
-                                    <div class="param-label">Appar</div> <div class="param-value val-s" id="val-s-${i}">-</div>
-                                    <div class="param-unit">kVA</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="row g-1 mt-1">
-                            <div class="col-6">
-                                <div class="param-box">
-                                    <div class="param-label">Freq</div>
-                                    <div class="param-value" id="val-hz-${i}">-</div>
-                                    <div class="param-unit">Hz</div>
-                                </div>
-                            </div>
-                            <div class="col-6">
-                                <div class="param-box">
-                                    <div class="param-label">PF</div>
-                                    <div class="param-value" id="val-pf-${i}">-</div>
-                                    <div class="param-unit">Cosφ</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <hr class="my-2">
-
-                        <div class="row g-1">
-                            <div class="col-6">
-                                <div class="param-box">
-                                    <div class="param-label">Tot Active</div>
-                                    <div class="param-value val-e" id="val-e-${i}">-</div>
-                                    <div class="param-unit">kWh</div>
-                                </div>
-                            </div>
-                            <div class="col-6">
-                                <div class="param-box">
-                                    <div class="param-label">Tot React</div>
-                                    <div class="param-value val-e" id="val-qtot-${i}">-</div>
-                                    <div class="param-unit">kVARh</div>
-                                </div>
-                            </div>
-                        </div>
-
-                         <div class="row g-1 mt-1">
-                            <div class="col-6">
-                                <div class="param-box">
-                                    <div class="param-label">Part Active</div>
-                                    <div class="param-value" style="font-size:0.9rem" id="val-epart-${i}">-</div>
-                                    <div class="param-unit">kWh</div>
-                                </div>
-                            </div>
-                            <div class="col-6">
-                                <div class="param-box">
-                                    <div class="param-label">Part React</div>
-                                    <div class="param-value" style="font-size:0.9rem" id="val-qpart-${i}">-</div>
-                                    <div class="param-unit">kVARh</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="mt-2 bg-light p-2 rounded border">
-                             <div class="d-flex justify-content-between" style="font-size:0.8rem">
-                                <span>Op Time:</span>
-                                <span class="fw-bold" id="val-time-${i}">-</span>
-                            </div>
-                             <div class="d-flex justify-content-between mt-1" style="font-size:0.8rem">
-                                <span>Tariffs:</span>
-                                <span class="fw-bold">-</span> </div>
-                        </div>
-
+    for (let i = 1; i <= 18; i++) {
+        cardsHTML += `
+        <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+            <div class="machine-card">
+                <div class="card-header-custom">
+                    <h5 class="machine-name">MESIN ${i}</h5>
+                    <div class="status-indicator st-offline" id="status-badge-${i}">
+                        <span class="dot"></span> <span id="status-text-${i}">OFF</span>
                     </div>
                 </div>
-            </div>
-            `;
-        }
-        machineContainer.innerHTML = html;
-    }
-    initCards();
+                <div class="card-body p-2">
+                    <div class="row g-1 mb-1">
+                        <div class="col-6">
+                            <div class="param-box">
+                                <span class="lbl">VOLTAGE</span>
+                                <span class="val" id="v-${i}">0</span> <span class="unit">V</span>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="param-box">
+                                <span class="lbl">CURRENT</span>
+                                <span class="val" id="i-${i}">0</span> <span class="unit">A</span>
+                            </div>
+                        </div>
+                    </div>
 
-    // --- 2. MQTT CLIENT LOGIC ---
+                    <div class="row g-1 mb-1">
+                        <div class="col-4">
+                            <div class="param-box">
+                                <span class="lbl">ACTIVE</span>
+                                <span class="val color-p" id="p-${i}">0</span> <span class="unit">W</span>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="param-box">
+                                <span class="lbl">REACT</span>
+                                <span class="val color-q" id="q-${i}">0</span> <span class="unit">VAR</span>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="param-box">
+                                <span class="lbl">APPAR</span>
+                                <span class="val color-s" id="s-${i}">0</span> <span class="unit">kVA</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-1 mb-1">
+                        <div class="col-6">
+                            <div class="param-box">
+                                <span class="lbl">FREQ</span>
+                                <span class="val" id="hz-${i}">0</span> <span class="unit">Hz</span>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="param-box">
+                                <span class="lbl">P. FACTOR</span>
+                                <span class="val" id="pf-${i}">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr style="margin: 5px 0; border-top: 1px dashed #ddd;">
+
+                    <div class="row g-1 mb-1">
+                        <div class="col-6">
+                            <div class="param-box" style="background:#fdfdfd;">
+                                <span class="lbl">TOT ACTIVE E</span>
+                                <span class="val" id="e-${i}">0</span> <span class="unit">kWh</span>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="param-box" style="background:#fdfdfd;">
+                                <span class="lbl">TOT REACT E</span>
+                                <span class="val" id="qtot-${i}">0</span> <span class="unit">kVARh</span>
+                            </div>
+                        </div>
+                    </div>
+
+                     <div class="row g-1 mb-1">
+                        <div class="col-6">
+                            <div class="param-box" style="background:#fdfdfd;">
+                                <span class="lbl">PART ACTIVE</span>
+                                <span class="val" id="epart-${i}">0</span> <span class="unit">kWh</span>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="param-box" style="background:#fdfdfd;">
+                                <span class="lbl">PART REACT</span>
+                                <span class="val" id="qpart-${i}">0</span> <span class="unit">kVARh</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-2 p-2 bg-light border rounded text-center">
+                        <span class="lbl">OPERATION TIME</span>
+                        <div class="fw-bold text-primary" id="time-${i}">0d 0h</div>
+                    </div>
+
+                </div>
+            </div>
+        </div>`;
+    }
+    container.innerHTML = cardsHTML;
+
+    // ==========================================
+    // 3. LOGIKA MQTT CLIENT (PAHO)
+    // ==========================================
     const client = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, MQTT_CLIENT_ID);
 
-    client.onConnectionLost = onConnectionLost;
-    client.onMessageArrived = onMessageArrived;
-
-    const options = {
-        useSSL: true,
-        userName: MQTT_USER,
-        password: MQTT_PASS,
-        onSuccess: onConnect,
-        onFailure: onFail
+    client.onConnectionLost = function(responseObject) {
+        console.log("Koneksi Putus: " + responseObject.errorMessage);
+        document.getElementById("mqtt-status").className = "badge bg-danger";
+        document.getElementById("mqtt-status").innerText = "OFFLINE - RECONNECTING...";
+        setTimeout(connectToMqtt, 5000); // Coba connect lagi setelah 5 detik
     };
 
-    client.connect(options);
-
-    function onConnect() {
-        console.log("MQTT Connected");
-        document.getElementById("connection-status").className = "badge bg-success";
-        document.getElementById("connection-status").innerText = "SYSTEM ONLINE";
-        client.subscribe(MQTT_TOPIC);
-    }
-
-    function onFail(responseObject) {
-        console.log("MQTT Failed: " + responseObject.errorMessage);
-        document.getElementById("connection-status").className = "badge bg-danger";
-        document.getElementById("connection-status").innerText = "CONNECTION FAILED";
-        setTimeout(function(){ client.connect(options); }, 5000); // Reconnect
-    }
-
-    function onConnectionLost(responseObject) {
-        if (responseObject.errorCode !== 0) {
-            console.log("Connection Lost: " + responseObject.errorMessage);
-            document.getElementById("connection-status").className = "badge bg-warning text-dark";
-            document.getElementById("connection-status").innerText = "Reconnecting...";
-            setTimeout(function(){ client.connect(options); }, 5000);
-        }
-    }
-
-    // --- 3. MEMPROSES DATA MASUK ---
-    function onMessageArrived(message) {
+    client.onMessageArrived = function(message) {
+        // console.log("Data Masuk: " + message.payloadString); // Un-comment untuk debug di Console
         try {
-            const payload = JSON.parse(message.payloadString);
-            updateDashboard(payload);
+            const data = JSON.parse(message.payloadString);
+            updateUI(data);
         } catch (e) {
-            console.error("JSON Error:", e);
+            console.error("JSON Error: ", e);
+        }
+    };
+
+    function connectToMqtt() {
+        console.log("Mencoba Connect ke " + MQTT_HOST);
+        client.connect({
+            useSSL: true, // WAJIB TRUE untuk HiveMQ Cloud
+            userName: MQTT_USER,
+            password: MQTT_PASS,
+            onSuccess: function() {
+                console.log("BERHASIL CONNECT!");
+                document.getElementById("mqtt-status").className = "badge bg-success";
+                document.getElementById("mqtt-status").innerText = "SYSTEM ONLINE (RECEIVING DATA)";
+                client.subscribe(MQTT_TOPIC);
+            },
+            onFailure: function(message) {
+                console.log("Gagal Connect: " + message.errorMessage);
+                document.getElementById("mqtt-status").className = "badge bg-danger";
+                document.getElementById("mqtt-status").innerText = "CONNECTION FAILED";
+                setTimeout(connectToMqtt, 5000);
+            }
+        });
+    }
+
+    // Start Connection
+    connectToMqtt();
+
+    // ==========================================
+    // 4. FUNGSI UPDATE TAMPILAN
+    // ==========================================
+    function updateUI(d) {
+        const id = d.id_mesin; // Ambil ID Mesin
+        if (!id || id < 1 || id > 18) return;
+
+        // Update Status Badge
+        const badge = document.getElementById(`status-badge-${id}`);
+        const txt = document.getElementById(`status-text-${id}`);
+
+        if (d.status === "online") {
+            badge.className = "status-indicator st-online";
+            txt.innerText = "ON";
+            
+            // Update Angka Parameter
+            setVal(`v-${id}`, d.v, 1);      // 1 desimal
+            setVal(`i-${id}`, d.i, 2);      // 2 desimal
+            setVal(`p-${id}`, d.p, 0);      // 0 desimal (Watt)
+            setVal(`q-${id}`, d.q, 0);      // 0 desimal (VAR)
+            setVal(`s-${id}`, d.s, 2);      // 2 desimal (kVA)
+            setVal(`hz-${id}`, d.hz, 1);
+            setVal(`pf-${id}`, d.pf, 2);
+            
+            setVal(`e-${id}`, d.e, 1);
+            setVal(`qtot-${id}`, d.q_tot, 1);
+            setVal(`epart-${id}`, d.e_part, 1);
+            setVal(`qpart-${id}`, d.q_part, 1);
+
+            // Convert Jam ke Hari
+            document.getElementById(`time-${id}`).innerText = formatTime(d.op_time);
+
+        } else {
+            badge.className = "status-indicator st-offline";
+            txt.innerText = "OFF";
+            // Opsional: Kalau OFF, angka mau di-nol-kan atau dibiarkan nilai terakhir?
+            // Saat ini dibiarkan nilai terakhir agar tidak kedip-kedip.
         }
     }
 
-    function updateDashboard(data) {
-        const id = data.id_mesin;
-        if(id < 1 || id > 18) return; // Safety check
-
-        // Status Handling
-        const statusDot = document.getElementById(`status-dot-${id}`);
-        const statusText = document.getElementById(`status-text-${id}`);
-        
-        if (data.status === "online") {
-            statusDot.className = "status-dot status-online";
-            statusText.innerText = "ON";
-            statusText.style.color = "green";
-        } else {
-            statusDot.className = "status-dot status-offline";
-            statusText.innerText = "OFF";
-            statusText.style.color = "red";
-            return; // Kalau offline, tidak perlu update angka
-        }
-
-        // Fungsi bantu format angka (2 desimal)
-        const fmt = (val) => parseFloat(val).toFixed(2);
-        // Fungsi bantu format angka besar (0 desimal untuk Watt jika > 1000 agar rapi, opsional)
-        const fmtW = (val) => parseFloat(val).toFixed(0); 
-
-        // --- UPDATE NILAI PARAMETER ---
-        
-        // 1. V & I
-        document.getElementById(`val-v-${id}`).innerText = fmt(data.v);
-        document.getElementById(`val-i-${id}`).innerText = fmt(data.i);
-
-        // 2. Powers (Request: Active=W, Reactive=VAR, Apparent=kVA)
-        // Arduino mengirim P dalam Watt, Q dalam VAR, S dalam kVA. Jadi langsung tampilkan.
-        document.getElementById(`val-p-${id}`).innerText = fmtW(data.p); // Watt
-        document.getElementById(`val-q-${id}`).innerText = fmtW(data.q); // VAR
-        document.getElementById(`val-s-${id}`).innerText = fmt(data.s);  // kVA
-
-        // 3. Freq & PF
-        document.getElementById(`val-hz-${id}`).innerText = fmt(data.hz);
-        document.getElementById(`val-pf-${id}`).innerText = fmt(data.pf);
-
-        // 4. Energy Import (Total)
-        document.getElementById(`val-e-${id}`).innerText = fmt(data.e);       // kWh
-        document.getElementById(`val-qtot-${id}`).innerText = fmt(data.q_tot); // kVARh
-
-        // 5. Energy Partial
-        document.getElementById(`val-epart-${id}`).innerText = fmt(data.e_part); // kWh
-        document.getElementById(`val-qpart-${id}`).innerText = fmt(data.q_part); // kVARh
-
-        // 6. Operation Time (Convert Hours -> Days & Hours)
-        document.getElementById(`val-time-${id}`).innerText = convertHoursToDays(data.op_time);
+    // Helper Update Text
+    function setVal(elemId, value, decimal) {
+        const el = document.getElementById(elemId);
+        if (el) el.innerText = parseFloat(value).toFixed(decimal);
     }
 
-    // --- LOGIKA KONVERSI WAKTU OPERASI ---
-    function convertHoursToDays(totalHours) {
-        if (!totalHours || isNaN(totalHours)) return "0d 0h";
-        
-        const days = Math.floor(totalHours / 24);
-        const hours = (totalHours % 24).toFixed(1); // Sisa jam (dengan 1 desimal)
-        
-        if (days > 0) {
-            return `${days}d ${hours}h`; // Contoh: 5d 2.5h
-        } else {
-            return `${hours}h`; // Contoh: 12.5h
-        }
+    // Helper Convert Hours -> Days Hours
+    function formatTime(hoursVal) {
+        if (!hoursVal || isNaN(hoursVal)) return "0d 0h";
+        const days = Math.floor(hoursVal / 24);
+        const hours = (hoursVal % 24).toFixed(1);
+        if (days > 0) return `${days}d ${hours}h`;
+        return `${hours}h`;
     }
 
 </script>
