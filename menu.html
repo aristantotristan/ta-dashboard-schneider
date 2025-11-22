@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menu Utama</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; background: #f1f5f9; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .container { width: 100%; max-width: 500px; padding: 20px; }
+        .card { 
+            background: white; padding: 30px; border-radius: 16px; margin-bottom: 20px; 
+            display: flex; align-items: center; gap: 20px; text-decoration: none; color: #1e293b;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); transition: 0.3s; border: 1px solid #e2e8f0;
+        }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0,0,0,0.1); border-color: #2563eb; }
+        .icon { width: 60px; height: 60px; background: #eff6ff; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: #2563eb; }
+        .text h3 { margin: 0 0 5px 0; } .text p { margin: 0; color: #64748b; font-size: 0.9rem; }
+        .back-btn { position: absolute; top: 20px; left: 20px; color: #64748b; text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back-btn"><i class="fa-solid fa-arrow-left"></i> Kembali</a>
+    <div class="container">
+        <a href="dashboard.html" class="card">
+            <div class="icon"><i class="fa-solid fa-bolt"></i></div>
+            <div class="text"><h3>Monitoring Live</h3><p>Cek Arus, Tegangan & Daya Real-time</p></div>
+        </a>
+        <a href="tarif.html" class="card">
+            <div class="icon" style="color:#10b981; background:#ecfdf5;"><i class="fa-solid fa-file-invoice-dollar"></i></div>
+            <div class="text"><h3>Laporan Tarif</h3><p>Analisa Biaya Listrik & Konsumsi</p></div>
+        </a>
+        <a href="maintenance.html" class="card">
+            <div class="icon" style="color:#ef4444; background:#fef2f2;"><i class="fa-solid fa-triangle-exclamation"></i></div>
+            <div class="text"><h3>Maintenance Log</h3><p>Riwayat Error & Downtime Sistem</p></div>
+        </a>
+    </div>
+</body>
+</html>
