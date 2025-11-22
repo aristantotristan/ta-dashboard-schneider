@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master Control Panel</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        body { 
+            font-family: 'Segoe UI', sans-serif; 
+            background: #1a1a2e; 
+            color: white; 
+            display: flex; 
+            flex-direction: column;
+            align-items: center; 
+            justify-content: center; 
+            min-height: 100vh; 
+            margin: 0; 
+        }
+
+        h1 { margin-bottom: 10px; color: #4cc9f0; text-transform: uppercase; letter-spacing: 2px; }
+        p { color: #a0a0a0; margin-bottom: 40px; }
+
+        .grid-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            max-width: 800px;
+            width: 90%;
+        }
+
+        .btn-card {
+            background: #16213e;
+            border: 2px solid #303C55;
+            border-radius: 20px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-card:hover { transform: translateY(-10px); border-color: white; }
+        .btn-card:active { transform: scale(0.95); }
+
+        .icon { font-size: 4rem; margin-bottom: 20px; display: block; }
+        .label { font-size: 1.5rem; font-weight: bold; display: block; }
+        .desc { font-size: 0.9rem; color: #8892b0; margin-top: 10px; display: block; }
+
+        /* WARNA TOMBOL */
+        .btn-start { color: #00e676; border-color: #00e676; }
+        .btn-start:hover { background: rgba(0, 230, 118, 0.1); box-shadow: 0 0 30px rgba(0, 230, 118, 0.4); }
+
+        .btn-stop { color: #ffea00; border-color: #ffea00; }
+        .btn-stop:hover { background: rgba(255, 234, 0, 0.1); box-shadow: 0 0 30px rgba(255, 234, 0, 0.4); }
+
+        .btn-reset { color: #ff1744; border-color: #ff1744; }
+        .btn-reset:hover { background: rgba(255, 23, 68, 0.1); box-shadow: 0 0 30px rgba(255, 23, 68, 0.4); }
+
+        .btn-pdf { color: #2979ff; border-color: #2979ff; }
+        .btn-pdf:hover { background: rgba(41, 121, 255, 0.1); box-shadow: 0 0 30px rgba(41, 121, 255, 0.4); }
+
+        .back-link {
+            margin-top: 50px;
+            color: #8892b0;
+            text-decoration: none;
+            font-weight: bold;
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 20px; border-radius: 30px;
+            background: rgba(255,255,255,0.05);
+        }
+        .back-link:hover { background: rgba(255,255,255,0.1); color: white; }
+
+        @media (max-width: 600px) {
+            .grid-controls { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Master Control Room</h1>
+    <p>Pusat Kendali Sistem Monitoring Energi</p>
+
+    <div class="grid-controls">
+        <div class="btn-card btn-start" onclick="systemAction('START')">
+            <i class="fa-solid fa-power-off icon"></i>
+            <span class="label">START SYSTEM</span>
+            <span class="desc">Aktifkan monitoring & pencatatan database</span>
+        </div>
+
+        <div class="btn-card btn-stop" onclick="systemAction('STOP')">
+            <i class="fa-solid fa-pause icon"></i>
+            <span class="label">STOP SYSTEM</span>
+            <span class="desc">Jeda monitoring (Mode Maintenance)</span>
+        </div>
+
+        <div class="btn-card btn-reset" onclick="confirmReset()">
+            <i class="fa-solid fa-trash-can icon"></i>
+            <span class="label">RESET DATABASE</span>
+            <span class="desc">Hapus SEMUA data log error & energi</span>
+        </div>
+
+        <div class="btn-card btn-pdf" onclick="generatePDF()">
+            <i class="fa-solid fa-file-pdf icon"></i>
+            <span class="label">EKSPOR LAPORAN</span>
+            <span class="desc">Download laporan error ke PDF</span>
+        </div>
+    </div>
+
+    <a href="menu.html" class="back-link">
+        <i class="fa-solid fa-arrow-left"></i> Kembali ke Menu User
+    </a>
+
+<script>
+    // --- CONFIG ---
+    const SUPABASE_URL = "https://khevzqqtswbdatbkkmme.supabase.co"; 
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtoZXZ6cXF0c3diZGF0YmtrbW1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1MTY4MDgsImV4cCI6MjA3OTA5MjgwOH0.N28mnbk8tTAJkm47DS2pzvsHHChlyCovT6vi2Z4aqHc";
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const MQTT_HOST = "701d32236feb43b38c22855a611f4d42.s1.eu.hivemq.cloud";
+    const MQTT_PORT = 8884;
+    const MQTT_USER = "web_dashboard";
+    const MQTT_PASS = "Tristan12";
+    const MQTT_TOPIC_CONTROL = "politeknik/setting/control"; // Topik buat perintah
+
+    let mqttClient;
+
+    // --- MQTT INIT ---
+    function initMQTT() {
+        mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "admin_" + Date.now());
+        mqttClient.connect({ useSSL: true, userName: MQTT_USER, password: MQTT_PASS });
+    }
+    window.onload = initMQTT;
+
+    // --- 1 & 2. START / STOP SYSTEM ---
+    function systemAction(action) {
+        if(!mqttClient.isConnected()) {
+            Swal.fire("Error", "Belum terhubung ke MQTT, tunggu sebentar...", "error");
+            return;
+        }
+        
+        // Kirim perintah ke MQTT
+        let message = new Paho.MQTT.Message(JSON.stringify({ cmd: action, time: new Date() }));
+        message.destinationName = MQTT_TOPIC_CONTROL;
+        message.retained = true; // Simpan status terakhir
+        mqttClient.send(message);
+
+        Swal.fire({
+            title: action === 'START' ? 'Sistem Dinyalakan!' : 'Sistem Dihentikan!',
+            text: `Perintah ${action} telah dikirim ke seluruh unit.`,
+            icon: action === 'START' ? 'success' : 'warning',
+            timer: 2000,
+            showConfirmButton: false
+        });
+    }
+
+    // --- 3. RESET DATABASE ---
+    function confirmReset() {
+        Swal.fire({
+            title: 'Yakin Hapus Semua Data?',
+            text: "Data Log Error & Data Energi akan hilang permanen!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Ya, Hapus Semuanya!'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                performReset();
+            }
+        });
+    }
+
+    async function performReset() {
+        Swal.fire({ title: 'Sedang menghapus...', didOpen: () => { Swal.showLoading() } });
+
+        // Hapus System Logs
+        const req1 = supabaseClient.from('system_logs').delete().gt('id', 0);
+        // Hapus Data Energi (History)
+        const req2 = supabaseClient.from('data_energi').delete().gt('id', 0);
+        
+        await Promise.all([req1, req2]);
+
+        Swal.fire('Terhapus!', 'Database kini bersih seperti baru.', 'success');
+    }
+
+    // --- 4. EXPORT PDF ---
+    async function generatePDF() {
+        Swal.fire({ title: 'Mengambil Data...', didOpen: () => { Swal.showLoading() } });
+
+        const { data, error } = await supabaseClient
+            .from('system_logs')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (!data || data.length === 0) {
+            Swal.fire("Info", "Tidak ada data error untuk diekspor.", "info");
+            return;
+        }
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+
+        doc.setFontSize(18);
+        doc.text("Laporan Maintenance System Log", 14, 20);
+        doc.setFontSize(10);
+        doc.text("Dicetak pada: " + new Date().toLocaleString('id-ID'), 14, 28);
+
+        const tableData = data.map(row => [
+            new Date(row.created_at).toLocaleString('id-ID'),
+            "Mesin " + row.machine_id,
+            row.event_type,
+            row.description
+        ]);
+
+        doc.autoTable({
+            head: [['Waktu', 'Mesin', 'Status', 'Keterangan']],
+            body: tableData,
+            startY: 35,
+        });
+
+        doc.save(`Maintenance_Log_${new Date().toISOString().slice(0,10)}.pdf`);
+        Swal.fire("Berhasil!", "File PDF telah didownload.", "success");
+    }
+</script>
+
+</body>
+</html>
