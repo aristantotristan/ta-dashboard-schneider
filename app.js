@@ -1,13 +1,18 @@
+// ==========================================================
 // --- 1. CONFIG ---
+// ==========================================================
 const SUPABASE_URL = "https://rojhcadtqfynlqzubftx.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs";
+
 const MQTT_HOST = "701d32236feb43b38c22855a611f4d42.s1.eu.hivemq.cloud";
 const MQTT_PORT = 8884;
 const MQTT_USER = "web_dashboard";
 const MQTT_PASS = "Tristan12";
 const MQTT_TOPIC = "politeknik/meter/data";
 
+// ==========================================================
 // --- 2. GLOBALS ---
+// ==========================================================
 let supabaseClient, mqttClient;
 let gauges = {}; 
 let activeId = 0;
@@ -15,21 +20,28 @@ let gaugesInitialized = false;
 let cache = {};
 let lastUpdate = {};
 
+// Helper Format
 const fmt = (n, d) => (n != null && !isNaN(n)) ? Number(n).toFixed(d) : "-";
 const fmtRp = (n) => (n != null && !isNaN(n)) ? 'Rp ' + Number(n).toLocaleString('id-ID') : "-";
 const fmtTime = (v) => { if(!v) return "-"; let d=Math.floor(v/24), h=(v%24).toFixed(1); return `${d}h ${h}j`; };
 
-// --- 3. INIT ---
+
+// ==========================================================
+// --- 3. INIT (JALAN SAAT HALAMAN DIMUAT) ---
+// ==========================================================
 window.onload = function() {
     try {
+        // Init Clients
         supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "pro_" + Date.now());
         
+        // MQTT Handlers
         mqttClient.onConnectionLost = (r) => { 
             if(r.errorCode!==0) { setStatus("Reconnecting...", "bg-disconn"); setTimeout(connectMQTT, 3000); }
         };
         mqttClient.onMessageArrived = onMessage;
 
+        // Build UI & Connect
         initUI();
         connectMQTT();
         
@@ -47,8 +59,12 @@ window.onload = function() {
             }
         }, 1000);
 
-    } catch(e) { console.error(e); }
+    } catch(e) { console.error("Init Error:", e); }
 };
+
+// ==========================================================
+// --- 4. LOGIKA UTAMA (GLOBAL SCOPE) ---
+// ==========================================================
 
 function initUI() {
     let gridM = "", gridT = "";
@@ -108,9 +124,13 @@ function updateCard(d) {
     if(d.status === 'online') {
         el.classList.remove('offline'); el.classList.add('online');
         bd.innerText = "RUNNING";
+        bd.parentElement.classList.remove('offline');
+        bd.parentElement.classList.add('online');
     } else {
         el.classList.remove('online'); el.classList.add('offline');
         bd.innerText = "OFFLINE";
+        bd.parentElement.classList.remove('online');
+        bd.parentElement.classList.add('offline');
     }
 }
 
@@ -148,7 +168,6 @@ function updateDetail(d) {
     `;
     document.getElementById("detail-table-body").innerHTML = html;
 
-    // Update Gauge
     if(gaugesInitialized) {
         gauges.v.set(isOff ? 0 : d.v); document.getElementById("val-volt").innerText = isOff ? "-" : fmt(d.v, 0) + " V";
         gauges.a.set(isOff ? 0 : d.i); document.getElementById("val-amp").innerText = isOff ? "-" : fmt(d.i, 1) + " A";
@@ -247,7 +266,7 @@ async function fetchTarifData() {
     const { data, error } = await supabaseClient
         .from('summary_harian')
         .select('*')
-        .eq('id_mesin', activeId)
+        .eq('id_mesin', activeMachineId)
         .gte('tanggal', document.getElementById('t-start').value)
         .lte('tanggal', document.getElementById('t-end').value)
         .order('tanggal', {ascending: false});
@@ -271,16 +290,20 @@ async function fetchTarifData() {
 }
 
 function setStatus(t, c) { 
-    document.getElementById("conn-text").innerText = t;
-    document.getElementById("conn-dot").className = "status-dot " + c;
+    const d = document.getElementById("conn-dot");
+    const txt = document.getElementById("conn-text");
+    if(d && txt) {
+        d.className = "status-dot " + c;
+        txt.innerText = t;
+    }
 }
 
-// PENTING: Expose fungsi ke window agar bisa diklik di HTML
+// ==========================================================
+// --- EXPOSE FUNCTIONS TO WINDOW (WAJIB BIAR BISA DIKLIK) ---
+// ==========================================================
 window.goToMonitor = goToMonitor;
 window.goToTarif = goToTarif;
 window.openMonitor = openMonitor;
 window.openTarif = openTarif;
 window.switchDetailTab = switchDetailTab;
 window.fetchTarifData = fetchTarifData;
-
-</script>
