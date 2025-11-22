@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Live</title>
+    <title>Dashboard Live (DEBUG MODE)</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
@@ -54,7 +54,7 @@
     <div id="view-grid" class="view-section active">
         <div class="header">
             <a href="menu.html" class="btn-back"><i class="fa-solid fa-arrow-left"></i> Menu Utama</a>
-            <h2 style="margin:0; color:var(--primary);">Pilih Mesin</h2>
+            <h2 style="margin:0; color:var(--primary);">Pilih Mesin (DEBUG MODE)</h2>
         </div>
         <div class="grid-container" id="machine-grid"></div>
     </div>
@@ -100,108 +100,95 @@
     </div>
 
 <script>
-    // CONFIG
+    // --- 1. CONFIG ---
     const SUPABASE_URL = "https://khevzqqtswbdatbkkmme.supabase.co";
-    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtoZXZ6cXF0c3diZGF0YmtrbW1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1MTY4MDgsImV4cCI6MjA3OTA5MjgwOH0.N28mnbk8tTAJkm47DS2pzvsHHChlyCovT6vi2Z4aqHc";
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtoZXZ6cXF0c3diZGF0YmtrbW1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1MTY4MDgsImV4cCI6MjA3OTA5MjgwOH0.N28mnbk8tTAJkm47DS2pzvsHHChlyCovT6vi2Z4aqHc";
     const MQTT_HOST = "701d32236feb43b38c22855a611f4d42.s1.eu.hivemq.cloud";
     const MQTT_PORT = 8884;
     const MQTT_USER = "web_dashboard";
     const MQTT_PASS = "Tristan12";
-    
-    let activeId = 1, client, cache = {}, lastUpd = {}, reported = {};
-    const fmt = (n, d) => (n!=null && !isNaN(n)) ? Number(n).toFixed(d) : "-";
+    const MQTT_TOPIC = "politeknik/meter/data";
 
-    function showGrid() { document.getElementById('view-detail').classList.remove('active'); document.getElementById('view-grid').classList.add('active'); }
-    function openDetail(id) { activeId = id; document.getElementById('page-title').innerText = "Mesin "+id; document.getElementById('view-grid').classList.remove('active'); document.getElementById('view-detail').classList.add('active'); refreshUI(); }
+    // --- 2. GLOBALS ---
+    let supabaseClient, mqttClient;
+    let activeId = 0;
+    let cache = {};
+    let lastUpdate = {};
 
-    function refreshUI() {
-        const d = cache[activeId];
-        const now = Date.now();
-        
-        // Watchdog 3 Menit
-        if(d && lastUpd[activeId] && (now - lastUpd[activeId] < 180000)) {
-            if(d.status === 'offline') setZero(); else setVal(d);
-        } else {
-            setZero();
-        }
-    }
+    const fmt = (n, d) => (n != null && !isNaN(n)) ? Number(n).toFixed(d) : "-";
+    const fmtTime = (v) => { if(!v) return "-"; let d=Math.floor(v/24), h=(v%24).toFixed(1); return `${d}h ${h}j`; };
+    function setStatus(t, c) { const d=document.getElementById("status-bar"); d.innerText=t; d.className=c; }
 
-    function setVal(d) {
-        document.getElementById('val-e').innerText = fmt(d.e, 2);
-        document.getElementById('val-q_tot').innerText = fmt(d.q_tot, 2);
-        document.getElementById('val-e_part').innerText = fmt(d.e_part, 2);
-        document.getElementById('val-v').innerText = fmt(d.v, 1);
-        document.getElementById('val-i').innerText = fmt(d.i, 2);
-        document.getElementById('val-i1').innerText = fmt(d.i1, 2);
-        document.getElementById('val-i2').innerText = fmt(d.i2, 2);
-        document.getElementById('val-i3').innerText = fmt(d.i3, 2);
-        document.getElementById('val-p').innerText = fmt(d.p, 0);
-        document.getElementById('val-pf').innerText = fmt(d.pf, 2);
-        document.getElementById('val-hz').innerText = fmt(d.hz, 1);
-        document.getElementById('val-op').innerText = fmt(d.op_time, 1);
-    }
-
-    function setZero() {
-        ['e','q_tot','e_part','v','i','i1','i2','i3','p','pf','hz','op'].forEach(k => document.getElementById('val-'+k).innerText = "-");
-    }
-
-    async function logError(id, desc) {
-        await supabaseClient.from('system_logs').insert({ machine_id: id, event_type: 'TIMEOUT', description: desc });
-    }
-
-    function startMQTT() {
-        client = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_" + Date.now());
-        client.onConnectionLost = (r) => { if(r.errorCode!==0) { document.getElementById('status-bar').className = 'bg-err'; setTimeout(startMQTT, 5000); } };
-        client.onMessageArrived = (m) => {
-            const d = JSON.parse(m.payloadString);
-            if(!d.id) return;
-            cache[d.id] = d; lastUpd[d.id] = Date.now();
+    // --- 3. INIT ---
+    window.onload = function() {
+        try {
+            supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "debug_" + Date.now());
             
-            // Update Grid
-            const card = document.getElementById(`card-${d.id}`);
-            if(card) {
-                if(d.status === 'online') { card.classList.add('online'); card.classList.remove('offline'); card.querySelector('.badge').innerText = "ONLINE"; }
-                else { card.classList.remove('online'); card.classList.add('offline'); card.querySelector('.badge').innerText = "OFFLINE"; }
-            }
-
-            if(activeId === d.id) refreshUI();
-        };
-        client.connect({ useSSL: true, userName: MQTT_USER, password: MQTT_PASS, onSuccess: () => { 
-            document.getElementById('status-bar').className = 'bg-ok'; 
-            client.subscribe("politeknik/meter/data"); 
-        }});
-    }
-
-    // Watchdog Loop
-    setInterval(() => {
-        const now = Date.now();
-        for(let i=1; i<=18; i++) {
-            if(lastUpd[i] && (now - lastUpd[i] > 180000) && !reported[i]) {
-                // Timeout -> Set Offline & Log
-                const card = document.getElementById(`card-${i}`);
-                if(card) { card.classList.remove('online'); card.classList.add('offline'); card.querySelector('.badge').innerText = "OFFLINE"; }
-                if(activeId === i) setZero();
+            mqttClient.onConnectionLost = (r) => { 
+                if(r.errorCode!==0) { setStatus("Reconnecting...", "bg-err"); setTimeout(connectMQTT, 3000); }
+            };
+            
+            // --- DIAGNOSA DISINI ---
+            mqttClient.onMessageArrived = (m) => {
+                // TAMPILKAN DATA ASLI DARI ESP32 KE LAYAR
+                alert("DATA MASUK:\n" + m.payloadString);
                 
-                logError(i, "Lost Connection > 3 Min");
-                reported[i] = true;
-            }
-            if(lastUpd[i] && (now - lastUpd[i] < 180000)) reported[i] = false; // Reset flag
-        }
-    }, 5000);
+                // KITA STOP DULU KODE LAINNYA AGAR FOKUS LIHAT DATA
+                // (Aktifkan kembali nanti jika sudah selesai debug)
+                /*
+                try {
+                    const d = JSON.parse(m.payloadString);
+                    if(d.id_mesin) d.id = d.id_mesin;
+                    if(!d.id) return;
+                    cache[d.id] = d;
+                    lastUpdate[d.id] = Date.now();
+                    updateCard(d);
+                    if(d.id === activeId) updateDetail(d);
+                } catch(e) {}
+                */
+            };
 
-    // Init
-    window.onload = () => {
-        const g = document.getElementById('machine-grid');
+            initUI();
+            connectMQTT();
+            
+        } catch(e) { console.error(e); }
+    };
+
+    function initUI() {
+        let gridM = "";
         for(let i=1; i<=18; i++) {
-            g.innerHTML += `<div class="machine-card offline" id="card-${i}" onclick="openDetail(${i})">
-                <i class="fa-solid fa-industry fa-2x" style="color:#cbd5e1; margin-bottom:10px;"></i>
+            gridM += `
+            <div class="machine-card offline" id="card-${i}" onclick="openMonitor(${i})">
                 <div style="font-weight:700; color:#334155">Mesin ${i}</div>
-                <div class="badge">OFFLINE</div>
+                <div class="badge" id="badge-${i}">OFFLINE</div>
             </div>`;
         }
-        startMQTT();
-    };
+        document.getElementById("machine-grid").innerHTML = gridM;
+    }
+
+    function connectMQTT() {
+        setStatus("Connecting...", "bg-wait");
+        mqttClient.connect({
+            useSSL: true, userName: MQTT_USER, password: MQTT_PASS,
+            onSuccess: () => { setStatus("Connected (DEBUG)", "bg-ok"); mqttClient.subscribe(MQTT_TOPIC); },
+            onFailure: () => { setStatus("Failed", "bg-err"); }
+        });
+    }
+
+    // (Fungsi UI lainnya dinonaktifkan sementara untuk DEBUG)
+    function openMonitor(id) {
+        activeId = id;
+        document.getElementById('page-title').innerText = "Mesin " + id;
+        document.getElementById('view-grid').classList.remove('active');
+        document.getElementById('view-detail').classList.add('active');
+    }
+    
+    function showGrid() {
+        document.getElementById('view-detail').classList.remove('active');
+        document.getElementById('view-grid').classList.add('active');
+    }
+
 </script>
 </body>
 </html>
