@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Live</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        :root { --primary: #0f172a; --accent: #2563eb; --bg: #f8fafc; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); margin: 0; padding: 20px; padding-top: 80px; }
+        
+        /* Status Bar */
+        #status-bar { position: fixed; top: 0; left: 0; width: 100%; padding: 8px; text-align: center; color: white; font-weight: 600; z-index: 100; transition: 0.3s; }
+        .bg-ok { background: #10b981; transform: translateY(-100%); } 
+        .bg-wait { background: #f59e0b; } .bg-err { background: #ef4444; }
+
+        /* Layout */
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; max-width: 1200px; margin: 0 auto 30px; }
+        .btn-back { background: white; border: 1px solid #e2e8f0; padding: 10px 20px; border-radius: 8px; text-decoration: none; color: #64748b; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+        .view-section { display: none; animation: fade 0.3s; } .view-section.active { display: block; }
+        @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+
+        /* Grid Mesin */
+        .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px; max-width: 1200px; margin: 0 auto; }
+        .machine-card { background: white; padding: 25px 15px; border-radius: 12px; text-align: center; cursor: pointer; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: 0.2s; border-bottom: 4px solid #cbd5e1; }
+        .machine-card:hover { transform: translateY(-5px); border-color: var(--accent); }
+        .machine-card.online { border-bottom-color: #10b981; } 
+        .machine-card.offline { border-bottom-color: #ef4444; opacity: 0.7; }
+        .badge { font-size: 0.7rem; font-weight: 700; padding: 4px 8px; border-radius: 4px; margin-top: 10px; display: inline-block; }
+        .online .badge { background: #dcfce7; color: #166534; } .offline .badge { background: #fee2e2; color: #991b1b; }
+
+        /* Detail View */
+        .detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; max-width: 1200px; margin: 0 auto; }
+        .card { background: white; border-radius: 16px; padding: 25px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; }
+        .card h3 { margin: 0 0 20px; font-size: 1rem; color: #64748b; display: flex; align-items: center; gap: 10px; }
+        .card h3 i { color: var(--accent); }
+        
+        .data-row { display: flex; justify-content: space-between; margin-bottom: 12px; border-bottom: 1px dashed #e2e8f0; padding-bottom: 8px; }
+        .val { font-weight: 700; font-size: 1.2rem; color: var(--primary); }
+        .unit { font-size: 0.8rem; color: #94a3b8; margin-left: 4px; }
+        
+        .phase-box { background: #f8fafc; padding: 15px; border-radius: 10px; display: flex; justify-content: space-between; margin-top: 10px; }
+        .p-item { text-align: center; } .p-val { display: block; font-weight: 700; color: var(--primary); }
+    </style>
+</head>
+<body>
+
+    <div id="status-bar" class="bg-wait">Connecting...</div>
+
+    <div id="view-grid" class="view-section active">
+        <div class="header">
+            <a href="menu.html" class="btn-back"><i class="fa-solid fa-arrow-left"></i> Menu Utama</a>
+            <h2 style="margin:0; color:var(--primary);">Pilih Mesin</h2>
+        </div>
+        <div class="grid-container" id="machine-grid"></div>
+    </div>
+
+    <div id="view-detail" class="view-section">
+        <div class="header">
+            <button onclick="showGrid()" class="btn-back"><i class="fa-solid fa-arrow-left"></i> Kembali</button>
+            <h2 style="margin:0; color:var(--primary);" id="page-title">Mesin 1</h2>
+        </div>
+
+        <div class="detail-grid">
+            <div class="card">
+                <h3><i class="fa-solid fa-bolt"></i> Energi Total</h3>
+                <div class="data-row"><span>Active (kWh)</span><span class="val" id="val-e">-</span></div>
+                <div class="data-row"><span>Reactive (kVARh)</span><span class="val" id="val-q_tot">-</span></div>
+                <div class="data-row"><span>Partial Active</span><span class="val" id="val-e_part">-</span></div>
+            </div>
+
+            <div class="card">
+                <h3><i class="fa-solid fa-plug"></i> Listrik</h3>
+                <div class="data-row"><span>Voltage (Avg)</span><span class="val" id="val-v">-</span><span class="unit">V</span></div>
+                <div class="data-row"><span>Current (Avg)</span><span class="val" id="val-i">-</span><span class="unit">A</span></div>
+                <div class="phase-box">
+                    <div class="p-item"><small>R</small><span class="p-val" id="val-i1">-</span></div>
+                    <div class="p-item"><small>S</small><span class="p-val" id="val-i2">-</span></div>
+                    <div class="p-item"><small>T</small><span class="p-val" id="val-i3">-</span></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3><i class="fa-solid fa-gauge-high"></i> Daya & Kualitas</h3>
+                <div class="data-row"><span>Active Power</span><span class="val" id="val-p">-</span><span class="unit">W</span></div>
+                <div class="data-row"><span>Power Factor</span><span class="val" id="val-pf">-</span></div>
+                <div class="data-row"><span>Frequency</span><span class="val" id="val-hz">-</span><span class="unit">Hz</span></div>
+            </div>
+            
+             <div class="card">
+                <h3><i class="fa-solid fa-clock"></i> Operasional</h3>
+                <div class="data-row"><span>Total Jam</span><span class="val" id="val-op">-</span><span class="unit">Jam</span></div>
+                <div class="data-row"><span>Tarif Aktif</span><span class="val">T1</span></div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // CONFIG
+    const SUPABASE_URL = "https://khevzqqtswbdatbkkmme.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtoZXZ6cXF0c3diZGF0YmtrbW1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1MTY4MDgsImV4cCI6MjA3OTA5MjgwOH0.N28mnbk8tTAJkm47DS2pzvsHHChlyCovT6vi2Z4aqHc";
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const MQTT_HOST = "701d32236feb43b38c22855a611f4d42.s1.eu.hivemq.cloud";
+    const MQTT_PORT = 8884;
+    const MQTT_USER = "web_dashboard";
+    const MQTT_PASS = "Tristan12";
+    
+    let activeId = 1, client, cache = {}, lastUpd = {}, reported = {};
+    const fmt = (n, d) => (n!=null && !isNaN(n)) ? Number(n).toFixed(d) : "-";
+
+    function showGrid() { document.getElementById('view-detail').classList.remove('active'); document.getElementById('view-grid').classList.add('active'); }
+    function openDetail(id) { activeId = id; document.getElementById('page-title').innerText = "Mesin "+id; document.getElementById('view-grid').classList.remove('active'); document.getElementById('view-detail').classList.add('active'); refreshUI(); }
+
+    function refreshUI() {
+        const d = cache[activeId];
+        const now = Date.now();
+        
+        // Watchdog 3 Menit
+        if(d && lastUpd[activeId] && (now - lastUpd[activeId] < 180000)) {
+            if(d.status === 'offline') setZero(); else setVal(d);
+        } else {
+            setZero();
+        }
+    }
+
+    function setVal(d) {
+        document.getElementById('val-e').innerText = fmt(d.e, 2);
+        document.getElementById('val-q_tot').innerText = fmt(d.q_tot, 2);
+        document.getElementById('val-e_part').innerText = fmt(d.e_part, 2);
+        document.getElementById('val-v').innerText = fmt(d.v, 1);
+        document.getElementById('val-i').innerText = fmt(d.i, 2);
+        document.getElementById('val-i1').innerText = fmt(d.i1, 2);
+        document.getElementById('val-i2').innerText = fmt(d.i2, 2);
+        document.getElementById('val-i3').innerText = fmt(d.i3, 2);
+        document.getElementById('val-p').innerText = fmt(d.p, 0);
+        document.getElementById('val-pf').innerText = fmt(d.pf, 2);
+        document.getElementById('val-hz').innerText = fmt(d.hz, 1);
+        document.getElementById('val-op').innerText = fmt(d.op_time, 1);
+    }
+
+    function setZero() {
+        ['e','q_tot','e_part','v','i','i1','i2','i3','p','pf','hz','op'].forEach(k => document.getElementById('val-'+k).innerText = "-");
+    }
+
+    async function logError(id, desc) {
+        await supabaseClient.from('system_logs').insert({ machine_id: id, event_type: 'TIMEOUT', description: desc });
+    }
+
+    function startMQTT() {
+        client = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_" + Date.now());
+        client.onConnectionLost = (r) => { if(r.errorCode!==0) { document.getElementById('status-bar').className = 'bg-err'; setTimeout(startMQTT, 5000); } };
+        client.onMessageArrived = (m) => {
+            const d = JSON.parse(m.payloadString);
+            if(!d.id) return;
+            cache[d.id] = d; lastUpd[d.id] = Date.now();
+            
+            // Update Grid
+            const card = document.getElementById(`card-${d.id}`);
+            if(card) {
+                if(d.status === 'online') { card.classList.add('online'); card.classList.remove('offline'); card.querySelector('.badge').innerText = "ONLINE"; }
+                else { card.classList.remove('online'); card.classList.add('offline'); card.querySelector('.badge').innerText = "OFFLINE"; }
+            }
+
+            if(activeId === d.id) refreshUI();
+        };
+        client.connect({ useSSL: true, userName: MQTT_USER, password: MQTT_PASS, onSuccess: () => { 
+            document.getElementById('status-bar').className = 'bg-ok'; 
+            client.subscribe("politeknik/meter/data"); 
+        }});
+    }
+
+    // Watchdog Loop
+    setInterval(() => {
+        const now = Date.now();
+        for(let i=1; i<=18; i++) {
+            if(lastUpd[i] && (now - lastUpd[i] > 180000) && !reported[i]) {
+                // Timeout -> Set Offline & Log
+                const card = document.getElementById(`card-${i}`);
+                if(card) { card.classList.remove('online'); card.classList.add('offline'); card.querySelector('.badge').innerText = "OFFLINE"; }
+                if(activeId === i) setZero();
+                
+                logError(i, "Lost Connection > 3 Min");
+                reported[i] = true;
+            }
+            if(lastUpd[i] && (now - lastUpd[i] < 180000)) reported[i] = false; // Reset flag
+        }
+    }, 5000);
+
+    // Init
+    window.onload = () => {
+        const g = document.getElementById('machine-grid');
+        for(let i=1; i<=18; i++) {
+            g.innerHTML += `<div class="machine-card offline" id="card-${i}" onclick="openDetail(${i})">
+                <i class="fa-solid fa-industry fa-2x" style="color:#cbd5e1; margin-bottom:10px;"></i>
+                <div style="font-weight:700; color:#334155">Mesin ${i}</div>
+                <div class="badge">OFFLINE</div>
+            </div>`;
+        }
+        startMQTT();
+    };
+</script>
+</body>
+</html>
