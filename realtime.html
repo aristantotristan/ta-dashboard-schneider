@@ -1,10 +1,161 @@
 <!DOCTYPE html>
-<html>
-<head><title>Realtime</title></head>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Monitoring Realtime</title>
+
+  <!-- MQTT Client -->
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #111;
+      font-family: Arial, sans-serif;
+      color: white;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #00eaff;
+    }
+
+    #statusText {
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 18px;
+      color: #0f0;
+    }
+
+    /* Mesin tampil 3 kolom */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+    }
+
+    .machine {
+      background: #1b1b1b;
+      padding: 15px;
+      border-radius: 10px;
+      border: 1px solid #333;
+    }
+
+    .machine h2 {
+      margin: 0 0 10px;
+      color: #00eaff;
+    }
+
+    .param {
+      margin-bottom: 4px;
+      font-size: 14px;
+    }
+  </style>
+
+</head>
 <body>
-<h1>18 Machine Realtime Monitoring (Dummy)</h1>
-<script>
-// dummy
-</script>
+
+  <h1>Monitoring Realtime – 18 Mesin</h1>
+  <div id="statusText">Connecting to MQTT...</div>
+
+  <!-- Container semua mesin -->
+  <div id="machines" class="grid"></div>
+
+  <script>
+    // -------------------------------------------
+    // AUTO-GENERATE 18 KOTAK MESIN
+    // -------------------------------------------
+    const machineContainer = document.getElementById("machines");
+
+    function generateMachines() {
+      let html = "";
+      for (let i = 1; i <= 18; i++) {
+        html += `
+          <div class="machine" id="machine-${i}">
+            <h2>Machine ${i}</h2>
+            <div class="param" id="m${i}-voltage">Voltage: -</div>
+            <div class="param" id="m${i}-current">Current: -</div>
+            <div class="param" id="m${i}-p">Power P: -</div>
+            <div class="param" id="m${i}-q">Power Q: -</div>
+            <div class="param" id="m${i}-s">Power S: -</div>
+            <div class="param" id="m${i}-pf">PF: -</div>
+            <div class="param" id="m${i}-freq">Freq: -</div>
+            <div class="param" id="m${i}-op">Op Time: -</div>
+            <div class="param" id="m${i}-ea">Total EA: -</div>
+            <div class="param" id="m${i}-er">Total ER: -</div>
+          </div>
+        `;
+      }
+      machineContainer.innerHTML = html;
+    }
+
+    generateMachines();
+
+
+    // -------------------------------------------
+    // MQTT CLIENT SETUP
+    // -------------------------------------------
+
+    const brokerUrl = "wss://f67b475c6dc548368dd0847dd1e4657e.s1.eu.hivemq.cloud:8884/mqtt";
+
+    const options = {
+      username: "web_dashboard",
+      password: "Tristan12",
+      clean: true,
+      reconnectPeriod: 2000
+    };
+
+    const client = mqtt.connect(brokerUrl, options);
+
+    client.on("connect", () => {
+      document.getElementById("statusText").textContent = "Connected to MQTT Broker ✓";
+
+      client.subscribe("iot/machines/realtime", (err) => {
+        if (!err) {
+          console.log("Subscribed to iot/machines/realtime");
+        }
+      });
+    });
+
+    client.on("reconnect", () => {
+      document.getElementById("statusText").textContent = "Reconnecting...";
+    });
+
+    client.on("error", (err) => {
+      document.getElementById("statusText").textContent = "Connection Error!";
+      console.error("MQTT Error:", err);
+    });
+
+    // -------------------------------------------
+    // HANDLE INCOMING DATA
+    // -------------------------------------------
+    client.on("message", (topic, message) => {
+      try {
+        const data = JSON.parse(message.toString());
+
+        const id = data.machine_id;
+        if (!id || id < 1 || id > 18) return;
+
+        document.getElementById(`m${id}-voltage`).textContent = `Voltage: ${data.voltage} V`;
+        document.getElementById(`m${id}-current`).textContent = `Current: ${data.current} A`;
+        document.getElementById(`m${id}-p`).textContent = `Power P: ${data.p} W`;
+        document.getElementById(`m${id}-q`).textContent = `Power Q: ${data.q} VAR`;
+        document.getElementById(`m${id}-s`).textContent = `Power S: ${data.s} kVA`;
+        document.getElementById(`m${id}-pf`).textContent = `PF: ${data.pf}`;
+        document.getElementById(`m${id}-freq`).textContent = `Freq: ${data.freq} Hz`;
+        document.getElementById(`m${id}-op`).textContent = `Op Time: ${data.op_time} h`;
+        document.getElementById(`m${id}-ea`).textContent = `Total EA: ${data.total_ea} kWh`;
+        document.getElementById(`m${id}-er`).textContent = `Total ER: ${data.total_er} kVARh`;
+
+      } catch (e) {
+        console.error("Invalid JSON:", e);
+      }
+    });
+
+  </script>
+
 </body>
 </html>
