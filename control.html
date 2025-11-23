@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Control & Maintenance</title>
+<link rel="stylesheet" href="style.css">
+<script src="script.js" defer></script>
+</head>
+
+<body>
+
+<div class="header">🛠️ Control & Maintenance</div>
+
+<div class="top-bar">
+    <a href="index.html" class="back-btn">⬅ Kembali</a>
+</div>
+
+<div class="content">
+    <h2>System Controls</h2>
+
+    <button class="btn" onclick="startSystem()">▶ Start System</button>
+    <button class="btn stop" onclick="stopSystem()">⏹ Stop System</button>
+    <button class="btn" onclick="checkSatpam()">👮 IoT Satpam Check</button>
+
+    <div class="result" id="controlStatus"></div>
+</div>
+
+</body>
+</html>
