@@ -1,0 +1,85 @@
+body {
+    margin: 0;
+    font-family: "Segoe UI", sans-serif;
+    background: #0d0d0d;
+    color: white;
+}
+
+.header {
+    padding: 20px;
+    font-size: 26px;
+    background: #111;
+    text-align: center;
+    box-shadow: 0 0 15px rgba(0,0,0,0.6);
+}
+
+.container {
+    padding: 30px;
+    display: grid;
+    gap: 25px;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.menu-card {
+    background: #1b1b1b;
+    padding: 25px;
+    border-radius: 12px;
+    border: 1px solid #2d2d2d;
+    text-decoration: none;
+    color: white;
+    transition: 0.3s;
+}
+
+.menu-card:hover {
+    background: #232323;
+    border-color: #4caf50;
+    transform: translateY(-4px);
+}
+
+.back-btn {
+    padding: 8px 14px;
+    background: #222;
+    border-radius: 8px;
+    text-decoration: none;
+    color: white;
+}
+
+.machine-container {
+    padding: 20px;
+    display: grid;
+    gap: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.machine-card {
+    background: #151515;
+    border: 1px solid #333;
+    padding: 14px;
+    border-radius: 10px;
+}
+
+.btn {
+    padding: 12px 20px;
+    background: #3a3a3a;
+    border: none;
+    color: white;
+    border-radius: 8px;
+    margin-top: 15px;
+    width: 100%;
+    font-size: 16px;
+}
+
+.btn:hover {
+    background: #4a4a4a;
+}
+
+.stop {
+    background: #a00000;
+}
+
+.result {
+    margin-top: 20px;
+    padding: 15px;
+    background: #1f1f1f;
+    border-radius: 10px;
+}
