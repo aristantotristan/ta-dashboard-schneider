@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MASTER SIMULATOR - ESP32 v44</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; background: #2c3e50; color: white; padding: 20px; }
+        .container { max-width: 800px; margin: auto; background: #34495e; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        h1 { color: #1abc9c; margin-bottom: 5px; }
+        h3 { border-bottom: 1px solid #7f8c8d; padding-bottom: 10px; margin-top: 20px; }
+        
+        .control-group { display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; align-items: center; }
+        .control-group label { color: #bdc3c7; font-weight: 600; }
+        .control-group select, .control-group input { padding: 8px; border-radius: 6px; border: none; }
+
+        .btn-send { background: #2980b9; color: white; padding: 10px 20px; border-radius: 6px; cursor: pointer; border: none; font-weight: bold; }
+        .btn-send:hover { background: #3498db; }
+        .btn-loop { background: #f39c12; }
+        .btn-loop.active { background: #e67e22; }
+
+        #log-output { height: 350px; background: #1f2a3a; color: #10b981; padding: 10px; border-radius: 8px; overflow-y: scroll; font-family: monospace; font-size: 0.85rem; margin-top: 15px; }
+        .log-error { color: #e74c3c; font-weight: bold; }
+        .log-success { color: #2ecc71; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>MASTER SIMULATOR (Tugas Akhir)</h1>
+    <p>Menggantikan ESP32 - Mengirim data ke HiveMQ dan Supabase.</p>
+    
+    <h3>1. Konfigurasi & Kontrol</h3>
+    <div class="control-group">
+        <label>Pilih Mesin ID:</label>
+        <select id="mesin-id">
+            <script> for(let i=1; i<=18; i++) document.write(`<option value="${i}">Mesin ${i}</option>`); </script>
+        </select>
+        
+        <button id="send-btn" class="btn-send" onclick="sendTestPacket()">Kirim Paket Uji Coba</button>
+        <button id="loop-btn" class="btn-send btn-loop" onclick="toggleLoop()">Start Auto Send (10s)</button>
+    </div>
+
+    <div class="control-group">
+        <button onclick="sendTrouble('OFFLINE')">Simulasi OFFLINE</button>
+        <button onclick="sendTrouble('OVERVOLTAGE')">Simulasi OVERVOLTAGE (420V)</button>
+    </div>
+
+    <h3>2. Log Aktivitas</h3>
+    <div id="log-output">Menunggu inisialisasi...</div>
+</div>
+
+<script>
+// ==========================================================
+// --- 1. KONFIGURASI KUNCI (GANTI DENGAN KUNCI ASLIMU) ---
+// ==========================================================
+const SUPABASE_URL = "https://rojhcadtqfynlqzubftx.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs";
+const MQTT_HOST = "701d32236feb43b38c22855a611f4d42.s1.eu.hivemq.cloud";
+const MQTT_PORT = 8884;
+const MQTT_USER = "vercel_client";
+const MQTT_PASS = "VercelPass123!";
+const MQTT_TOPIC = "politeknik/meter/data";
+
+// ==========================================================
+// --- 2. INISIALISASI ---
+// ==========================================================
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "simulator_" + Date.now());
+
+let loopIntervalId = null;
+
+// Helper Log
+function log(msg, className = 'log-success') {
+    const time = new Date().toLocaleTimeString();
+    const el = document.getElementById('log-output');
+    el.innerHTML = `<p class="log-entry ${className}">[${time}] ${msg}</p>` + el.innerHTML;
+    if (el.scrollHeight > el.clientHeight) el.scrollTop = 0;
+}
+
+// Helper: Generasi Data
+function generateDummyData(id, status) {
+    const r = Math.random();
+    const baseV = 380 + (r * 10);
+    const baseI = 15 + (r * 5);
+    const baseP = 6000 + (r * 2000);
+    
+    let volt = baseV;
+    let power = baseP;
+    
+    if (status === 'OVERVOLTAGE') {
+        volt = 420 + (r * 5); // Overvoltage condition
+    } else if (status === 'OFFLINE' || status === 'OFF') {
+        volt = 0; power = 0;
+    }
+    
+    const payload = {
+        id: id,
+        id_mesin: id,
+        status: status === 'OFFLINE' ? 'offline' : 'online',
+        v: volt,
+        i: status === 'OFFLINE' ? 0 : baseI,
+        i1: status === 'OFFLINE' ? 0 : baseI * 0.95,
+        i2: status === 'OFFLINE' ? 0 : baseI * 1.05,
+        i3: status === 'OFFLINE' ? 0 : baseI * 0.1, // Unbalanced
+        p: status === 'OFFLINE' ? 0 : power, // Watt
+        q: status === 'OFFLINE' ? 0 : power * 0.3, // VAR
+        s: status === 'OFFLINE' ? 0 : power * 1.2, // kVA
+        pf: status === 'OFFLINE' ? 0 : 0.75 + (r * 0.2),
+        hz: 50.0 + (r * 0.1),
+        e: 2000 + (id * 100) + (r * 10), // kWh Accumulator
+        q_tot: 100 + (id * 5) + (r * 5), // kVARh Accumulator
+        e_part: 50 + r,
+        q_part: 10 + r,
+        op_time: 59556 + (r * 100) // Hours (2481 days)
+    };
+    
+    // Ensure P is below 10W for trouble check (optional)
+    if (status === 'TROUBLE_OFF') {
+        payload.p = 5 + r; 
+        log(`Triggering Trouble Logic (P=${payload.p.toFixed(2)}W)`, 'log-error');
+    }
+    
+    return payload;
+}
+
+// ==========================================================
+// --- 3. FUNGSI KIRIM DATA & LOG ---
+// ==========================================================
+
+function connectMQTT() {
+    log("Mencoba koneksi ke HiveMQ...");
+    mqttClient.connect({
+        useSSL: true, userName: MQTT_USER, password: MQTT_PASS,
+        onSuccess: () => { log("MQTT Connected. Siap Kirim Data.", 'log-success'); },
+        onFailure: (e) => { log(`MQTT GAGAL: ${e.errorMessage}. Coba lagi.`, 'log-error'); setTimeout(connectMQTT, 5000); }
+    });
+}
+
+// Fungsi utama: Mengirim ke DUA tujuan (MQTT & Supabase)
+window.sendTestPacket = async () => {
+    const mesinId = parseInt(document.getElementById('mesin-id').value);
+    const data = generateDummyData(mesinId, 'NORMAL'); // Kirim data normal by default
+    const payloadString = JSON.stringify(data);
+    
+    log(`--- KIRIM MESIN ${mesinId} ---`);
+
+    // TUGAS 1: KIRIM KE MQTT (Untuk Realtime Dashboard)
+    if (mqttClient.isConnected()) {
+        mqttClient.publish(MQTT_TOPIC, payloadString);
+        log("1. MQTT Publish: OK");
+    } else {
+        log("1. MQTT Publish: GAGAL (Klien terputus)", 'log-error');
+    }
+
+    // TUGAS 2: KIRIM KE SUPABASE (Untuk Database Historis)
+    try {
+        const { error, status } = await supabase
+            .from('data_energi')
+            .insert([data])
+            .select('*', { count: 'exact', head: true });
+        
+        if (error) {
+            log(`2. Supabase Insert: GAGAL! Code: ${status}, Error: ${error.message}`, 'log-error');
+        } else {
+            log("2. Supabase Insert: OK (201 Created)");
+        }
+    } catch (e) {
+        log(`2. Supabase Insert: CRITICAL FAILED! ${e.message}`, 'log-error');
+    }
+}
+
+// Fungsi untuk mengirim Trouble (diluar loop normal)
+window.sendTrouble = (type) => {
+    const mesinId = parseInt(document.getElementById('mesin-id').value);
+    let data;
+
+    if (type === 'OFFLINE') {
+        data = generateDummyData(mesinId, 'OFFLINE');
+        log(`Mengirim status OFFLINE (Simulasi Cabut Kabel)...`, 'log-error');
+    } else if (type === 'OVERVOLTAGE') {
+        data = generateDummyData(mesinId, 'OVERVOLTAGE');
+        log(`Mengirim status OVERVOLTAGE (Simulasi Trouble V)...`, 'log-error');
+    } else {
+        data = generateDummyData(mesinId, 'TROUBLE_OFF'); // Low Power
+    }
+
+    const payloadString = JSON.stringify(data);
+    
+    // Kirim ke MQTT
+    if (mqttClient.isConnected()) {
+        mqttClient.publish(MQTT_TOPIC, payloadString);
+    }
+    
+    // Kirim ke Supabase
+    supabase.from('data_energi').insert([data]).then(({ error }) => {
+        if (error) log(`DB Log Gagal: ${error.message}`, 'log-error');
+        else log(`DB Log Success: ${type} dicatat.`);
+    });
+}
+
+// Fungsi untuk Control (Start/Stop Loop)
+window.toggleLoop = () => {
+    const btn = document.getElementById('loop-btn');
+    if (loopIntervalId) {
+        clearInterval(loopIntervalId);
+        loopIntervalId = null;
+        btn.innerText = 'Start Auto Send (10s)';
+        btn.classList.remove('active');
+        log("Auto Send Dihentikan.", 'log-error');
+    } else {
+        // Run sekali saat start, lalu setiap 10 detik
+        log("Auto Send DIMULAI.", 'log-success');
+        loopIntervalId = setInterval(() => {
+            const currentId = parseInt(document.getElementById('mesin-id').value);
+            // Rotasi ID mesin (Simulasi 18 mesin)
+            const nextId = (currentId % 18) + 1;
+            document.getElementById('mesin-id').value = nextId;
+            sendTestPacket();
+        }, 1000); // Ganti ke 10000ms untuk simulasi 10 detik per mesin
+        
+        btn.innerText = 'Stop Auto Send';
+        btn.classList.add('active');
+    }
+}
+
+// --- INIT APP ---
+window.onload = function() {
+    log("Aplikasi Dimulai. Mencoba koneksi...");
+    connectMQTT();
+}
+</script>
+</body>
+</html>
