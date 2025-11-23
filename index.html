@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MONITORING ENERGI (v44 - FINAL)</title>
+    <title>MONITORING ENERGI (v52 - FINAL)</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gauge.js/1.3.7/gauge.min.js"></script>
@@ -13,24 +13,24 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        /* CSS SAMA PERSIS DENGAN FINAL PRO */
-        :root { --primary: #0f172a; --secondary: #334155; --accent: #2563eb; --success: #10b981; --danger: #ef4444; --warning: #f59e0b; --bg-light: #f1f5f9; --card-bg: #ffffff; --text-main: #1e293b; --text-muted: #64748b; --border: #e2e8f0; --shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); }
+        /* CSS DARI V50 PRO */
+        :root { --primary: #0f172a; --secondary: #334155; --accent: #2563eb; --success: #10b981; --danger: #ef4444; --warning: #f59e0b; --bg-light: #f1f5f9; --card-bg: #ffffff; --text-main: #1e293b; --text-muted: #64748b; --border: #e2e8f0; --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Inter', sans-serif; background: var(--bg-light); color: var(--text-main); height: 100vh; display: flex; overflow: hidden; }
 
         .sidebar { width: 260px; background: var(--primary); color: white; display: flex; flex-direction: column; padding: 20px; }
         .sidebar-header { margin-bottom: 40px; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
         .nav-btn { display: flex; align-items: center; gap: 12px; padding: 14px 16px; color: #cbd5e1; border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s; font-weight: 500; }
-        .nav-btn.active { background: var(--accent); color: white; box-shadow: 0 4px 12px rgba(37,99,235,0.3); }
+        .nav-btn.active { background: var(--accent); color: white; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); }
 
         .main-content { flex: 1; overflow-y: auto; padding: 30px; position: relative; }
         .status-pill { padding: 8px 16px; border-radius: 50px; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 8px; background: white; box-shadow: var(--shadow); }
         .status-dot { width: 10px; height: 10px; border-radius: 50%; }
         .bg-conn { background: var(--success); } .bg-disconn { background: var(--danger); } .bg-wait { background: var(--warning); }
 
-        .page { display: none; } .page.active { display: block; }
+        .page { display: none; animation: fadeIn 0.3s ease-in-out; } .page.active { display: block; }
         .grid-18 { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
-        .machine-card { background: var(--card-bg); border-radius: 12px; padding: 20px; box-shadow: var(--shadow); border-top: 4px solid var(--border); cursor: pointer; position: relative; overflow: hidden; }
+        .machine-card { background: var(--card-bg); border-radius: 12px; padding: 20px; box-shadow: var(--shadow); border: 1px solid var(--border); cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden; }
         .machine-card.online::before { background: var(--success); }
         .machine-card.offline::before { background: var(--danger); }
         .mc-status { font-size: 0.75rem; font-weight: 700; padding: 4px 8px; border-radius: 4px; background: #f1f5f9; color: #64748b; display: inline-block; }
@@ -38,20 +38,13 @@
         .offline .mc-status { background: #fee2e2; color: #991b1b; }
         
         .back-btn { background: white; border: 1px solid var(--border); padding: 10px 15px; border-radius: 8px; cursor: pointer; color: var(--text-muted); }
-        .tabs { display: flex; gap: 10px; margin-bottom: 25px; background: white; padding: 5px; border-radius: 10px; width: fit-content; box-shadow: var(--shadow); }
         .tab-btn.active { background: var(--accent); color: white; }
         .tab-content { display: none; } .tab-content.active { display: block; }
         .gauge-cluster { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
         .pro-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
         .pro-table th { text-align: left; padding: 15px 25px; background: #f8fafc; color: var(--text-muted); font-weight: 600; border-bottom: 1px solid var(--border); }
         .pro-table td { padding: 12px 25px; border-bottom: 1px solid var(--border); color: var(--secondary); }
-        .group-header { background: #e0f2fe !important; color: #0369a1 !important; font-weight: 700; padding: 10px 25px; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; }
-
-        @media (max-width: 768px) {
-            body { flex-direction: column; overflow-y: auto; }
-            .sidebar { width: 100%; flex-direction: row; padding: 15px; justify-content: space-between; }
-            .main-content { padding: 15px; }
-        }
+        .group-header { background: #e0f2fe !important; color: #0369a1 !important; font-weight: 700; padding: 10px 25px; font-size: 0.85rem; }
     </style>
 </head>
 <body>
@@ -110,7 +103,7 @@
                 <div class="gauge-cluster">
                     <div class="gauge-box"><h4>Tegangan (V)</h4><canvas id="g-volt"></canvas><div id="val-volt" style="font-weight:bold; font-size:1.5rem;">-</div></div>
                     <div class="gauge-box"><h4>Arus Total (A)</h4><canvas id="g-amp"></canvas><div id="val-amp" style="font-weight:bold; font-size:1.5rem;">-</div></div>
-                    <div class="gauge-box"><h4>Daya Aktif (W)</h4><canvas id="g-power"></canvas><div id="val-power" style="font-weight:bold; font-size:1.5rem;">-</div></div>
+                    <div class="gauge-box"><h4>Daya Aktif (W)</h4><canvas id="g-pwr"></canvas><div id="val-power" style="font-weight:bold; font-size:1.5rem;">-</div></div>
                     <div class="gauge-box"><h4>Frekuensi (Hz)</h4><canvas id="g-freq"></canvas><div id="val-freq" style="font-weight:bold; font-size:1.5rem;">-</div></div>
                 </div>
             </div>
@@ -147,18 +140,9 @@
                 <h2 id="control-mc-name">Control & Maintenance</h2>
             </div>
             <div class="control-panel">
-                <h3>Kontrol Data Logger</h3>
-                <p class="text-muted">Mengendalikan apakah sistem pengiriman data aktif atau tidak (Simulasi).</p>
-                <button class="control-btn" onclick="sendControl('START')"><i class="fa-solid fa-play"></i> Mulai Sistem (START)</button>
-                <button class="control-btn stop" onclick="sendControl('STOP')"><i class="fa-solid fa-stop"></i> Hentikan Sistem (STOP)</button>
-            </div>
-            
-            <div class="control-panel">
-                <h3>Satpam IoT (Log Koneksi)</h3>
-                <p class="text-muted">Riwayat kegagalan koneksi dan pemulihan.</p>
-                <div id="log-koneksi-output" style="max-height: 200px; overflow-y: scroll; border: 1px solid var(--border); padding: 10px; border-radius: 8px;">
-                    <p style="color: var(--text-muted);">Log akan muncul di sini...</p>
-                </div>
+                <p class="text-muted">Fitur ini membutuhkan ESP32 untuk men-subscribe ke MQTT control topic. (Belum diimplementasikan)</p>
+                <button class="control-btn" onclick="alert('START command sent to MQTT!')"><i class="fa-solid fa-play"></i> Mulai Sistem (START)</button>
+                <button class="control-btn stop" onclick="alert('STOP command sent to MQTT!')"><i class="fa-solid fa-stop"></i> Hentikan Sistem (STOP)</button>
             </div>
         </div>
 
@@ -181,22 +165,20 @@ let activeId = 0;
 let gaugesInitialized = false;
 let cache = {};
 let lastUpdate = {};
-const TIMEOUT_MS = 180000; // 3 Menit
 
-const fmt = (n, d) => (n != null && !isNaN(n)) ? Number(n).toFixed(d) : "0";
+const fmt = (val, dig) => (val != null && !isNaN(val)) ? Number(val).toFixed(dig) : "0";
 const fmtRp = (n) => (n != null && !isNaN(n)) ? 'Rp ' + Number(n).toLocaleString('id-ID') : "-";
 function fmtTime(v) {
     if (v == null || isNaN(v) || v == 0) return "0h 0j";
-    return `${Math.floor(v / 24)}h ${(v % 24).toFixed(1)}j`;
+    return `${Math.floor(v / 24)} Hari ${(v % 24).toFixed(1)} Jam`;
 }
 
-// --- INIT ---
 window.onload = function() {
     try {
         supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "pro_" + Date.now());
         
-        mqttClient.onConnectionLost = (r) => { if(r.errorCode!==0) { setStatus("Reconnecting...", "bg-disconn"); setTimeout(connectMQTT, 3000); } };
+        mqttClient.onConnectionLost = (r) => { if (r.errorCode !== 0) { setStatus("Reconnecting...", "bg-disconn"); setTimeout(connectMQTT, 3000); } };
         mqttClient.onMessageArrived = onMessageArrived;
 
         initUI();
@@ -208,24 +190,22 @@ window.onload = function() {
 };
 
 function initUI() {
-    let gridM = "", gridT = "", gridTb = "";
+    let gridM = "", gridT = "", gridTr = "";
     for(let i=1; i<=18; i++) {
-        // Monitoring Grid
         gridM += `<div class="machine-card offline" id="card-${i}" onclick="openMonitor(${i})"><div class="mc-header"><div class="mc-title">Mesin ${i}</div><i class="fa-solid fa-industry mc-icon"></i></div><div class="mc-status" id="badge-${i}">OFFLINE</div></div>`;
-        // Tarif Grid
-        gridT += `<div class="machine-card" onclick="openTarif(${i})"><div class="mc-header"><div class="mc-title">Mesin ${i}</div><i class="fa-solid fa-chart-line mc-icon" style="color:var(--accent)"></i></div><div style="font-size:0.8rem; color:var(--text-muted)">Klik untuk laporan</div></div>`;
-        // Trouble Grid (Sama seperti Monitoring, tapi untuk log trouble)
-        gridTb += `<div class="machine-card" onclick="openTroubleLog(${i})"><div class="mc-header"><div class="mc-title">Mesin ${i}</div><i class="fa-solid fa-bell-slash mc-icon" style="color:var(--danger)"></i></div><div style="font-size:0.8rem; color:var(--text-muted)">Riwayat Trouble</div></div>`;
+        gridT += `<div class="machine-card" onclick="openTarif(${i})"><div class="mc-header"><div class="mc-title">Mesin ${i}</div><i class="fa-solid fa-chart-line mc-icon" style="color:var(--accent)"></i></div><div style="font-size:0.8rem; color:var(--text-muted)">Laporan Biaya</div></div>`;
+        gridTr += `<div class="machine-card" onclick="openTroubleLog(${i})"><div class="mc-header"><div class="mc-title">Mesin ${i}</div><i class="fa-solid fa-bug mc-icon" style="color:var(--danger)"></i></div><div style="font-size:0.8rem; color:var(--text-muted)">Log Kesalahan</div></div>`;
     }
     document.getElementById("machine-grid").innerHTML = gridM;
     document.getElementById("tarif-grid-container").innerHTML = gridT;
-    document.getElementById("trouble-grid-container").innerHTML = gridTb;
+    document.getElementById("trouble-grid-container").innerHTML = gridTr;
 }
 
 function checkTimeouts() {
     const now = Date.now();
+    const TIMEOUT = 180000; // 3 Menit
     for(let i=1; i<=18; i++) {
-        if(lastUpdate[i] && (now - lastUpdate[i] > TIMEOUT_MS)) {
+        if(lastUpdate[i] && (now - lastUpdate[i] > TIMEOUT)) {
             const off = {id: i, status: 'offline'};
             cache[i] = off;
             updateCard(off);
@@ -236,7 +216,7 @@ function checkTimeouts() {
 }
 
 function connectMQTT() {
-    setStatus("Connecting...", "bg-wait");
+    setStatus("Menghubungkan...", "bg-wait");
     mqttClient.connect({
         useSSL: true, userName: MQTT_USER, password: MQTT_PASS,
         onSuccess: () => { setStatus("Connected (Real-Time)", "bg-conn"); mqttClient.subscribe(MQTT_TOPIC); },
@@ -278,27 +258,27 @@ function updateDetail(d) {
     
     // RENDER TABLE ROWS
     const html = `
-        <tr><td class="group-header" colspan="3">1. Energi (Akumulasi)</td></tr>
+        <tr><td class="group-header" colspan="2">1. ENERGI TOTAL</td></tr>
         <tr><td>Total Ea Import</td><td>${val('e', 2, 'kWh')}</td></tr>
         <tr><td>Total Er Import</td><td>${val('q_tot', 2, 'kVARh')}</td></tr>
         <tr><td>Partial Active E</td><td>${val('e_part', 2, 'kWh')}</td></tr>
         <tr><td>Partial Reactive E</td><td>${val('q_part', 2, 'kVARh')}</td></tr>
         
-        <tr><td class="group-header" colspan="3">2. Kelistrikan</td></tr>
+        <tr><td class="group-header" colspan="2">2. KELISTRIKAN</td></tr>
         <tr><td>Voltage (Avg L-L)</td><td>${val('v', 1, 'V')}</td></tr>
         <tr><td>Current (Avg)</td><td>${val('i', 2, 'A')}</td></tr>
-        <tr class="row-sub"><td style="padding-left:40px">Phase 1 (I1)</td><td>${val('i1', 2, 'A')}</td></tr>
-        <tr class="row-sub"><td style="padding-left:40px">Phase 2 (I2)</td><td>${val('i2', 2, 'A')}</td></tr>
-        <tr class="row-sub"><td style="padding-left:40px">Phase 3 (I3)</td><td>${val('i3', 2, 'A')}</td></tr>
+        <tr><td style="padding-left:40px">Phase 1 (I1)</td><td>${val('i1', 2, 'A')}</td></tr>
+        <tr><td style="padding-left:40px">Phase 2 (I2)</td><td>${val('i2', 2, 'A')}</td></tr>
+        <tr><td style="padding-left:40px">Phase 3 (I3)</td><td>${val('i3', 2, 'A')}</td></tr>
         
-        <tr><td class="group-header" colspan="3">3. Daya & Kualitas</td></tr>
+        <tr><td class="group-header" colspan="2">3. DAYA & KUALITAS</td></tr>
         <tr><td>Active Power (P)</td><td>${val('p', 0, 'W')}</td></tr>
         <tr><td>Reactive Power (Q)</td><td>${val('q', 0, 'VAR')}</td></tr>
         <tr><td>Apparent Power (S)</td><td>${val('s', 2, 'kVA')}</td></tr>
         <tr><td>Power Factor</td><td>${val('pf', 3)}</td></tr>
         <tr><td>Frequency</td><td>${val('hz', 1, 'Hz')}</td></tr>
         
-        <tr><td class="group-header" colspan="3">4. WAKTU OPERASI</td></tr>
+        <tr><td class="group-header" colspan="2">4. WAKTU OPERASI</td></tr>
         <tr><td>Total Running Time</td><td>${valT('op_time')}</td></tr>
     `;
     document.getElementById("detail-table-body").innerHTML = html;
@@ -313,15 +293,17 @@ function updateDetail(d) {
 }
 
 // --- NAVIGASI ---
-window.goToMonitor = () => {
+window.showPage = (id) => {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.getElementById('view-monitor-grid').classList.add('active');
-    document.getElementById('header-title').innerText = "Monitoring Live";
+    document.getElementById(id).classList.add('active');
+};
+window.goToMonitor = () => {
     document.getElementById('nav-monitor').classList.add('active');
     document.getElementById('nav-tarif').classList.remove('active');
     document.getElementById('nav-trouble').classList.remove('active');
     document.getElementById('nav-control').classList.remove('active');
     activeId = 0;
+    showPage('view-monitor-grid');
 };
 window.goToTarif = () => {
     document.getElementById('nav-monitor').classList.remove('active');
@@ -349,14 +331,14 @@ window.goToControl = () => {
 };
 window.openMonitor = (id) => {
     activeId = id;
-    document.getElementById('detail-mc-name').innerText = `Mesin ${id}`;
+    document.getElementById('detail-mc-name').innerText = `Detail Mesin ${id}`;
     if(cache[id]) updateDetail(cache[id]);
     else updateDetail({status:'offline'});
     switchDetailTab('full');
     showPage('view-monitor-detail');
 };
 
-// ... (Sisa fungsi lain) ...
+// ... (Sisa fungsi dan Gauge Setup) ...
 window.openTarif = (id) => {
     activeId = id;
     document.getElementById('tarif-mc-name').innerText = `Laporan Biaya - Mesin ${id}`;
@@ -374,11 +356,9 @@ window.openTarif = (id) => {
 
 window.openTroubleLog = (id) => {
     activeId = id;
-    alert(`Membuka Riwayat Trouble Mesin ${id}. (Data diambil dari summary_harian)`);
-    // Implementasi fetch dan render log trouble di sini.
-    // Untuk saat ini, kita akan menampilkan log data historis yang ada.
     document.getElementById('view-trouble-grid').classList.remove('active');
     document.getElementById('view-tarif-detail').classList.add('active'); // Re-use Tarif Detail page for now
+    alert(`Membuka Riwayat Trouble Mesin ${id}. (Akan diimplementasikan)`);
 };
 
 window.switchDetailTab = (tab) => {
@@ -413,7 +393,7 @@ async function fetchTarifData() {
     
     const { data, error } = await supabaseClient
         .from('summary_harian')
-        .select('tanggal, total_biaya_rp, total_kwh_harian, total_jam_digunakan, total_jam_standby, trouble_off_count, trouble_overvoltage_count') // Ambil data trouble
+        .select('*')
         .eq('id_mesin', activeId)
         .gte('tanggal', document.getElementById('t-start').value)
         .lte('tanggal', document.getElementById('t-end').value)
@@ -424,31 +404,15 @@ async function fetchTarifData() {
         return;
     }
 
-    // Perbarui header tabel untuk menampilkan data trouble
-    document.getElementById('tarif-data-table').querySelector('thead tr').innerHTML = `
-        <th>Tanggal</th>
-        <th>Biaya (Rp)</th>
-        <th>Konsumsi (kWh)</th>
-        <th>Jam Kerja</th>
-        <th>Jam Standby</th>
-        <th>Trouble Off Count</th>
-        <th>Overvoltage Count</th>
-    `;
-
     let html = "";
     data.forEach(r => {
-        html += `<tr>
-            <td>${r.tanggal}</td>
-            <td>${fmtRp(r.total_biaya_rp)}</td>
-            <td>${fmt(r.total_kwh_harian, 2)}</td>
-            <td>${fmt(r.total_jam_digunakan, 1)} Jam</td>
-            <td>${fmt(r.total_jam_standby, 1)} Jam</td>
-            <td>${r.trouble_off_count}</td>
-            <td>${r.trouble_overvoltage_count}</td>
-        </tr>`;
+        html += `<tr><td>${r.tanggal}</td><td>${fmtRp(r.total_biaya_rp)}</td><td>${fmt(r.total_kwh_harian, 2)}</td><td>${fmt(r.total_jam_digunakan, 1)} Jam</td><td>${fmt(r.total_jam_standby, 1)} Jam</td></tr>`;
     });
     tBody.innerHTML = html;
 }
-</script>
-</body>
-</html>
+
+function setStatus(t, c) { 
+    const d = document.getElementById("conn-dot");
+    const txt = document.getElementById("conn-text");
+    if(d) { d.className = "status-dot " + c; txt.innerText = t; }
+}
