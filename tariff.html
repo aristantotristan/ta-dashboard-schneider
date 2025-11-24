@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitoring Tarif Mesin</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4; }
+        h1 { color: #ffc107; }
+        .back-button { margin-bottom: 20px; padding: 10px; background-color: #333; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background-color: #ffe082; }
+        .rate-display { font-size: 1.5em; font-weight: bold; color: #ff9800; }
+    </style>
+</head>
+<body>
+
+    <button class="back-button" onclick="window.location.href='index.html'">← Kembali ke Dashboard</button>
+    
+    <h1>Monitoring Tarif Mesin</h1>
+    
+    <div class="card">
+        <h2>Tarif Aktif Saat Ini</h2>
+        <p>Nama Tarif: <span id="currentTariffName">Memuat...</span></p>
+        <p>Tarif per kWh: <span id="currentTariffRate" class="rate-display">Memuat...</span></p>
+    </div>
+    
+    <div class="card">
+        <h2>Laporan Estimasi Biaya (kWh Konsumsi)</h2>
+        <p>Filter data konsumsi: **(Saat ini menggunakan rata-rata dummy)**</p>
+        
+        <table id="tariffTable">
+            <thead>
+                <tr>
+                    <th>Mesin ID</th>
+                    <th>Konsumsi Energi (kWh)</th>
+                    <th>Tarif (Rp/kWh)</th>
+                    <th>Total Biaya Estimasi (Rp)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td colspan="4">Memuat data dari Supabase...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script src="tariff_fetch.js"></script>
+</body>
+</html>
