@@ -1,5 +1,5 @@
 // =======================================================
-// KODE LENGKAP trouble_fetch.js YANG SUDAH DI-FIX FILTER
+// KODE LENGKAP trouble_fetch.js DENGAN FILTER MESIN ID
 // =======================================================
 const SUPABASE_URL = 'https://khamzxkrvmnjhrgdqbkg.supabase.co'; 
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtoYW16eGtydm1uamhyZ2RxYmtnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM5NDg2MzcsImV4cCI6MjA3OTUyNDYzN30.SYZTZA3rxaE-kwFuKLlzkol_mLuwjYmVudGCN0imAM8'; 
@@ -7,19 +7,25 @@ const TABLE_NAME = 'machine_daily_status';
 
 // Fungsi utama untuk mengambil data trouble
 async function fetchTroubleData() {
+    const machineId = document.getElementById('machineId').value;
     const startDateInput = document.getElementById('startDate').value;
     const endDateInput = document.getElementById('endDate').value;
     const tbody = document.querySelector('#troubleTable tbody');
     
-    tbody.innerHTML = `<tr><td colspan="6">Mencari log trouble...</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6">Mencari log trouble untuk ${machineId}...</td></tr>`;
 
-    if (!startDateInput || !endDateInput) {
-        alert("Mohon pilih Tanggal Mulai dan Tanggal Akhir.");
-        tbody.innerHTML = `<tr><td colspan="6">Pilih tanggal dan tekan 'Cek Trouble' untuk melihat laporan.</td></tr>`;
+    // Validasi input
+    if (!machineId || !startDateInput || !endDateInput) {
+        alert("Mohon pilih Mesin ID, Tanggal Mulai dan Tanggal Akhir.");
+        document.getElementById('selectedMachineDisplay').textContent = "N/A";
+        tbody.innerHTML = `<tr><td colspan="6">Pilih mesin, tanggal, dan tekan 'Cek Trouble' untuk melihat laporan.</td></tr>`;
         return;
     }
 
-    // --- Logika Penentuan Filter Waktu (Sama seperti di Tarif) ---
+    // Tampilkan Mesin ID yang dipilih
+    document.getElementById('selectedMachineDisplay').textContent = machineId;
+    
+    // --- Logika Penentuan Filter Waktu ---
     const startDate = new Date(startDateInput);
     startDate.setHours(0, 0, 0, 0); 
     const endDate = new Date(endDateInput);
@@ -31,16 +37,12 @@ async function fetchTroubleData() {
         return;
     }
 
-    const startFilter = startDate.toISOString();
-    const endFilter = endDate.toISOString();
-
     // Tampilkan rentang tanggal yang dipilih di UI
     document.getElementById('dateRangeDisplay').textContent = 
-        `Periode: ${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}`;
+        `Periode: ${startDate.toLocaleDateString('id-ID')} - ${endDate.toLocaleDateString('id-ID')}`;
     
-    // URL API Supabase untuk mengambil log dalam rentang tanggal
-    // Kita filter berdasarkan kolom 'report_date'
-    const url = `${SUPABASE_URL}/rest/v1/${TABLE_NAME}?select=*&report_date=gte.${startDateInput}&report_date=lte.${endDateInput}&order=report_date.asc`;
+    // URL API Supabase: FILTER BERDASARKAN MACHINE_ID
+    const url = `${SUPABASE_URL}/rest/v1/${TABLE_NAME}?select=*&machine_id=eq.${machineId}&report_date=gte.${startDateInput}&report_date=lte.${endDateInput}&order=report_date.asc`;
 
     try {
         const response = await fetch(url, {
@@ -58,11 +60,11 @@ async function fetchTroubleData() {
         const data = await response.json();
         
         if (data.length === 0) {
-             tbody.innerHTML = `<tr><td colspan="6">Tidak ada log trouble yang tercatat dalam periode ini.</td></tr>`;
+             tbody.innerHTML = `<tr><td colspan="6">Tidak ada log trouble yang tercatat untuk ${machineId} dalam periode ini.</td></tr>`;
              return;
         }
 
-        // Olah data
+        // Olah data (walaupun hanya 1 mesin, kita gunakan fungsi ini untuk ringkasan)
         const summary = groupDataByMachine(data);
         displayData(summary);
         
@@ -91,7 +93,7 @@ function displayData(summary) {
         row.insertCell().textContent = machineData.daysOff;
         row.insertCell().textContent = machineData.totalTroubleCount;
         
-        // Menampilkan tanggal-tanggal trouble (BARU)
+        // Menampilkan tanggal-tanggal trouble
         row.insertCell().textContent = machineData.troubleDates.join(', '); 
         
         // Menampilkan penyebab utama (yang paling sering terjadi)
@@ -101,8 +103,9 @@ function displayData(summary) {
 
 // Fungsi pembantu: Mengelompokkan data harian menjadi ringkasan per mesin
 function groupDataByMachine(data) {
+    // Karena kita sudah memfilter 1 mesin, ini hanya merangkum log harian mesin tersebut
     const summary = {};
-    const troubleTypeCount = {}; // Untuk menentukan penyebab utama
+    const troubleTypeCount = {}; 
 
     data.forEach(record => {
         const machineId = record.machine_id;
@@ -112,14 +115,12 @@ function groupDataByMachine(data) {
                 daysOn: 0,
                 daysOff: 0,
                 totalTroubleCount: 0,
-                troubleDates: [], // Menyimpan tanggal trouble
-                troubleTypes: {}, // Menghitung jenis trouble
+                troubleDates: [], 
                 majorTrouble: null,
             };
             troubleTypeCount[machineId] = {};
         }
         
-        // Menghitung Hari ON/OFF
         if (record.is_operational) {
             summary[machineId].daysOn++;
         } else {
@@ -127,7 +128,7 @@ function groupDataByMachine(data) {
             summary[machineId].totalTroubleCount += record.trouble_count;
             
             // Catat Tanggal Trouble
-            summary[machineId].troubleDates.push(record.report_date.split('T')[0]); 
+            summary[machineId].troubleDates.push(new Date(record.report_date).toLocaleDateString('id-ID', {day: 'numeric', month: 'short'})); 
 
             // Hitung Jenis Trouble
             if (record.trouble_type) {
@@ -137,7 +138,7 @@ function groupDataByMachine(data) {
         }
     });
 
-    // 2. Tentukan Penyebab Utama (Major Trouble)
+    // Tentukan Penyebab Utama (Major Trouble)
     for (const machineId in summary) {
         let maxCount = 0;
         let majorType = null;
@@ -153,12 +154,6 @@ function groupDataByMachine(data) {
     return summary;
 }
 
-// Panggil fungsi saat halaman dimuat (untuk inisialisasi, meskipun tabel kosong)
 document.addEventListener('DOMContentLoaded', () => {
-    // Set tanggal default untuk kemudahan testing (opsional)
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('endDate').value = today;
-    // document.getElementById('startDate').value = '2025-11-16'; // Contoh tanggal dummy
-
-    // Tidak perlu langsung fetch, tunggu user input
+    // Tidak perlu inisialisasi, tunggu user input
 });
