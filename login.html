@@ -24,6 +24,8 @@
         <input type="password" id="password" placeholder="Password" required>
 
         <button onclick="signIn()">MASUK (Sign In)</button>
+        
+        <p style="margin-top: 10px;"><a href="#" onclick="requestPasswordReset()">Lupa Password?</a></p>
 
         <p>Belum punya akun? <a href="register.html">Daftar di sini.</a></p>
         <p id="message" style="color: red; margin-top: 10px;"></p>
@@ -41,7 +43,7 @@
                 return;
             }
         });
-        // Note: Fungsi signIn() ada di auth_script.js
+        // Note: Fungsi signIn() dan requestPasswordReset() ada di auth_script.js
     </script>
 </body>
 </html>
