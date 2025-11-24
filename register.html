@@ -8,7 +8,7 @@
         body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
         .login-container { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1); width: 350px; text-align: center; }
         h1 { color: #28a745; margin-bottom: 25px; }
-        input[type="email"], input[type="password"], input[type="text"], select { 
+        input[type="email"], input[type="password"], input[type="text"] { 
             width: 100%; 
             padding: 12px; 
             margin: 10px 0; 
@@ -29,13 +29,6 @@
 
         <input type="text" id="fullName" placeholder="Nama Lengkap" required>
         <input type="text" id="division" placeholder="Divisi (Contoh: Maintenance)" required>
-        
-        <select id="userRole" required>
-            <option value="">-- Pilih Peran/Role --</option>
-            <option value="user">User (Karyawan)</option>
-            <option value="admin">Admin (Manager/IT)</option>
-        </select>
-
         <input type="email" id="email" placeholder="Email Perusahaan" required>
         <input type="password" id="password" placeholder="Password (Min. 6 Karakter)" required>
 
