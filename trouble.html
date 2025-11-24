@@ -5,35 +5,54 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Monitoring Trouble Mesin</title>
     <style>
-        body { font-family: Arial, sans-serif; padding: 20px; }
+        body { font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4; }
         h1 { color: #dc3545; }
+        .back-button { margin-bottom: 20px; padding: 10px; background-color: #333; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); margin-bottom: 20px; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
-        .back-button { margin-bottom: 20px; padding: 10px; background-color: #333; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        th { background-color: #f8d7da; color: #721c24; }
+        .filter-group { margin-bottom: 15px; padding: 15px; border: 1px dashed #ccc; border-radius: 5px; }
+        .filter-group label { margin-right: 10px; }
+        .filter-group input { padding: 8px; margin-right: 15px; }
+        .filter-group button { padding: 8px 15px; background-color: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer; }
     </style>
 </head>
 <body>
 
     <button class="back-button" onclick="window.location.href='index.html'">← Kembali ke Dashboard</button>
 
-    <h1>Monitoring Trouble Mesin (7 Hari Terakhir)</h1>
+    <h1>Monitoring Trouble Mesin</h1>
     
-    <h2>Status Kinerja Mesin Individu</h2>
-    <table id="troubleTable">
-        <thead>
-            <tr>
-                <th>Mesin ID</th>
-                <th>Hari ON (Stabil)</th>
-                <th>Hari OFF (Trouble)</th>
-                <th>Total Trouble Count</th>
-                <th>Trouble Terakhir</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr><td colspan="5">Memuat data dari Supabase...</td></tr>
-        </tbody>
-    </table>
+    <div class="card filter-group">
+        <h2>Pilih Periode Laporan</h2>
+        <label for="startDate">Tanggal Mulai:</label>
+        <input type="date" id="startDate" required>
+        
+        <label for="endDate">Tanggal Akhir:</label>
+        <input type="date" id="endDate" required>
+
+        <button onclick="fetchTroubleData()">Cek Trouble</button>
+    </div>
+
+    <div class="card">
+        <h2>Status Kinerja Mesin Individu</h2>
+        <p id="dateRangeDisplay">Periode: Harap masukkan tanggal</p>
+        <table id="troubleTable">
+            <thead>
+                <tr>
+                    <th>Mesin ID</th>
+                    <th>Hari ON (Stabil)</th>
+                    <th>Hari OFF (Trouble)</th>
+                    <th>Total Trouble Count</th>
+                    <th>Hari Trouble (Tanggal)</th> <th>Penyebab Utama</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td colspan="6">Pilih tanggal dan tekan 'Cek Trouble' untuk melihat laporan.</td></tr>
+            </tbody>
+        </table>
+    </div>
     
     <script src="trouble_fetch.js"></script>
 </body>
