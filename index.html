@@ -5,57 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <style>
-        body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            margin: 0; 
-            padding: 20px; 
-            background-color: #f0f2f5; 
-            color: #333;
-        }
-        header {
-            text-align: center;
-            padding-bottom: 15px;
-            border-bottom: 3px solid #007bff;
-            margin-bottom: 30px;
-        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background-color: #f0f2f5; color: #333; }
+        header { text-align: center; padding-bottom: 15px; border-bottom: 3px solid #007bff; margin-bottom: 30px; }
         h1 { color: #007bff; margin: 0; }
-        .grid-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-        }
-        .data-box { 
-            background-color: white; 
-            padding: 20px; 
-            border-radius: 12px; 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            transition: transform 0.2s;
-        }
-        .data-box:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 6px 15px rgba(0,0,0,0.15);
-        }
-        .label { 
-            font-size: 0.9em; 
-            color: #6c757d; 
-            margin-bottom: 5px; 
-        }
-        .value { 
-            font-size: 2em; 
-            font-weight: bold; 
-            color: #333; 
-        }
-        .unit { 
-            font-size: 0.5em; 
-            color: #6c757d; 
-            margin-left: 5px; 
-            font-weight: normal; 
-        }
-        #status { 
-            font-weight: bold; 
-            padding: 5px 10px; 
-            border-radius: 5px;
-        }
+        .grid-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+        .data-box { background-color: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: transform 0.2s; }
+        .label { font-size: 0.9em; color: #6c757d; margin-bottom: 5px; }
+        .value { font-size: 2em; font-weight: bold; color: #333; }
+        .unit { font-size: 0.5em; color: #6c757d; margin-left: 5px; font-weight: normal; }
+        #status { font-weight: bold; padding: 5px 10px; border-radius: 5px; }
     </style>
 </head>
 <body>
@@ -69,57 +27,20 @@
     </header>
 
     <div class="grid-container">
+        <div class="data-box"><div class="label">1. Total Energi Aktif (Ea)</div><div class="value"><span id="e_tot_kwh">--</span><span class="unit">kWh</span></div></div>
+        <div class="data-box"><div class="label">2. Total Energi Reaktif (Er)</div><div class="value"><span id="e_r_tot_kvarh">--</span><span class="unit">kVARh</span></div></div>
+        <div class="data-box"><div class="label">3. Partial Energi Aktif</div><div class="value"><span id="e_part_kwh">--</span><span class="unit">kWh</span></div></div>
+        <div class="data-box"><div class="label">4. Partial Energi Reaktif</div><div class="value"><span id="e_r_part_kvarh">--</span><span class="unit">kVARh</span></div></div>
         
-        <div class="data-box">
-            <div class="label">1. Total Energi Aktif (Ea)</div>
-            <div class="value"><span id="e_tot_kwh">--</span><span class="unit">kWh</span></div>
-        </div>
-        <div class="data-box">
-            <div class="label">2. Total Energi Reaktif (Er)</div>
-            <div class="value"><span id="e_r_tot_kvarh">--</span><span class="unit">kVARh</span></div>
-        </div>
-        <div class="data-box">
-            <div class="label">3. Partial Energi Aktif</div>
-            <div class="value"><span id="e_part_kwh">--</span><span class="unit">kWh</span></div>
-        </div>
-        <div class="data-box">
-            <div class="label">4. Partial Energi Reaktif</div>
-            <div class="value"><span id="e_r_part_kvarh">--</span><span class="unit">kVARh</span></div>
-        </div>
+        <div class="data-box"><div class="label">5. Voltage (L-L Avg)</div><div class="value"><span id="voltage_avg_v">--</span><span class="unit">Volt</span></div></div>
+        <div class="data-box"><div class="label">6. Current (I1)</div><div class="value"><span id="current_i1_a">--</span><span class="unit">Ampere</span></div></div>
+        <div class="data-box"><div class="label">7. Active Power (P)</div><div class="value"><span id="power_p_w">--</span><span class="unit">Watt</span></div></div>
         
-        <div class="data-box">
-            <div class="label">5. Voltage (L-L Avg)</div>
-            <div class="value"><span id="voltage_avg_v">--</span><span class="unit">Volt</span></div>
-        </div>
-        <div class="data-box">
-            <div class="label">6. Current (I1)</div>
-            <div class="value"><span id="current_i1_a">--</span><span class="unit">Ampere</span></div>
-        </div>
-        <div class="data-box">
-            <div class="label">7. Active Power (P)</div>
-            <div class="value"><span id="power_p_w">--</span><span class="unit">Watt</span></div>
-        </div>
-        
-        <div class="data-box">
-            <div class="label">8. Reactive Power (Q)</div>
-            <div class="value"><span id="power_q_var">--</span><span class="unit">VAR</span></div>
-        </div>
-        <div class="data-box">
-            <div class="label">9. Apparent Power (S)</div>
-            <div class="value"><span id="power_s_kva">--</span><span class="unit">kVA</span></div>
-        </div>
-        <div class="data-box">
-            <div class="label">10. Power Factor (PF)</div>
-            <div class="value"><span id="pf">--</span></div>
-        </div>
-        <div class="data-box">
-            <div class="label">11. Frequency (Hz)</div>
-            <div class="value"><span id="freq_hz">--</span><span class="unit">Hz</span></div>
-        </div>
-        <div class="data-box">
-            <div class="label">12. Operation Time</div>
-            <div class="value"><span id="op_time_hr">--</span><span class="unit">Jam</span></div>
-        </div>
+        <div class="data-box"><div class="label">8. Reactive Power (Q)</div><div class="value"><span id="power_q_var">--</span><span class="unit">VAR</span></div></div>
+        <div class="data-box"><div class="label">9. Apparent Power (S)</div><div class="value"><span id="power_s_kva">--</span><span class="unit">kVA</span></div></div>
+        <div class="data-box"><div class="label">10. Power Factor (PF)</div><div class="value"><span id="pf">--</span></div></div>
+        <div class="data-box"><div class="label">11. Frequency (Hz)</div><div class="value"><span id="freq_hz">--</span><span class="unit">Hz</span></div></div>
+        <div class="data-box"><div class="label">12. Operation Time</div><div class="value"><span id="op_time_hr">--</span><span class="unit">Jam</span></div></div>
 
     </div>
 
@@ -127,7 +48,6 @@
     <pre id="raw-json" style="background-color: #e9ecef; padding: 10px; border-radius: 5px; font-size: 0.9em;"></pre>
 
     <script>
-        // --- KONFIGURASI KONEKSI AMAN (WSS) ---
         const BROKER_URL = 'wss://broker.hivemq.com:8884/mqtt'; 
         const TOPIC = 'schneider/data/meter1'; 
         
@@ -135,35 +55,23 @@
         const statusElement = document.getElementById('status');
         const rawJsonElement = document.getElementById('raw-json');
 
-        // --- 1. HANDLE KONEKSI ---
+        // Handle Koneksi
         client.on('connect', function () {
             statusElement.innerText = 'LIVE';
-            statusElement.style.backgroundColor = '#28a745'; // Hijau
+            statusElement.style.backgroundColor = '#28a745'; 
             statusElement.style.color = 'white';
             client.subscribe(TOPIC);
         });
 
-        client.on('error', function (err) {
-            statusElement.innerText = 'ERROR';
-            statusElement.style.backgroundColor = '#dc3545'; // Merah
-            statusElement.style.color = 'white';
-        });
-
-        client.on('close', function () {
-            statusElement.innerText = 'Disconnected';
-            statusElement.style.backgroundColor = '#ffc107'; // Kuning
-            statusElement.style.color = '#333';
-        });
-
-        // --- 2. HANDLE DATA MASUK ---
         client.on('message', function (topic, message) {
             try {
                 const dataString = message.toString();
                 const data = JSON.parse(dataString);
                 
-                // Tampilkan JSON mentah di bagian Debugging
+                // 1. Tampilkan JSON mentah
                 rawJsonElement.innerText = JSON.stringify(data, null, 2);
                 
+                // 2. Update Dashboard
                 updateDashboard(data);
 
             } catch (e) {
@@ -172,24 +80,23 @@
             }
         });
 
-        // --- 3. FUNGSI UPDATE TAMPILAN (PEMROSESAN TANGGUH DAN DIPERBAIKI) ---
+        // FUNGSI UPDATE TAMPILAN (PEMROSESAN TANGGUH DAN DIPERBAIKI)
         function updateDashboard(data) {
             const mappings = [
-                // Urutan sesuai daftar Anda, fixed adalah jumlah angka di belakang koma
                 { id: 'e_tot_kwh', key: 'e_tot_kwh', fixed: 2 },
                 { id: 'e_r_tot_kvarh', key: 'e_r_tot_kvarh', fixed: 2 },
                 { id: 'e_part_kwh', key: 'e_part_kwh', fixed: 2 },
                 { id: 'e_r_part_kvarh', key: 'e_r_part_kvarh', fixed: 2 },
                 { id: 'voltage_avg_v', key: 'voltage_avg_v', fixed: 1 },
                 { id: 'current_i1_a', key: 'current_i1_a', fixed: 3 },
-                { id: 'current_i2_a', key: 'current_i2_a', fixed: 3 }, // Tambahkan ini jika Anda ingin menampilkan I2/I3
+                { id: 'current_i2_a', key: 'current_i2_a', fixed: 3 }, 
                 { id: 'current_i3_a', key: 'current_i3_a', fixed: 3 }, 
                 { id: 'power_p_w', key: 'power_p_w', fixed: 0 },
                 { id: 'power_q_var', key: 'power_q_var', fixed: 0 },
                 { id: 'power_s_kva', key: 'power_s_kva', fixed: 2 },
                 { id: 'pf', key: 'pf', fixed: 3 },
                 { id: 'freq_hz', key: 'freq_hz', fixed: 1 },
-                { id: 'op_time_hr', key: 'op_time_hr', fixed: 0 } // Gunakan 0 desimal untuk Jam (74 jam)
+                { id: 'op_time_hr', key: 'op_time_hr', fixed: 0 }
             ];
 
             mappings.forEach(item => {
@@ -198,20 +105,15 @@
                 
                 if (element && value !== undefined) {
                     
-                    // Logic: Cek apakah nilai adalah angka dan bukan NULL
                     if (value !== null && typeof value === 'number') {
                         try {
-                            // Coba format angka. Ini adalah satu-satunya tempat crash mungkin terjadi.
                             element.innerText = value.toFixed(item.fixed); 
                         } catch (e) {
-                            // Jika format gagal (misalnya angka terlalu besar), tampilkan raw value atau --
                             element.innerText = String(value); 
                         }
                     } else if (value === null) {
-                        // Jika NULL (seperti Power atau PF), tampilkan '--'
                         element.innerText = '--';
                     } else {
-                        // Tampilkan string/non-number apa adanya
                         element.innerText = value;
                     }
                 }
