@@ -9,7 +9,8 @@ const TARIFF_TABLE = 'tariff_settings';
 const TELEMETRY_TABLE = 'machine_telemetry';
 
 async function fetchTariffData() {
-    const tariffUrl = `${SUPABASE_URL}/rest/v1/${TARIFF_TABLE}?select=*&is_active=eq.true`;
+    // Meminta semua kolom yang diperlukan untuk Audit Trail
+    const tariffUrl = `${SUPABASE_URL}/rest/v1/${TARIFF_TABLE}?select=rate_per_kwh,tariff_name,updated_by_name,updated_by_division,updated_at&is_active=eq.true`;
     const telemetryUrl = `${SUPABASE_URL}/rest/v1/${TELEMETRY_TABLE}?select=machine_id,ea_total&limit=1000`; 
 
     try {
@@ -32,8 +33,9 @@ async function fetchTariffData() {
         document.getElementById('currentTariffName').textContent = activeName;
         document.getElementById('currentTariffRate').textContent = `Rp ${activeRate.toLocaleString('id-ID', { minimumFractionDigits: 2 })}`;
 
-        // Tampilkan Detail Audit (BARU)
+        // Tampilkan Detail Audit (Bagian yang Anda soroti)
         if (tariffData.length > 0) {
+            // Mengambil Nama dan Divisi dari database untuk ditampilkan
             document.getElementById('updaterName').textContent = tariffData[0].updated_by_name || 'System';
             document.getElementById('updaterDivision').textContent = tariffData[0].updated_by_division || 'IT';
             document.getElementById('updaterTime').textContent = new Date(tariffData[0].updated_at).toLocaleString('id-ID');
@@ -49,6 +51,7 @@ async function fetchTariffData() {
 
 // Fungsi pembantu: Mengelompokkan konsumsi dan menghitung biaya
 function displayCostData(telemetryData, ratePerKwh) {
+    // ... (Kode ini tidak berubah)
     const costSummary = {};
 
     telemetryData.forEach(record => {
@@ -81,7 +84,7 @@ function displayCostData(telemetryData, ratePerKwh) {
     }
 }
 
-// Fungsi untuk POST (PATCH) update tarif (BARU)
+// Fungsi untuk POST (PATCH) update tarif - Kunci Revisi Ada Di Sini
 async function updateTariff() {
     const newRate = document.getElementById('newRate').value;
     
@@ -90,16 +93,20 @@ async function updateTariff() {
         return;
     }
     
+    // --- Langkah Kritis: Meminta Nama dan Divisi Pengubah ---
+    const userName = prompt("⚠️ MASUKKAN NAMA ANDA (Pencatat Audit):") || 'ADMIN TANPA NAMA';
+    const userDivision = prompt("⚠️ MASUKKAN DIVISI ANDA (Contoh: Finance, IT, TA):") || 'DIVISI TIDAK DIKETAHUI';
+    // ---------------------------------------------------------
+
     // Hardcoded ID 1, asumsi itu adalah tarif aktif
     const activeTariffId = 1; 
-    
-    const userName = prompt("Masukkan Nama Anda:") || 'Admin Dashboard';
-    const userDivision = prompt("Masukkan Divisi Anda:") || 'IT/TA';
 
     const payload = {
         rate_per_kwh: parseFloat(newRate),
+        // --- Mengirim Data Audit ke Supabase ---
         updated_by_name: userName,
         updated_by_division: userDivision,
+        // --------------------------------------
         updated_at: new Date().toISOString()
     };
     
@@ -116,10 +123,10 @@ async function updateTariff() {
         });
 
         if (response.ok) {
-            alert(`Tarif berhasil diperbarui menjadi Rp ${newRate}! Audit trail dicatat. Silakan cek RLS Policy UPDATE.`);
+            alert(`✅ Tarif berhasil diperbarui menjadi Rp ${newRate}! Dicatat oleh ${userName} (${userDivision}). Pastikan RLS Policy UPDATE sudah diatur.`);
             fetchTariffData(); 
         } else {
-            alert('Gagal memperbarui tarif. Pastikan RLS Policy (UPDATE) di Supabase sudah diatur untuk tabel tariff_settings.');
+            alert('❌ Gagal memperbarui tarif. Pastikan RLS Policy (UPDATE) di Supabase sudah diatur untuk tabel tariff_settings.');
         }
     } catch (error) {
         console.error("Error update tarif:", error);
