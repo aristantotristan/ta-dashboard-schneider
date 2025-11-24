@@ -1,18 +1,48 @@
 // =======================================================
-// control_script.js: FOKUS PENCATATAN LOG KONEKSI
+// control_script.js: FOKUS LOG DOWNTIME KONEKSI
 // =======================================================
 const SUPABASE_URL = 'https://khamzxkrvmnjhrgdqbkg.supabase.co'; 
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtoYW16eGtydm1uamhyZ2RxYmtnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM5NDg2MzcsImV4cCI6MjA3OTUyNDYzN30.SYZTZA3rxaE-kwFuKLlzkol_mLuwjYmVudGCN0imAM8'; 
-const LOG_TABLE = 'system_connection_log';
-const API_URL = `${SUPABASE_URL}/rest/v1/${LOG_TABLE}`;
+const DOWNTIME_TABLE = 'connection_downtime_log';
+const API_URL = `${SUPABASE_URL}/rest/v1/${DOWNTIME_TABLE}`;
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// --- 1. Fungsi untuk Mengambil dan Menampilkan Log Koneksi ---
-async function fetchConnectionLogs() {
+// --- Fungsi Utama: Mengambil dan Menampilkan Log Downtime ---
+async function fetchDowntimeLog() {
+    const startDateInput = document.getElementById('startDate').value;
+    const endDateInput = document.getElementById('endDate').value;
+    const tbody = document.querySelector('#downtimeLogTable tbody');
+    tbody.innerHTML = `<tr><td colspan="4">Mencari log downtime...</td></tr>`;
+
+    if (!startDateInput || !endDateInput) {
+        alert("Mohon pilih Tanggal Mulai dan Tanggal Akhir.");
+        tbody.innerHTML = `<tr><td colspan="4">Pilih tanggal dan tekan 'Tampilkan Log' untuk melihat riwayat.</td></tr>`;
+        return;
+    }
+    
+    // Logika filter waktu yang sudah kita Sempurnakan
+    const startDate = new Date(startDateInput);
+    startDate.setHours(0, 0, 0, 0); 
+    const endDate = new Date(endDateInput);
+    endDate.setHours(23, 59, 59, 999); 
+    
+    if (startDate.getTime() >= endDate.getTime()) {
+        alert("Tanggal Mulai harus lebih awal dari Tanggal Akhir.");
+        return;
+    }
+
+    const startFilter = startDate.toISOString();
+    const endFilter = endDate.toISOString();
+
+    document.getElementById('dateRangeDisplay').textContent = 
+        `Periode yang ditampilkan: ${startDate.toLocaleDateString('id-ID')} - ${new Date(endDateInput).toLocaleDateString('id-ID')}`;
+
+    // Query: Cari log dimana downtime_start berada DALAM rentang filter
+    const url = `${API_URL}?select=*&downtime_start=gte.${startFilter}&downtime_start=lte.${endFilter}&order=downtime_start.desc`;
+
     try {
-        // Ambil hanya log bertipe CONNECTION_TROUBLE, diurutkan terbaru
-        const response = await fetch(`${API_URL}?select=*&log_type=eq.CONNECTION_TROUBLE&order=timestamp.desc`, {
+        const response = await fetch(url, {
             method: 'GET',
             headers: {'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY }
         });
@@ -21,88 +51,47 @@ async function fetchConnectionLogs() {
 
         const data = await response.json();
         
-        displayConnectionLog(data);
-        updateConnectionStatus(data);
+        displayLogTable(data);
 
     } catch (error) {
-        console.error("Gagal mengambil log koneksi:", error);
-        document.querySelector('#connectionLogTable tbody').innerHTML = `<tr><td colspan='3'>Error: ${error.message}</td></tr>`;
+        console.error("Gagal mengambil log downtime:", error);
+        tbody.innerHTML = `<tr><td colspan='4'>Error: ${error.message}. Cek RLS Policy.</td></tr>`;
     }
 }
 
-// --- 2. Menampilkan Log di Tabel ---
-function displayConnectionLog(logs) {
-    const tbody = document.querySelector('#connectionLogTable tbody');
+// --- Menampilkan Log di Tabel ---
+function displayLogTable(logs) {
+    const tbody = document.querySelector('#downtimeLogTable tbody');
     tbody.innerHTML = '';
     
     if (logs.length === 0) {
-        tbody.innerHTML = `<tr><td colspan='3'>Tidak ada riwayat gangguan koneksi.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan='4'>Tidak ada riwayat gangguan koneksi dalam periode ini.</td></tr>`;
         return;
     }
 
     logs.forEach(log => {
         const row = tbody.insertRow();
-        row.insertCell().textContent = log.event_status;
-        row.insertCell().textContent = new Date(log.timestamp).toLocaleString('id-ID');
-        row.insertCell().textContent = log.details || '-';
+        
+        // Format Waktu Mulai
+        row.insertCell().textContent = new Date(log.downtime_start).toLocaleString('id-ID'); 
+        
+        // Format Waktu Pulih
+        row.insertCell().textContent = log.downtime_end ? new Date(log.downtime_end).toLocaleString('id-ID') : 'BELUM PULIH';
+        
+        // Durasi (Menit)
+        const duration = log.duration_minutes ? `${log.duration_minutes.toFixed(1)} Menit` : 'Belum Selesai';
+        row.insertCell().textContent = duration;
+
+        // Penyebab
+        row.insertCell().textContent = log.cause || 'Tidak Diketahui';
     });
 }
 
-// --- 3. Memperbarui Status Koneksi Terakhir ---
-function updateConnectionStatus(logs) {
-    const connStatusElement = document.getElementById('connectionStatus');
-    const latestLog = logs[0]; // Karena sudah diurutkan dari yang terbaru
+// Global function for HTML
+window.fetchDowntimeLog = fetchDowntimeLog;
 
-    if (latestLog && latestLog.event_status === 'DISCONNECTED') {
-        connStatusElement.textContent = `TERPUTUS sejak ${new Date(latestLog.timestamp).toLocaleString('id-ID')}`;
-        connStatusElement.className = 'status-stopped';
-    } else if (latestLog && latestLog.event_status === 'RECONNECTED') {
-        connStatusElement.textContent = 'KONEKSI OK';
-        connStatusElement.className = 'status-running';
-    } else {
-         connStatusElement.textContent = 'KONEKSI OK (Belum ada log)';
-         connStatusElement.className = 'status-running';
-    }
-}
-
-// --- 4. Fungsi Kunci: Mencatat Status Koneksi (POST) ---
-async function logConnectionStatus(status) {
-    const detailLog = prompt(`Masukkan Keterangan Detail untuk status ${status}:`) || status;
-    
-    // Nanti diganti dengan user ID setelah Auth
-    const userName = 'Maintenance Team TA'; 
-
-    const payload = {
-        log_type: 'CONNECTION_TROUBLE',
-        event_status: status,
-        machine_id: 'GLOBAL_COMM', // Asumsi: trouble koneksi bersifat global (WiFi)
-        user_id: userName, 
-        details: detailLog
-    };
-    
-    try {
-        const response = await fetch(API_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'apikey': SUPABASE_ANON_KEY 
-            },
-            body: JSON.stringify(payload)
-        });
-
-        if (response.ok) {
-            alert(`✅ Status ${status} berhasil dicatat!`);
-            fetchConnectionLogs(); // Refresh log
-        } else {
-            alert('❌ Gagal mencatat status. Cek RLS Policy (INSERT) untuk system_connection_log!');
-        }
-    } catch (error) {
-        console.error('Error POST:', error);
-    }
-}
-
-// Global functions for HTML
-window.logConnectionStatus = logConnectionStatus;
-
-// Inisialisasi: Ambil log saat halaman dimuat
-document.addEventListener('DOMContentLoaded', fetchConnectionLogs);
+// Inisialisasi: Hapus log saat halaman dimuat
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('downtimeLogTable').querySelector('tbody').innerHTML = 
+        '<tr><td colspan="4">Pilih tanggal dan tekan \'Tampilkan Log\' untuk melihat riwayat.</td></tr>';
+});
