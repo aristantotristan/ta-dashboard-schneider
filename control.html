@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control & Maintenance Sistem</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4; }
+        h1 { color: #17a2b8; }
+        .back-button { margin-bottom: 20px; padding: 10px; background-color: #333; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); margin-bottom: 20px; }
+        .control-buttons button { padding: 15px 30px; margin: 10px; font-size: 1.1em; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; color: white; }
+        #btnStart { background-color: #28a745; }
+        #btnStop { background-color: #dc3545; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background-color: #d1ecf1; }
+    </style>
+</head>
+<body>
+
+    <button class="back-button" onclick="window.location.href='index.html'">← Kembali ke Dashboard</button>
+
+    <h1>Control & Maintenance Sistem</h1>
+
+    <div class="card">
+        <h2>A. Status & Kontrol Data Logging</h2>
+        <p>Status Sistem Saat Ini: <span id="systemStatus" style="font-weight: bold;">Tidak Diketahui</span></p>
+        <div class="control-buttons">
+            <button id="btnStart" onclick="logControl('START')">MULAI SISTEM</button>
+            <button id="btnStop" onclick="logControl('STOP')">HENTIKAN SISTEM</button>
+        </div>
+        
+        <h3>Log Kontrol Sistem</h3>
+        <table id="controlLogTable">
+            <thead>
+                <tr><th>Event</th><th>Pengguna</th><th>Waktu Kejadian</th></tr>
+            </thead>
+            <tbody><tr><td colspan="3">Memuat log kontrol...</td></tr></tbody>
+        </table>
+    </div>
+    
+    <div class="card">
+        <h2>B. Pemantauan Koneksi (Satpam IoT) 📡</h2>
+        <p>Status Komunikasi: <span id="connectionStatus" style="font-weight: bold;">Memuat...</span></p>
+        
+        <h3>Log Gangguan Koneksi</h3>
+        <table id="connectionLogTable">
+            <thead>
+                <tr><th>Status</th><th>Waktu Kejadian</th><th>Durasi</th><th>Keterangan</th></tr>
+            </thead>
+            <tbody><tr><td colspan="4">Memuat log koneksi...</td></tr></tbody>
+        </table>
+    </div>
+
+    <script src="control_fetch.js"></script>
+</body>
+</html>
