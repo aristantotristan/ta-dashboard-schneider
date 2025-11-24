@@ -1,10 +1,3 @@
-<div style="margin-top: 30px;">
-    <p>Status: <span id="authStatus">Memuat...</span></p>
-    <button onclick="signOut()" style="padding: 10px; background-color: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer; margin-top: 10px;">
-        Logout
-    </button>
-</div>
-
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="auth_script.js"></script>
 
@@ -13,16 +6,16 @@
         const authInfo = await checkUserRole();
         const statusElement = document.getElementById('authStatus');
         
-        if (authInfo.isLoggedIn) {
-            statusElement.innerHTML = `Login sebagai: <b>${authInfo.profile.full_name || 'User'}</b> (${authInfo.role.toUpperCase()})`;
-            statusElement.style.color = 'green';
+        // 1. Logika Proteksi: Jika TIDAK login, redirect ke login.html
+        if (!authInfo.isLoggedIn) {
+            window.location.href = 'login.html'; // LOGIKA REDIRECT HANYA DI SINI!
+            return;
         }
-        
-        // Pengecekan, jika tidak login, sudah diarahkan oleh checkUserRole() ke login.html
-    });
 
-    function goToPage(page) {
-        // Navigasi ke halaman detail
-        window.location.href = page; 
-    }
+        // 2. Tampilkan status jika berhasil login
+        const profile = authInfo.profile;
+        statusElement.innerHTML = `Login sebagai: <b>${profile.full_name || 'User'}</b> (${authInfo.role.toUpperCase()})`;
+        statusElement.style.color = 'green';
+    });
+    // ... (fungsi goToPage) ...
 </script>
