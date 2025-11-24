@@ -71,79 +71,79 @@
     <div class="grid-container">
         
         <div class="data-box">
-            <div class="label">Total Energi Aktif (Ea)</div>
+            <div class="label">1. Total Energi Aktif (Ea)</div>
             <div class="value"><span id="e_tot_kwh">--</span><span class="unit">kWh</span></div>
         </div>
         <div class="data-box">
-            <div class="label">Total Energi Reaktif (Er)</div>
+            <div class="label">2. Total Energi Reaktif (Er)</div>
             <div class="value"><span id="e_r_tot_kvarh">--</span><span class="unit">kVARh</span></div>
         </div>
         <div class="data-box">
-            <div class="label">Partial Energi Aktif</div>
+            <div class="label">3. Partial Energi Aktif</div>
             <div class="value"><span id="e_part_kwh">--</span><span class="unit">kWh</span></div>
+        </div>
+        <div class="data-box">
+            <div class="label">4. Partial Energi Reaktif</div>
+            <div class="value"><span id="e_r_part_kvarh">--</span><span class="unit">kVARh</span></div>
         </div>
         
         <div class="data-box">
-            <div class="label">Voltage (L-L Avg)</div>
+            <div class="label">5. Voltage (L-L Avg)</div>
             <div class="value"><span id="voltage_avg_v">--</span><span class="unit">Volt</span></div>
         </div>
         <div class="data-box">
-            <div class="label">Current (I1)</div>
+            <div class="label">6. Current (I1)</div>
             <div class="value"><span id="current_i1_a">--</span><span class="unit">Ampere</span></div>
         </div>
         <div class="data-box">
-            <div class="label">Active Power (P)</div>
+            <div class="label">7. Active Power (P)</div>
             <div class="value"><span id="power_p_w">--</span><span class="unit">Watt</span></div>
         </div>
-
+        
         <div class="data-box">
-            <div class="label">Reactive Power (Q)</div>
+            <div class="label">8. Reactive Power (Q)</div>
             <div class="value"><span id="power_q_var">--</span><span class="unit">VAR</span></div>
         </div>
         <div class="data-box">
-            <div class="label">Apparent Power (S)</div>
+            <div class="label">9. Apparent Power (S)</div>
             <div class="value"><span id="power_s_kva">--</span><span class="unit">kVA</span></div>
         </div>
         <div class="data-box">
-            <div class="label">Power Factor (PF)</div>
+            <div class="label">10. Power Factor (PF)</div>
             <div class="value"><span id="pf">--</span></div>
         </div>
         <div class="data-box">
-            <div class="label">Frequency (Hz)</div>
+            <div class="label">11. Frequency (Hz)</div>
             <div class="value"><span id="freq_hz">--</span><span class="unit">Hz</span></div>
         </div>
         <div class="data-box">
-            <div class="label">Operation Time</div>
+            <div class="label">12. Operation Time</div>
             <div class="value"><span id="op_time_hr">--</span><span class="unit">Jam</span></div>
-        </div>
-        <div class="data-box">
-            <div class="label">Partial Reaktif</div>
-            <div class="value"><span id="e_r_part_kvarh">--</span><span class="unit">kVARh</span></div>
         </div>
 
     </div>
 
+    <h3 style="margin-top: 40px; color: #555;">Data JSON Terakhir (Debugging)</h3>
+    <pre id="raw-json" style="background-color: #e9ecef; padding: 10px; border-radius: 5px; font-size: 0.9em;"></pre>
+
     <script>
         // --- KONFIGURASI KONEKSI AMAN (WSS) ---
-        // Menggunakan port 8884 (WSS) karena lebih kompatibel dengan hosting HTTPS seperti Vercel
         const BROKER_URL = 'wss://broker.hivemq.com:8884/mqtt'; 
         const TOPIC = 'schneider/data/meter1'; 
         
         const client = mqtt.connect(BROKER_URL);
         const statusElement = document.getElementById('status');
+        const rawJsonElement = document.getElementById('raw-json');
 
         // --- 1. HANDLE KONEKSI ---
         client.on('connect', function () {
             statusElement.innerText = 'LIVE';
             statusElement.style.backgroundColor = '#28a745'; // Hijau
             statusElement.style.color = 'white';
-            client.subscribe(TOPIC, function (err) {
-                if (err) console.error('Subscription failed:', err);
-            });
+            client.subscribe(TOPIC);
         });
 
         client.on('error', function (err) {
-            console.error('MQTT Connection Error:', err);
             statusElement.innerText = 'ERROR';
             statusElement.style.backgroundColor = '#dc3545'; // Merah
             statusElement.style.color = 'white';
@@ -158,19 +158,21 @@
         // --- 2. HANDLE DATA MASUK ---
         client.on('message', function (topic, message) {
             try {
-                const data = JSON.parse(message.toString());
-                console.log('Data Received:', data);
+                const dataString = message.toString();
+                const data = JSON.parse(dataString);
+                
+                // Tampilkan JSON mentah di bagian Debugging
+                rawJsonElement.innerText = dataString;
+                
                 updateDashboard(data);
 
             } catch (e) {
-                console.error('Error processing message:', e);
+                rawJsonElement.innerText = "Error Parsing JSON: " + e.message;
             }
         });
 
-        // --- 3. FUNGSI UPDATE TAMPILAN (DOM MANIPULATION) ---
+        // --- 3. FUNGSI UPDATE TAMPILAN (PEMROSESAN TANGGUH) ---
         function updateDashboard(data) {
-            // Mapping antara KEY JSON (dari ESP32) dan ID HTML
-            // KEY harus sama persis dengan yang dikirim oleh fungsi publish_data di kode ESP32!
             const mappings = [
                 { id: 'e_tot_kwh', key: 'e_tot_kwh', fixed: 2 },
                 { id: 'e_r_tot_kvarh', key: 'e_r_tot_kvarh', fixed: 2 },
@@ -178,7 +180,6 @@
                 { id: 'e_r_part_kvarh', key: 'e_r_part_kvarh', fixed: 2 },
                 { id: 'voltage_avg_v', key: 'voltage_avg_v', fixed: 1 },
                 { id: 'current_i1_a', key: 'current_i1_a', fixed: 3 },
-                // Kita hanya menampilkan I1 saja di dashboard ini
                 { id: 'power_p_w', key: 'power_p_w', fixed: 0 },
                 { id: 'power_q_var', key: 'power_q_var', fixed: 0 },
                 { id: 'power_s_kva', key: 'power_s_kva', fixed: 2 },
@@ -192,8 +193,18 @@
                 const value = data[item.key];
                 
                 if (element && value !== undefined) {
-                    // Gunakan toFixed untuk mengatur desimal
-                    element.innerText = typeof value === 'number' ? value.toFixed(item.fixed) : value; 
+                    
+                    // Logic untuk menangani nilai valid (angka) vs. error (null)
+                    if (value !== null && typeof value === 'number') {
+                        // Tampilkan angka yang valid (Voltage, Energy, Freq)
+                        element.innerText = value.toFixed(item.fixed); 
+                    } else if (value === null) {
+                        // Tampilkan '--' untuk nilai yang gagal dibaca (Power, PF)
+                        element.innerText = '--';
+                    } else {
+                        // Tampilkan apa adanya
+                        element.innerText = value;
+                    }
                 }
             });
         }
