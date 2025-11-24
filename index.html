@@ -1,85 +1,82 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Dashboard Listrik MQTT (HiveMQ Cloud)</title>
+    <title>Dashboard Listrik (Hotspot Final)</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js" type="text/javascript"></script>
     <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f7f6; color: #333; padding: 20px; }
-        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); }
-        h1 { color: #007bff; text-align: center; }
-        .status { margin-bottom: 20px; padding: 10px; border-radius: 4px; font-weight: bold; }
-        .status.connected { background-color: #d4edda; color: #155724; }
-        .status.disconnected { background-color: #f8d7da; color: #721c24; }
-        .data-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .data-item { padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
-        .data-label { font-size: 0.9em; color: #555; }
-        .data-value { font-size: 1.5em; font-weight: bold; color: #333; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #e9ecef; color: #343a40; padding: 20px; }
+        .container { max-width: 900px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15); }
+        h1 { color: #007bff; text-align: center; border-bottom: 2px solid #007bff; padding-bottom: 10px; margin-bottom: 20px; }
+        .status { margin-bottom: 20px; padding: 12px; border-radius: 6px; font-weight: bold; text-align: center; background-color: #dc3545; color: white; transition: all 0.5s ease; }
+        .status.connected { background-color: #28a745; }
+        .data-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+        .data-item { padding: 15px; border: 1px solid #dee2e6; border-radius: 8px; background-color: #f8f9fa; }
+        .data-label { font-size: 0.9em; color: #6c757d; margin-bottom: 5px; }
+        .data-value { font-size: 2.0em; font-weight: 700; color: #343a40; }
+        .unit { font-size: 0.7em; color: #6c757d; margin-left: 5px; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <h1>⚡ Live Power Meter Dashboard</h1>
-    
-    <div id="status" class="status disconnected">Status: Disconnected</div>
+    <div id="status" class="status">Status: Disconnected</div>
 
     <div class="data-grid">
         <div class="data-item">
-            <div class="data-label">Tegangan (Volt)</div>
-            <div class="data-value" id="Voltage_V">--</div>
+            <div class="data-label">Tegangan (Rata-rata)</div>
+            <div class="data-value" id="Voltage_V">--</div><span class="unit">V</span>
         </div>
         <div class="data-item">
-            <div class="data-label">Daya Aktif (Watt)</div>
-            <div class="data-value" id="ActivePower_W">--</div>
+            <div class="data-label">Daya Aktif Total</div>
+            <div class="data-value" id="ActivePower_W">--</div><span class="unit">W</span>
         </div>
         <div class="data-item">
-            <div class="data-label">Arus (Ampere)</div>
-            <div class="data-value" id="Current_I1_A">--</div>
+            <div class="data-label">Arus I1</div>
+            <div class="data-value" id="Current_I1_A">--</div><span class="unit">A</span>
         </div>
         <div class="data-item">
             <div class="data-label">Power Factor</div>
-            <div class="data-value" id="PowerFactor">--</div>
+            <div class="data-value" id="PowerFactor">--</div><span class="unit">PF</span>
         </div>
         <div class="data-item">
-            <div class="data-label">Energi Total (kWh)</div>
-            <div class="data-value" id="EnergyTotal_kWh">--</div>
+            <div class="data-label">Energi Total (Import)</div>
+            <div class="data-value" id="EnergyTotal_kWh">--</div><span class="unit">kWh</span>
         </div>
         <div class="data-item">
-            <div class="data-label">Frekuensi (Hz)</div>
-            <div class="data-value" id="Frequency_Hz">--</div>
+            <div class="data-label">Frekuensi</div>
+            <div class="data-value" id="Frequency_Hz">--</div><span class="unit">Hz</span>
         </div>
+        <div class="data-item">
+            <div class="data-label">Daya Nyata (Apparent)</div>
+            <div class="data-value" id="ApparentPower_kVA">--</div><span class="unit">kVA</span>
         </div>
+        <div class="data-item">
+            <div class="data-label">Waktu Operasi</div>
+            <div class="data-value" id="OperationTime_Jam">--</div><span class="unit">Jam</span>
+        </div>
+    </div>
 </div>
 
 <script>
     // ==========================================================
-    // --- KONFIGURASI MQTT JAVASCRIPT (WAJIB SESUAIKAN) ---
+    // --- KONFIGURASI MQTT JAVASCRIPT (MOSQUITTO PUBLIC) ---
     // ==========================================================
-    const host = 'cbc4d19f6f3d4371b47d363751d186d1.s1.eu.hivemq.cloud'; // Host Name HiveMQ Cloud Anda
-    const port = 8884; // Port 8884 adalah port WebSocket Secure (WSS) untuk HiveMQ Cloud
+    const host = 'test.mosquitto.org'; 
+    const port = 8000; // Port 8000 adalah port WebSocket non-aman
     const path = '/mqtt';
-    const topic = 'esp32/powermeter/data'; 
-    const clientId = 'WebClient-' + Math.random().toString(16).substr(2, 8); // Client ID unik
-    
-    // Kredensial untuk koneksi
-    const username = 'esp32_user'; 
-    const password = 'Tristan12#'; 
-    
-    // Inisialisasi Klien
+    const topic = 'esp32/powermeter/data_akg'; // WAJIB SAMA dengan TOPIC di kode ESP32
+    const clientId = 'WebClient-Final-' + Math.random().toString(16).substr(2, 8); 
+
     const client = new Paho.MQTT.Client(host, port, path, clientId);
-    
-    // Atur fungsi callback
     client.onConnectionLost = onConnectionLost;
     client.onMessageArrived = onMessageArrived;
 
-    // Coba koneksi ke Broker
     client.connect({
         onSuccess: onConnect,
         onFailure: onFailure,
-        userName: username,
-        password: password,
-        useSSL: true // WAJIB True karena kita menggunakan Port 8884 (WSS)
+        useSSL: false 
     });
 
     // ==========================================================
@@ -87,45 +84,41 @@
     // ==========================================================
 
     function onConnect() {
-        console.log("Connected to MQTT Broker!");
+        console.log("Connected to MQTT Public Broker!");
         document.getElementById('status').className = 'status connected';
         document.getElementById('status').innerHTML = 'Status: Connected';
-        
-        // Berlangganan ke Topik setelah berhasil terhubung
         client.subscribe(topic);
-        console.log("Subscribed to topic: " + topic);
     }
 
     function onFailure(responseObject) {
-        console.log("Connection failed: " + responseObject.errorMessage);
+        console.error("Connection failed: " + responseObject.errorMessage);
         document.getElementById('status').className = 'status disconnected';
-        document.getElementById('status').innerHTML = 'Status: Connection Failed';
+        document.getElementById('status').innerHTML = 'Status: Connection Failed. Check internet or broker.';
     }
 
     function onConnectionLost(responseObject) {
         if (responseObject.errorCode !== 0) {
-            console.log("Connection Lost: " + responseObject.errorMessage);
+            console.warn("Connection Lost: " + responseObject.errorMessage);
             document.getElementById('status').className = 'status disconnected';
-            document.getElementById('status').innerHTML = 'Status: Connection Lost';
+            document.getElementById('status').innerHTML = 'Status: Connection Lost. Retrying...';
         }
-        // Coba koneksi ulang
-        // client.connect({onSuccess:onConnect, userName:username, password:password, useSSL:true});
+        setTimeout(() => {
+            client.connect({
+                onSuccess: onConnect,
+                onFailure: onFailure,
+                useSSL: false
+            });
+        }, 3000); 
     }
 
     function onMessageArrived(message) {
-        console.log("Message Arrived: " + message.payloadString);
-        
         try {
-            // Parsing payload JSON dari ESP32
             const data = JSON.parse(message.payloadString);
-            
-            // Memperbarui nilai di dashboard berdasarkan ID HTML
             for (const key in data) {
                 const element = document.getElementById(key);
                 if (element) {
-                    // Tampilkan nilai dengan 2 angka di belakang koma (atau sesuai kebutuhan)
                     if (typeof data[key] === 'number') {
-                         element.innerText = data[key].toFixed(2);
+                         element.innerText = data[key].toFixed(3); 
                     } else {
                          element.innerText = data[key];
                     }
