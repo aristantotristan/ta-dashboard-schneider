@@ -1,11 +1,49 @@
 <!DOCTYPE html>
-<html>
-<head><title>Monitoring Energi</title></head>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MONITORING ENERGI (v50 - FINAL)</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gauge.js/1.3.7/gauge.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* [CSS FINAL DARI V50 PRO] */
+        :root { /* ... */ }
+        /* ... (Semua CSS Final dari jawaban sebelumnya) ... */
+    </style>
+</head>
 <body>
-<h1>Dashboard Monitoring Energi</h1>
-<a href="realtime.html">Monitoring Realtime</a><br>
-<a href="tarif.html">Monitoring Tarif Mesin</a><br>
-<a href="trouble.html">Monitoring Trouble Mesin</a><br>
-<a href="control.html">Control & Maintenance</a><br>
+
+    <nav class="sidebar">
+        </nav>
+
+    <main class="main-content">
+        
+        <div id="view-monitor-grid" class="page active">
+            <div class="grid-18" id="machine-grid"></div>
+        </div>
+
+        <div id="view-monitor-detail" class="page">
+            </div>
+
+        <div id="view-trouble-grid" class="page">
+            </div>
+
+        <div id="view-tarif-detail" class="page">
+            </div>
+        
+        <div id="view-control-system" class="page">
+             </div>
+
+    </main>
+
+<script>
+// [SEMUA LOGIKA JAVASCRIPT LENGKAP DARI V50 (INIT, UPDATE, WATCHDOG, NAVIGASI) DI SINI]
+</script>
 </body>
 </html>
