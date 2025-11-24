@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Real-Time Monitoring</title>
+    <title>Monitoring Real-Time</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 0; background-color: #f4f4f4; }
         .back-button { padding: 10px; background-color: #333; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 20px; }
@@ -19,11 +19,37 @@
         .online { background-color: #28a745; }
         .offline { background-color: #dc3545; }
 
-        /* Gauges Style (Sederhana) */
+        /* Gauges Style */
         .gauge-container { display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 30px; }
-        .gauge-box { flex-basis: calc(50% - 10px); background: #f9f9f9; padding: 15px; border-radius: 8px; text-align: center; }
+        .gauge-box { 
+            flex-basis: calc(50% - 10px); 
+            background: #f9f9f9; 
+            padding: 15px; 
+            border-radius: 8px; 
+            text-align: center; 
+            border: 1px solid #ccc; 
+            position: relative; 
+        }
         .gauge-value { font-size: 2.5em; font-weight: bold; color: #007bff; }
-        .gauge-label { font-size: 0.9em; color: #555; }
+        .gauge-label { font-size: 0.9em; color: #555; margin-bottom: 10px; }
+        
+        /* Visual Bar (Gauge Sederhana) */
+        .gauge-visual { 
+            width: 100%; 
+            height: 10px; 
+            background-color: #e0e0e0; 
+            border-radius: 5px; 
+            margin-top: 5px;
+            overflow: hidden;
+        }
+        .gauge-fill {
+            height: 100%;
+            width: 0; /* Diisi oleh JS */
+            background-color: #28a745; /* Default Green */
+            transition: width 0.5s;
+        }
+        .gauge-fill.warning { background-color: orange; }
+        .gauge-fill.danger { background-color: red; }
 
         /* Detail Table */
         .detail-table { width: 100%; border-collapse: collapse; }
