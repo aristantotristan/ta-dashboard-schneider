@@ -1,16 +1,15 @@
 // =======================================================
-// !!! GANTI DENGAN KREDENSIAL SUPABASE ANDA !!!
+// KODE LENGKAP tariff_fetch.js YANG SUDAH DI-FIX TIMEZONE
 // =======================================================
+
 const SUPABASE_URL = 'https://khamzxkrvmnjhrgdqbkg.supabase.co'; 
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtoYW16eGtydm1uamhyZ2RxYmtnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM5NDg2MzcsImV4cCI6MjA3OTUyNDYzN30.SYZTZA3rxaE-kwFuKLlzkol_mLuwjYmVudGCN0imAM8'; 
-// =======================================================
 
 const TARIFF_TABLE = 'tariff_settings';
 const TELEMETRY_TABLE = 'machine_telemetry';
 
-let activeRate = 0; // Variabel global untuk menyimpan tarif aktif
+let activeRate = 0; 
 
-// Fungsi setup awal (hanya mengambil tarif aktif)
 async function setupTariffData() {
     const tariffUrl = `${SUPABASE_URL}/rest/v1/${TARIFF_TABLE}?select=rate_per_kwh,tariff_name,updated_by_name,updated_by_division,updated_at&is_active=eq.true`;
 
@@ -23,7 +22,6 @@ async function setupTariffData() {
         activeRate = tariffData.length > 0 ? parseFloat(tariffData[0].rate_per_kwh) : 0;
         const activeName = tariffData.length > 0 ? tariffData[0].tariff_name : 'Tarif Default (Rp 0)';
 
-        // Tampilkan tarif & audit
         document.getElementById('currentTariffName').textContent = activeName;
         document.getElementById('currentTariffRate').textContent = `Rp ${activeRate.toLocaleString('id-ID', { minimumFractionDigits: 2 })}`;
 
@@ -51,11 +49,15 @@ async function fetchAndCalculateCost() {
         return;
     }
 
-    // 1. Tentukan Tanggal Mulai (Pukul 00:00:00 di awal hari yang dipilih)
+    // --- REVISI LOGIKA TIMEZONE DI SINI ---
+    
+    // 1. Tanggal Mulai: Ambil input tanggal, pastikan waktu dimulai dari 00:00:00 (Lokal)
     const startDate = new Date(startDateInput);
-    // 2. Tentukan Tanggal Akhir (Pukul 23:59:59 di akhir hari yang dipilih)
+    startDate.setHours(0, 0, 0, 0); 
+    
+    // 2. Tanggal Akhir: Ambil input tanggal, pastikan waktu berakhir di 23:59:59 (Lokal)
     const endDate = new Date(endDateInput);
-    endDate.setHours(23, 59, 59, 999); // Set ke hampir tengah malam agar inklusif
+    endDate.setHours(23, 59, 59, 999); 
     
     // Validasi Tanggal
     if (startDate.getTime() >= endDate.getTime()) {
@@ -64,12 +66,13 @@ async function fetchAndCalculateCost() {
         return;
     }
     
-    // Konversi ke format ISO string (digunakan Supabase)
+    // Konversi ke format UTC ISO string untuk Supabase
+    // Karena Supabase menyimpan dengan +07 dan kita mengirim sebagai UTC, 
+    // Supabase akan melakukan perbandingan yang benar.
     const startFilter = startDate.toISOString();
     const endFilter = endDate.toISOString();
     
     // Ambil data Ea_Total dan timestamp
-    // Filter: timestamp >= startFilter (gte.) DAN timestamp <= endFilter (lte.)
     const telemetryUrl = `${SUPABASE_URL}/rest/v1/${TELEMETRY_TABLE}?select=machine_id,ea_total,timestamp&timestamp=gte.${startFilter}&timestamp=lte.${endFilter}&order=timestamp.asc`; 
     
     try {
@@ -79,7 +82,7 @@ async function fetchAndCalculateCost() {
         const telemetryData = await telemetryRes.json();
         
         if (telemetryData.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5">Tidak ada data yang terekam dalam periode tersebut. (Rentang filter: ${startFilter} hingga ${endFilter})</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="5">Tidak ada data yang terekam dalam periode tersebut. (Cek: ${startFilter} to ${endFilter})</td></tr>`;
             return;
         }
 
@@ -103,7 +106,6 @@ async function fetchAndCalculateCost() {
 function calculateConsumptionByPeriod(telemetryData, ratePerKwh) {
     const machineLogs = {};
 
-    // 1. Kelompokkan data per mesin
     telemetryData.forEach(record => {
         if (!machineLogs[record.machine_id]) {
             machineLogs[record.machine_id] = [];
@@ -118,15 +120,14 @@ function calculateConsumptionByPeriod(telemetryData, ratePerKwh) {
 
     for (const machineId in machineLogs) {
         const logs = machineLogs[machineId];
-        // Urutkan (seharusnya sudah diurutkan dari query)
         logs.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 
-        if (logs.length < 2) continue; // Minimal 2 pembacaan untuk menghitung selisih
+        if (logs.length < 2) continue;
 
-        const startLog = logs[0]; // Pembacaan awal
-        const endLog = logs[logs.length - 1]; // Pembacaan akhir
+        const startLog = logs[0]; 
+        const endLog = logs[logs.length - 1]; 
 
-        const kwhConsumed = Math.max(0, endLog.eaTotal - startLog.eaTotal); // Konsumsi (Pastikan tidak negatif)
+        const kwhConsumed = Math.max(0, endLog.eaTotal - startLog.eaTotal); 
         const totalCost = kwhConsumed * ratePerKwh;
 
         results[machineId] = {
@@ -193,7 +194,7 @@ async function updateTariff() {
 
         if (response.ok) {
             alert(`✅ Tarif berhasil diperbarui menjadi Rp ${newRate}! Dicatat oleh ${userName} (${userDivision}).`);
-            setupTariffData(); // Refresh data tarif setelah update
+            setupTariffData(); 
         } else {
             alert('❌ Gagal memperbarui tarif. Pastikan RLS Policy (UPDATE) di Supabase sudah diatur untuk tabel tariff_settings.');
         }
@@ -204,5 +205,4 @@ async function updateTariff() {
 }
 
 
-// Ganti fetchTariffData dengan setupTariffData saat DOMContentLoaded
 document.addEventListener('DOMContentLoaded', setupTariffData);
