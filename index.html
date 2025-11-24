@@ -162,30 +162,34 @@
                 const data = JSON.parse(dataString);
                 
                 // Tampilkan JSON mentah di bagian Debugging
-                rawJsonElement.innerText = dataString;
+                rawJsonElement.innerText = JSON.stringify(data, null, 2);
                 
                 updateDashboard(data);
 
             } catch (e) {
                 rawJsonElement.innerText = "Error Parsing JSON: " + e.message;
+                console.error("JSON Parsing Error:", e);
             }
         });
 
-        // --- 3. FUNGSI UPDATE TAMPILAN (PEMROSESAN TANGGUH) ---
+        // --- 3. FUNGSI UPDATE TAMPILAN (PEMROSESAN TANGGUH DAN DIPERBAIKI) ---
         function updateDashboard(data) {
             const mappings = [
+                // Urutan sesuai daftar Anda, fixed adalah jumlah angka di belakang koma
                 { id: 'e_tot_kwh', key: 'e_tot_kwh', fixed: 2 },
                 { id: 'e_r_tot_kvarh', key: 'e_r_tot_kvarh', fixed: 2 },
                 { id: 'e_part_kwh', key: 'e_part_kwh', fixed: 2 },
                 { id: 'e_r_part_kvarh', key: 'e_r_part_kvarh', fixed: 2 },
                 { id: 'voltage_avg_v', key: 'voltage_avg_v', fixed: 1 },
                 { id: 'current_i1_a', key: 'current_i1_a', fixed: 3 },
+                { id: 'current_i2_a', key: 'current_i2_a', fixed: 3 }, // Tambahkan ini jika Anda ingin menampilkan I2/I3
+                { id: 'current_i3_a', key: 'current_i3_a', fixed: 3 }, 
                 { id: 'power_p_w', key: 'power_p_w', fixed: 0 },
                 { id: 'power_q_var', key: 'power_q_var', fixed: 0 },
                 { id: 'power_s_kva', key: 'power_s_kva', fixed: 2 },
                 { id: 'pf', key: 'pf', fixed: 3 },
                 { id: 'freq_hz', key: 'freq_hz', fixed: 1 },
-                { id: 'op_time_hr', key: 'op_time_hr', fixed: 1 }
+                { id: 'op_time_hr', key: 'op_time_hr', fixed: 0 } // Gunakan 0 desimal untuk Jam (74 jam)
             ];
 
             mappings.forEach(item => {
@@ -194,15 +198,20 @@
                 
                 if (element && value !== undefined) {
                     
-                    // Logic untuk menangani nilai valid (angka) vs. error (null)
+                    // Logic: Cek apakah nilai adalah angka dan bukan NULL
                     if (value !== null && typeof value === 'number') {
-                        // Tampilkan angka yang valid (Voltage, Energy, Freq)
-                        element.innerText = value.toFixed(item.fixed); 
+                        try {
+                            // Coba format angka. Ini adalah satu-satunya tempat crash mungkin terjadi.
+                            element.innerText = value.toFixed(item.fixed); 
+                        } catch (e) {
+                            // Jika format gagal (misalnya angka terlalu besar), tampilkan raw value atau --
+                            element.innerText = String(value); 
+                        }
                     } else if (value === null) {
-                        // Tampilkan '--' untuk nilai yang gagal dibaca (Power, PF)
+                        // Jika NULL (seperti Power atau PF), tampilkan '--'
                         element.innerText = '--';
                     } else {
-                        // Tampilkan apa adanya
+                        // Tampilkan string/non-number apa adanya
                         element.innerText = value;
                     }
                 }
