@@ -14,6 +14,10 @@
         th { background-color: #ffe082; }
         .rate-display { font-size: 1.5em; font-weight: bold; color: #ff9800; }
         .audit-info { font-size: 0.9em; color: #666; margin-top: 10px; }
+        .filter-group { margin-bottom: 15px; padding: 15px; border: 1px dashed #ccc; border-radius: 5px; }
+        .filter-group label { margin-right: 10px; }
+        .filter-group input { padding: 8px; margin-right: 15px; }
+        .filter-group button { padding: 8px 15px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -44,19 +48,29 @@
 
     <div class="card">
         <h2>Laporan Estimasi Biaya (kWh Konsumsi)</h2>
-        <p>Data diambil dari log `machine_telemetry` selama 7 hari terakhir.</p>
+        
+        <div class="filter-group">
+            <label for="startDate">Tanggal Mulai:</label>
+            <input type="date" id="startDate" required>
+            
+            <label for="endDate">Tanggal Akhir:</label>
+            <input type="date" id="endDate" required>
+
+            <button onclick="fetchAndCalculateCost()">Hitung Biaya</button>
+        </div>
         
         <table id="tariffTable">
             <thead>
                 <tr>
                     <th>Mesin ID</th>
-                    <th>Konsumsi Total (kWh)</th>
-                    <th>Tarif (Rp/kWh)</th>
-                    <th>Biaya Harian (24 Jam) (Rp)</th> <th>Biaya Mingguan (7 Hari) (Rp)</th> <th>Biaya Keseluruhan (Rp)</th>
+                    <th>Konsumsi (kWh)</th>
+                    <th>Waktu Mulai Pembacaan</th>
+                    <th>Waktu Akhir Pembacaan</th>
+                    <th>Total Biaya Estimasi (Rp)</th>
                 </tr>
             </thead>
             <tbody>
-                <tr><td colspan="6">Memuat data dari Supabase...</td></tr>
+                <tr><td colspan="5">Pilih tanggal dan tekan 'Hitung Biaya' untuk melihat laporan.</td></tr>
             </tbody>
         </table>
     </div>
