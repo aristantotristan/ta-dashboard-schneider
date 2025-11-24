@@ -1,121 +1,199 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Simple Schneider MQTT Dashboard</title>
+    <title>Schneider Modbus MQTT Dashboard</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            background-color: #f0f2f5; 
+            color: #333;
+        }
+        header {
+            text-align: center;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #007bff;
+            margin-bottom: 30px;
+        }
+        h1 { color: #007bff; margin: 0; }
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
         .data-box { 
             background-color: white; 
-            padding: 15px; 
-            margin: 10px 0; 
-            border-radius: 8px; 
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            padding: 20px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
         }
-        h2 { color: #007bff; }
-        .value { font-size: 2.5em; font-weight: bold; color: #333; }
-        .unit { font-size: 0.6em; color: #6c757d; margin-left: 5px; }
+        .data-box:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+        }
+        .label { 
+            font-size: 0.9em; 
+            color: #6c757d; 
+            margin-bottom: 5px; 
+        }
+        .value { 
+            font-size: 2em; 
+            font-weight: bold; 
+            color: #333; 
+        }
+        .unit { 
+            font-size: 0.5em; 
+            color: #6c757d; 
+            margin-left: 5px; 
+            font-weight: normal; 
+        }
+        #status { 
+            font-weight: bold; 
+            padding: 5px 10px; 
+            border-radius: 5px;
+        }
     </style>
 </head>
 <body>
 
-    <h1>Monitoring Meteran Schneider (MQTT)</h1>
-    <p>Status Koneksi: <span id="status" style="font-weight: bold; color: orange;">Disconnected</span></p>
+    <header>
+        <h1>⚡ Real-Time Schneider Monitoring</h1>
+        <p>
+            Status Koneksi Broker: 
+            <span id="status" style="background-color: #ffc107; color: #333;">Connecting...</span>
+        </p>
+    </header>
 
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+    <div class="grid-container">
         
         <div class="data-box">
-            <h4>Tegangan (Volt)</h4>
+            <div class="label">Total Energi Aktif (Ea)</div>
+            <div class="value"><span id="e_tot_kwh">--</span><span class="unit">kWh</span></div>
+        </div>
+        <div class="data-box">
+            <div class="label">Total Energi Reaktif (Er)</div>
+            <div class="value"><span id="e_r_tot_kvarh">--</span><span class="unit">kVARh</span></div>
+        </div>
+        <div class="data-box">
+            <div class="label">Partial Energi Aktif</div>
+            <div class="value"><span id="e_part_kwh">--</span><span class="unit">kWh</span></div>
+        </div>
+        
+        <div class="data-box">
+            <div class="label">Voltage (L-L Avg)</div>
             <div class="value"><span id="voltage_avg_v">--</span><span class="unit">Volt</span></div>
         </div>
-
         <div class="data-box">
-            <h4>Arus I1 (Ampere)</h4>
-            <div class="value"><span id="current_i1_a">--</span><span class="unit">A</span></div>
+            <div class="label">Current (I1)</div>
+            <div class="value"><span id="current_i1_a">--</span><span class="unit">Ampere</span></div>
         </div>
-        
         <div class="data-box">
-            <h4>Active Power (Watt)</h4>
+            <div class="label">Active Power (P)</div>
             <div class="value"><span id="power_p_w">--</span><span class="unit">Watt</span></div>
         </div>
 
         <div class="data-box">
-            <h4>Total Energi (kWh)</h4>
-            <div class="value"><span id="e_tot_kwh">--</span><span class="unit">kWh</span></div>
+            <div class="label">Reactive Power (Q)</div>
+            <div class="value"><span id="power_q_var">--</span><span class="unit">VAR</span></div>
         </div>
-        
         <div class="data-box">
-            <h4>Power Factor (PF)</h4>
+            <div class="label">Apparent Power (S)</div>
+            <div class="value"><span id="power_s_kva">--</span><span class="unit">kVA</span></div>
+        </div>
+        <div class="data-box">
+            <div class="label">Power Factor (PF)</div>
             <div class="value"><span id="pf">--</span></div>
         </div>
-        
         <div class="data-box">
-            <h4>Frekuensi (Hz)</h4>
+            <div class="label">Frequency (Hz)</div>
             <div class="value"><span id="freq_hz">--</span><span class="unit">Hz</span></div>
         </div>
-        
+        <div class="data-box">
+            <div class="label">Operation Time</div>
+            <div class="value"><span id="op_time_hr">--</span><span class="unit">Jam</span></div>
+        </div>
+        <div class="data-box">
+            <div class="label">Partial Reaktif</div>
+            <div class="value"><span id="e_r_part_kvarh">--</span><span class="unit">kVARh</span></div>
+        </div>
+
     </div>
 
     <script>
-        // Konfigurasi harus sama persis dengan yang dikirim ESP32
-        const BROKER_URL = 'ws://broker.hivemq.com:8000/mqtt'; 
+        // --- KONFIGURASI KONEKSI AMAN (WSS) ---
+        // Menggunakan port 8884 (WSS) karena lebih kompatibel dengan hosting HTTPS seperti Vercel
+        const BROKER_URL = 'wss://broker.hivemq.com:8884/mqtt'; 
         const TOPIC = 'schneider/data/meter1'; 
         
         const client = mqtt.connect(BROKER_URL);
+        const statusElement = document.getElementById('status');
 
+        // --- 1. HANDLE KONEKSI ---
         client.on('connect', function () {
-            document.getElementById('status').innerText = 'Connected';
-            document.getElementById('status').style.color = 'green';
+            statusElement.innerText = 'LIVE';
+            statusElement.style.backgroundColor = '#28a745'; // Hijau
+            statusElement.style.color = 'white';
             client.subscribe(TOPIC, function (err) {
-                if (err) {
-                    console.error('Subscription failed:', err);
-                }
+                if (err) console.error('Subscription failed:', err);
             });
         });
 
+        client.on('error', function (err) {
+            console.error('MQTT Connection Error:', err);
+            statusElement.innerText = 'ERROR';
+            statusElement.style.backgroundColor = '#dc3545'; // Merah
+            statusElement.style.color = 'white';
+        });
+
+        client.on('close', function () {
+            statusElement.innerText = 'Disconnected';
+            statusElement.style.backgroundColor = '#ffc107'; // Kuning
+            statusElement.style.color = '#333';
+        });
+
+        // --- 2. HANDLE DATA MASUK ---
         client.on('message', function (topic, message) {
             try {
-                // Parse JSON data dari ESP32
                 const data = JSON.parse(message.toString());
                 console.log('Data Received:', data);
-
-                // --- DOM MANIPULATION: UPDATE NILAI ---
-                // Setiap kali pesan baru datang, kita harus mencari ID HTML dan mengubah nilainya.
-                
-                // Panggil fungsi untuk update semua parameter
                 updateDashboard(data);
 
             } catch (e) {
                 console.error('Error processing message:', e);
             }
         });
-        
-        client.on('error', function (err) {
-            console.error('MQTT Error:', err);
-            document.getElementById('status').innerText = 'Error';
-            document.getElementById('status').style.color = 'red';
-            client.end();
-        });
 
-        // Fungsi Helper untuk update semua nilai
+        // --- 3. FUNGSI UPDATE TAMPILAN (DOM MANIPULATION) ---
         function updateDashboard(data) {
             // Mapping antara KEY JSON (dari ESP32) dan ID HTML
+            // KEY harus sama persis dengan yang dikirim oleh fungsi publish_data di kode ESP32!
             const mappings = [
-                { id: 'voltage_avg_v', key: 'voltage_avg_v' },
-                { id: 'current_i1_a', key: 'current_i1_a' },
-                { id: 'power_p_w', key: 'power_p_w' },
-                { id: 'e_tot_kwh', key: 'e_tot_kwh' },
-                { id: 'pf', key: 'pf' },
-                { id: 'freq_hz', key: 'freq_hz' }
-                // Tambahkan semua parameter lain di sini!
+                { id: 'e_tot_kwh', key: 'e_tot_kwh', fixed: 2 },
+                { id: 'e_r_tot_kvarh', key: 'e_r_tot_kvarh', fixed: 2 },
+                { id: 'e_part_kwh', key: 'e_part_kwh', fixed: 2 },
+                { id: 'e_r_part_kvarh', key: 'e_r_part_kvarh', fixed: 2 },
+                { id: 'voltage_avg_v', key: 'voltage_avg_v', fixed: 1 },
+                { id: 'current_i1_a', key: 'current_i1_a', fixed: 3 },
+                // Kita hanya menampilkan I1 saja di dashboard ini
+                { id: 'power_p_w', key: 'power_p_w', fixed: 0 },
+                { id: 'power_q_var', key: 'power_q_var', fixed: 0 },
+                { id: 'power_s_kva', key: 'power_s_kva', fixed: 2 },
+                { id: 'pf', key: 'pf', fixed: 3 },
+                { id: 'freq_hz', key: 'freq_hz', fixed: 1 },
+                { id: 'op_time_hr', key: 'op_time_hr', fixed: 1 }
             ];
 
             mappings.forEach(item => {
                 const element = document.getElementById(item.id);
-                if (element && data[item.key] !== undefined) {
-                    // Tampilkan nilai dengan 2 angka di belakang koma (jika ada)
-                    element.innerText = data[item.key].toFixed(2); 
+                const value = data[item.key];
+                
+                if (element && value !== undefined) {
+                    // Gunakan toFixed untuk mengatur desimal
+                    element.innerText = typeof value === 'number' ? value.toFixed(item.fixed) : value; 
                 }
             });
         }
