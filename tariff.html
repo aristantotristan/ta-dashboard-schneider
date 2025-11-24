@@ -14,8 +14,8 @@
         th { background-color: #ffe082; }
         .rate-display { font-size: 1.5em; font-weight: bold; color: #ff9800; }
         .audit-info { font-size: 0.9em; color: #666; margin-top: 10px; }
-        .filter-group { margin-bottom: 15px; padding: 15px; border: 1px dashed #ccc; border-radius: 5px; }
-        .filter-item { margin-bottom: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 15px; } /* Grouping filter items */
+        .filter-group { margin-bottom: 15px; padding: 15px; border: 1px dashed #ccc; border-radius: 5px; display: flex; flex-wrap: wrap; align-items: center; gap: 15px; }
+        .filter-item { margin-bottom: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 15px; }
         .filter-item label { font-weight: bold; }
         .filter-item input, .filter-item select { padding: 8px; }
         .filter-item button { padding: 8px 15px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
@@ -39,7 +39,7 @@
         </div>
     </div>
 
-    <div class="card">
+    <div class="card" id="adminUpdateSection" style="display: none;">
         <h3>Ubah Tarif Aktif (Admin Access)</h3>
         <label for="newRate">Tarif per kWh Baru (Rp):</label>
         <input type="number" id="newRate" placeholder="Masukkan angka tarif baru" required style="padding: 8px; margin-right: 10px; width: 150px;">
@@ -64,13 +64,15 @@
                 <label for="startDate">Tanggal Mulai:</label>
                 <input type="date" id="startDate" required>
                 <label for="startTime">Jam Mulai:</label>
-                <input type="time" id="startTime" value="08:00" required> </div>
+                <input type="time" id="startTime" value="08:00" required>
+            </div>
 
             <div class="filter-item">
                 <label for="endDate">Tanggal Akhir:</label>
                 <input type="date" id="endDate" required>
                 <label for="endTime">Jam Akhir:</label>
-                <input type="time" id="endTime" value="17:00" required> </div>
+                <input type="time" id="endTime" value="17:00" required>
+            </div>
 
             <div class="filter-item">
                 <button onclick="fetchAndCalculateCost()">Hitung Biaya</button>
@@ -93,6 +95,23 @@
         </table>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="auth_script.js"></script> 
     <script src="tariff_fetch.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            // 1. Ambil data tarif dan tampilkan (fungsi dari tariff_fetch.js)
+            await setupTariffData(); 
+
+            // 2. Pengecekan Role untuk mengaktifkan Form Update (Admin Safety)
+            const authStatus = await checkUserRole();
+            
+            if (authStatus.isLoggedIn && authStatus.role === 'admin') {
+                document.getElementById('adminUpdateSection').style.display = 'block';
+            }
+        });
+        // Note: updateTariff() dan fetchAndCalculateCost() ada di tariff_fetch.js
+    </script>
 </body>
 </html>
