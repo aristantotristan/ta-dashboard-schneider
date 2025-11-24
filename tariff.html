@@ -44,19 +44,19 @@
 
     <div class="card">
         <h2>Laporan Estimasi Biaya (kWh Konsumsi)</h2>
-        <p>Data diambil dari Total Ea terakhir pada `machine_telemetry`.</p>
+        <p>Data diambil dari log `machine_telemetry` selama 7 hari terakhir.</p>
         
         <table id="tariffTable">
             <thead>
                 <tr>
                     <th>Mesin ID</th>
-                    <th>Konsumsi Energi (kWh)</th>
+                    <th>Konsumsi Total (kWh)</th>
                     <th>Tarif (Rp/kWh)</th>
-                    <th>Total Biaya Estimasi (Rp)</th>
+                    <th>Biaya Harian (24 Jam) (Rp)</th> <th>Biaya Mingguan (7 Hari) (Rp)</th> <th>Biaya Keseluruhan (Rp)</th>
                 </tr>
             </thead>
             <tbody>
-                <tr><td colspan="4">Memuat data dari Supabase...</td></tr>
+                <tr><td colspan="6">Memuat data dari Supabase...</td></tr>
             </tbody>
         </table>
     </div>
