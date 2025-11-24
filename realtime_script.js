@@ -4,29 +4,30 @@
 const SUPABASE_URL = 'https://khamzxkrvmnjhrgdqbkg.supabase.co'; 
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtoYW16eGtydm1uamhyZ2RxYmtnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM5NDg2MzcsImV4cCI6MjA3OTUyNDYzN30.SYZTZA3rxaE-kwFuKLlzkol_mLuwjYmVudGCN0imAM8'; 
 const REALTIME_TABLE = 'realtime_telemetry';
-const API_URL = `${SUPABASE_URL}/rest/v1/${REALTIME_TABLE}`;
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// FIX: Inisialisasi Klien Supabase menggunakan window.supabase
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Definisikan Semua Parameter dan Satuan
+
+// Definisikan Semua Parameter dan Satuan (12 Parameter Penuh)
 const ALL_PARAMETERS_DEFINITION = {
-    // Core Parameters (akan di render di gauge)
-    'Voltage (L-L Avg)': { col: 'voltage_avg', unit: 'Volt', isCore: true, precision: 1 },
-    'Power (P Total)': { col: 'power_p', unit: 'kW', isCore: true, precision: 1 },
-    'Power Factor (Total)': { col: 'pf_total', unit: '-', isCore: true, precision: 3 },
-    'Current (I1)': { col: 'current_i1', unit: 'Ampere', isCore: true, precision: 1 },
+    // Core Parameters (untuk Gauge)
+    'Voltage (L-L Avg)': { col: 'voltage_avg', unit: 'Volt', isCore: true, precision: 1 }, // Poin 5
+    'Current (I1)': { col: 'current_i1', unit: 'Ampere', isCore: true, precision: 1 }, // Poin 6
+    'Power (P Total/kW)': { col: 'power_p', unit: 'kW', isCore: true, precision: 1 }, // Poin 7
+    'Power Factor (Total)': { col: 'pf_total', unit: '-', isCore: true, precision: 3 }, // Poin 10
     
-    // Non-Core Parameters (hanya di tabel)
-    'Total Ea': { col: 'ea_total', unit: 'kWh', isCore: false, precision: 2 },
-    'Total Er': { col: 'er_total', unit: 'kVARh', isCore: false, precision: 2 },
-    'Partial Ea': { col: 'ea_partial', unit: 'kWh', isCore: false, precision: 2 },
-    'Partial Er': { col: 'er_partial', unit: 'kVARh', isCore: false, precision: 2 },
-    'Current (I2)': { col: 'current_i2', unit: 'Ampere', isCore: false, precision: 1 },
-    'Current (I3)': { col: 'current_i3', unit: 'Ampere', isCore: false, precision: 1 },
-    'Power (Q Total)': { col: 'power_q', unit: 'kVAR', isCore: false, precision: 1 },
-    'Power (S Total)': { col: 'power_s', unit: 'kVA', isCore: false, precision: 1 },
-    'Frequency': { col: 'frequency', unit: 'Hz', isCore: false, precision: 2 },
-    'Operating Time': { col: 'op_time', unit: 'Jam', isCore: false, precision: 0 },
+    // Non-Core Parameters (Sisanya)
+    'Total Ea': { col: 'ea_total', unit: 'kWh', isCore: false, precision: 2 }, // Poin 1
+    'Total Er': { col: 'er_total', unit: 'kVARh', isCore: false, precision: 2 }, // Poin 2
+    'Partial Ea': { col: 'ea_partial', unit: 'kWh', isCore: false, precision: 2 }, // Poin 3
+    'Partial Er': { col: 'er_partial', unit: 'kVARh', isCore: false, precision: 2 }, // Poin 4
+    'Current (I2)': { col: 'current_i2', unit: 'Ampere', isCore: false, precision: 1 }, // Poin 6
+    'Current (I3)': { col: 'current_i3', unit: 'Ampere', isCore: false, precision: 1 }, // Poin 6
+    'Power (Q Total/kVAR)': { col: 'power_q', unit: 'kVAR', isCore: false, precision: 1 }, // Poin 8
+    'Power (S Total/kVA)': { col: 'power_s', unit: 'kVA', isCore: false, precision: 1 }, // Poin 9
+    'Frequency': { col: 'frequency', unit: 'Hz', isCore: false, precision: 2 }, // Poin 11
+    'Operating Time': { col: 'op_time', unit: 'Jam', isCore: false, precision: 0 }, // Poin 12
 };
 
 // --- 1. Ambil dan Tampilkan Daftar 18 Mesin ---
@@ -56,13 +57,19 @@ async function fetchMachineList() {
                 <span>${machine.machine_id}</span>
                 <span><span class="status-dot ${statusClass}"></span>${statusText}</span>
             `;
-            item.onclick = () => selectMachine(machine.machine_id, data);
+            // Mengirim seluruh data ke selectMachine agar tidak perlu query ulang
+            item.onclick = () => selectMachine(machine.machine_id, data); 
             listElement.appendChild(item);
         });
+        
+        // Coba pilih mesin pertama secara default
+        if (data.length > 0) {
+             selectMachine(data[0].machine_id, data);
+        }
 
     } catch (error) {
         console.error("Gagal memuat daftar mesin:", error);
-        listElement.innerHTML = `<p style="color: red;">Error: ${error.message}. Cek RLS Policy.</p>`;
+        listElement.innerHTML = `<p style="color: red;">Error: ${error.message}. Pastikan RLS Policy tabel realtime_telemetry sudah diaktifkan.</p>`;
     }
 }
 
@@ -93,7 +100,6 @@ function renderCoreParameters(data) {
     const container = document.getElementById('coreParameters');
     container.innerHTML = '';
 
-    // Loop melalui semua definisi, hanya render yang isCore: true
     for (const key in ALL_PARAMETERS_DEFINITION) {
         const paramDef = ALL_PARAMETERS_DEFINITION[key];
         if (paramDef.isCore) {
@@ -115,7 +121,6 @@ function renderAllParameters(data) {
     const tbody = document.querySelector('#allParametersTable tbody');
     tbody.innerHTML = '';
     
-    // Loop melalui semua definisi
     for (const key in ALL_PARAMETERS_DEFINITION) {
         const paramDef = ALL_PARAMETERS_DEFINITION[key];
         const value = data[paramDef.col];
@@ -129,6 +134,3 @@ function renderAllParameters(data) {
 
 // Inisialisasi
 document.addEventListener('DOMContentLoaded', fetchMachineList);
-
-// Export selectMachine agar bisa diakses jika user klik di HTML (optional)
-window.selectMachine = selectMachine;
