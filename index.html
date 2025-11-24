@@ -1,366 +1,351 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MONITORING ENERGI (v52 - Murni)</title>
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gauge.js/1.3.7/gauge.min.js"></script>
-    
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <style>
-        /* CSS FINAL (PROFESSIONAL LOOK) */
-        :root { --primary: #0f172a; --secondary: #334155; --accent: #2563eb; --success: #10b981; --danger: #ef4444; --warning: #f59e0b; --bg-light: #f1f5f9; --card-bg: #ffffff; --text-main: #1e293b; --text-muted: #64748b; --border: #e2e8f0; --shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Inter', sans-serif; background: var(--bg-light); color: var(--text-main); height: 100vh; display: flex; overflow: hidden; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MONITORING ENERGI (Final Dashboard)</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gauge.js/1.3.7/gauge.min.js"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* CSS FINAL (PROFESSIONAL LOOK) */
+        :root { --primary: #0f172a; --secondary: #334155; --accent: #2563eb; --success: #10b981; --danger: #ef4444; --warning: #f59e0b; --bg-light: #f1f5f9; --card-bg: #ffffff; --text-main: #1e293b; --text-muted: #64748b; --border: #e2e8f0; --shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg-light); color: var(--text-main); height: 100vh; display: flex; overflow: hidden; }
 
-        .sidebar { width: 260px; background: var(--primary); color: white; display: flex; flex-direction: column; padding: 20px; }
-        .sidebar-header { margin-bottom: 40px; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .nav-btn { display: flex; align-items: center; gap: 12px; padding: 14px 16px; color: #cbd5e1; border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s; font-weight: 500; }
-        .nav-btn.active { background: var(--accent); color: white; }
+        .sidebar { width: 260px; background: var(--primary); color: white; display: flex; flex-direction: column; padding: 20px; }
+        .sidebar-header { margin-bottom: 40px; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .nav-btn { display: flex; align-items: center; gap: 12px; padding: 14px 16px; color: #cbd5e1; border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s; font-weight: 500; }
+        .nav-btn.active { background: var(--accent); color: white; }
 
-        .main-content { flex: 1; overflow-y: auto; padding: 30px; position: relative; }
-        .status-pill { padding: 8px 16px; border-radius: 50px; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 8px; background: white; box-shadow: var(--shadow); }
-        .status-dot { width: 10px; height: 10px; border-radius: 50%; }
-        .bg-conn { background: var(--success); } .bg-disconn { background: var(--danger); } .bg-wait { background: var(--warning); }
+        .main-content { flex: 1; overflow-y: auto; padding: 30px; position: relative; }
+        .status-pill { padding: 8px 16px; border-radius: 50px; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 8px; background: white; box-shadow: var(--shadow); }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; }
+        .bg-ok { background: var(--success); } .bg-disconn { background: var(--danger); } .bg-wait { background: var(--warning); } .bg-err { background: var(--danger); }
 
-        .page { display: none; animation: fadeIn 0.3s ease-in-out; } .page.active { display: block; }
-        .grid-18 { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
-        .machine-card { background: var(--card-bg); border-radius: 12px; padding: 20px; box-shadow: var(--shadow); border: 1px solid var(--border); cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden; }
-        .machine-card.online::before { background: var(--success); }
-        .machine-card.offline::before { background: var(--danger); }
-        .mc-status { font-size: 0.75rem; font-weight: 700; padding: 4px 8px; border-radius: 4px; background: #f1f5f9; color: #64748b; display: inline-block; }
-        .online .mc-status { background: #dcfce7; color: #166534; }
-        .offline .mc-status { background: #fee2e2; color: #991b1b; }
-        
-        .back-btn { background: white; border: 1px solid var(--border); padding: 10px 15px; border-radius: 8px; cursor: pointer; color: var(--text-muted); }
-        .tab-btn.active { background: var(--accent); color: white; }
-        .tab-content { display: none; } .tab-content.active { display: block; }
-        .gauge-cluster { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
-        .pro-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
-        .pro-table td { padding: 12px 25px; border-bottom: 1px solid var(--border); color: var(--secondary); }
-        .group-header { background: #e0f2fe !important; color: #0369a1 !important; font-weight: 700; padding: 10px 25px; font-size: 0.85rem; }
-    </style>
+        .page { display: none; animation: fadeIn 0.3s ease-in-out; } .page.active { display: block; }
+        .grid-18 { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
+        .machine-card { background: var(--card-bg); border-radius: 12px; padding: 20px; box-shadow: var(--shadow); border: 1px solid var(--border); cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden; }
+        .machine-card.online::before { background: var(--success); }
+        .machine-card.offline::before { background: var(--danger); }
+        .mc-status { font-size: 0.75rem; font-weight: 700; padding: 4px 8px; border-radius: 4px; background: #f1f5f9; color: #64748b; display: inline-block; }
+        .online .mc-status { background: #dcfce7; color: #166534; }
+        .offline .mc-status { background: #fee2e2; color: #991b1b; }
+        
+        .back-btn { background: white; border: 1px solid var(--border); padding: 10px 15px; border-radius: 8px; cursor: pointer; color: var(--text-muted); }
+        .tab-btn.active { background: var(--accent); color: white; }
+        .tab-content { display: none; } .tab-content.active { display: block; }
+        .gauge-cluster { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
+        .pro-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+        .pro-table td { padding: 12px 25px; border-bottom: 1px solid var(--border); color: var(--secondary); }
+        .group-header { background: #e0f2fe !important; color: #0369a1 !important; font-weight: 700; padding: 10px 25px; font-size: 0.85rem; }
+    </style>
 </head>
 <body>
 
-    <nav class="sidebar">
-        <div class="sidebar-header">
-            <i class="fa-solid fa-bolt"></i>
-            <div><div class="brand-title">ENERGIA</div><div class="brand-subtitle">v50 Pro Dashboard</div></div>
-        </div>
-        <div class="nav-links">
-            <div class="nav-btn active" id="nav-monitor" onclick="goToMonitor()">
-                <i class="fa-solid fa-desktop"></i> <span>Monitoring Live</span>
-            </div>
-            </div>
-    </nav>
+    <nav class="sidebar">
+        <div class="sidebar-header">
+            <i class="fa-solid fa-bolt"></i>
+            <div><div class="brand-title">ENERGIA</div><div class="brand-subtitle">v50 Pro Dashboard</div></div>
+        </div>
+        <div class="nav-links">
+            <div class="nav-btn active" id="nav-monitor" onclick="goToMonitor()">
+                <i class="fa-solid fa-desktop"></i> <span>Monitoring Live</span>
+            </div>
+            </div>
+    </nav>
 
-    <main class="main-content">
-        
-        <div class="header-bar">
-            <div class="page-title">
-                <h1 id="header-title">Monitoring Live</h1>
-                <p>PT. Amarilys Karisma Gemilang</p>
-            </div>
-            <div class="status-pill">
-                <div class="status-dot bg-wait" id="conn-dot"></div>
-                <span id="conn-text">Connecting...</span>
-            </div>
-        </div>
+    <main class="main-content">
+        
+        <div class="header-bar">
+            <div class="page-title">
+                <h1 id="header-title">Monitoring Live</h1>
+                <p>PT. Amarilys Karisma Gemilang</p>
+            </div>
+            <div class="status-pill">
+                <div class="status-dot bg-wait" id="conn-dot"></div>
+                <span id="conn-text">Connecting...</span>
+            </div>
+        </div>
 
-        <div id="view-monitor-grid" class="page active">
-            <div class="grid-18" id="machine-grid"></div>
-        </div>
+        <div id="view-monitor-grid" class="page active">
+            <div class="grid-18" id="machine-grid"></div>
+        </div>
 
-        <div id="view-monitor-detail" class="page">
-            <div class="detail-header">
-                <button class="back-btn" onclick="goToMonitor()"><i class="fa-solid fa-arrow-left"></i> Kembali</button>
-                <h2 id="detail-mc-name">Mesin X</h2>
-            </div>
-            <div class="tabs">
-                <button class="tab-btn active" id="tab-full" onclick="switchDetailTab('full')">Data Lengkap</button>
-                <button class="tab-btn" id="tab-gauge" onclick="switchDetailTab('gauge')">Instrumen (Gauge)</button>
-            </div>
-            <div id="tab-content-full" class="tab-content active">
-                <div class="table-container">
-                    <table class="pro-table">
-                        <tbody id="detail-table-body"></tbody>
-                    </table>
-                </div>
-            </div>
-            <div id="tab-content-gauge" style="display:none;" class="tab-content">
-                <div class="gauge-cluster">
-                    <div class="gauge-box"><h4>Tegangan (V)</h4><canvas id="g-volt"></canvas><div id="val-volt" style="font-weight:bold; font-size:1.5rem;">-</div></div>
-                    <div class="gauge-box"><h4>Arus Total (A)</h4><canvas id="g-amp"></canvas><div id="val-amp" style="font-weight:bold; font-size:1.5rem;">-</div></div>
-                    <div class="gauge-box"><h4>Daya Aktif (W)</h4><canvas id="g-pwr"></canvas><div id="val-power" style="font-weight:bold; font-size:1.5rem;">-</div></div>
-                    <div class="gauge-box"><h4>Frekuensi (Hz)</h4><canvas id="g-freq"></canvas><div id="val-freq" style="font-weight:bold; font-size:1.5rem;">-</div></div>
-                </div>
-            </div>
-        </div>
+        <div id="view-monitor-detail" class="page">
+            <div class="detail-header">
+                <button class="back-btn" onclick="goToMonitor()"><i class="fa-solid fa-arrow-left"></i> Kembali</button>
+                <h2 id="detail-mc-name">Mesin X</h2>
+            </div>
+            <div class="tabs">
+                <button class="tab-btn active" id="tab-full" onclick="switchDetailTab('full')">Data Lengkap</button>
+                <button class="tab-btn" id="tab-gauge" onclick="switchDetailTab('gauge')">Instrumen (Gauge)</button>
+            </div>
+            <div id="tab-content-full" class="tab-content active">
+                <div class="table-container">
+                    <table class="pro-table">
+                        <tbody id="detail-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div id="tab-content-gauge" style="display:none;" class="tab-content">
+                <div class="gauge-cluster">
+                    <div class="gauge-box"><h4>Tegangan (V)</h4><canvas id="g-volt"></canvas><div id="val-volt" style="font-weight:bold; font-size:1.5rem;">-</div></div>
+                    <div class="gauge-box"><h4>Arus Total (A)</h4><canvas id="g-amp"></canvas><div id="val-amp" style="font-weight:bold; font-size:1.5rem;">-</div></div>
+                    <div class="gauge-box"><h4>Daya Aktif (W)</h4><canvas id="g-pwr"></canvas><div id="val-power" style="font-weight:bold; font-size:1.5rem;">-</div></div>
+                    <div class="gauge-box"><h4>Frekuensi (Hz)</h4><canvas id="g-freq"></canvas><div id="val-freq" style="font-weight:bold; font-size:1.5rem;">-</div></div>
+                </div>
+            </div>
+        </div>
 
-    </main>
+    </main>
 
 <script>
-// --- CONFIG (SUPABASE HANYA UNTUK INIT) ---
-const MQTT_HOST = "f67b475c6dc548368dd0847dd1e4657e.s1.eu.hivemq.cloud";
-const MQTT_PORT = 8884;
-const MQTT_USER = "web_dashboard";
-const MQTT_PASS = "Tristan12";
-const MQTT_TOPIC = "politeknik/meter/data";
+// ======================================================
+// --- 1. CONFIG (PASTI KAN SAMA DENGAN ESP32) ---
+// ======================================================
+const MQTT_HOST = "cbc4d19f6f3d4371b47d363751d186d1.s1.eu.hivemq.cloud"; // URL HOST BARU ANDA
+const MQTT_PORT = 8883; // Port TLS
+const MQTT_USER = "vercell_client"; // Username Anda
+const MQTT_PASS = "VercelPass123!"; // Password Anda
+const MQTT_TOPIC_WILDCARD = "meter/id1/#"; // SUBSCRIBE KE SEMUA DATA METER ID 1
 
 // --- GLOBALS ---
 let mqttClient;
 let gauges = {};
-let activeId = 0;
+let activeId = 1; // Kita hanya punya 1 mesin (ID 1)
 let gaugesInitialized = false;
 let cache = {};
 let lastUpdate = {};
 const TIMEOUT_MS = 180000; // Watchdog 3 Menit
 
+// Map Topic Suffixes dari ESP32 ke Key di HTML
+// Contoh: "voltage_avg" dari ESP32 menjadi key "v" di HTML
+const KEY_MAP = { 
+    'voltage_avg': 'v', 'current_i1': 'i1', 'current_i2': 'i2', 'current_i3': 'i3', 
+    'power_active_w': 'p', 'power_reactive_var': 'q', 'power_apparent_kva': 's', 
+    'power_factor': 'pf', 'frequency_hz': 'hz', 
+    'energy_total_kwh': 'e', 'energy_reactive_kvarh': 'q_tot', 
+    'energy_partial_kwh': 'e_part', 'energy_partial_kvarh': 'q_part',
+    'operation_time_hours': 'op_time'
+};
+
 const fmt = (n, d) => (n != null && !isNaN(n)) ? Number(n).toFixed(d) : "0";
 function fmtTime(v) {
-    if (v == null || isNaN(v) || v == 0) return "0 Hari 0 Jam";
-    return `${Math.floor(v / 24)} Hari ${(v % 24).toFixed(1)} Jam`;
+    if (v == null || isNaN(v) || v <= 0) return "0 Hari 0 Jam";
+    return `${Math.floor(v / 24)} Hari ${(v % 24).toFixed(1)} Jam`;
 }
 
 // --- INIT ---
 window.onload = function() {
-    try {
-        // Init MQTT Client
-        mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "pro_" + Date.now());
-        
-        mqttClient.onConnectionLost = (r) => { if (r.errorCode !== 0) { setStatus("Reconnecting...", "bg-err"); setTimeout(connectMQTT, 3000); } };
-        mqttClient.onMessageArrived = onMessageArrived;
+    try {
+        // Init MQTT Client
+        mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "/ws", "pro_" + Date.now()); // Menambahkan /ws untuk WebSocket
 
-        initUI();
-        connectMQTT();
-        
-        // Watchdog Timer (Cek setiap 1s)
-        setInterval(checkTimeouts, 1000);
+        mqttClient.onConnectionLost = (r) => { 
+            if (r.errorCode !== 0) { 
+                setStatus("Reconnecting...", "bg-wait"); 
+                setTimeout(connectMQTT, 3000); 
+            } 
+        };
+        mqttClient.onMessageArrived = onMessageArrived;
 
-    } catch(e) { setStatus("CRITICAL ERROR: Cek console", "bg-err"); console.error(e); }
+        initUI();
+        connectMQTT();
+        
+        // Watchdog Timer (Cek setiap 1s)
+        setInterval(checkTimeouts, 1000);
+
+    } catch(e) { setStatus("CRITICAL ERROR: Cek console", "bg-err"); console.error(e); }
 };
 
 function initUI() {
-    let gridM = "";
-    for(let i=1; i<=18; i++) {
-        gridM += `<div class="machine-card offline" id="card-${i}" onclick="openDetail(${i})"><div class="mc-header"><div class="mc-title">Mesin ${i}</div><i class="fa-solid fa-industry mc-icon"></i></div><div class="mc-status" id="badge-${i}">OFFLINE</div></div>`;
-    }
-    document.getElementById("machine-grid").innerHTML = gridM;
+    let gridM = "";
+    // Hanya inisialisasi satu card untuk METER_ID 1
+    for(let i=1; i<=1; i++) {
+        gridM += `<div class="machine-card offline" id="card-${i}" onclick="openDetail(${i})"><div class="mc-header"><div class="mc-title">Mesin ${i}</div><i class="fa-solid fa-industry mc-icon"></i></div><div class="mc-status" id="badge-${i}">OFFLINE</div></div>`;
+    }
+    document.getElementById("machine-grid").innerHTML = gridM;
+    // Inisialisasi cache untuk Mesin 1
+    cache[1] = {id: 1, status: 'offline'};
 }
 
 function checkTimeouts() {
-    const now = Date.now();
-    for(let i=1; i<=18; i++) {
-        if(lastUpdate[i] && (now - lastUpdate[i] > TIMEOUT_MS)) {
-            const off = {id: i, status: 'offline'};
-            cache[i] = off;
-            updateCard(off);
-            if(activeId === i) updateDetail(off);
-            delete lastUpdate[i];
-        }
-    }
+    const now = Date.now();
+    // Hanya cek Mesin 1
+    for(let i=1; i<=1; i++) {
+        if(lastUpdate[i] && (now - lastUpdate[i] > TIMEOUT_MS)) {
+            const off = {id: i, status: 'offline'};
+            cache[i] = off;
+            updateCard(off);
+            if(activeId === i) updateDetail(off);
+            delete lastUpdate[i];
+        }
+    }
 }
 
 function connectMQTT() {
-    setStatus("Menghubungkan...", "bg-wait");
-    mqttClient.connect({
-        useSSL: true, userName: MQTT_USER, password: MQTT_PASS,
-        onSuccess: () => { setStatus("Connected (Real-Time)", "bg-ok"); mqttClient.subscribe(MQTT_TOPIC); },
-        onFailure: () => { setStatus("Failed (Retrying)", "bg-disconn"); setTimeout(connectMQTT, 5000); }
-    });
+    setStatus("Menghubungkan...", "bg-wait");
+    mqttClient.connect({
+        useSSL: true, userName: MQTT_USER, password: MQTT_PASS,
+        onSuccess: () => { 
+            setStatus("Connected (Real-Time)", "bg-ok"); 
+            // SUBSCRIBE KE TOPIC WILDCARD
+            mqttClient.subscribe(MQTT_TOPIC_WILDCARD); 
+        },
+        onFailure: (err) => { 
+            console.error("MQTT Failed:", err);
+            setStatus("Failed (Retrying)", "bg-disconn"); 
+            setTimeout(connectMQTT, 5000); 
+        }
+    });
 }
 
+// FUNGSI KRITIS: Menerima Pesan Satu per Satu dari ESP32
 function onMessageArrived(m) {
-    try {
-        const d = JSON.parse(m.payloadString);
-        if(d.id_mesin) d.id = d.id_mesin;
-        if(!d.id) return;
-        
-        cache[d.id] = d;
-        lastUpdateTimes[d.id] = Date.now();
-        updateCard(d);
-        if(d.id === activeId) updateDetail(d);
-    } catch(e) { console.error(e); }
+    try {
+        const topicParts = m.destinationName.split('/'); // meter/id1/voltage_avg
+        const id = 1; // METER_ID selalu 1 dari ESP32
+        const topicSuffix = topicParts[2]; // Contoh: "voltage_avg"
+        
+        // Cek jika key ada di mapping
+        const finalKey = KEY_MAP[topicSuffix];
+        if (!finalKey) return; // Abaikan topik yang tidak dikenal
+
+        // Ambil nilai float dari payload
+        const value = parseFloat(m.payloadString);
+
+        // Ambil data dari cache atau buat baru (initial status online)
+        let d = cache[id] || { id: id, status: 'online' };
+        d.status = 'online'; 
+
+        // Simpan data ke cache dengan key yang benar (v, i1, p, dll)
+        d[finalKey] = value;
+        
+        cache[id] = d;
+        lastUpdate[id] = Date.now(); // Update waktu terakhir
+        
+        // Update UI
+        updateCard(d);
+        if(id === activeId) updateDetail(d);
+
+    } catch(e) { console.error("Error processing MQTT message:", e); }
 }
 
 function updateCard(d) {
-    const el = document.getElementById(`card-${d.id}`);
-    if(!el) return;
-    const bd = el.querySelector(".mc-status");
-    
-    if(d.status === 'online') {
-        el.classList.remove('offline'); el.classList.add('online');
-        bd.innerText = "RUNNING";
-    } else {
-        el.classList.remove('online'); el.classList.add('offline');
-        bd.innerText = "OFFLINE";
-    }
+    const el = document.getElementById(`card-${d.id}`);
+    if(!el) return;
+    const bd = el.querySelector(".mc-status");
+    
+    if(d.status === 'online') {
+        el.classList.remove('offline'); el.classList.add('online');
+        bd.innerText = "RUNNING";
+    } else {
+        el.classList.remove('online'); el.classList.add('offline');
+        bd.innerText = "OFFLINE";
+    }
 }
 
 function updateDetail(d) {
-    const isOff = d.status === 'offline';
-    const val = (k, dec, u='') => isOff ? '0' : `<span class="val-highlight">${fmt(d[k], dec)}</span> <span class="unit">${u}</span>`;
-    const valT = (k) => isOff ? '0 Hari 0 Jam' : `<span class="val-highlight time-val">${fmtTime(d[k])}</span>`;
-    
-    const html = `
-        <tr><td class="group-header" colspan="2">1. Energi (Akumulasi)</td></tr>
-        <tr><td>Total Ea Import</td><td>${val('e', 2, 'kWh')}</td></tr>
-        <tr><td>Total Er Import</td><td>${val('q_tot', 2, 'kVARh')}</td></tr>
-        <tr><td>Partial Active E</td><td>${val('e_part', 2, 'kWh')}</td></tr>
-        <tr><td>Partial Reactive E</td><td>${val('q_part', 2, 'kVARh')}</td></tr>
-        
-        <tr><td class="group-header" colspan="2">2. Kelistrikan</td></tr>
-        <tr><td>Voltage (Avg L-L)</td><td>${val('v', 1, 'V')}</td></tr>
-        <tr><td>Current (Avg)</td><td>${val('i', 2, 'A')}</td></tr>
-        <tr class="row-sub"><td style="padding-left:40px">Phase 1 (I1)</td><td>${val('i1', 2, 'A')}</td></tr>
-        <tr class="row-sub"><td style="padding-left:40px">Phase 2 (I2)</td><td>${val('i2', 2, 'A')}</td></tr>
-        <tr class="row-sub"><td style="padding-left:40px">Phase 3 (I3)</td><td>${val('i3', 2, 'A')}</td></tr>
-        
-        <tr><td class="group-header" colspan="2">3. Daya & Kualitas</td></tr>
-        <tr><td>Active Power (P)</td><td>${val('p', 0, 'W')}</td></tr>
-        <tr><td>Reactive Power (Q)</td><td>${val('q', 0, 'VAR')}</td></tr>
-        <tr><td>Apparent Power (S)</td><td>${val('s', 2, 'kVA')}</td></tr>
-        <tr><td>Power Factor</td><td>${val('pf', 3)}</td></tr>
-        <tr><td>Frequency</td><td>${val('hz', 1, 'Hz')}</td></tr>
-        
-        <tr><td class="group-header" colspan="2">4. WAKTU OPERASI</td></tr>
-        <tr><td>Total Running Time</td><td>${valT('op_time')}</td></tr>
-    `;
-    document.getElementById("detail-table-body").innerHTML = html;
+    const isOff = d.status === 'offline';
+    // Gunakan key yang ada di cache (v, i1, p, dst)
+    const val = (k, dec, u='') => isOff ? '0' : (d[k] == null || isNaN(d[k]) ? 'N/A' : `<span class="val-highlight">${fmt(d[k], dec)}</span> <span class="unit">${u}</span>`);
+    const valT = (k) => isOff ? '0 Hari 0 Jam' : (d[k] == null || isNaN(d[k]) ? 'N/A' : `<span class="val-highlight time-val">${fmtTime(d[k])}</span>`);
+    
+    const html = `
+        <tr><td class="group-header" colspan="2">1. Energi (Akumulasi)</td></tr>
+        <tr><td>Total Ea Import</td><td>${val('e', 2, 'kWh')}</td></tr>
+        <tr><td>Total Er Import</td><td>${val('q_tot', 2, 'kVARh')}</td></tr>
+        <tr><td>Partial Active E</td><td>${val('e_part', 2, 'kWh')}</td></tr>
+        <tr><td>Partial Reactive E</td><td>${val('q_part', 2, 'kVARh')}</td></tr>
+        
+        <tr><td class="group-header" colspan="2">2. Kelistrikan</td></tr>
+        <tr><td>Voltage (Avg L-L)</td><td>${val('v', 1, 'V')}</td></tr>
+        <tr><td>Current (Avg)</td><td>${val('i', 2, 'A')}</td></tr>
+        <tr class="row-sub"><td style="padding-left:40px">Phase 1 (I1)</td><td>${val('i1', 2, 'A')}</td></tr>
+        <tr class="row-sub"><td style="padding-left:40px">Phase 2 (I2)</td><td>${val('i2', 2, 'A')}</td></tr>
+        <tr class="row-sub"><td style="padding-left:40px">Phase 3 (I3)</td><td>${val('i3', 2, 'A')}</td></tr>
+        
+        <tr><td class="group-header" colspan="2">3. Daya & Kualitas</td></tr>
+        <tr><td>Active Power (P)</td><td>${val('p', 0, 'W')}</td></tr>
+        <tr><td>Reactive Power (Q)</td><td>${val('q', 0, 'VAR')}</td></tr>
+        <tr><td>Apparent Power (S)</td><td>${val('s', 2, 'kVA')}</td></tr>
+        <tr><td>Power Factor</td><td>${val('pf', 3)}</td></tr>
+        <tr><td>Frequency</td><td>${val('hz', 1, 'Hz')}</td></tr>
+        
+        <tr><td class="group-header" colspan="2">4. WAKTU OPERASI</td></tr>
+        <tr><td>Total Running Time</td><td>${valT('op_time')}</td></tr>
+    `;
+    document.getElementById("detail-table-body").innerHTML = html;
 
-    // UPDATE GAUGE
-    if(gaugesInitialized) {
-        gauges.v.set(isOff ? 0 : d.v); document.getElementById("val-volt").innerText = isOff ? "-" : fmt(d.v, 0) + " V";
-        gauges.a.set(isOff ? 0 : d.i); document.getElementById("val-amp").innerText = isOff ? "-" : fmt(d.i, 1) + " A";
-        gauges.p.set(isOff ? 0 : d.p); document.getElementById("val-power").innerText = isOff ? "-" : fmt(d.p, 0) + " W";
-        gauges.f.set(isOff ? 0 : d.hz); document.getElementById("val-freq").innerText = isOff ? "-" : fmt(d.hz, 1) + " Hz";
-    }
+    // UPDATE GAUGE
+    if(gaugesInitialized) {
+        // Nilai Gauge menggunakan nilai dari cache
+        gauges.v.set(isOff || d.v == null ? 0 : d.v); document.getElementById("val-volt").innerText = isOff || d.v == null ? "-" : fmt(d.v, 0) + " V";
+        // Ambil rata-rata arus (I1+I2+I3)/3 untuk gauge Arus Total jika ada
+        let avgI = 0;
+        if(d.i1 != null && d.i2 != null && d.i3 != null) avgI = (d.i1 + d.i2 + d.i3) / 3;
+        
+        gauges.a.set(isOff ? 0 : avgI); document.getElementById("val-amp").innerText = isOff ? "-" : fmt(avgI, 1) + " A";
+        gauges.p.set(isOff || d.p == null ? 0 : d.p); document.getElementById("val-power").innerText = isOff || d.p == null ? "-" : fmt(d.p, 0) + " W";
+        gauges.f.set(isOff || d.hz == null ? 0 : d.hz); document.getElementById("val-freq").innerText = isOff || d.hz == null ? "-" : fmt(d.hz, 1) + " Hz";
+    }
 }
 
-// --- NAVIGASI ---
+// --- FUNGSI NAVIGASI & GAUGE (Tidak diubah, hanya ditambahkan) ---
 window.showPage = (id) => {
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
 };
 window.goToMonitor = () => {
-    document.getElementById('nav-monitor').classList.add('active');
-    document.getElementById('nav-tarif').classList.remove('active');
-    document.getElementById('nav-trouble').classList.remove('active');
-    document.getElementById('nav-control').classList.remove('active');
-    activeId = 0;
-    showPage('view-monitor-grid');
+    document.getElementById('nav-monitor').classList.add('active');
+    activeId = 1;
+    showPage('view-monitor-grid');
 };
-window.goToTarif = () => {
-    document.getElementById('nav-monitor').classList.remove('active');
-    document.getElementById('nav-tarif').classList.add('active');
-    document.getElementById('nav-trouble').classList.remove('active');
-    document.getElementById('nav-control').classList.remove('active');
-    activeId = 0;
-    showPage('view-tarif-grid');
+window.openDetail = (id) => {
+    activeId = id;
+    document.getElementById('detail-mc-name').innerText = `Detail Mesin ${id}`;
+    if(cache[id]) updateDetail(cache[id]);
+    else updateDetail({id: id, status:'offline'});
+    switchDetailTab('full');
+    showPage('view-monitor-detail');
 };
-window.goToTrouble = () => {
-    document.getElementById('nav-monitor').classList.remove('active');
-    document.getElementById('nav-trouble').classList.add('active');
-    document.getElementById('nav-tarif').classList.remove('active');
-    document.getElementById('nav-control').classList.remove('active');
-    activeId = 0;
-    showPage('view-trouble-grid');
-};
-window.goToControl = () => {
-    document.getElementById('nav-monitor').classList.remove('active');
-    document.getElementById('nav-control').classList.add('active');
-    document.getElementById('nav-trouble').classList.remove('active');
-    document.getElementById('nav-tarif').classList.remove('active');
-    activeId = 0;
-    showPage('view-control-system');
-};
-window.openMonitor = (id) => {
-    activeId = id;
-    document.getElementById('detail-mc-name').innerText = `Detail Mesin ${id}`;
-    if(cache[id]) updateDetail(cache[id]);
-    else updateDetail({status:'offline'});
-    switchDetailTab('full');
-    showPage('view-monitor-detail');
-};
-
-window.openTroubleLog = (id) => {
-    activeId = id;
-    document.getElementById('view-trouble-grid').classList.remove('active');
-    document.getElementById('view-tarif-detail').classList.add('active');
-    alert(`Membuka Riwayat Trouble Mesin ${id}. (Akan diimplementasikan)`);
-};
-
-window.openTarif = (id) => {
-    activeId = id;
-    document.getElementById('tarif-mc-name').innerText = `Laporan Biaya - Mesin ${id}`;
-    document.getElementById('view-tarif-grid').classList.remove('active');
-    document.getElementById('view-tarif-detail').classList.add('active');
-    
-    const d = new Date();
-    document.getElementById('t-end').value = d.toISOString().split('T')[0];
-    d.setDate(d.getDate() - 7);
-    document.getElementById('t-start').value = d.toISOString().split('T')[0];
-    
-    fetchTarifData();
-};
-
 window.switchDetailTab = (tab) => {
-    if(tab === 'full') {
-        document.getElementById('tab-content-full').style.display = 'block';
-        document.getElementById('tab-content-gauge').style.display = 'none';
-        document.getElementById('btn-full').classList.add('active');
-        document.getElementById('btn-gauge').classList.remove('active');
-    } else {
-        document.getElementById('tab-content-full').style.display = 'none';
-        document.getElementById('tab-content-gauge').style.display = 'block';
-        document.getElementById('btn-full').classList.remove('active');
-        document.getElementById('btn-gauge').classList.add('active');
-        if(!gaugesInitialized) setupGauges();
-    }
+    document.getElementById('tab-content-full').style.display = (tab === 'full' ? 'block' : 'none');
+    document.getElementById('tab-content-gauge').style.display = (tab === 'gauge' ? 'block' : 'none');
+    document.getElementById('tab-full').classList.toggle('active', tab === 'full');
+    document.getElementById('tab-gauge').classList.toggle('active', tab === 'gauge');
+
+    if(tab === 'gauge' && !gaugesInitialized) setupGauges();
 };
 
 function setupGauges() {
-    const opts = { angle: 0.0, lineWidth: 0.2, radiusScale: 0.9, pointer: { length: 0.5, strokeWidth: 0.035, color: '#1e293b' }, limitMax: false, limitMin: false, colorStart: '#3b82f6', colorStop: '#2563eb', strokeColor: '#e2e8f0', generateGradient: true, highDpiSupport: true };
-    gauges = {};
-    gauges.v = new Gauge(document.getElementById("g-volt")).setOptions(opts); gauges.v.maxValue = 450; gauges.v.setMinValue(0); gauges.v.set(0);
-    gauges.a = new Gauge(document.getElementById("g-amp")).setOptions(opts); gauges.a.maxValue = 100; gauges.a.setMinValue(0); gauges.a.set(0);
-    gauges.p = new Gauge(document.getElementById("g-pwr")).setOptions(opts); gauges.p.maxValue = 20000; gauges.p.setMinValue(0); gauges.p.set(0);
-    gauges.f = new Gauge(document.getElementById("g-freq")).setOptions(opts); gauges.f.maxValue = 60; gauges.f.setMinValue(40); gauges.f.set(0);
-    gaugesInitialized = true;
-    if(cache[activeId]) updateDetailView(cache[activeId]);
+    const opts = { angle: 0.0, lineWidth: 0.2, radiusScale: 0.9, pointer: { length: 0.5, strokeWidth: 0.035, color: '#1e293b' }, limitMax: false, limitMin: false, colorStart: '#3b82f6', colorStop: '#2563eb', strokeColor: '#e2e8f0', generateGradient: true, highDpiSupport: true };
+    gauges = {};
+    gauges.v = new Gauge(document.getElementById("g-volt")).setOptions(opts); gauges.v.maxValue = 450; gauges.v.setMinValue(0); gauges.v.set(0);
+    gauges.a = new Gauge(document.getElementById("g-amp")).setOptions(opts); gauges.a.maxValue = 100; gauges.a.setMinValue(0); gauges.a.set(0);
+    gauges.p = new Gauge(document.getElementById("g-pwr")).setOptions(opts); gauges.p.maxValue = 20000; gauges.p.setMinValue(0); gauges.p.set(0);
+    gauges.f = new Gauge(document.getElementById("g-freq")).setOptions(opts); gauges.f.maxValue = 60; gauges.f.setMinValue(40); gauges.f.set(0);
+    gaugesInitialized = true;
+    if(cache[activeId]) updateDetail(cache[activeId]);
 }
 
-async function fetchTarifData() {
-    const tBody = document.getElementById('tarif-table-body');
-    tBody.innerHTML = "<tr><td colspan='5' style='text-align:center'>Mengambil data...</td></tr>";
-    
-    const { data, error } = await supabaseClient
-        .from('summary_harian')
-        .select('tanggal, total_biaya_rp, total_kwh_harian, total_jam_digunakan, total_jam_standby')
-        .eq('id_mesin', activeId)
-        .gte('tanggal', document.getElementById('t-start').value)
-        .lte('tanggal', document.getElementById('t-end').value)
-        .order('tanggal', {ascending: false});
-
-    if(error || !data || data.length === 0) { tBody.innerHTML = "<tr><td colspan='5' style='text-align:center'>Tidak ada data untuk periode ini.</td></tr>"; return; }
-
-    let html = "";
-    data.forEach(r => {
-        html += `<tr><td>${r.tanggal}</td><td>${fmtRp(r.total_biaya_rp)}</td><td>${fmt(r.total_kwh_harian, 2)}</td><td>${fmt(r.total_jam_digunakan, 1)} Jam</td><td>${fmt(r.total_jam_standby, 1)} Jam</td></tr>`;
-    });
-    tBody.innerHTML = html;
+function setStatus(t, c) { 
+    const d = document.getElementById("conn-dot");
+    const txt = document.getElementById("conn-text");
+    if(d) { d.className = "status-dot " + c; txt.innerText = t; }
 }
 
-function setStatus(t, c) { 
-    const d = document.getElementById("conn-dot");
-    const txt = document.getElementById("conn-text");
-    if(d) { d.className = "status-dot " + c; txt.innerText = t; }
-}
+// Tambahkan inisialisasi awal ke card 1
+document.addEventListener('DOMContentLoaded', () => {
+    initUI();
+    updateCard({id: 1, status: 'offline'}); // Pastikan card 1 ada
+});
+
 </script>
 </body>
 </html>
