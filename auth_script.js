@@ -1,16 +1,17 @@
 // =======================================================
-// auth_script.js: FUNGSI OTENTIKASI DAN ROLE MANAGEMENT
+// auth_script.js: FUNGSI OTENTIKASI DAN ROLE MANAGEMENT (FIXED REDIRECT LOOP)
 // =======================================================
 const SUPABASE_URL = 'https://khamzxkrvmnjhrgdqbkg.supabase.co'; 
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtoYW16eGtydm1uamhyZ2RxYmtnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM5NDg2MzcsImV4cCI6MjA3OTUyNDYzN30.SYZTZA3rxaE-kwFuKLlzkol_mLuwjYmVudGCN0imAM8'; 
 
-// Inisialisasi Klien Supabase (FIXED: Menggunakan window.supabase)
+// Inisialisasi Klien Supabase (Menggunakan window.supabase)
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const messageElement = document.getElementById('message');
+const messageElement = document.getElementById('message'); // Asumsi hanya ada di login/register
 
-// --- Fungsi Sign Up (Register) ---
+// --- Fungsi Sign Up (Register) (Tidak Berubah) ---
 async function signUp() {
+    // ... (Logika Sign Up) ...
     const fullName = document.getElementById('fullName')?.value;
     const division = document.getElementById('division')?.value;
     const email = document.getElementById('email')?.value;
@@ -21,7 +22,6 @@ async function signUp() {
         return;
     }
 
-    // 1. Panggil Supabase Auth untuk mendaftar
     const { data: authData, error: authError } = await supabase.auth.signUp({
         email: email,
         password: password
@@ -32,12 +32,11 @@ async function signUp() {
         return;
     }
 
-    // 2. Jika pendaftaran berhasil, buat profile di tabel 'user_profiles'
     const userId = authData.user.id;
     const { error: profileError } = await supabase
         .from('user_profiles')
         .insert([
-            { id: userId, full_name: fullName, division: division, user_role: 'user' } // Default role: 'user'
+            { id: userId, full_name: fullName, division: division, user_role: 'user' }
         ]);
         
     if (profileError) {
@@ -47,11 +46,11 @@ async function signUp() {
     }
 
     messageElement.style.color = 'green';
-    messageElement.textContent = 'Pendaftaran berhasil! Silakan cek email Anda untuk verifikasi (jika diaktifkan).';
+    messageElement.textContent = 'Pendaftaran berhasil! Silakan cek email Anda untuk verifikasi.';
 }
 
 
-// --- Fungsi Sign In (Login) ---
+// --- Fungsi Sign In (Login) (Tidak Berubah) ---
 async function signIn() {
     const email = document.getElementById('email')?.value;
     const password = document.getElementById('password')?.value;
@@ -66,37 +65,41 @@ async function signIn() {
     } else {
         messageElement.style.color = 'green';
         messageElement.textContent = 'Login Berhasil! Mengarahkan ke Dashboard...';
-        // Redirect ke dashboard utama setelah login
         window.location.href = 'index.html'; 
     }
 }
 
-// --- Fungsi Logout ---
+// --- Fungsi Logout (Tidak Berubah) ---
 async function signOut() {
     const { error } = await supabase.auth.signOut();
     if (error) {
         console.error('Logout Gagal:', error);
     } else {
-        // Redirect ke halaman login setelah logout
         window.location.href = 'login.html'; 
     }
 }
 
 
-// --- Fungsi Kunci: Pengecekan Sesi dan Role Pengguna ---
+// --- Fungsi Kunci: Pengecekan Sesi dan Role Pengguna (FIXED LOGIC) ---
 async function checkUserRole() {
-    // 1. Cek sesi Auth
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     
     if (sessionError || !session) {
-        // Jika tidak ada sesi, paksa ke halaman login
-        window.location.href = 'login.html';
+        // --- LOGIKA FIX REDIRECT LOOP ---
+        const path = window.location.pathname;
+        
+        // Cek apakah pengguna TIDAK berada di halaman auth
+        if (!path.includes('login.html') && !path.includes('register.html')) {
+            // Jika tidak ada sesi DAN berada di halaman dashboard, paksa redirect ke login
+            window.location.href = 'login.html';
+        }
+        // Jika sudah di login.html atau register.html, biarkan saja
         return { isLoggedIn: false, role: 'guest', profile: {} };
     }
 
     const userId = session.user.id;
 
-    // 2. Ambil profile dan role dari tabel 'user_profiles'
+    // Ambil profile dan role
     const { data: profileData, error: profileError } = await supabase
         .from('user_profiles')
         .select('user_role, full_name, division')
@@ -105,7 +108,6 @@ async function checkUserRole() {
     
     if (profileError || !profileData) {
         console.error("Gagal mengambil profile:", profileError);
-        // Tetap diizinkan masuk, tapi dengan role terbatas
         return { isLoggedIn: true, role: 'user', profile: { full_name: 'Unknown', division: 'Unknown' } }; 
     }
 
@@ -118,5 +120,3 @@ window.signUp = signUp;
 window.signIn = signIn;
 window.signOut = signOut;
 window.checkUserRole = checkUserRole;
-
-// Pastikan skrip ini diakses oleh register.html dan login.html
