@@ -1,15 +1,14 @@
 // =======================================================
-// admin_approval_script.js
+// admin_approval_script.js: LOGIKA PERSETUJUAN ADMIN
 // =======================================================
 const SUPABASE_URL = 'https://khamzxkrvmnjhrgdqbkg.supabase.co'; 
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtoYW16eGtydm1uamhyZ2RxYmtnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM5NDg2MzcsImV4cCI6MjA3OTUyNDYzN30.SYZTZA3rxaE-kwFuKLlzkol_mLuwjYmVudGCN0imAM8'; 
 const PROFILES_TABLE = 'user_profiles';
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); // Menggunakan ANONYMOUS KEY dari auth_script.js
 
 // Ambil daftar pengguna yang belum disetujui
 async function fetchPendingUsers() {
-    // Memastikan hanya Admin yang bisa mengakses halaman ini (opsional)
+    // 1. Cek Otorisasi (Wajib): Pastikan hanya Admin yang diizinkan
     const authStatus = await checkUserRole();
     if (authStatus.role !== 'admin') {
         alert("Akses Ditolak: Hanya Admin yang dapat mengakses halaman ini.");
@@ -17,15 +16,17 @@ async function fetchPendingUsers() {
         return;
     }
     
-    // Ambil data user yang is_approved = FALSE
+    // 2. Ambil data user yang is_approved = FALSE
+    // Kita menggunakan JOIN implisit (dot notation) untuk mendapatkan email dari auth.users
     const { data: pendingUsers, error } = await supabase
         .from(PROFILES_TABLE)
         .select(`id, full_name, division, user_role, auth_user:auth.users (email)`)
-        .eq('is_approved', false);
+        .eq('is_approved', false)
+        .order('full_name', { ascending: true }); // Urutkan berdasarkan nama
 
     if (error) {
         console.error("Gagal memuat pengguna:", error);
-        document.querySelector('#approvalTable tbody').innerHTML = '<tr><td colspan="5">Error memuat data.</td></tr>';
+        document.querySelector('#approvalTable tbody').innerHTML = '<tr><td colspan="5">Error memuat data. Cek RLS Policy.</td></tr>';
         return;
     }
     
@@ -37,14 +38,15 @@ function renderApprovalTable(users) {
     const tbody = document.querySelector('#approvalTable tbody');
     tbody.innerHTML = '';
     
-    if (users.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5">Tidak ada akun yang menunggu persetujuan.</td></tr>';
+    if (!users || users.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: green;">Tidak ada akun yang menunggu persetujuan.</td></tr>';
         return;
     }
 
     users.forEach(user => {
         const row = tbody.insertRow();
-        const userEmail = user.auth_user ? user.auth_user.email : 'N/A'; // Ambil email dari join
+        // Ambil email dari data JOIN (auth_user)
+        const userEmail = user.auth_user ? user.auth_user.email : 'N/A'; 
         
         row.insertCell().textContent = user.full_name;
         row.insertCell().textContent = userEmail;
@@ -54,8 +56,8 @@ function renderApprovalTable(users) {
         const actionCell = row.insertCell();
         const button = document.createElement('button');
         button.textContent = 'Setujui Akun';
-        button.style.backgroundColor = '#28a745';
-        button.style.color = 'white';
+        button.className = 'approve-btn';
+        // Panggil fungsi approveUser dengan ID unik pengguna
         button.onclick = () => approveUser(user.id);
         actionCell.appendChild(button);
     });
@@ -69,11 +71,14 @@ async function approveUser(userId) {
         .eq('id', userId);
 
     if (error) {
-        alert(`Gagal menyetujui user: ${error.message}. Cek RLS Policy UPDATE.`);
+        alert(`Gagal menyetujui user: ${error.message}. Pastikan RLS Policy UPDATE untuk Admin sudah diatur!`);
     } else {
-        alert("User berhasil disetujui!");
+        alert("User berhasil disetujui! Status: APPROVED TRUE.");
         fetchPendingUsers(); // Refresh daftar
     }
 }
+
+// Global function for HTML
+window.approveUser = approveUser; // Ekspos fungsi ke HTML
 
 document.addEventListener('DOMContentLoaded', fetchPendingUsers);
