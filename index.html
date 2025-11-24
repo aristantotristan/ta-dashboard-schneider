@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Schneider Modbus MQTT Dashboard</title>
+    <title>Schneider Modbus MQTT Dashboard - Minimal</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <style>
@@ -9,7 +9,7 @@
         header { text-align: center; padding-bottom: 15px; border-bottom: 3px solid #007bff; margin-bottom: 30px; }
         h1 { color: #007bff; margin: 0; }
         .grid-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
-        .data-box { background-color: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: transform 0.2s; }
+        .data-box { background-color: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         .label { font-size: 0.9em; color: #6c757d; margin-bottom: 5px; }
         .value { font-size: 2em; font-weight: bold; color: #333; }
         .unit { font-size: 0.5em; color: #6c757d; margin-left: 5px; font-weight: normal; }
@@ -27,18 +27,14 @@
     </header>
 
     <div class="grid-container">
-        <div class="data-box"><div class="label">1. Total Energi Aktif (Ea)</div><div class="value"><span id="e_tot_kwh">--</span><span class="unit">kWh</span></div></div>
-        <div class="data-box"><div class="label">2. Total Energi Reaktif (Er)</div><div class="value"><span id="e_r_tot_kvarh">--</span><span class="unit">kVARh</span></div></div>
-        <div class="data-box"><div class="label">3. Partial Energi Aktif</div><div class="value"><span id="e_part_kwh">--</span><span class="unit">kWh</span></div></div>
-        <div class="data-box"><div class="label">4. Partial Energi Reaktif</div><div class="value"><span id="e_r_part_kvarh">--</span><span class="unit">kVARh</span></div></div>
-        <div class="data-box"><div class="label">5. Voltage (L-L Avg)</div><div class="value"><span id="voltage_avg_v">--</span><span class="unit">Volt</span></div></div>
-        <div class="data-box"><div class="label">6. Current (I1)</div><div class="value"><span id="current_i1_a">--</span><span class="unit">Ampere</span></div></div>
-        <div class="data-box"><div class="label">7. Active Power (P)</div><div class="value"><span id="power_p_w">--</span><span class="unit">Watt</span></div></div>
-        <div class="data-box"><div class="label">8. Reactive Power (Q)</div><div class="value"><span id="power_q_var">--</span><span class="unit">VAR</span></div></div>
-        <div class="data-box"><div class="label">9. Apparent Power (S)</div><div class="value"><span id="power_s_kva">--</span><span class="unit">kVA</span></div></div>
-        <div class="data-box"><div class="label">10. Power Factor (PF)</div><div class="value"><span id="pf">--</span></div></div>
-        <div class="data-box"><div class="label">11. Frequency (Hz)</div><div class="value"><span id="freq_hz">--</span><span class="unit">Hz</span></div></div>
-        <div class="data-box"><div class="label">12. Operation Time</div><div class="value"><span id="op_time_hr">--</span><span class="unit">Jam</span></div></div>
+        <div class="data-box"><div class="label">Total Energi Aktif (Ea)</div><div class="value"><span id="e_tot_kwh">--</span><span class="unit">kWh</span></div></div>
+        <div class="data-box"><div class="label">Total Energi Reaktif (Er)</div><div class="value"><span id="e_r_tot_kvarh">--</span><span class="unit">kVARh</span></div></div>
+        <div class="data-box"><div class="label">Voltage (L-L Avg)</div><div class="value"><span id="voltage_avg_v">--</span><span class="unit">Volt</span></div></div>
+        <div class="data-box"><div class="label">Frequency (Hz)</div><div class="value"><span id="freq_hz">--</span><span class="unit">Hz</span></div></div>
+        <div class="data-box"><div class="label">Operation Time</div><div class="value"><span id="op_time_hr">--</span><span class="unit">Jam</span></div></div>
+        <div class="data-box"><div class="label">Current (I1)</div><div class="value"><span id="current_i1_a">--</span><span class="unit">Ampere</span></div></div>
+
+        <div class="data-box"><div class="label">Active Power (P)</div><div class="value"><span id="power_p_w">--</span><span class="unit">Watt</span></div></div>
     </div>
 
     <h3 style="margin-top: 40px; color: #555;">Data JSON Terakhir (Debugging)</h3>
@@ -50,7 +46,7 @@
         const MQTT_USER = 'schneider_esp'; // USERNAME ANDA
         const MQTT_PASS = 'SuperSecret123'; // PASSWORD ANDA
         
-        const BROKER_URL = 'wss://' + CLOUD_HOST + ':8884/mqtt'; // WSS PORT 8884
+        const BROKER_URL = 'wss://' + CLOUD_HOST + ':8884/mqtt'; 
         const TOPIC = 'schneider/data/meter1'; 
         
         const client = mqtt.connect(BROKER_URL, {
@@ -68,20 +64,13 @@
             statusElement.style.color = 'white';
             client.subscribe(TOPIC);
         });
-        
-        client.on('error', function (err) {
-            console.error("MQTT Connection Error:", err);
-            statusElement.innerText = 'ERROR';
-            statusElement.style.backgroundColor = '#dc3545'; 
-            statusElement.style.color = 'white';
-        });
 
         client.on('message', function (topic, message) {
             try {
                 const dataString = message.toString();
                 const data = JSON.parse(dataString);
                 
-                // 1. Tampilkan JSON mentah
+                // 1. Tampilkan JSON mentah (Ini harusnya berhasil 100% dan muncul)
                 rawJsonElement.innerText = JSON.stringify(data, null, 2);
                 
                 // 2. Lanjutkan Update Dashboard
@@ -93,15 +82,18 @@
             }
         });
 
-        // FUNGSI UPDATE TAMPILAN (PEMROSESAN TANGGUH DAN DIPERBAIKI)
+        // FUNGSI UPDATE TAMPILAN (Hanya untuk KEY yang ada)
         function updateDashboard(data) {
             const mappings = [
-                { id: 'e_tot_kwh', key: 'e_tot_kwh', fixed: 2 }, { id: 'e_r_tot_kvarh', key: 'e_r_tot_kvarh', fixed: 2 },
-                { id: 'e_part_kwh', key: 'e_part_kwh', fixed: 2 }, { id: 'e_r_part_kvarh', key: 'e_r_part_kvarh', fixed: 2 },
-                { id: 'voltage_avg_v', key: 'voltage_avg_v', fixed: 1 }, { id: 'current_i1_a', key: 'current_i1_a', fixed: 3 },
-                { id: 'power_p_w', key: 'power_p_w', fixed: 0 }, { id: 'power_q_var', key: 'power_q_var', fixed: 0 },
-                { id: 'power_s_kva', key: 'power_s_kva', fixed: 2 }, { id: 'pf', key: 'pf', fixed: 3 },
-                { id: 'freq_hz', key: 'freq_hz', fixed: 1 }, { id: 'op_time_hr', key: 'op_time_hr', fixed: 0 }
+                // HANYA KEY YANG PASTI ADA DI JSON
+                { id: 'e_tot_kwh', key: 'e_tot_kwh', fixed: 2 },
+                { id: 'e_r_tot_kvarh', key: 'e_r_tot_kvarh', fixed: 2 },
+                { id: 'voltage_avg_v', key: 'voltage_avg_v', fixed: 1 },
+                { id: 'freq_hz', key: 'freq_hz', fixed: 1 },
+                { id: 'op_time_hr', key: 'op_time_hr', fixed: 0 },
+                { id: 'current_i1_a', key: 'current_i1_a', fixed: 3 },
+                // Tambahkan kembali yang mungkin null/0
+                { id: 'power_p_w', key: 'power_p_w', fixed: 0 }, 
             ];
 
             mappings.forEach(item => {
@@ -109,7 +101,6 @@
                 const value = data[item.key];
                 
                 if (element && value !== undefined) {
-                    
                     if (value !== null && typeof value === 'number') {
                         try {
                             element.innerText = value.toFixed(item.fixed); 
@@ -117,7 +108,7 @@
                             element.innerText = '-- FORMAT ERROR'; 
                         }
                     } else if (value === null) {
-                        element.innerText = '--';
+                        element.innerText = '--'; 
                     } else {
                         element.innerText = value;
                     }
