@@ -1,139 +1,108 @@
 // =======================================================
-// control_script.js: Logika Safety Tombol
+// control_script.js: FOKUS PENCATATAN LOG KONEKSI
 // =======================================================
 const SUPABASE_URL = 'https://khamzxkrvmnjhrgdqbkg.supabase.co'; 
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtoYW16eGtydm1uamhyZ2RxYmtnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM5NDg2MzcsImV4cCI6MjA3OTUyNDYzN30.SYZTZA3rxaE-kwFuKLlzkol_mLuwjYmVudGCN0imAM8'; 
-const SYSTEM_STATUS_TABLE = 'system_status';
-const SINGLE_ROW_ID = 1; 
+const LOG_TABLE = 'system_connection_log';
+const API_URL = `${SUPABASE_URL}/rest/v1/${LOG_TABLE}`;
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const startButton = document.getElementById('startButton');
-const stopButton = document.getElementById('stopButton');
-const systemStatusDisplay = document.getElementById('systemStatus');
-const lastActionByDisplay = document.getElementById('lastActionBy');
-const lastActionAtDisplay = document.getElementById('lastActionAt');
+// --- 1. Fungsi untuk Mengambil dan Menampilkan Log Koneksi ---
+async function fetchConnectionLogs() {
+    try {
+        // Ambil hanya log bertipe CONNECTION_TROUBLE, diurutkan terbaru
+        const response = await fetch(`${API_URL}?select=*&log_type=eq.CONNECTION_TROUBLE&order=timestamp.desc`, {
+            method: 'GET',
+            headers: {'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY }
+        });
 
-// --- 1. Fungsi Inti: Mengubah Status Tombol dan UI ---
-function updateButtonState(isRunning, lastActionBy = 'N/A', lastActionAt = 'N/A') {
-    if (isRunning) {
-        // Status BERJALAN: Start dinonaktifkan, Stop diaktifkan
-        startButton.disabled = true;
-        stopButton.disabled = false;
-        systemStatusDisplay.textContent = 'BERJALAN';
-        systemStatusDisplay.className = 'status-indicator status-running';
-    } else {
-        // Status BERHENTI: Start diaktifkan, Stop dinonaktifkan
-        startButton.disabled = false;
-        stopButton.disabled = true;
-        systemStatusDisplay.textContent = 'BERHENTI';
-        systemStatusDisplay.className = 'status-indicator status-stopped';
-    }
-    
-    lastActionByDisplay.textContent = lastActionBy;
-    
-    if (lastActionAt !== 'N/A') {
-        lastActionAtDisplay.textContent = new Date(lastActionAt).toLocaleString('id-ID');
-    } else {
-        lastActionAtDisplay.textContent = lastActionAt;
+        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+
+        const data = await response.json();
+        
+        displayConnectionLog(data);
+        updateConnectionStatus(data);
+
+    } catch (error) {
+        console.error("Gagal mengambil log koneksi:", error);
+        document.querySelector('#connectionLogTable tbody').innerHTML = `<tr><td colspan='3'>Error: ${error.message}</td></tr>`;
     }
 }
 
-// --- 2. Mengambil Status Saat Ini dari Supabase (Dipanggil saat refresh) ---
-async function fetchSystemStatus() {
+// --- 2. Menampilkan Log di Tabel ---
+function displayConnectionLog(logs) {
+    const tbody = document.querySelector('#connectionLogTable tbody');
+    tbody.innerHTML = '';
+    
+    if (logs.length === 0) {
+        tbody.innerHTML = `<tr><td colspan='3'>Tidak ada riwayat gangguan koneksi.</td></tr>`;
+        return;
+    }
+
+    logs.forEach(log => {
+        const row = tbody.insertRow();
+        row.insertCell().textContent = log.event_status;
+        row.insertCell().textContent = new Date(log.timestamp).toLocaleString('id-ID');
+        row.insertCell().textContent = log.details || '-';
+    });
+}
+
+// --- 3. Memperbarui Status Koneksi Terakhir ---
+function updateConnectionStatus(logs) {
+    const connStatusElement = document.getElementById('connectionStatus');
+    const latestLog = logs[0]; // Karena sudah diurutkan dari yang terbaru
+
+    if (latestLog && latestLog.event_status === 'DISCONNECTED') {
+        connStatusElement.textContent = `TERPUTUS sejak ${new Date(latestLog.timestamp).toLocaleString('id-ID')}`;
+        connStatusElement.className = 'status-stopped';
+    } else if (latestLog && latestLog.event_status === 'RECONNECTED') {
+        connStatusElement.textContent = 'KONEKSI OK';
+        connStatusElement.className = 'status-running';
+    } else {
+         connStatusElement.textContent = 'KONEKSI OK (Belum ada log)';
+         connStatusElement.className = 'status-running';
+    }
+}
+
+// --- 4. Fungsi Kunci: Mencatat Status Koneksi (POST) ---
+async function logConnectionStatus(status) {
+    const detailLog = prompt(`Masukkan Keterangan Detail untuk status ${status}:`) || status;
+    
+    // Nanti diganti dengan user ID setelah Auth
+    const userName = 'Maintenance Team TA'; 
+
+    const payload = {
+        log_type: 'CONNECTION_TROUBLE',
+        event_status: status,
+        machine_id: 'GLOBAL_COMM', // Asumsi: trouble koneksi bersifat global (WiFi)
+        user_id: userName, 
+        details: detailLog
+    };
+    
     try {
-        const { data, error } = await supabase
-            .from(SYSTEM_STATUS_TABLE)
-            .select('is_running, last_action_by, last_action_at')
-            .eq('id', SINGLE_ROW_ID)
-            .single();
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'apikey': SUPABASE_ANON_KEY 
+            },
+            body: JSON.stringify(payload)
+        });
 
-        if (error) throw error;
-
-        if (data) {
-            updateButtonState(data.is_running, data.last_action_by, data.last_action_at);
+        if (response.ok) {
+            alert(`✅ Status ${status} berhasil dicatat!`);
+            fetchConnectionLogs(); // Refresh log
         } else {
-            updateButtonState(false, 'SYSTEM', new Date().toISOString());
+            alert('❌ Gagal mencatat status. Cek RLS Policy (INSERT) untuk system_connection_log!');
         }
-
     } catch (error) {
-        console.error("Gagal mengambil status sistem:", error);
-        alert("Error koneksi: Gagal mengambil status sistem.");
-        // Gagal ambil data, status tombol tidak aman, nonaktifkan keduanya
-        startButton.disabled = true;
-        stopButton.disabled = true;
-    }
-}
-
-// --- 3. Fungsi START SISTEM ---
-async function startSystem() {
-    // Audit: Minta Nama User (Akan diganti dengan data Auth nanti)
-    const userName = prompt("⚠️ MASUKKAN NAMA ANDA untuk audit START:") || 'ADMIN TANPA NAMA';
-    
-    // Nonaktifkan tombol sementara proses update
-    startButton.disabled = true;
-    stopButton.disabled = true;
-
-    try {
-        const { error } = await supabase
-            .from(SYSTEM_STATUS_TABLE)
-            .update({ 
-                is_running: true, 
-                last_action_by: userName, 
-                last_action_at: new Date().toISOString() 
-            })
-            .eq('id', SINGLE_ROW_ID);
-
-        if (error) throw error;
-
-        alert(`✅ Sistem BERHASIL DIMULAI oleh ${userName}!`);
-        // Ambil status terbaru untuk update UI
-        fetchSystemStatus(); 
-        
-    } catch (error) {
-        console.error("Gagal memulai sistem:", error);
-        alert(`❌ Gagal memulai sistem: ${error.message}.`);
-        // Kembalikan status tombol ke keadaan terakhir yang diketahui
-        fetchSystemStatus(); 
-    }
-}
-
-// --- 4. Fungsi STOP SISTEM ---
-async function stopSystem() {
-    // Audit: Minta Nama User (Akan diganti dengan data Auth nanti)
-    const userName = prompt("⚠️ MASUKKAN NAMA ANDA untuk audit STOP:") || 'ADMIN TANPA NAMA';
-    
-    // Nonaktifkan tombol sementara proses update
-    startButton.disabled = true;
-    stopButton.disabled = true;
-    
-    try {
-        const { error } = await supabase
-            .from(SYSTEM_STATUS_TABLE)
-            .update({ 
-                is_running: false, 
-                last_action_by: userName, 
-                last_action_at: new Date().toISOString() 
-            })
-            .eq('id', SINGLE_ROW_ID);
-
-        if (error) throw error;
-        
-        alert(`✅ Sistem BERHASIL DIHENTIKAN oleh ${userName}!`);
-        // Ambil status terbaru untuk update UI
-        fetchSystemStatus();
-
-    } catch (error) {
-        console.error("Gagal menghentikan sistem:", error);
-        alert(`❌ Gagal menghentikan sistem: ${error.message}.`);
-        // Kembalikan status tombol ke keadaan terakhir yang diketahui
-        fetchSystemStatus();
+        console.error('Error POST:', error);
     }
 }
 
 // Global functions for HTML
-window.startSystem = startSystem;
-window.stopSystem = stopSystem;
+window.logConnectionStatus = logConnectionStatus;
 
-// Inisialisasi: Ambil status saat halaman dimuat
-document.addEventListener('DOMContentLoaded', fetchSystemStatus);
+// Inisialisasi: Ambil log saat halaman dimuat
+document.addEventListener('DOMContentLoaded', fetchConnectionLogs);
