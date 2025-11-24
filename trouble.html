@@ -12,9 +12,9 @@
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
         th { background-color: #f8d7da; color: #721c24; }
-        .filter-group { margin-bottom: 15px; padding: 15px; border: 1px dashed #ccc; border-radius: 5px; }
-        .filter-group label { margin-right: 10px; }
-        .filter-group input { padding: 8px; margin-right: 15px; }
+        .filter-group { margin-bottom: 15px; padding: 15px; border: 1px dashed #ccc; border-radius: 5px; display: flex; flex-wrap: wrap; align-items: center; gap: 15px; }
+        .filter-group label { margin-right: 5px; font-weight: bold; }
+        .filter-group input, .filter-group select { padding: 8px; }
         .filter-group button { padding: 8px 15px; background-color: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer; }
     </style>
 </head>
@@ -25,7 +25,15 @@
     <h1>Monitoring Trouble Mesin</h1>
     
     <div class="card filter-group">
-        <h2>Pilih Periode Laporan</h2>
+        <h2>Pilih Mesin & Periode Laporan</h2>
+        
+        <label for="machineId">Pilih Mesin:</label>
+        <select id="machineId" required>
+            <option value="">-- Pilih Mesin --</option>
+            <option value="MESIN_01">MESIN_01</option>
+            <option value="MESIN_02">MESIN_02</option>
+            </select>
+        
         <label for="startDate">Tanggal Mulai:</label>
         <input type="date" id="startDate" required>
         
@@ -36,7 +44,7 @@
     </div>
 
     <div class="card">
-        <h2>Status Kinerja Mesin Individu</h2>
+        <h2>Laporan Status Kinerja Mesin: <span id="selectedMachineDisplay">N/A</span></h2>
         <p id="dateRangeDisplay">Periode: Harap masukkan tanggal</p>
         <table id="troubleTable">
             <thead>
@@ -45,11 +53,12 @@
                     <th>Hari ON (Stabil)</th>
                     <th>Hari OFF (Trouble)</th>
                     <th>Total Trouble Count</th>
-                    <th>Hari Trouble (Tanggal)</th> <th>Penyebab Utama</th>
+                    <th>Hari Trouble (Tanggal)</th>
+                    <th>Penyebab Utama</th>
                 </tr>
             </thead>
             <tbody>
-                <tr><td colspan="6">Pilih tanggal dan tekan 'Cek Trouble' untuk melihat laporan.</td></tr>
+                <tr><td colspan="6">Pilih mesin, tanggal, dan tekan 'Cek Trouble' untuk melihat laporan.</td></tr>
             </tbody>
         </table>
     </div>
