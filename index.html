@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MONITORING ENERGI (v53 - FINAL)</title>
+    <title>MONITORING ENERGI (v54 - BROKER PUBLIK)</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gauge.js/1.3.7/gauge.min.js"></script>
@@ -50,6 +50,10 @@
         .pro-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
         .pro-table td { padding: 12px 25px; border-bottom: 1px solid var(--border); color: var(--secondary); }
         .group-header { background: #e0f2fe !important; color: #0369a1 !important; font-weight: 700; padding: 10px 25px; font-size: 0.85rem; }
+        .control-panel { display: flex; flex-direction: column; gap: 20px; max-width: 400px; margin-top: 20px; padding: 20px; background: var(--card-bg); border-radius: 12px; box-shadow: var(--shadow); }
+        .control-btn { padding: 15px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s; background: var(--success); color: white; }
+        .control-btn.stop { background: var(--danger); }
+        .date-input { padding: 10px; border: 1px solid var(--border); border-radius: 8px; }
     </style>
 </head>
 <body>
@@ -57,7 +61,7 @@
     <nav class="sidebar">
         <div class="sidebar-header">
             <i class="fa-solid fa-bolt"></i>
-            <div><div class="brand-title">ENERGIA</div><div class="brand-subtitle">v50 Pro Dashboard</div></div>
+            <div><div class="brand-title">ENERGIA</div><div class="brand-subtitle">v54 Pro Dashboard</div></div>
         </div>
         <div class="nav-links">
             <div class="nav-btn active" id="nav-monitor" onclick="goToMonitor()">
@@ -116,10 +120,16 @@
 
         <div id="view-trouble-grid" class="page">
             <div class="detail-header">
-                <button class="back-btn" onclick="goToMonitor()"><i class="fa-solid fa-arrow-left"></i> Kembali</button>
-                <h2 id="trouble-menu-title">Riwayat Trouble Mesin</h2>
+                <h2 id="trouble-menu-title">Riwayat Trouble Mesin (Pilih Mesin)</h2>
             </div>
-            <div class="grid-18" id="trouble-grid-container"></div>
+             <div class="grid-18" id="trouble-grid-container"></div>
+        </div>
+
+        <div id="view-tarif-grid" class="page">
+            <div class="detail-header">
+                <h2 id="tarif-menu-title">Laporan Biaya & Energi (Pilih Mesin)</h2>
+            </div>
+            <div class="grid-18" id="tarif-grid-container"></div>
         </div>
 
         <div id="view-tarif-detail" class="page">
@@ -127,9 +137,9 @@
                 <button class="back-btn" onclick="goToTarif()"><i class="fa-solid fa-arrow-left"></i> Kembali</button>
                 <h2 id="tarif-mc-name">Laporan Biaya - Mesin X</h2>
             </div>
-            <div class="controls">
+            <div class="controls" style="margin-bottom: 20px;">
                 <input type="date" id="t-start" class="date-input"> <span>s/d</span> <input type="date" id="t-end" class="date-input">
-                <button class="action-btn" onclick="fetchTarifData()">Tampilkan</button>
+                <button class="control-btn" onclick="fetchTarifData()" style="width:150px; display:inline-block; margin-left: 10px;">Tampilkan</button>
             </div>
             <div class="table-container">
                 <table class="pro-table">
@@ -141,7 +151,6 @@
         
         <div id="view-control-system" class="page">
              <div class="detail-header">
-                <button class="back-btn" onclick="goToMonitor()"><i class="fa-solid fa-arrow-left"></i> Kembali</button>
                 <h2 id="control-mc-name">Control & Maintenance</h2>
             </div>
             <div class="control-panel">
@@ -157,12 +166,16 @@
 // ==========================================================
 // --- 1. KONFIGURASI FINAL ---
 // ==========================================================
-const SUPABASE_URL = "https://khamzxkrvmnjhrgdqbkg.supabase.co"; // URL Supabase Terbaru
+// KONFIGURASI SUPABASE TETAP SAMA (HTTPS)
+const SUPABASE_URL = "https://khamzxkrvmnjhrgdqbkg.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtoYW16eGtydm1uamhyZ2RxYmtnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM5NDg2MzcsImV4cCI6MjA3OTUyNDYzN30.SYZTZA3rxaE-kwFuKLlzkol_mLuwjYmVudGCN0imAM8";
-const MQTT_HOST = "f67b475c6dc548368dd0847dd1e4657e.s1.eu.hivemq.cloud"; // Host MQTT Terbaru
-const MQTT_PORT = 8884; // WebSocket Port
-const MQTT_USER = "web_dashboard";
-const MQTT_PASS = "Tristan12";
+
+// KONFIGURASI BROKER PUBLIK DENGAN PORT WEBSOCKET NON-SSL (FIX)
+const MQTT_HOST = "broker.hivemq.com"; 
+const MQTT_PORT = 8000; // Port Websocket Insecure (Paling stabil untuk browser)
+const MQTT_USER = ""; // Broker publik tidak perlu user
+const MQTT_PASS = ""; // Broker publik tidak perlu password
+
 const MQTT_TOPIC_DATA = "esp32data";
 const MQTT_TOPIC_COMMAND = "esp32command";
 
@@ -185,8 +198,11 @@ function fmtTime(v) {
 // --- 3. INIT & WATCHDOG ---
 window.onload = function() {
     try {
+        // Init Klien Supabase
         supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "pro_" + Date.now());
+        
+        // Init MQTT (menggunakan host publik dan port insecure browser 8000)
+        mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "pro_" + Date.now()); 
         
         mqttClient.onConnectionLost = (r) => { if (r.errorCode !== 0) { setStatus("Reconnecting...", "bg-disconn"); setTimeout(connectMQTT, 3000); } };
         mqttClient.onMessageArrived = onMessageArrived;
@@ -195,16 +211,16 @@ window.onload = function() {
         connectMQTT();
         
         setInterval(checkTimeouts, 1000);
-    } catch(e) { setStatus("CRITICAL ERROR: Cek console", "bg-err"); console.error(e); }
+
+    } catch(e) { setStatus("CRITICAL ERROR: Cek console", "bg-danger"); console.error(e); }
 };
 
 function initUI() {
-    let gridM = "", gridT = "", gridTb = "", gridCc = "";
+    let gridM = "", gridT = "", gridTb = "";
     for(let i=1; i<=18; i++) {
         gridM += `<div class="machine-card offline" id="card-${i}" onclick="openMonitor(${i})"><div class="mc-header"><div class="mc-title">Mesin ${i}</div><i class="fa-solid fa-industry mc-icon"></i></div><div class="mc-status" id="badge-${i}">OFFLINE</div></div>`;
         gridT += `<div class="machine-card" onclick="openTarif(${i})"><div class="mc-header"><div class="mc-title">Mesin ${i}</div><i class="fa-solid fa-chart-line mc-icon" style="color:var(--accent)"></i></div><div style="font-size:0.8rem; color:var(--text-muted)">Laporan Biaya</div></div>`;
         gridTb += `<div class="machine-card" onclick="openTroubleLog(${i})"><div class="mc-header"><div class="mc-title">Mesin ${i}</div><i class="fa-solid fa-bug mc-icon" style="color:var(--danger)"></i></div><div style="font-size:0.8rem; color:var(--text-muted)">Log Kesalahan</div></div>`;
-        gridCc += `<div class="machine-card" onclick="goToControl()"><div class="mc-header"><div class="mc-title">Mesin ${i}</div><i class="fa-solid fa-gear mc-icon"></i></div><div style="font-size:0.8rem; color:var(--text-muted)">Kontrol</div></div>`;
     }
     document.getElementById("machine-grid").innerHTML = gridM;
     document.getElementById("tarif-grid-container").innerHTML = gridT;
@@ -227,9 +243,18 @@ function checkTimeouts() {
 function connectMQTT() {
     setStatus("Menghubungkan...", "bg-wait");
     mqttClient.connect({
-        useSSL: true, userName: MQTT_USER, password: MQTT_PASS,
-        onSuccess: () => { setStatus("Connected (Real-Time)", "bg-conn"); mqttClient.subscribe(MQTT_TOPIC_DATA); mqttClient.subscribe(MQTT_TOPIC_COMMAND); },
-        onFailure: (e) => { setStatus("Failed (Retrying)", "bg-disconn"); setTimeout(connectMQTT, 5000); }
+        useSSL: false, // FALSE karena port 8000 adalah non-SSL/insecure
+        userName: MQTT_USER, 
+        password: MQTT_PASS,
+        onSuccess: () => { 
+            setStatus("Connected (Real-Time)", "bg-conn"); 
+            mqttClient.subscribe(MQTT_TOPIC_DATA); 
+            mqttClient.subscribe(MQTT_TOPIC_COMMAND); 
+        },
+        onFailure: (e) => { 
+            setStatus("Failed (Retrying)", "bg-disconn"); 
+            setTimeout(connectMQTT, 5000); 
+        }
     });
 }
 
@@ -251,7 +276,7 @@ function updateCard(d) {
     if(!el) return;
     const bd = el.querySelector(".mc-status");
     
-    if(d.status === 'online') {
+    if(d.status === 'online' || d.p > 0) { // Status online/running
         el.classList.remove('offline'); el.classList.add('online');
         bd.innerText = "RUNNING";
     } else {
@@ -293,6 +318,7 @@ function updateDetail(d) {
     document.getElementById("detail-table-body").innerHTML = html;
 
     if(gaugesInitialized) {
+        // Update Gauge
         gauges.v.set(isOff ? 0 : d.v); document.getElementById("val-volt").innerText = isOff ? "-" : fmt(d.v, 0) + " V";
         gauges.a.set(isOff ? 0 : d.i); document.getElementById("val-amp").innerText = isOff ? "-" : fmt(d.i, 1) + " A";
         gauges.p.set(isOff ? 0 : d.p); document.getElementById("val-power").innerText = isOff ? "-" : fmt(d.p, 0) + " W";
@@ -306,34 +332,26 @@ window.showPage = (id) => {
     document.getElementById(id).classList.add('active');
 };
 window.goToMonitor = () => {
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
     document.getElementById('nav-monitor').classList.add('active');
-    document.getElementById('nav-tarif').classList.remove('active');
-    document.getElementById('nav-trouble').classList.remove('active');
-    document.getElementById('nav-control').classList.remove('active');
     activeId = 0;
     showPage('view-monitor-grid');
 };
 window.goToTarif = () => {
-    document.getElementById('nav-monitor').classList.remove('active');
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
     document.getElementById('nav-tarif').classList.add('active');
-    document.getElementById('nav-trouble').classList.remove('active');
-    document.getElementById('nav-control').classList.remove('active');
     activeId = 0;
     showPage('view-tarif-grid');
 };
 window.goToTrouble = () => {
-    document.getElementById('nav-monitor').classList.remove('active');
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
     document.getElementById('nav-trouble').classList.add('active');
-    document.getElementById('nav-tarif').classList.remove('active');
-    document.getElementById('nav-control').classList.remove('active');
     activeId = 0;
     showPage('view-trouble-grid');
 };
 window.goToControl = () => {
-    document.getElementById('nav-monitor').classList.remove('active');
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
     document.getElementById('nav-control').classList.add('active');
-    document.getElementById('nav-trouble').classList.remove('active');
-    document.getElementById('nav-tarif').classList.remove('active');
     activeId = 0;
     showPage('view-control-system');
 };
@@ -347,17 +365,13 @@ window.openMonitor = (id) => {
 };
 
 window.openTroubleLog = (id) => {
-    activeId = id;
-    document.getElementById('view-trouble-grid').classList.remove('active');
-    document.getElementById('view-tarif-detail').classList.add('active');
     alert(`Membuka Riwayat Trouble Mesin ${id}. (Akan diimplementasikan)`);
 };
 
 window.openTarif = (id) => {
     activeId = id;
     document.getElementById('tarif-mc-name').innerText = `Laporan Biaya - Mesin ${id}`;
-    document.getElementById('view-tarif-grid').classList.remove('active');
-    document.getElementById('view-tarif-detail').classList.add('active');
+    showPage('view-tarif-detail');
     const d = new Date();
     document.getElementById('t-end').value = d.toISOString().split('T')[0];
     d.setDate(d.getDate() - 7);
@@ -366,15 +380,14 @@ window.openTarif = (id) => {
 };
 
 window.switchDetailTab = (tab) => {
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+
     if(tab === 'full') {
-        document.getElementById('tab-content-full').style.display = 'block';
-        document.getElementById('tab-content-gauge').style.display = 'none';
+        document.getElementById('tab-content-full').classList.add('active');
         document.getElementById('tab-full').classList.add('active');
-        document.getElementById('btn-gauge').classList.remove('active');
     } else {
-        document.getElementById('tab-content-full').style.display = 'none';
-        document.getElementById('tab-content-gauge').style.display = 'block';
-        document.getElementById('tab-full').classList.remove('active');
+        document.getElementById('tab-content-gauge').classList.add('active');
         document.getElementById('tab-gauge').classList.add('active');
         if(!gaugesInitialized) initGauges();
     }
@@ -383,18 +396,20 @@ window.switchDetailTab = (tab) => {
 function initGauges() {
     const opts = { angle: 0.0, lineWidth: 0.2, radiusScale: 0.9, pointer: { length: 0.5, strokeWidth: 0.035, color: '#1e293b' }, limitMax: false, limitMin: false, colorStart: '#3b82f6', colorStop: '#2563eb', strokeColor: '#e2e8f0', generateGradient: true, highDpiSupport: true };
     gauges = {};
+    // Sesuaikan Max Value dengan spesifikasi meter
     gauges.v = new Gauge(document.getElementById("g-volt")).setOptions(opts); gauges.v.maxValue = 450; gauges.v.setMinValue(0); gauges.v.set(0);
     gauges.a = new Gauge(document.getElementById("g-amp")).setOptions(opts); gauges.a.maxValue = 100; gauges.a.setMinValue(0); gauges.a.set(0);
     gauges.p = new Gauge(document.getElementById("g-pwr")).setOptions(opts); gauges.p.maxValue = 20000; gauges.p.setMinValue(0); gauges.p.set(0);
     gauges.f = new Gauge(document.getElementById("g-freq")).setOptions(opts); gauges.f.maxValue = 60; gauges.f.setMinValue(40); gauges.f.set(0);
     gaugesInitialized = true;
-    if(cache[activeId]) updateDetailView(cache[activeId]);
+    if(cache[activeId]) updateDetail(cache[activeId]);
 }
 
 async function fetchTarifData() {
     const tBody = document.getElementById('tarif-table-body');
     tBody.innerHTML = "<tr><td colspan='5' style='text-align:center'>Mengambil data...</td></tr>";
     
+    // LOGIKA PENGAMBILAN DATA DARI SUPABASE
     const { data, error } = await supabaseClient
         .from('summary_harian')
         .select('*')
@@ -412,8 +427,30 @@ async function fetchTarifData() {
     tBody.innerHTML = html;
 }
 
+window.sendControl = (command) => {
+    if (!mqttClient || !mqttClient.isConnected()) {
+        alert("Koneksi MQTT belum aktif. Mohon tunggu atau coba lagi.");
+        return;
+    }
+    
+    const payload = JSON.stringify({ command: command });
+    const message = new Paho.MQTT.Message(payload);
+    message.destinationName = MQTT_TOPIC_COMMAND;
+    
+    try {
+        mqttClient.send(message);
+        alert(`Perintah '${command}' berhasil dikirim ke ESP32.`);
+    } catch(e) {
+        console.error("Gagal mengirim perintah:", e);
+        alert("Gagal mengirim perintah. Cek koneksi.");
+    }
+}
+
 function setStatus(t, c) { 
     const d = document.getElementById("conn-dot");
     const txt = document.getElementById("conn-text");
     if(d) { d.className = "status-dot " + c; txt.innerText = t; }
 }
+</script>
+</body>
+</html>
