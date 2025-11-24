@@ -4,11 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MONITORING ENERGI (Final Sinkron)</title>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gauge.js/1.3.7/gauge.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <style>
-        /* CSS DARI ANDA (Tidak Diubah) */
+        /* CSS DARI ANDA (Sama Persis) */
         :root { --primary: #0f172a; --secondary: #334155; --accent: #2563eb; --success: #10b981; --danger: #ef4444; --warning: #f59e0b; --bg-light: #f1f5f9; --card-bg: #ffffff; --text-main: #1e293b; --text-muted: #64748b; --border: #e2e8f0; --shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; padding: 20px; color: #333; }
@@ -134,7 +136,7 @@
 
 <script>
 // ======================================================
-// --- 1. CONFIG (SUDAH DIUBAH KE BROKER PUBLIK WSS/443) ---
+// --- 1. CONFIG (SINKRON DENGAN ESP32 & WSS/443 FIX) ---
 // ======================================================
 const SUPABASE_URL = "https://rojhcadtqfynlqzubftx.supabase.co"; 
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs";
@@ -170,7 +172,8 @@ function fmtTime(val) {
 window.onload = function() {
     try {
         supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "/ws", "web_" + Date.now());
+        // FIX KRITIS: Hapus path "/ws" untuk Port 443
+        mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_" + Date.now()); 
         
         mqttClient.onConnectionLost = (r) => { if (r.errorCode !== 0) { setStatus("Koneksi Putus...", "bg-err"); setTimeout(connectMQTT, 3000); } };
         
@@ -234,7 +237,7 @@ function checkTimeouts() {
 function connectMQTT() {
     setStatus("Menghubungkan...", "bg-wait");
     mqttClient.connect({
-        useSSL: true, // AKTIFKAN SSL/TLS UNTUK PORT 443
+        useSSL: true, // WAJIB: Menggunakan WSS (Karena halaman Anda HTTPS)
         userName: MQTT_USER, password: MQTT_PASS, 
         onSuccess: () => { setStatus("ONLINE", "bg-ok"); mqttClient.subscribe(MQTT_TOPIC_WILDCARD); },
         onFailure: (err) => { 
