@@ -4,7 +4,7 @@
 const SUPABASE_URL = 'https://khamzxkrvmnjhrgdqbkg.supabase.co'; 
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtoYW16eGtydm1uamhyZ2RxYmtnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM5NDg2MzcsImV4cCI6MjA3OTUyNDYzN30.SYZTZA3rxaE-kwFuKLlzkol_mLuwjYmVudGCN0imAM8'; 
 
-// FIX: Inisialisasi Klien Supabase (Menggunakan window.supabase)
+// Inisialisasi Klien Supabase (Menggunakan window.supabase)
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const messageElement = document.getElementById('message'); // Untuk pesan error/sukses di login/register
@@ -13,11 +13,13 @@ const messageElement = document.getElementById('message'); // Untuk pesan error/
 async function signUp() {
     const fullName = document.getElementById('fullName')?.value;
     const division = document.getElementById('division')?.value;
-    const role = document.getElementById('userRole')?.value; 
     const email = document.getElementById('email')?.value;
     const password = document.getElementById('password')?.value;
+    
+    // Set role default, semua pendaftar adalah USER yang belum disetujui
+    const DEFAULT_ROLE = 'user'; 
 
-    if (!fullName || !division || !role || !email || !password) {
+    if (!fullName || !division || !email || !password) {
         if (messageElement) messageElement.textContent = 'Semua field wajib diisi.';
         return;
     }
@@ -34,11 +36,12 @@ async function signUp() {
     }
 
     // 2. Jika pendaftaran berhasil, buat profile di tabel 'user_profiles'
+    // Default: user_role = 'user', is_approved = FALSE (menunggu persetujuan Admin)
     const userId = authData.user.id;
     const { error: profileError } = await supabase
         .from('user_profiles')
         .insert([
-            { id: userId, full_name: fullName, division: division, user_role: role } 
+            { id: userId, full_name: fullName, division: division, user_role: DEFAULT_ROLE } 
         ]);
         
     if (profileError) {
@@ -49,7 +52,7 @@ async function signUp() {
 
     if (messageElement) {
         messageElement.style.color = 'green';
-        messageElement.textContent = 'Pendaftaran berhasil! Silakan cek email Anda.';
+        messageElement.textContent = 'Pendaftaran berhasil! Akun Anda menunggu persetujuan Admin.';
     }
 }
 
@@ -59,20 +62,44 @@ async function signIn() {
     const email = document.getElementById('email')?.value;
     const password = document.getElementById('password')?.value;
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: email,
         password: password,
     });
 
-    if (error) {
-        if (messageElement) messageElement.textContent = 'Login Gagal: ' + error.message;
-    } else {
-        if (messageElement) {
-            messageElement.style.color = 'green';
-            messageElement.textContent = 'Login Berhasil! Mengarahkan ke Dashboard...';
-        }
-        window.location.href = 'index.html'; 
+    if (authError) {
+        if (messageElement) messageElement.textContent = 'Login Gagal: ' + authError.message;
+        return;
     }
+    
+    // --- LOGIKA PERSETUJUAN ADMIN (Approval Flow) ---
+    const userId = authData.user.id;
+    
+    // Ambil status is_approved dari tabel user_profiles
+    const { data: profileData, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('is_approved')
+        .eq('id', userId)
+        .single();
+        
+    if (profileError) {
+        if (messageElement) messageElement.textContent = 'Error: Gagal memverifikasi status akun.';
+        return;
+    }
+
+    if (!profileData || profileData.is_approved === false) {
+        // Jika TIDAK disetujui, paksa logout Auth dan tolak akses
+        await supabase.auth.signOut(); 
+        if (messageElement) messageElement.textContent = 'Akses Ditolak. Akun Anda menunggu persetujuan Admin.';
+        return;
+    }
+    
+    // Jika is_approved = true, lanjutkan ke dashboard
+    if (messageElement) {
+        messageElement.style.color = 'green';
+        messageElement.textContent = 'Login Berhasil! Mengarahkan ke Dashboard...';
+    }
+    window.location.href = 'index.html'; 
 }
 
 // --- Fungsi Logout ---
@@ -86,7 +113,7 @@ async function signOut() {
 }
 
 
-// --- Fungsi Kunci: Pengecekan Sesi dan Role Pengguna ---
+// --- Fungsi Kunci: Pengecekan Sesi dan Role Pengguna (Untuk Dashboard Protection) ---
 async function checkUserRole() {
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     
@@ -99,13 +126,14 @@ async function checkUserRole() {
     // Ambil profile dan role
     const { data: profileData, error: profileError } = await supabase
         .from('user_profiles')
-        .select('user_role, full_name, division')
+        .select('user_role, full_name, division, is_approved')
         .eq('id', userId)
         .single();
     
-    if (profileError || !profileData) {
-        console.error("Gagal mengambil profile:", profileError);
-        return { isLoggedIn: true, role: 'user', profile: { full_name: 'Unknown', division: 'Unknown' } }; 
+    if (profileError || !profileData || profileData.is_approved === false) {
+        // Jika profile hilang atau belum disetujui, perlakukan sebagai tamu (guest)
+        // Note: Logic ini hanya dijalankan di index.html, login.html sudah handle redirect
+        return { isLoggedIn: false, role: 'guest', profile: {} }; 
     }
 
     return { isLoggedIn: true, role: profileData.user_role, profile: profileData };
