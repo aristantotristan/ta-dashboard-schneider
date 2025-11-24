@@ -1,10 +1,10 @@
 // =======================================================
-// auth_script.js: FUNGSI OTENTIKASI DAN ROLE MANAGEMENT (FINAL)
+// auth_script.js: FUNGSI OTENTIKASI, ROLE, DAN PASSWORD RESET (FINAL)
 // =======================================================
 const SUPABASE_URL = 'https://khamzxkrvmnjhrgdqbkg.supabase.co'; 
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtoYW16eGtydm1uamhyZ2RxYmtnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM5NDg2MzcsImV4cCI6MjA3OTUyNDYzN30.SYZTZA3rxaE-kwFuKLlzkol_mLuwjYmVudGCN0imAM8'; 
 
-// Inisialisasi Klien Supabase (Menggunakan window.supabase)
+// FIX: Inisialisasi Klien Supabase 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const messageElement = document.getElementById('message'); // Untuk pesan error/sukses di login/register
@@ -16,7 +16,6 @@ async function signUp() {
     const email = document.getElementById('email')?.value;
     const password = document.getElementById('password')?.value;
     
-    // Set role default, semua pendaftar adalah USER yang belum disetujui
     const DEFAULT_ROLE = 'user'; 
 
     if (!fullName || !division || !email || !password) {
@@ -35,8 +34,7 @@ async function signUp() {
         return;
     }
 
-    // 2. Jika pendaftaran berhasil, buat profile di tabel 'user_profiles'
-    // Default: user_role = 'user', is_approved = FALSE (menunggu persetujuan Admin)
+    // 2. Buat profile di tabel 'user_profiles'
     const userId = authData.user.id;
     const { error: profileError } = await supabase
         .from('user_profiles')
@@ -72,10 +70,9 @@ async function signIn() {
         return;
     }
     
-    // --- LOGIKA PERSETUJUAN ADMIN (Approval Flow) ---
+    // --- LOGIKA PERSETUJUAN ADMIN (Approval Flow Check) ---
     const userId = authData.user.id;
     
-    // Ambil status is_approved dari tabel user_profiles
     const { data: profileData, error: profileError } = await supabase
         .from('user_profiles')
         .select('is_approved')
@@ -112,6 +109,22 @@ async function signOut() {
     }
 }
 
+// --- Fungsi Lupa Password (Password Reset) ---
+async function requestPasswordReset() {
+    const email = prompt("Masukkan Email yang Anda gunakan untuk mendaftar:");
+    if (!email) return;
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + '/login.html', 
+    });
+
+    if (error) {
+        alert("Gagal mengirim link reset: " + error.message);
+    } else {
+        alert("Link reset password telah dikirim ke email Anda! Mohon cek kotak masuk Anda.");
+    }
+}
+
 
 // --- Fungsi Kunci: Pengecekan Sesi dan Role Pengguna (Untuk Dashboard Protection) ---
 async function checkUserRole() {
@@ -131,8 +144,7 @@ async function checkUserRole() {
         .single();
     
     if (profileError || !profileData || profileData.is_approved === false) {
-        // Jika profile hilang atau belum disetujui, perlakukan sebagai tamu (guest)
-        // Note: Logic ini hanya dijalankan di index.html, login.html sudah handle redirect
+        // Jika profile hilang atau belum disetujui, perlakukan sebagai tamu (akan diarahkan oleh index.html)
         return { isLoggedIn: false, role: 'guest', profile: {} }; 
     }
 
@@ -145,3 +157,4 @@ window.signUp = signUp;
 window.signIn = signIn;
 window.signOut = signOut;
 window.checkUserRole = checkUserRole;
+window.requestPasswordReset = requestPasswordReset;
