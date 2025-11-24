@@ -1,12 +1,9 @@
 // =======================================================
-// admin_approval_script.js: LOGIKA PERSETUJUAN ADMIN
+// admin_approval_script.js: LOGIKA PERSETUJUAN ADMIN (FINAL)
 // =======================================================
-const SUPABASE_URL = 'https://khamzxkrvmnjhrgdqbkg.supabase.co'; 
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtoYW16eGtydm1uamhyZ2RxYmtnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM5NDg2MzcsImV4cCI6MjA3OTUyNDYzN30.SYZTZA3rxaE-kwFuKLlzkol_mLuwjYmVudGCN0imAM8'; 
-const PROFILES_TABLE = 'user_profiles';
+const PROFILES_TABLE = 'user_profiles'; // Nama tabel yang digunakan
 
-// Inisialisasi Klien Supabase (Menggunakan window.supabase yang sudah dimuat di config/auth script)
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); 
+// Klien Supabase (variabel 'supabase' didefinisikan di config.js)
 
 // Ambil daftar pengguna yang belum disetujui
 async function fetchPendingUsers() {
@@ -19,19 +16,21 @@ async function fetchPendingUsers() {
     }
     
     // 2. Ambil data user yang is_approved = FALSE
-    const { data: pendingUsers, error } = await supabase
-        .from(PROFILES_TABLE)
-        .select(`id, full_name, division, user_role, auth_user:auth.users (email)`)
-        .eq('is_approved', false)
-        .order('full_name', { ascending: true });
+    try {
+        const { data: pendingUsers, error } = await supabase
+            .from(PROFILES_TABLE)
+            .select(`id, full_name, division, user_role, auth_user:auth.users (email)`)
+            .eq('is_approved', false)
+            .order('full_name', { ascending: true });
 
-    if (error) {
-        console.error("Gagal memuat pengguna:", error);
-        document.querySelector('#approvalTable tbody').innerHTML = '<tr><td colspan="5">Error memuat data. Cek RLS Policy SELECT Admin.</td></tr>';
-        return;
-    }
+        if (error) throw error;
+        
+        renderApprovalTable(pendingUsers);
     
-    renderApprovalTable(pendingUsers);
+    } catch (error) {
+        console.error("Gagal memuat pengguna:", error);
+        document.querySelector('#approvalTable tbody').innerHTML = `<tr><td colspan="5">Error Memuat Data. Cek RLS Policy SELECT Admin. (${error.message})</td></tr>`;
+    }
 }
 
 // Render tabel
@@ -46,7 +45,6 @@ function renderApprovalTable(users) {
 
     users.forEach(user => {
         const row = tbody.insertRow();
-        // Ambil email dari data JOIN (auth_user)
         const userEmail = user.auth_user ? user.auth_user.email : 'N/A'; 
         
         row.insertCell().textContent = user.full_name;
@@ -59,7 +57,6 @@ function renderApprovalTable(users) {
         button.textContent = 'Setujui Akun';
         button.className = 'approve-btn';
         
-        // Panggil fungsi approveUser dengan ID unik pengguna
         button.onclick = () => approveUser(user.id);
         actionCell.appendChild(button);
     });
@@ -67,16 +64,19 @@ function renderApprovalTable(users) {
 
 // Fungsi untuk menyetujui (Update) user_profiles
 async function approveUser(userId) {
-    const { error } = await supabase
-        .from(PROFILES_TABLE)
-        .update({ is_approved: true })
-        .eq('id', userId);
+    try {
+        const { error } = await supabase
+            .from(PROFILES_TABLE)
+            .update({ is_approved: true })
+            .eq('id', userId);
 
-    if (error) {
-        alert(`Gagal menyetujui user: ${error.message}. Pastikan RLS Policy UPDATE untuk Admin sudah diatur!`);
-    } else {
+        if (error) throw error;
+
         alert("User berhasil disetujui! Status: APPROVED TRUE.");
         fetchPendingUsers(); // Refresh daftar
+    } catch (error) {
+        console.error("Gagal update user:", error);
+        alert(`Gagal menyetujui user: ${error.message}. Pastikan RLS Policy UPDATE untuk Admin sudah diatur!`);
     }
 }
 
