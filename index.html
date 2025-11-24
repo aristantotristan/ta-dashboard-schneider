@@ -45,18 +45,35 @@
     <pre id="raw-json" style="background-color: #e9ecef; padding: 10px; border-radius: 5px; font-size: 0.9em;"></pre>
 
     <script>
-        const BROKER_URL = 'wss://broker.hivemq.com:8884/mqtt'; 
+        // --- GANTI DENGAN DETAIL HIVEMQ CLOUD ANDA ---
+        const CLOUD_HOST = '3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud'; // HOST ANDA
+        const MQTT_USER = 'schneider_esp'; // USERNAME ANDA
+        const MQTT_PASS = 'SuperSecret123'; // PASSWORD ANDA
+        
+        const BROKER_URL = 'wss://' + CLOUD_HOST + ':8884/mqtt'; // WSS PORT 8884
         const TOPIC = 'schneider/data/meter1'; 
         
-        const client = mqtt.connect(BROKER_URL);
+        const client = mqtt.connect(BROKER_URL, {
+            username: MQTT_USER,
+            password: MQTT_PASS
+        });
+        
         const statusElement = document.getElementById('status');
         const rawJsonElement = document.getElementById('raw-json');
 
+        // Handle Koneksi
         client.on('connect', function () {
             statusElement.innerText = 'LIVE';
             statusElement.style.backgroundColor = '#28a745'; 
             statusElement.style.color = 'white';
             client.subscribe(TOPIC);
+        });
+        
+        client.on('error', function (err) {
+            console.error("MQTT Connection Error:", err);
+            statusElement.innerText = 'ERROR';
+            statusElement.style.backgroundColor = '#dc3545'; 
+            statusElement.style.color = 'white';
         });
 
         client.on('message', function (topic, message) {
@@ -64,14 +81,13 @@
                 const dataString = message.toString();
                 const data = JSON.parse(dataString);
                 
-                // 1. Tampilkan JSON mentah (Ini harus berhasil 100%)
+                // 1. Tampilkan JSON mentah
                 rawJsonElement.innerText = JSON.stringify(data, null, 2);
                 
                 // 2. Lanjutkan Update Dashboard
                 updateDashboard(data);
 
             } catch (e) {
-                // Jika crash saat parsing, setidaknya kita tahu
                 rawJsonElement.innerText = "Error Parsing JSON: " + e.message;
                 console.error("JSON Error:", e);
             }
@@ -80,20 +96,12 @@
         // FUNGSI UPDATE TAMPILAN (PEMROSESAN TANGGUH DAN DIPERBAIKI)
         function updateDashboard(data) {
             const mappings = [
-                { id: 'e_tot_kwh', key: 'e_tot_kwh', fixed: 2 },
-                { id: 'e_r_tot_kvarh', key: 'e_r_tot_kvarh', fixed: 2 },
-                { id: 'e_part_kwh', key: 'e_part_kwh', fixed: 2 },
-                { id: 'e_r_part_kvarh', key: 'e_r_part_kvarh', fixed: 2 },
-                { id: 'voltage_avg_v', key: 'voltage_avg_v', fixed: 1 },
-                { id: 'current_i1_a', key: 'current_i1_a', fixed: 3 },
-                { id: 'current_i2_a', key: 'current_i2_a', fixed: 3 }, 
-                { id: 'current_i3_a', key: 'current_i3_a', fixed: 3 }, 
-                { id: 'power_p_w', key: 'power_p_w', fixed: 0 },
-                { id: 'power_q_var', key: 'power_q_var', fixed: 0 },
-                { id: 'power_s_kva', key: 'power_s_kva', fixed: 2 },
-                { id: 'pf', key: 'pf', fixed: 3 },
-                { id: 'freq_hz', key: 'freq_hz', fixed: 1 },
-                { id: 'op_time_hr', key: 'op_time_hr', fixed: 0 }
+                { id: 'e_tot_kwh', key: 'e_tot_kwh', fixed: 2 }, { id: 'e_r_tot_kvarh', key: 'e_r_tot_kvarh', fixed: 2 },
+                { id: 'e_part_kwh', key: 'e_part_kwh', fixed: 2 }, { id: 'e_r_part_kvarh', key: 'e_r_part_kvarh', fixed: 2 },
+                { id: 'voltage_avg_v', key: 'voltage_avg_v', fixed: 1 }, { id: 'current_i1_a', key: 'current_i1_a', fixed: 3 },
+                { id: 'power_p_w', key: 'power_p_w', fixed: 0 }, { id: 'power_q_var', key: 'power_q_var', fixed: 0 },
+                { id: 'power_s_kva', key: 'power_s_kva', fixed: 2 }, { id: 'pf', key: 'pf', fixed: 3 },
+                { id: 'freq_hz', key: 'freq_hz', fixed: 1 }, { id: 'op_time_hr', key: 'op_time_hr', fixed: 0 }
             ];
 
             mappings.forEach(item => {
@@ -106,10 +114,10 @@
                         try {
                             element.innerText = value.toFixed(item.fixed); 
                         } catch (e) {
-                            element.innerText = '-- FORMAT ERROR'; // Jika formatting gagal
+                            element.innerText = '-- FORMAT ERROR'; 
                         }
                     } else if (value === null) {
-                        element.innerText = '--'; // Jika data gagal (null)
+                        element.innerText = '--';
                     } else {
                         element.innerText = value;
                     }
