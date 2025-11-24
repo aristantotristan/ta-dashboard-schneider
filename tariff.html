@@ -14,10 +14,11 @@
         th { background-color: #ffe082; }
         .rate-display { font-size: 1.5em; font-weight: bold; color: #ff9800; }
         .audit-info { font-size: 0.9em; color: #666; margin-top: 10px; }
-        .filter-group { margin-bottom: 15px; padding: 15px; border: 1px dashed #ccc; border-radius: 5px; display: flex; flex-wrap: wrap; align-items: center; gap: 15px; }
-        .filter-group label { margin-right: 5px; font-weight: bold; }
-        .filter-group input, .filter-group select { padding: 8px; }
-        .filter-group button { padding: 8px 15px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .filter-group { margin-bottom: 15px; padding: 15px; border: 1px dashed #ccc; border-radius: 5px; }
+        .filter-item { margin-bottom: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 15px; } /* Grouping filter items */
+        .filter-item label { font-weight: bold; }
+        .filter-item input, .filter-item select { padding: 8px; }
+        .filter-item button { padding: 8px 15px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -50,20 +51,30 @@
         <h2>Laporan Estimasi Biaya (kWh Konsumsi)</h2>
         
         <div class="filter-group">
-            <label for="machineId">Pilih Mesin:</label>
-            <select id="machineId" required>
-                <option value="">-- Pilih Mesin --</option>
-                <option value="MESIN_01">MESIN_01</option>
-                <option value="MESIN_02">MESIN_02</option>
+            <div class="filter-item">
+                <label for="machineId">Pilih Mesin:</label>
+                <select id="machineId" required>
+                    <option value="">-- Pilih Mesin --</option>
+                    <option value="MESIN_01">MESIN_01</option>
+                    <option value="MESIN_02">MESIN_02</option>
                 </select>
-            
-            <label for="startDate">Tanggal Mulai:</label>
-            <input type="date" id="startDate" required>
-            
-            <label for="endDate">Tanggal Akhir:</label>
-            <input type="date" id="endDate" required>
+            </div>
 
-            <button onclick="fetchAndCalculateCost()">Hitung Biaya</button>
+            <div class="filter-item">
+                <label for="startDate">Tanggal Mulai:</label>
+                <input type="date" id="startDate" required>
+                <label for="startTime">Jam Mulai:</label>
+                <input type="time" id="startTime" value="08:00" required> </div>
+
+            <div class="filter-item">
+                <label for="endDate">Tanggal Akhir:</label>
+                <input type="date" id="endDate" required>
+                <label for="endTime">Jam Akhir:</label>
+                <input type="time" id="endTime" value="17:00" required> </div>
+
+            <div class="filter-item">
+                <button onclick="fetchAndCalculateCost()">Hitung Biaya</button>
+            </div>
         </div>
         
         <table id="tariffTable">
@@ -77,7 +88,7 @@
                 </tr>
             </thead>
             <tbody>
-                <tr><td colspan="5">Pilih mesin, tanggal, dan tekan 'Hitung Biaya' untuk melihat laporan.</td></tr>
+                <tr><td colspan="5">Pilih mesin, tanggal, jam, dan tekan 'Hitung Biaya' untuk melihat laporan.</td></tr>
             </tbody>
         </table>
     </div>
