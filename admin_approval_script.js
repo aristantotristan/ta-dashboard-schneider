@@ -2,9 +2,11 @@
 // admin_approval_script.js: LOGIKA PERSETUJUAN ADMIN
 // =======================================================
 const SUPABASE_URL = 'https://khamzxkrvmnjhrgdqbkg.supabase.co'; 
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtoYW16eGtydm1uamhyZ2RxYmtnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM5NDg2MzcsImV4cCI6MjA3OTUyNDYzN30.SYZTZA3rxaE-kwFuKLlzkol_mLuwjYmVudGCN0imAM8'; 
 const PROFILES_TABLE = 'user_profiles';
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); // Menggunakan ANONYMOUS KEY dari auth_script.js
+// Inisialisasi Klien Supabase (Menggunakan window.supabase yang sudah dimuat di config/auth script)
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); 
 
 // Ambil daftar pengguna yang belum disetujui
 async function fetchPendingUsers() {
@@ -17,16 +19,15 @@ async function fetchPendingUsers() {
     }
     
     // 2. Ambil data user yang is_approved = FALSE
-    // Kita menggunakan JOIN implisit (dot notation) untuk mendapatkan email dari auth.users
     const { data: pendingUsers, error } = await supabase
         .from(PROFILES_TABLE)
         .select(`id, full_name, division, user_role, auth_user:auth.users (email)`)
         .eq('is_approved', false)
-        .order('full_name', { ascending: true }); // Urutkan berdasarkan nama
+        .order('full_name', { ascending: true });
 
     if (error) {
         console.error("Gagal memuat pengguna:", error);
-        document.querySelector('#approvalTable tbody').innerHTML = '<tr><td colspan="5">Error memuat data. Cek RLS Policy.</td></tr>';
+        document.querySelector('#approvalTable tbody').innerHTML = '<tr><td colspan="5">Error memuat data. Cek RLS Policy SELECT Admin.</td></tr>';
         return;
     }
     
@@ -57,6 +58,7 @@ function renderApprovalTable(users) {
         const button = document.createElement('button');
         button.textContent = 'Setujui Akun';
         button.className = 'approve-btn';
+        
         // Panggil fungsi approveUser dengan ID unik pengguna
         button.onclick = () => approveUser(user.id);
         actionCell.appendChild(button);
@@ -79,6 +81,6 @@ async function approveUser(userId) {
 }
 
 // Global function for HTML
-window.approveUser = approveUser; // Ekspos fungsi ke HTML
+window.approveUser = approveUser;
 
 document.addEventListener('DOMContentLoaded', fetchPendingUsers);
