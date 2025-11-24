@@ -1,21 +1,99 @@
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="auth_script.js"></script>
-
-<script>
-    document.addEventListener('DOMContentLoaded', async () => {
-        const authInfo = await checkUserRole();
-        const statusElement = document.getElementById('authStatus');
-        
-        // 1. Logika Proteksi: Jika TIDAK login, redirect ke login.html
-        if (!authInfo.isLoggedIn) {
-            window.location.href = 'login.html'; // LOGIKA REDIRECT HANYA DI SINI!
-            return;
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitoring Energi PT. Amarilys</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; display: flex; flex-direction: column; justify-content: flex-start; align-items: center; min-height: 100vh; }
+        .dashboard-container { max-width: 450px; width: 100%; margin: 20px auto; text-align: center; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); }
+        h1 { color: #333; margin-bottom: 30px; }
+        .info-panel { margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; background: #f9f9f9; width: 100%; box-sizing: border-box;}
+        .button-grid {
+            display: grid;
+            gap: 15px;
         }
+        .dashboard-button {
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .dashboard-button:hover { opacity: 0.9; }
+        
+        /* Warna Tombol */
+        #btn-realtime { background-color: #28a745; }
+        #btn-tariff { background-color: #ffc107; color: #333;}
+        #btn-trouble { background-color: #dc3545; }
+        #btn-control { background-color: #17a2b8; }
 
-        // 2. Tampilkan status jika berhasil login
-        const profile = authInfo.profile;
-        statusElement.innerHTML = `Login sebagai: <b>${profile.full_name || 'User'}</b> (${authInfo.role.toUpperCase()})`;
-        statusElement.style.color = 'green';
-    });
-    // ... (fungsi goToPage) ...
-</script>
+        /* Logout */
+        .logout-button { margin-top: 30px; padding: 10px; background-color: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <div class="dashboard-container">
+        <h1>Monitoring Energi<br>(Halaman Utama)</h1>
+        
+        <div class="info-panel">
+            <p>Status: <span id="authStatus">Memuat...</span></p>
+            <p>Role: <span id="userRoleDisplay">N/A</span></p>
+        </div>
+
+        <div class="button-grid">
+            
+            <div class="dashboard-button" id="btn-realtime" onclick="goToPage('realtime.html')">
+                Monitoring Real Time
+            </div>
+
+            <div class="dashboard-button" id="btn-tariff" onclick="goToPage('tariff.html')">
+                Monitoring Tarif Mesin
+            </div>
+
+            <div class="dashboard-button" id="btn-trouble" onclick="goToPage('trouble.html')">
+                Monitoring Trouble Mesin
+            </div>
+
+            <div class="dashboard-button" id="btn-control" onclick="goToPage('control.html')">
+                Maintenance Sistem
+            </div>
+
+        </div>
+
+        <button onclick="signOut()" class="logout-button">
+            Logout
+        </button>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="auth_script.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const authInfo = await checkUserRole();
+            const statusElement = document.getElementById('authStatus');
+            const roleElement = document.getElementById('userRoleDisplay');
+            
+            // 1. Logika Proteksi: Jika TIDAK login, redirect ke login.html
+            if (!authInfo.isLoggedIn) {
+                window.location.href = 'login.html'; 
+                return;
+            }
+
+            // 2. Tampilkan status jika berhasil login
+            const profile = authInfo.profile;
+            statusElement.textContent = `Login sebagai: ${profile.full_name || 'User'}`;
+            roleElement.textContent = authInfo.role.toUpperCase();
+        });
+
+        function goToPage(page) {
+            window.location.href = page; 
+        }
+    </script>
+</body>
+</html>
