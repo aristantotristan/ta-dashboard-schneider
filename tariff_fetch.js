@@ -1,5 +1,5 @@
 // =======================================================
-// KODE LENGKAP tariff_fetch.js DENGAN FILTER MESIN ID
+// KODE LENGKAP tariff_fetch.js DENGAN FILTER TANGGAL + WAKTU (JAM)
 // =======================================================
 
 const SUPABASE_URL = 'https://khamzxkrvmnjhrgdqbkg.supabase.co'; 
@@ -10,6 +10,7 @@ const TELEMETRY_TABLE = 'machine_telemetry';
 
 let activeRate = 0; 
 
+// Fungsi setup tarif awal (tidak berubah)
 async function setupTariffData() {
     const tariffUrl = `${SUPABASE_URL}/rest/v1/${TARIFF_TABLE}?select=rate_per_kwh,tariff_name,updated_by_name,updated_by_division,updated_at&is_active=eq.true`;
 
@@ -36,36 +37,42 @@ async function setupTariffData() {
     }
 }
 
-// Fungsi Kunci: Mengambil dan Menghitung Biaya Berdasarkan Filter Mesin & Tanggal
+// Fungsi Kunci: Mengambil dan Menghitung Biaya Berdasarkan Filter Mesin, Tanggal & Jam
 async function fetchAndCalculateCost() {
     const machineId = document.getElementById('machineId').value;
     const startDateInput = document.getElementById('startDate').value;
+    const startTimeInput = document.getElementById('startTime').value; // Jam Mulai (e.g., "08:00")
     const endDateInput = document.getElementById('endDate').value;
+    const endTimeInput = document.getElementById('endTime').value; // Jam Akhir (e.g., "17:00")
+
     const tbody = document.querySelector('#tariffTable tbody');
     tbody.innerHTML = `<tr><td colspan="5">Mencari data telemetri untuk ${machineId}...</td></tr>`;
 
-    if (!machineId || !startDateInput || !endDateInput) {
-        alert("Mohon pilih Mesin ID, Tanggal Mulai dan Tanggal Akhir.");
-        tbody.innerHTML = `<tr><td colspan="5">Pilih mesin, tanggal, dan tekan 'Hitung Biaya' untuk melihat laporan.</td></tr>`;
+    if (!machineId || !startDateInput || !endDateInput || !startTimeInput || !endTimeInput) {
+        alert("Mohon lengkapi Mesin ID, Tanggal, dan Jam.");
+        tbody.innerHTML = `<tr><td colspan="5">Pilih mesin, tanggal, jam, dan tekan 'Hitung Biaya' untuk melihat laporan.</td></tr>`;
         return;
     }
 
-    // --- Logika Penentuan Filter Waktu ---
-    const startDate = new Date(startDateInput);
-    startDate.setHours(0, 0, 0, 0); 
-    const endDate = new Date(endDateInput);
-    endDate.setHours(23, 59, 59, 999); 
+    // --- Logika Penggabungan Tanggal dan Waktu (Kritis) ---
     
+    // 1. Tanggal Mulai + Jam Mulai
+    const startDate = new Date(`${startDateInput}T${startTimeInput}:00`);
+    
+    // 2. Tanggal Akhir + Jam Akhir
+    const endDate = new Date(`${endDateInput}T${endTimeInput}:00`);
+
     if (startDate.getTime() >= endDate.getTime()) {
-        alert("Tanggal Mulai harus lebih awal dari Tanggal Akhir.");
-        tbody.innerHTML = `<tr><td colspan="5">Tanggal tidak valid.</td></tr>`;
+        alert("Waktu Mulai harus lebih awal dari Waktu Akhir.");
+        tbody.innerHTML = `<tr><td colspan="5">Waktu tidak valid.</td></tr>`;
         return;
     }
     
+    // Konversi ke format ISO string (digunakan Supabase)
     const startFilter = startDate.toISOString();
     const endFilter = endDate.toISOString();
     
-    // URL API Supabase: FILTER BERDASARKAN MACHINE_ID & WAKTU
+    // URL API Supabase: FILTER BERDASARKAN MACHINE_ID & WAKTU (sekarang lebih presisi)
     const telemetryUrl = `${SUPABASE_URL}/rest/v1/${TELEMETRY_TABLE}?select=machine_id,ea_total,timestamp&machine_id=eq.${machineId}&timestamp=gte.${startFilter}&timestamp=lte.${endFilter}&order=timestamp.asc`; 
     
     try {
@@ -74,8 +81,8 @@ async function fetchAndCalculateCost() {
         
         const telemetryData = await telemetryRes.json();
         
-        if (telemetryData.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5">Tidak ada data yang terekam untuk ${machineId} dalam periode tersebut.</td></tr>`;
+        if (telemetryData.length < 2) {
+            tbody.innerHTML = `<tr><td colspan="5">Hanya ditemukan 1 atau 0 pembacaan untuk ${machineId} dalam periode tersebut. Minimal butuh 2 log.</td></tr>`;
             return;
         }
 
@@ -83,7 +90,7 @@ async function fetchAndCalculateCost() {
         const costSummary = calculateConsumptionByPeriod(telemetryData, activeRate);
         
         if (Object.keys(costSummary).length === 0) {
-             tbody.innerHTML = `<tr><td colspan="5">Data ditemukan, tetapi tidak cukup log (minimal 2 pembacaan) untuk menghitung selisih konsumsi.</td></tr>`;
+             tbody.innerHTML = `<tr><td colspan="5">Data ditemukan, tetapi tidak cukup log untuk menghitung selisih konsumsi.</td></tr>`;
              return;
         }
         
@@ -95,13 +102,11 @@ async function fetchAndCalculateCost() {
     }
 }
 
-// Fungsi Kunci: Menghitung Konsumsi & Biaya berdasarkan data awal dan akhir
+// Fungsi Kunci: Menghitung Konsumsi & Biaya berdasarkan data awal dan akhir (Tidak Berubah)
 function calculateConsumptionByPeriod(telemetryData, ratePerKwh) {
-    // Karena data sudah difilter oleh machineId, kita hanya perlu memproses array ini.
     const machineLogs = {};
 
     telemetryData.forEach(record => {
-        // Kita hanya perlu menyimpan data untuk satu mesin yang terfilter
         if (!machineLogs[record.machine_id]) {
             machineLogs[record.machine_id] = [];
         }
@@ -117,12 +122,12 @@ function calculateConsumptionByPeriod(telemetryData, ratePerKwh) {
         const logs = machineLogs[machineId];
         logs.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 
-        if (logs.length < 2) continue; // Minimal 2 pembacaan untuk menghitung selisih
+        if (logs.length < 2) continue;
 
-        const startLog = logs[0]; // Pembacaan awal
-        const endLog = logs[logs.length - 1]; // Pembacaan akhir
+        const startLog = logs[0];
+        const endLog = logs[logs.length - 1];
 
-        const kwhConsumed = Math.max(0, endLog.eaTotal - startLog.eaTotal); 
+        const kwhConsumed = Math.max(0, endLog.eaTotal - startLog.eaTotal);
         const totalCost = kwhConsumed * ratePerKwh;
 
         results[machineId] = {
@@ -135,7 +140,7 @@ function calculateConsumptionByPeriod(telemetryData, ratePerKwh) {
     return results;
 }
 
-// Fungsi Display (Menampilkan hanya satu baris)
+// Fungsi Display (Tidak Berubah)
 function displayCostData(costSummary) {
     const tbody = document.querySelector('#tariffTable tbody');
     tbody.innerHTML = '';
