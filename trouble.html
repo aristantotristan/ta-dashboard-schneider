@@ -16,13 +16,15 @@
         .filter-group label { margin-right: 5px; font-weight: bold; }
         .filter-group input, .filter-group select { padding: 8px; }
         .filter-group button { padding: 8px 15px; background-color: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .status-on { color: green; font-weight: bold; }
+        .status-off { color: red; font-weight: bold; }
     </style>
 </head>
 <body>
 
     <button class="back-button" onclick="window.location.href='index.html'">← Kembali ke Dashboard</button>
 
-    <h1>Monitoring Trouble Mesin</h1>
+    <h1>Monitoring Trouble Mesin (Log Harian)</h1>
     
     <div class="card filter-group">
         <h2>Pilih Mesin & Periode Laporan</h2>
@@ -44,17 +46,17 @@
     </div>
 
     <div class="card">
-        <h2>Laporan Status Kinerja Mesin: <span id="selectedMachineDisplay">N/A</span></h2>
+        <h2>Log Detail Harian: <span id="selectedMachineDisplay">N/A</span></h2>
         <p id="dateRangeDisplay">Periode: Harap masukkan tanggal</p>
         <table id="troubleTable">
             <thead>
                 <tr>
-                    <th>Mesin ID</th>
-                    <th>Hari ON (Stabil)</th>
-                    <th>Hari OFF (Trouble)</th>
+                    <th>Tanggal</th>
+                    <th>Status</th>
                     <th>Total Trouble Count</th>
-                    <th>Hari Trouble (Tanggal)</th>
-                    <th>Penyebab Utama</th>
+                    <th>Tipe Trouble</th>
+                    <th>Uptime (Jam)</th>
+                    <th>Downtime (Jam)</th>
                 </tr>
             </thead>
             <tbody>
