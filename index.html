@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Schneider MQTT Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; }
+        .data-box { 
+            background-color: white; 
+            padding: 15px; 
+            margin: 10px 0; 
+            border-radius: 8px; 
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        h2 { color: #007bff; }
+        .value { font-size: 2.5em; font-weight: bold; color: #333; }
+        .unit { font-size: 0.6em; color: #6c757d; margin-left: 5px; }
+    </style>
+</head>
+<body>
+
+    <h1>Monitoring Meteran Schneider (MQTT)</h1>
+    <p>Status Koneksi: <span id="status" style="font-weight: bold; color: orange;">Disconnected</span></p>
+
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+        
+        <div class="data-box">
+            <h4>Tegangan (Volt)</h4>
+            <div class="value"><span id="voltage_avg_v">--</span><span class="unit">Volt</span></div>
+        </div>
+
+        <div class="data-box">
+            <h4>Arus I1 (Ampere)</h4>
+            <div class="value"><span id="current_i1_a">--</span><span class="unit">A</span></div>
+        </div>
+        
+        <div class="data-box">
+            <h4>Active Power (Watt)</h4>
+            <div class="value"><span id="power_p_w">--</span><span class="unit">Watt</span></div>
+        </div>
+
+        <div class="data-box">
+            <h4>Total Energi (kWh)</h4>
+            <div class="value"><span id="e_tot_kwh">--</span><span class="unit">kWh</span></div>
+        </div>
+        
+        <div class="data-box">
+            <h4>Power Factor (PF)</h4>
+            <div class="value"><span id="pf">--</span></div>
+        </div>
+        
+        <div class="data-box">
+            <h4>Frekuensi (Hz)</h4>
+            <div class="value"><span id="freq_hz">--</span><span class="unit">Hz</span></div>
+        </div>
+        
+    </div>
+
+    <script>
+        // Konfigurasi harus sama persis dengan yang dikirim ESP32
+        const BROKER_URL = 'ws://broker.hivemq.com:8000/mqtt'; 
+        const TOPIC = 'schneider/data/meter1'; 
+        
+        const client = mqtt.connect(BROKER_URL);
+
+        client.on('connect', function () {
+            document.getElementById('status').innerText = 'Connected';
+            document.getElementById('status').style.color = 'green';
+            client.subscribe(TOPIC, function (err) {
+                if (err) {
+                    console.error('Subscription failed:', err);
+                }
+            });
+        });
+
+        client.on('message', function (topic, message) {
+            try {
+                // Parse JSON data dari ESP32
+                const data = JSON.parse(message.toString());
+                console.log('Data Received:', data);
+
+                // --- DOM MANIPULATION: UPDATE NILAI ---
+                // Setiap kali pesan baru datang, kita harus mencari ID HTML dan mengubah nilainya.
+                
+                // Panggil fungsi untuk update semua parameter
+                updateDashboard(data);
+
+            } catch (e) {
+                console.error('Error processing message:', e);
+            }
+        });
+        
+        client.on('error', function (err) {
+            console.error('MQTT Error:', err);
+            document.getElementById('status').innerText = 'Error';
+            document.getElementById('status').style.color = 'red';
+            client.end();
+        });
+
+        // Fungsi Helper untuk update semua nilai
+        function updateDashboard(data) {
+            // Mapping antara KEY JSON (dari ESP32) dan ID HTML
+            const mappings = [
+                { id: 'voltage_avg_v', key: 'voltage_avg_v' },
+                { id: 'current_i1_a', key: 'current_i1_a' },
+                { id: 'power_p_w', key: 'power_p_w' },
+                { id: 'e_tot_kwh', key: 'e_tot_kwh' },
+                { id: 'pf', key: 'pf' },
+                { id: 'freq_hz', key: 'freq_hz' }
+                // Tambahkan semua parameter lain di sini!
+            ];
+
+            mappings.forEach(item => {
+                const element = document.getElementById(item.id);
+                if (element && data[item.key] !== undefined) {
+                    // Tampilkan nilai dengan 2 angka di belakang koma (jika ada)
+                    element.innerText = data[item.key].toFixed(2); 
+                }
+            });
+        }
+    </script>
+</body>
+</html>
