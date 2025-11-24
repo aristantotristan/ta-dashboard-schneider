@@ -13,6 +13,7 @@
         th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
         th { background-color: #ffe082; }
         .rate-display { font-size: 1.5em; font-weight: bold; color: #ff9800; }
+        .audit-info { font-size: 0.9em; color: #666; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -25,11 +26,25 @@
         <h2>Tarif Aktif Saat Ini</h2>
         <p>Nama Tarif: <span id="currentTariffName">Memuat...</span></p>
         <p>Tarif per kWh: <span id="currentTariffRate" class="rate-display">Memuat...</span></p>
+
+        <div class="audit-info">
+            <hr>
+            <p>Terakhir diperbarui oleh: <span id="updaterName">Memuat...</span> (<span id="updaterDivision"></span>)</p>
+            <p>Waktu Pembaruan: <span id="updaterTime">Memuat...</span></p>
+        </div>
     </div>
-    
+
+    <div class="card">
+        <h3>Ubah Tarif Aktif (Admin Access)</h3>
+        <label for="newRate">Tarif per kWh Baru (Rp):</label>
+        <input type="number" id="newRate" placeholder="Masukkan angka tarif baru" required style="padding: 8px; margin-right: 10px; width: 150px;">
+        
+        <button onclick="updateTariff()" style="padding: 10px; background-color: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer;">Simpan Perubahan Tarif</button>
+    </div>
+
     <div class="card">
         <h2>Laporan Estimasi Biaya (kWh Konsumsi)</h2>
-        <p>Filter data konsumsi: **(Saat ini menggunakan rata-rata dummy)**</p>
+        <p>Data diambil dari Total Ea terakhir pada `machine_telemetry`.</p>
         
         <table id="tariffTable">
             <thead>
