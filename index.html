@@ -1,69 +1,28 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monitoring Energi PT. Amarilys</title>
-    <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; }
-        .dashboard-container { max-width: 400px; width: 100%; margin: 20px auto; text-align: center; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); }
-        h1 { color: #333; margin-bottom: 30px; }
-        .button-grid {
-            display: grid;
-            gap: 20px;
-        }
-        .dashboard-button {
-            color: white;
-            padding: 15px 20px;
-            border-radius: 8px;
-            font-size: 1.1em;
-            font-weight: bold;
-            cursor: pointer; /* Penting agar tombol bisa diklik */
-            transition: background-color 0.3s;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            position: relative; /* Penting untuk z-index */
-            z-index: 10; /* Pastikan tombol di atas elemen lain */
-        }
-        .dashboard-button:hover { opacity: 0.9; }
-        /* Warna untuk identifikasi tombol */
-        #btn-realtime { background-color: #28a745; }
-        #btn-tariff { background-color: #ffc107; color: #333;}
-        #btn-trouble { background-color: #dc3545; }
-        #btn-control { background-color: #17a2b8; }
-    </style>
-</head>
-<body>
+<div style="margin-top: 30px;">
+    <p>Status: <span id="authStatus">Memuat...</span></p>
+    <button onclick="signOut()" style="padding: 10px; background-color: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer; margin-top: 10px;">
+        Logout
+    </button>
+</div>
 
-    <div class="dashboard-container">
-        <h1>Monitoring Energi<br>(Halaman Utama)</h1>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth_script.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        const authInfo = await checkUserRole();
+        const statusElement = document.getElementById('authStatus');
         
-        <div class="button-grid">
-            
-            <div class="dashboard-button" id="btn-realtime" onclick="goToPage('realtime.html')">
-                Monitoring Real Time
-            </div>
-
-            <div class="dashboard-button" id="btn-tariff" onclick="goToPage('tariff.html')">
-                Monitoring Tarif Mesin
-            </div>
-
-            <div class="dashboard-button" id="btn-trouble" onclick="goToPage('trouble.html')">
-                Monitoring Trouble Mesin
-            </div>
-
-            <div class="dashboard-button" id="btn-control" onclick="goToPage('control.html')">
-                Control & Maintenance Sistem
-            </div>
-
-        </div>
-    </div>
-
-    <script>
-        function goToPage(page) {
-            console.log("Navigasi ke: " + page);
-            // BARIS INI KINI DIAKTIFKAN PENUH UNTUK NAVIGASI!
-            window.location.href = page; 
+        if (authInfo.isLoggedIn) {
+            statusElement.innerHTML = `Login sebagai: <b>${authInfo.profile.full_name || 'User'}</b> (${authInfo.role.toUpperCase()})`;
+            statusElement.style.color = 'green';
         }
-    </script>
-</body>
-</html>
+        
+        // Pengecekan, jika tidak login, sudah diarahkan oleh checkUserRole() ke login.html
+    });
+
+    function goToPage(page) {
+        // Navigasi ke halaman detail
+        window.location.href = page; 
+    }
+</script>
