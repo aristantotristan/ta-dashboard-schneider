@@ -5,16 +5,12 @@ const SUPABASE_URL = 'https://khamzxkrvmnjhrgdqbkg.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtoYW16eGtydm1uamhyZ2RxYmtnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM5NDg2MzcsImV4cCI6MjA3OTUyNDYzN30.SYZTZA3rxaE-kwFuKLlzkol_mLuwjYmVudGCN0imAM8'; 
 // =======================================================
 
-// Asumsi: Kita akan mengambil data tarif aktif dan data telemetri (konsumsi)
 const TARIFF_TABLE = 'tariff_settings';
 const TELEMETRY_TABLE = 'machine_telemetry';
 
 async function fetchTariffData() {
-    // 1. Ambil Tarif Aktif
     const tariffUrl = `${SUPABASE_URL}/rest/v1/${TARIFF_TABLE}?select=*&is_active=eq.true`;
-    
-    // 2. Ambil Konsumsi Energi (Kita ambil total Ea dari telemetri, kelompokkan per mesin)
-    const telemetryUrl = `${SUPABASE_URL}/rest/v1/${TELEMETRY_TABLE}?select=machine_id,ea_total&limit=100`; // Limit 100 data terakhir
+    const telemetryUrl = `${SUPABASE_URL}/rest/v1/${TELEMETRY_TABLE}?select=machine_id,ea_total&limit=1000`; 
 
     try {
         const [tariffRes, telemetryRes] = await Promise.all([
@@ -29,15 +25,20 @@ async function fetchTariffData() {
         const tariffData = await tariffRes.json();
         const telemetryData = await telemetryRes.json();
         
-        // Cek tarif aktif
         const activeRate = tariffData.length > 0 ? parseFloat(tariffData[0].rate_per_kwh) : 0;
         const activeName = tariffData.length > 0 ? tariffData[0].tariff_name : 'Tarif Default (Rp 0)';
 
         // Tampilkan tarif
         document.getElementById('currentTariffName').textContent = activeName;
-        document.getElementById('currentTariffRate').textContent = `Rp ${activeRate.toLocaleString('id-ID')}`;
+        document.getElementById('currentTariffRate').textContent = `Rp ${activeRate.toLocaleString('id-ID', { minimumFractionDigits: 2 })}`;
 
-        // Olah dan tampilkan biaya
+        // Tampilkan Detail Audit (BARU)
+        if (tariffData.length > 0) {
+            document.getElementById('updaterName').textContent = tariffData[0].updated_by_name || 'System';
+            document.getElementById('updaterDivision').textContent = tariffData[0].updated_by_division || 'IT';
+            document.getElementById('updaterTime').textContent = new Date(tariffData[0].updated_at).toLocaleString('id-ID');
+        }
+
         displayCostData(telemetryData, activeRate);
         
     } catch (error) {
@@ -52,17 +53,21 @@ function displayCostData(telemetryData, ratePerKwh) {
 
     telemetryData.forEach(record => {
         const machineId = record.machine_id;
-        // Gunakan Total Ea (kWh) untuk estimasi
         const kwh = parseFloat(record.ea_total) || 0; 
         
-        // Untuk data dummy, kita ambil Total Ea yang terakhir/maksimal
-        if (!costSummary[machineId] || kwh > costSummary[machineId].kwhTotal) {
+        // Ambil data Total Ea yang terakhir/maksimal
+        if (!costSummary[machineId] || kwh > (costSummary[machineId].kwhTotal || 0)) {
              costSummary[machineId] = { kwhTotal: kwh };
         }
     });
     
     const tbody = document.querySelector('#tariffTable tbody');
     tbody.innerHTML = '';
+
+    if (Object.keys(costSummary).length === 0) {
+        tbody.innerHTML = `<tr><td colspan='4'>Tidak ada data konsumsi energi (machine_telemetry) yang ditemukan.</td></tr>`;
+        return;
+    }
 
     for (const machineId in costSummary) {
         const kwh = costSummary[machineId].kwhTotal;
@@ -72,8 +77,55 @@ function displayCostData(telemetryData, ratePerKwh) {
         row.insertCell().textContent = machineId;
         row.insertCell().textContent = kwh.toFixed(2);
         row.insertCell().textContent = ratePerKwh.toLocaleString('id-ID');
-        row.insertCell().textContent = totalCost.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' });
+        row.insertCell().textContent = totalCost.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 });
     }
 }
+
+// Fungsi untuk POST (PATCH) update tarif (BARU)
+async function updateTariff() {
+    const newRate = document.getElementById('newRate').value;
+    
+    if (newRate === "" || isNaN(newRate) || parseFloat(newRate) <= 0) {
+        alert("Mohon masukkan nilai tarif yang valid (angka positif).");
+        return;
+    }
+    
+    // Hardcoded ID 1, asumsi itu adalah tarif aktif
+    const activeTariffId = 1; 
+    
+    const userName = prompt("Masukkan Nama Anda:") || 'Admin Dashboard';
+    const userDivision = prompt("Masukkan Divisi Anda:") || 'IT/TA';
+
+    const payload = {
+        rate_per_kwh: parseFloat(newRate),
+        updated_by_name: userName,
+        updated_by_division: userDivision,
+        updated_at: new Date().toISOString()
+    };
+    
+    const updateUrl = `${SUPABASE_URL}/rest/v1/${TARIFF_TABLE}?id=eq.${activeTariffId}`;
+
+    try {
+        const response = await fetch(updateUrl, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'apikey': SUPABASE_ANON_KEY 
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (response.ok) {
+            alert(`Tarif berhasil diperbarui menjadi Rp ${newRate}! Audit trail dicatat. Silakan cek RLS Policy UPDATE.`);
+            fetchTariffData(); 
+        } else {
+            alert('Gagal memperbarui tarif. Pastikan RLS Policy (UPDATE) di Supabase sudah diatur untuk tabel tariff_settings.');
+        }
+    } catch (error) {
+        console.error("Error update tarif:", error);
+        alert("Terjadi error saat komunikasi dengan server.");
+    }
+}
+
 
 document.addEventListener('DOMContentLoaded', fetchTariffData);
