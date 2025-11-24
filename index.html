@@ -8,7 +8,11 @@
         body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; display: flex; flex-direction: column; justify-content: flex-start; align-items: center; min-height: 100vh; }
         .dashboard-container { max-width: 450px; width: 100%; margin: 20px auto; text-align: center; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); }
         h1 { color: #333; margin-bottom: 30px; }
+        
+        /* Info Panel */
         .info-panel { margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; background: #f9f9f9; width: 100%; box-sizing: border-box;}
+        .info-panel p { margin: 5px 0; font-size: 0.95em; }
+
         .button-grid {
             display: grid;
             gap: 15px;
@@ -30,6 +34,7 @@
         #btn-tariff { background-color: #ffc107; color: #333;}
         #btn-trouble { background-color: #dc3545; }
         #btn-control { background-color: #17a2b8; }
+        #btn-admin-approval { background-color: #007bff; } /* Tombol Tambahan Admin */
 
         /* Logout */
         .logout-button { margin-top: 30px; padding: 10px; background-color: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer; }
@@ -41,7 +46,7 @@
         <h1>Monitoring Energi<br>(Halaman Utama)</h1>
         
         <div class="info-panel">
-            <p>Status: <span id="authStatus">Memuat...</span></p>
+            <p>User: <span id="authStatus">Memuat...</span></p>
             <p>Role: <span id="userRoleDisplay">N/A</span></p>
         </div>
 
@@ -62,6 +67,11 @@
             <div class="dashboard-button" id="btn-control" onclick="goToPage('control.html')">
                 Maintenance Sistem
             </div>
+            
+            <div class="dashboard-button" id="btn-admin-approval" 
+                 onclick="goToPage('admin_approval.html')" style="display:none;">
+                Persetujuan Akun Baru
+            </div>
 
         </div>
 
@@ -78,6 +88,7 @@
             const authInfo = await checkUserRole();
             const statusElement = document.getElementById('authStatus');
             const roleElement = document.getElementById('userRoleDisplay');
+            const adminButton = document.getElementById('btn-admin-approval');
             
             // 1. Logika Proteksi: Jika TIDAK login, redirect ke login.html
             if (!authInfo.isLoggedIn) {
@@ -87,8 +98,13 @@
 
             // 2. Tampilkan status jika berhasil login
             const profile = authInfo.profile;
-            statusElement.textContent = `Login sebagai: ${profile.full_name || 'User'}`;
+            statusElement.textContent = profile.full_name || 'User';
             roleElement.textContent = authInfo.role.toUpperCase();
+
+            // 3. LOGIKA ADMIN: Tampilkan Tombol Persetujuan
+            if (authInfo.role === 'admin') {
+                adminButton.style.display = 'block'; 
+            }
         });
 
         function goToPage(page) {
