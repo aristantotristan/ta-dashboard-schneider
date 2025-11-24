@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        /* CSS FINAL (PROFESSIONAL LOOK) */
+        /* CSS disederhanakan untuk tampilan */
         :root { --primary: #0f172a; --secondary: #334155; --accent: #2563eb; --success: #10b981; --danger: #ef4444; --warning: #f59e0b; --bg-light: #f1f5f9; --card-bg: #ffffff; --text-main: #1e293b; --text-muted: #64748b; --border: #e2e8f0; --shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Inter', sans-serif; background: var(--bg-light); color: var(--text-main); height: 100vh; display: flex; overflow: hidden; }
@@ -98,7 +98,7 @@
                     <div class="gauge-box"><h4>Arus Total (A)</h4><canvas id="g-amp"></canvas><div id="val-amp" style="font-weight:bold; font-size:1.5rem;">-</div></div>
                     <div class="gauge-box"><h4>Daya Aktif (W)</h4><canvas id="g-pwr"></canvas><div id="val-power" style="font-weight:bold; font-size:1.5rem;">-</div></div>
                     <div class="gauge-box"><h4>Frekuensi (Hz)</h4><canvas id="g-freq"></canvas><div id="val-freq" style="font-weight:bold; font-size:1.5rem;">-</div></div>
-                </div>
+            </div>
             </div>
         </div>
 
@@ -106,25 +106,24 @@
 
 <script>
 // ======================================================
-// --- 1. CONFIG (PASTI KAN SAMA DENGAN ESP32) ---
+// --- 1. CONFIG (SUDAH DIUBAH KE BROKER PUBLIK) ---
 // ======================================================
-const MQTT_HOST = "cbc4d19f6f3d4371b47d363751d186d1.s1.eu.hivemq.cloud"; // URL HOST BARU ANDA
-const MQTT_PORT = 8883; // Port TLS
-const MQTT_USER = "vercell_client"; // Username Anda
-const MQTT_PASS = "VercelPass123!"; // Password Anda
+const MQTT_HOST = "broker.hivemq.com"; // BROKER PUBLIK
+const MQTT_PORT = 1883; // PORT NON-TLS
+const MQTT_USER = ""; // KOSONG
+const MQTT_PASS = ""; // KOSONG
 const MQTT_TOPIC_WILDCARD = "meter/id1/#"; // SUBSCRIBE KE SEMUA DATA METER ID 1
 
 // --- GLOBALS ---
 let mqttClient;
 let gauges = {};
-let activeId = 1; // Kita hanya punya 1 mesin (ID 1)
+let activeId = 1; // Mesin ID 1 dari ESP32
 let gaugesInitialized = false;
 let cache = {};
 let lastUpdate = {};
 const TIMEOUT_MS = 180000; // Watchdog 3 Menit
 
 // Map Topic Suffixes dari ESP32 ke Key di HTML
-// Contoh: "voltage_avg" dari ESP32 menjadi key "v" di HTML
 const KEY_MAP = { 
     'voltage_avg': 'v', 'current_i1': 'i1', 'current_i2': 'i2', 'current_i3': 'i3', 
     'power_active_w': 'p', 'power_reactive_var': 'q', 'power_apparent_kva': 's', 
@@ -144,7 +143,8 @@ function fmtTime(v) {
 window.onload = function() {
     try {
         // Init MQTT Client
-        mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "/ws", "pro_" + Date.now()); // Menambahkan /ws untuk WebSocket
+        // Paho menggunakan port standar 80/443 untuk WebSocket, tapi kita set 1883 agar MQTT tau ini koneksi standar
+        mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "/ws", "pro_" + Date.now()); 
 
         mqttClient.onConnectionLost = (r) => { 
             if (r.errorCode !== 0) { 
@@ -165,18 +165,15 @@ window.onload = function() {
 
 function initUI() {
     let gridM = "";
-    // Hanya inisialisasi satu card untuk METER_ID 1
-    for(let i=1; i<=1; i++) {
+    for(let i=1; i<=1; i++) { // Hanya untuk Mesin 1
         gridM += `<div class="machine-card offline" id="card-${i}" onclick="openDetail(${i})"><div class="mc-header"><div class="mc-title">Mesin ${i}</div><i class="fa-solid fa-industry mc-icon"></i></div><div class="mc-status" id="badge-${i}">OFFLINE</div></div>`;
     }
     document.getElementById("machine-grid").innerHTML = gridM;
-    // Inisialisasi cache untuk Mesin 1
     cache[1] = {id: 1, status: 'offline'};
 }
 
 function checkTimeouts() {
     const now = Date.now();
-    // Hanya cek Mesin 1
     for(let i=1; i<=1; i++) {
         if(lastUpdate[i] && (now - lastUpdate[i] > TIMEOUT_MS)) {
             const off = {id: i, status: 'offline'};
@@ -191,10 +188,10 @@ function checkTimeouts() {
 function connectMQTT() {
     setStatus("Menghubungkan...", "bg-wait");
     mqttClient.connect({
-        useSSL: true, userName: MQTT_USER, password: MQTT_PASS,
+        useSSL: false, // TIDAK PAKAI SSL
+        userName: MQTT_USER, password: MQTT_PASS, // KOSONG
         onSuccess: () => { 
             setStatus("Connected (Real-Time)", "bg-ok"); 
-            // SUBSCRIBE KE TOPIC WILDCARD
             mqttClient.subscribe(MQTT_TOPIC_WILDCARD); 
         },
         onFailure: (err) => { 
@@ -209,27 +206,22 @@ function connectMQTT() {
 function onMessageArrived(m) {
     try {
         const topicParts = m.destinationName.split('/'); // meter/id1/voltage_avg
-        const id = 1; // METER_ID selalu 1 dari ESP32
+        const id = 1; // METER_ID selalu 1
         const topicSuffix = topicParts[2]; // Contoh: "voltage_avg"
         
-        // Cek jika key ada di mapping
         const finalKey = KEY_MAP[topicSuffix];
-        if (!finalKey) return; // Abaikan topik yang tidak dikenal
+        if (!finalKey) return; 
 
-        // Ambil nilai float dari payload
         const value = parseFloat(m.payloadString);
 
-        // Ambil data dari cache atau buat baru (initial status online)
         let d = cache[id] || { id: id, status: 'online' };
         d.status = 'online'; 
 
-        // Simpan data ke cache dengan key yang benar (v, i1, p, dll)
         d[finalKey] = value;
         
         cache[id] = d;
-        lastUpdate[id] = Date.now(); // Update waktu terakhir
+        lastUpdate[id] = Date.now(); 
         
-        // Update UI
         updateCard(d);
         if(id === activeId) updateDetail(d);
 
@@ -252,10 +244,13 @@ function updateCard(d) {
 
 function updateDetail(d) {
     const isOff = d.status === 'offline';
-    // Gunakan key yang ada di cache (v, i1, p, dst)
     const val = (k, dec, u='') => isOff ? '0' : (d[k] == null || isNaN(d[k]) ? 'N/A' : `<span class="val-highlight">${fmt(d[k], dec)}</span> <span class="unit">${u}</span>`);
     const valT = (k) => isOff ? '0 Hari 0 Jam' : (d[k] == null || isNaN(d[k]) ? 'N/A' : `<span class="val-highlight time-val">${fmtTime(d[k])}</span>`);
     
+    // Menghitung arus rata-rata dari I1, I2, I3 (Jika datanya ada)
+    let avgI = 0;
+    if(d.i1 != null && d.i2 != null && d.i3 != null) avgI = (d.i1 + d.i2 + d.i3) / 3;
+
     const html = `
         <tr><td class="group-header" colspan="2">1. Energi (Akumulasi)</td></tr>
         <tr><td>Total Ea Import</td><td>${val('e', 2, 'kWh')}</td></tr>
@@ -284,19 +279,14 @@ function updateDetail(d) {
 
     // UPDATE GAUGE
     if(gaugesInitialized) {
-        // Nilai Gauge menggunakan nilai dari cache
         gauges.v.set(isOff || d.v == null ? 0 : d.v); document.getElementById("val-volt").innerText = isOff || d.v == null ? "-" : fmt(d.v, 0) + " V";
-        // Ambil rata-rata arus (I1+I2+I3)/3 untuk gauge Arus Total jika ada
-        let avgI = 0;
-        if(d.i1 != null && d.i2 != null && d.i3 != null) avgI = (d.i1 + d.i2 + d.i3) / 3;
-        
         gauges.a.set(isOff ? 0 : avgI); document.getElementById("val-amp").innerText = isOff ? "-" : fmt(avgI, 1) + " A";
         gauges.p.set(isOff || d.p == null ? 0 : d.p); document.getElementById("val-power").innerText = isOff || d.p == null ? "-" : fmt(d.p, 0) + " W";
         gauges.f.set(isOff || d.hz == null ? 0 : d.hz); document.getElementById("val-freq").innerText = isOff || d.hz == null ? "-" : fmt(d.hz, 1) + " Hz";
     }
 }
 
-// --- FUNGSI NAVIGASI & GAUGE (Tidak diubah, hanya ditambahkan) ---
+// --- FUNGSI NAVIGASI & GAUGE (SAMA) ---
 window.showPage = (id) => {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.getElementById(id).classList.add('active');
@@ -340,10 +330,9 @@ function setStatus(t, c) { 
     if(d) { d.className = "status-dot " + c; txt.innerText = t; }
 }
 
-// Tambahkan inisialisasi awal ke card 1
 document.addEventListener('DOMContentLoaded', () => {
     initUI();
-    updateCard({id: 1, status: 'offline'}); // Pastikan card 1 ada
+    updateCard({id: 1, status: 'offline'}); 
 });
 
 </script>
