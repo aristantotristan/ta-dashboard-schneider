@@ -38,32 +38,39 @@ async function setupTariffData() {
     }
 }
 
-// Fungsi BARU: Mengambil dan Menghitung Biaya Berdasarkan Filter Tanggal
+// Fungsi Kunci: Mengambil dan Menghitung Biaya Berdasarkan Filter Tanggal
 async function fetchAndCalculateCost() {
-    const startDate = document.getElementById('startDate').value;
-    const endDate = document.getElementById('endDate').value;
+    const startDateInput = document.getElementById('startDate').value;
+    const endDateInput = document.getElementById('endDate').value;
     const tbody = document.querySelector('#tariffTable tbody');
     tbody.innerHTML = `<tr><td colspan="5">Mencari data telemetri...</td></tr>`;
 
-    if (!startDate || !endDate) {
+    if (!startDateInput || !endDateInput) {
         alert("Mohon pilih Tanggal Mulai dan Tanggal Akhir.");
         tbody.innerHTML = `<tr><td colspan="5">Pilih tanggal dan tekan 'Hitung Biaya' untuk melihat laporan.</td></tr>`;
         return;
     }
 
-    if (new Date(startDate) >= new Date(endDate)) {
+    // 1. Tentukan Tanggal Mulai (Pukul 00:00:00 di awal hari yang dipilih)
+    const startDate = new Date(startDateInput);
+    // 2. Tentukan Tanggal Akhir (Pukul 23:59:59 di akhir hari yang dipilih)
+    const endDate = new Date(endDateInput);
+    endDate.setHours(23, 59, 59, 999); // Set ke hampir tengah malam agar inklusif
+    
+    // Validasi Tanggal
+    if (startDate.getTime() >= endDate.getTime()) {
         alert("Tanggal Mulai harus lebih awal dari Tanggal Akhir.");
         tbody.innerHTML = `<tr><td colspan="5">Tanggal tidak valid.</td></tr>`;
         return;
     }
     
-    // Konversi format tanggal untuk filter Supabase
-    // Supabase menggunakan format ISO, kita tambahkan satu hari pada endDate agar inklusif
-    const endFilterDate = new Date(endDate);
-    endFilterDate.setDate(endFilterDate.getDate() + 1); // Tambah 1 hari agar data tanggal akhir ikut terbawa
+    // Konversi ke format ISO string (digunakan Supabase)
+    const startFilter = startDate.toISOString();
+    const endFilter = endDate.toISOString();
     
-    // Ambil semua data Ea_Total dan timestamp dalam rentang waktu yang dipilih
-    const telemetryUrl = `${SUPABASE_URL}/rest/v1/${TELEMETRY_TABLE}?select=machine_id,ea_total,timestamp&timestamp=gte.${startDate}&timestamp=lt.${endFilterDate.toISOString()}&order=timestamp.asc`; 
+    // Ambil data Ea_Total dan timestamp
+    // Filter: timestamp >= startFilter (gte.) DAN timestamp <= endFilter (lte.)
+    const telemetryUrl = `${SUPABASE_URL}/rest/v1/${TELEMETRY_TABLE}?select=machine_id,ea_total,timestamp&timestamp=gte.${startFilter}&timestamp=lte.${endFilter}&order=timestamp.asc`; 
     
     try {
         const telemetryRes = await fetch(telemetryUrl, { headers: {'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY } });
@@ -72,17 +79,23 @@ async function fetchAndCalculateCost() {
         const telemetryData = await telemetryRes.json();
         
         if (telemetryData.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5">Tidak ada data yang terekam dalam periode tersebut.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="5">Tidak ada data yang terekam dalam periode tersebut. (Rentang filter: ${startFilter} hingga ${endFilter})</td></tr>`;
             return;
         }
 
         // --- Proses Kalkulasi Konsumsi Berdasarkan Selisih ---
         const costSummary = calculateConsumptionByPeriod(telemetryData, activeRate);
+        
+        if (Object.keys(costSummary).length === 0) {
+             tbody.innerHTML = `<tr><td colspan="5">Data ditemukan, tetapi tidak cukup log (minimal 2 pembacaan per mesin) untuk menghitung selisih konsumsi.</td></tr>`;
+             return;
+        }
+        
         displayCostData(costSummary);
 
     } catch (error) {
         console.error("Gagal menghitung biaya:", error);
-        tbody.innerHTML = `<tr><td colspan="5">Error: ${error.message}. Cek koneksi Supabase.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5">Error: ${error.message}. Cek RLS Policy SELECT pada machine_telemetry.</td></tr>`;
     }
 }
 
@@ -105,7 +118,7 @@ function calculateConsumptionByPeriod(telemetryData, ratePerKwh) {
 
     for (const machineId in machineLogs) {
         const logs = machineLogs[machineId];
-        // Urutkan (seharusnya sudah diurutkan dari query, tapi untuk jaga-jaga)
+        // Urutkan (seharusnya sudah diurutkan dari query)
         logs.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 
         if (logs.length < 2) continue; // Minimal 2 pembacaan untuk menghitung selisih
@@ -126,15 +139,10 @@ function calculateConsumptionByPeriod(telemetryData, ratePerKwh) {
     return results;
 }
 
-// Fungsi Display (Diubah agar sesuai struktur tabel baru)
+// Fungsi Display
 function displayCostData(costSummary) {
     const tbody = document.querySelector('#tariffTable tbody');
     tbody.innerHTML = '';
-
-    if (Object.keys(costSummary).length === 0) {
-        tbody.innerHTML = `<tr><td colspan='5'>Tidak cukup data untuk menghitung selisih konsumsi.</td></tr>`;
-        return;
-    }
 
     const formatRupiah = (value) => value.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 });
 
@@ -150,7 +158,7 @@ function displayCostData(costSummary) {
     }
 }
 
-// --- Fungsi Update Tariff (Tidak Berubah) ---
+// Fungsi Update Tariff
 async function updateTariff() {
     const newRate = document.getElementById('newRate').value;
     
