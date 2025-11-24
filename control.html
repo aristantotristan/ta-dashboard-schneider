@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pencatatan Maintenance Sistem</title>
+    <title>Monitoring Downtime Koneksi</title>
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4; }
         h1 { color: #17a2b8; }
@@ -12,39 +12,42 @@
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
         th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
         th { background-color: #d1ecf1; }
-        .status-running { color: green; font-weight: bold; }
-        .status-stopped { color: red; font-weight: bold; }
-        .action-buttons { margin-top: 15px; }
-        .action-buttons button { padding: 10px 15px; margin-right: 10px; border: none; border-radius: 5px; cursor: pointer; color: white; font-weight: bold; }
-        #btnDisconnect { background-color: #dc3545; }
-        #btnReconnect { background-color: #28a745; }
+        .filter-group { margin-bottom: 15px; padding: 15px; border: 1px dashed #ccc; border-radius: 5px; }
+        .filter-group input { padding: 8px; margin-right: 15px; }
+        .filter-group button { padding: 8px 15px; background-color: #17a2b8; color: white; border: none; border-radius: 5px; cursor: pointer; }
     </style>
 </head>
 <body>
 
     <button class="back-button" onclick="window.location.href='index.html'">← Kembali ke Dashboard</button>
 
-    <h1>Pencatatan Maintenance & Log Koneksi (Satpam IoT)</h1>
+    <h1>Monitoring Downtime Koneksi (Satpam IoT) 📡</h1>
 
-    <div class="card">
-        <h2>Pencatatan Manual Gangguan Koneksi</h2>
-        <p>Gunakan tombol ini untuk mencatat kapan koneksi *gateway* IoT terputus atau pulih (misalnya karena WiFi mati/hidup).</p>
+    <div class="card filter-group">
+        <h2>Pilih Periode Laporan</h2>
+        <label for="startDate">Tanggal Mulai:</label>
+        <input type="date" id="startDate" required>
+        
+        <label for="endDate">Tanggal Akhir:</label>
+        <input type="date" id="endDate" required>
 
-        <div class="action-buttons">
-            <button id="btnDisconnect" onclick="logConnectionStatus('DISCONNECTED')">Catat Gangguan Koneksi</button>
-            <button id="btnReconnect" onclick="logConnectionStatus('RECONNECTED')">Catat Koneksi Pulih</button>
-        </div>
+        <button onclick="fetchDowntimeLog()">Tampilkan Log</button>
     </div>
     
     <div class="card">
         <h2>Log Gangguan Koneksi Historis</h2>
-        <p>Status Komunikasi Terakhir: <span id="connectionStatus" class="status-running">Memuat...</span></p>
+        <p id="dateRangeDisplay">Periode yang ditampilkan: N/A</p>
         
-        <table id="connectionLogTable">
+        <table id="downtimeLogTable">
             <thead>
-                <tr><th>Status</th><th>Waktu Kejadian</th><th>Keterangan/Durasi</th></tr>
+                <tr>
+                    <th>Waktu Mulai Gagal Kirim</th>
+                    <th>Waktu Pulih (Menyambung Kembali)</th>
+                    <th>Durasi (Menit)</th>
+                    <th>Penyebab</th>
+                </tr>
             </thead>
-            <tbody><tr><td colspan="3">Memuat log koneksi...</td></tr></tbody>
+            <tbody><tr><td colspan="4">Pilih tanggal dan tekan 'Tampilkan Log' untuk melihat riwayat.</td></tr></tbody>
         </table>
     </div>
 
