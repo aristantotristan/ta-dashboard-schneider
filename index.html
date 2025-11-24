@@ -31,17 +31,14 @@
         <div class="data-box"><div class="label">2. Total Energi Reaktif (Er)</div><div class="value"><span id="e_r_tot_kvarh">--</span><span class="unit">kVARh</span></div></div>
         <div class="data-box"><div class="label">3. Partial Energi Aktif</div><div class="value"><span id="e_part_kwh">--</span><span class="unit">kWh</span></div></div>
         <div class="data-box"><div class="label">4. Partial Energi Reaktif</div><div class="value"><span id="e_r_part_kvarh">--</span><span class="unit">kVARh</span></div></div>
-        
         <div class="data-box"><div class="label">5. Voltage (L-L Avg)</div><div class="value"><span id="voltage_avg_v">--</span><span class="unit">Volt</span></div></div>
         <div class="data-box"><div class="label">6. Current (I1)</div><div class="value"><span id="current_i1_a">--</span><span class="unit">Ampere</span></div></div>
         <div class="data-box"><div class="label">7. Active Power (P)</div><div class="value"><span id="power_p_w">--</span><span class="unit">Watt</span></div></div>
-        
         <div class="data-box"><div class="label">8. Reactive Power (Q)</div><div class="value"><span id="power_q_var">--</span><span class="unit">VAR</span></div></div>
         <div class="data-box"><div class="label">9. Apparent Power (S)</div><div class="value"><span id="power_s_kva">--</span><span class="unit">kVA</span></div></div>
         <div class="data-box"><div class="label">10. Power Factor (PF)</div><div class="value"><span id="pf">--</span></div></div>
         <div class="data-box"><div class="label">11. Frequency (Hz)</div><div class="value"><span id="freq_hz">--</span><span class="unit">Hz</span></div></div>
         <div class="data-box"><div class="label">12. Operation Time</div><div class="value"><span id="op_time_hr">--</span><span class="unit">Jam</span></div></div>
-
     </div>
 
     <h3 style="margin-top: 40px; color: #555;">Data JSON Terakhir (Debugging)</h3>
@@ -55,7 +52,6 @@
         const statusElement = document.getElementById('status');
         const rawJsonElement = document.getElementById('raw-json');
 
-        // Handle Koneksi
         client.on('connect', function () {
             statusElement.innerText = 'LIVE';
             statusElement.style.backgroundColor = '#28a745'; 
@@ -68,15 +64,16 @@
                 const dataString = message.toString();
                 const data = JSON.parse(dataString);
                 
-                // 1. Tampilkan JSON mentah
+                // 1. Tampilkan JSON mentah (Ini harus berhasil 100%)
                 rawJsonElement.innerText = JSON.stringify(data, null, 2);
                 
-                // 2. Update Dashboard
+                // 2. Lanjutkan Update Dashboard
                 updateDashboard(data);
 
             } catch (e) {
+                // Jika crash saat parsing, setidaknya kita tahu
                 rawJsonElement.innerText = "Error Parsing JSON: " + e.message;
-                console.error("JSON Parsing Error:", e);
+                console.error("JSON Error:", e);
             }
         });
 
@@ -109,10 +106,10 @@
                         try {
                             element.innerText = value.toFixed(item.fixed); 
                         } catch (e) {
-                            element.innerText = String(value); 
+                            element.innerText = '-- FORMAT ERROR'; // Jika formatting gagal
                         }
                     } else if (value === null) {
-                        element.innerText = '--';
+                        element.innerText = '--'; // Jika data gagal (null)
                     } else {
                         element.innerText = value;
                     }
