@@ -19,9 +19,13 @@
             transition: background-color 0.3s;
         }
         .back-button:hover { background-color: #5a6268; }
+        
+        /* Status Bar Styling */
         .status-bar { padding: 10px; margin-bottom: 20px; border-radius: 8px; text-align: center; font-weight: bold; }
         .connected { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .disconnected { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        
+        /* Grid and Card Styling */
         .grid { 
             display: grid; 
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
@@ -39,7 +43,7 @@
         .value { font-size: 2.5em; font-weight: 700; color: #333; line-height: 1; }
         .unit { font-size: 0.9em; color: #666; margin-top: 5px; display: block; }
         
-        /* Tabel Metadata */
+        /* Metadata Table Styling */
         .metadata-table { margin-top: 30px; }
         .metadata-table table { width: 100%; border-collapse: collapse; margin-top: 10px; background: #fff; font-size: 0.9em; }
         .metadata-table th, .metadata-table td { border: 1px solid #ddd; padding: 10px; text-align: left; }
@@ -114,11 +118,10 @@
 </div>
 
 <script>
-    // --- KONFIGURASI MQTT ---
+    // --- KONFIGURASI MQTT (DIUBAH UNTUK WSS AMAN) ---
     const host = "broker.hivemq.com";
-    const port = 8000; // Port WebSocket HiveMQ (Penting: Beda dengan port 1883 di ESP32)
+    const port = 8883; // <<< Ganti ke port WSS (WebSocket Secure)
     const topic = "schneider/mesin01/telemetry";
-    // Buat Client ID unik agar broker tidak menolak
     const clientId = "WebClient-" + parseInt(Math.random() * 1000, 10); 
 
     const statusElement = document.getElementById('mqtt-status');
@@ -135,17 +138,14 @@
         onSuccess: onConnect,
         onFailure: onFailure,
         cleanSession: true,
-        useSSL: false // HiveMQ umumnya tidak memerlukan SSL untuk port 8000
+        useSSL: true // <<< DISET TRUE UNTUK KONEKSI AMAN (WSS)
     });
 
     function onConnect() {
         console.log("MQTT Connected");
         statusElement.className = 'status-bar connected';
         statusElement.innerHTML = 'Status Koneksi: **Connected**';
-        
-        // Subscribe ke Topik setelah berhasil terhubung
         client.subscribe(topic);
-        console.log(`Subscribed to: ${topic}`);
     }
 
     function onFailure(responseObject) {
@@ -161,45 +161,26 @@
             statusElement.innerHTML = 'Status Koneksi: **Disconnected** (Lost). Reconnecting...';
         }
         // Coba koneksi ulang setelah 5 detik
-        setTimeout(() => client.connect({ onSuccess: onConnect, onFailure: onFailure }), 5000);
+        setTimeout(() => client.connect({ onSuccess: onConnect, onFailure: onFailure, useSSL: true }), 5000);
     }
 
     function onMessageArrived(message) {
-        console.log("Message Arrived:", message.payloadString);
         try {
-            // Parsing payload JSON dari ESP32
             const data = JSON.parse(message.payloadString);
             
             // --- UPDATE NILAI DI DASHBOARD ---
             
-            // 1. Voltage (voltage_avg)
-            if (data.voltage_avg !== undefined) {
-                document.getElementById('voltage').innerText = data.voltage_avg.toFixed(2);
-            } else {
-                document.getElementById('voltage').innerText = 'N/A';
-            }
+            // Voltage (voltage_avg)
+            document.getElementById('voltage').innerText = data.voltage_avg !== undefined ? data.voltage_avg.toFixed(2) : 'N/A';
             
-            // 2. Current (current_i1)
-            if (data.current_i1 !== undefined) {
-                document.getElementById('current').innerText = data.current_i1.toFixed(2);
-            } else {
-                 document.getElementById('current').innerText = 'N/A';
-            }
+            // Current (current_i1)
+            document.getElementById('current').innerText = data.current_i1 !== undefined ? data.current_i1.toFixed(2) : 'N/A';
             
-            // 3. Power (power_p) - Asumsi dalam kW untuk tampilan
-            if (data.power_p !== undefined) {
-                 // Pembacaan ESP32 Anda adalah 35.0 (kita asumsikan sudah dalam kW atau nilai yang wajar)
-                document.getElementById('power').innerText = data.power_p.toFixed(2); 
-            } else {
-                 document.getElementById('power').innerText = 'N/A';
-            }
+            // Power (power_p) 
+            document.getElementById('power').innerText = data.power_p !== undefined ? data.power_p.toFixed(2) : 'N/A'; 
             
-            // 4. Power Factor (pf_total)
-            if (data.pf_total !== undefined) {
-                document.getElementById('pf').innerText = data.pf_total.toFixed(3);
-            } else {
-                 document.getElementById('pf').innerText = 'N/A';
-            }
+            // Power Factor (pf_total)
+            document.getElementById('pf').innerText = data.pf_total !== undefined ? data.pf_total.toFixed(3) : 'N/A';
             
         } catch (e) {
             console.error("Error parsing JSON or updating UI:", e);
