@@ -16,6 +16,7 @@ async function signUp() {
     const email = document.getElementById('email')?.value;
     const password = document.getElementById('password')?.value;
     
+    // Set role default, semua pendaftar adalah USER yang belum disetujui
     const DEFAULT_ROLE = 'user'; 
 
     if (!fullName || !division || !email || !password) {
@@ -115,7 +116,8 @@ async function requestPasswordReset() {
     if (!email) return;
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin + '/login.html', 
+        // Redirect ke halaman khusus reset password
+        redirectTo: window.location.origin + '/reset_password.html', 
     });
 
     if (error) {
@@ -144,7 +146,7 @@ async function checkUserRole() {
         .single();
     
     if (profileError || !profileData || profileData.is_approved === false) {
-        // Jika profile hilang atau belum disetujui, perlakukan sebagai tamu (akan diarahkan oleh index.html)
+        // Jika profile hilang atau belum disetujui, perlakukan sebagai tamu 
         return { isLoggedIn: false, role: 'guest', profile: {} }; 
     }
 
