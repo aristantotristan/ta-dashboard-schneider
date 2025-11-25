@@ -8,10 +8,36 @@
         /* ========================================================== */
         /* CSS FINAL (Layout & Buttons) */
         /* ========================================================== */
-        body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; display: flex; flex-direction: column; justify-content: flex-start; align-items: center; min-height: 100vh; }
-        .dashboard-container { max-width: 450px; width: 100%; margin: 20px auto; text-align: center; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); }
-        h1 { color: #333; margin-bottom: 30px; }
-        .button-grid { display: grid; gap: 15px; }
+        body { 
+            font-family: Arial, sans-serif; 
+            background-color: #f4f4f4; 
+            margin: 0; 
+            padding: 20px; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: flex-start; 
+            align-items: center; 
+            min-height: 100vh; 
+        }
+        .dashboard-container { 
+            max-width: 450px; 
+            width: 100%; 
+            margin: 100px auto; /* Margin diubah agar di tengah vertikal */
+            text-align: center; 
+            background: white; 
+            padding: 30px; 
+            border-radius: 10px; 
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); 
+        }
+        h1 { 
+            color: #333; 
+            margin-bottom: 30px; 
+        }
+        /* Grid tetap digunakan untuk konsistensi, tapi hanya ada 1 item */
+        .button-grid { 
+            display: grid; 
+            gap: 15px; 
+        } 
         .dashboard-button {
             color: white;
             padding: 15px 20px;
@@ -22,34 +48,24 @@
             transition: background-color 0.3s;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
-        .dashboard-button:hover { opacity: 0.9; }
-        #btn-realtime { background-color: #28a745; }
-        #btn-tariff { background-color: #ffc107; color: #333;}
-        #btn-trouble { background-color: #dc3545; }
-        #btn-control { background-color: #17a2b8; }
+        .dashboard-button:hover { 
+            opacity: 0.9; 
+        }
+        /* Hanya menyisakan style untuk tombol Real Time */
+        #btn-realtime { 
+            background-color: #28a745; 
+        } 
     </style>
 </head>
 <body>
 
     <div class="dashboard-container">
-        <h1>Monitoring Energi<br>(Halaman Utama)</h1>
+        <h1>Monitoring Energi<br>(Mesin Tunggal)</h1>
         
         <div class="button-grid">
             
             <div class="dashboard-button" id="btn-realtime" onclick="goToPage('realtime.html')">
-                Monitoring Real Time
-            </div>
-
-            <div class="dashboard-button" id="btn-tariff" onclick="goToPage('tariff.html')">
-                Monitoring Tarif Mesin
-            </div>
-
-            <div class="dashboard-button" id="btn-trouble" onclick="goToPage('trouble.html')">
-                Monitoring Trouble Mesin
-            </div>
-
-            <div class="dashboard-button" id="btn-control" onclick="goToPage('control.html')">
-                Maintenance Sistem
+                Monitoring Real Time MESIN_01
             </div>
             
         </div>
