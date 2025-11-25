@@ -1,158 +1,175 @@
 // =======================================================
-// realtime_script.js: LOGIKA REAL-TIME MONITORING
+// realtime_script.js: LOGIC REAL-TIME
 // =======================================================
-const SUPABASE_URL = 'https://khamzxkrvmnjhrgdqbkg.supabase.co'; 
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtoYW16eGtydm1uamhyZ2RxYmtnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM5NDg2MzcsImV4cCI6MjA3OTUyNDYzN30.SYZTZA3rxaE-kwFuKLlzkol_mLuwjYmVudGCN0imAM8'; 
+// Kredensial di-load dari config.js
 const REALTIME_TABLE = 'realtime_telemetry';
+const MACHINE_LIST_TABLE = 'machine_telemetry';
 
-// FIX: Inisialisasi Klien Supabase (Menggunakan window.supabase)
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let selectedMachineId = null;
+let charts = {};
 
+document.addEventListener('DOMContentLoaded', fetchMachineList);
 
-// Definisikan Semua Parameter dan Satuan (12 Parameter Penuh)
-const ALL_PARAMETERS_DEFINITION = {
-    // Core Parameters (untuk Gauge dan Fokus)
-    'Voltage (L-L Avg)': { col: 'voltage_avg', unit: 'Volt', isCore: true, precision: 1 },
-    'Current (I1)': { col: 'current_i1', unit: 'Ampere', isCore: true, precision: 1 },
-    'Power (P Total/kW)': { col: 'power_p', unit: 'kW', isCore: true, precision: 1 },
-    'Power Factor (Total)': { col: 'pf_total', unit: '-', isCore: true, precision: 3 },
-    
-    // Non-Core Parameters (Sisanya)
-    'Total Ea': { col: 'ea_total', unit: 'kWh', isCore: false, precision: 2 },
-    'Total Er': { col: 'er_total', unit: 'kVARh', isCore: false, precision: 2 },
-    'Partial Ea': { col: 'ea_partial', unit: 'kWh', isCore: false, precision: 2 },
-    'Partial Er': { col: 'er_partial', unit: 'kVARh', isCore: false, precision: 2 },
-    'Current (I2)': { col: 'current_i2', unit: 'Ampere', isCore: false, precision: 1 },
-    'Current (I3)': { col: 'current_i3', unit: 'Ampere', isCore: false, precision: 1 },
-    'Power (Q Total/kVAR)': { col: 'power_q', unit: 'kVAR', isCore: false, precision: 1 },
-    'Power (S Total/kVA)': { col: 'power_s', unit: 'kVA', isCore: false, precision: 1 },
-    'Frequency': { col: 'frequency', unit: 'Hz', isCore: false, precision: 2 },
-    'Operating Time': { col: 'op_time', unit: 'Jam', isCore: false, precision: 0 },
-};
-
-// Definisikan Max Value untuk Kalkulasi Visual Gauge
-const MAX_VALUES = {
-    'voltage_avg': 400, // Max Volt
-    'current_i1': 100,  // Max Ampere (Asumsi Kapasitas)
-    'power_p': 50,      // Max kW
-    'pf_total': 1.0,    // Max PF
-};
-
-
-// --- 1. Ambil dan Tampilkan Daftar 18 Mesin ---
+// 1. Mengambil daftar mesin yang tersedia
 async function fetchMachineList() {
-    const listElement = document.getElementById('machineList');
-    listElement.innerHTML = 'Memuat...';
+    try {
+        const { data, error } = await supabase
+            .from(MACHINE_LIST_TABLE)
+            .select('machine_id')
+            .order('machine_id', { ascending: true })
+            .limit(100); 
 
+        if (error) throw error;
+
+        const uniqueMachines = [...new Set(data.map(item => item.machine_id))];
+        const select = document.getElementById('machine-select');
+
+        uniqueMachines.forEach(id => {
+            const option = document.createElement('option');
+            option.value = id;
+            option.textContent = id;
+            select.appendChild(option);
+        });
+        document.getElementById('no-data-message').style.display = 'block';
+    } catch (error) {
+        console.error("Error fetching machine list:", error);
+    }
+}
+
+// 2. Handler saat mesin dipilih
+function selectMachine(machineId) {
+    if (machineId) {
+        selectedMachineId = machineId;
+        document.getElementById('telemetry-display').style.display = 'block';
+        document.getElementById('no-data-message').style.display = 'none';
+        
+        // Membersihkan interval lama
+        if (window.realtimeInterval) {
+            clearInterval(window.realtimeInterval);
+        }
+        
+        // Memulai fetch baru setiap 5 detik
+        fetchLatestTelemetry(machineId); 
+        window.realtimeInterval = setInterval(() => fetchLatestTelemetry(machineId), 5000); 
+    } else {
+        document.getElementById('telemetry-display').style.display = 'none';
+        document.getElementById('no-data-message').style.display = 'block';
+        if (window.realtimeInterval) {
+            clearInterval(window.realtimeInterval);
+        }
+    }
+}
+
+// 3. Mengambil data telemetri terbaru
+async function fetchLatestTelemetry(machineId) {
     try {
         const { data, error } = await supabase
             .from(REALTIME_TABLE)
             .select('*')
-            .order('machine_id', { ascending: true });
+            .eq('machine_id', machineId)
+            .order('timestamp', { ascending: false })
+            .limit(1);
 
         if (error) throw error;
-        
-        listElement.innerHTML = ''; 
-
-        data.forEach(machine => {
-            const statusClass = machine.is_online ? 'online' : 'offline';
-            const statusText = machine.is_online ? 'Online' : 'Offline';
-            
-            const item = document.createElement('div');
-            item.className = 'machine-item';
-            item.id = `machine-${machine.machine_id}`;
-            item.innerHTML = `
-                <span>${machine.machine_id}</span>
-                <span><span class="status-dot ${statusClass}"></span>${statusText}</span>
-            `;
-            item.onclick = () => selectMachine(machine.machine_id, data); 
-            listElement.appendChild(item);
-        });
-        
-        // Coba pilih mesin pertama secara default
-        if (data.length > 0) {
-             selectMachine(data[0].machine_id, data);
+        if (data.length === 0) {
+            document.getElementById('last-update').textContent = 'Tidak ada data real-time terbaru.';
+            return;
         }
+
+        const latestData = data[0];
+        document.getElementById('last-update').textContent = new Date(latestData.timestamp).toLocaleString('id-ID');
+        
+        renderCoreParameters(latestData);
+        renderAllParameters(latestData);
 
     } catch (error) {
-        console.error("Gagal memuat daftar mesin:", error);
-        listElement.innerHTML = `<p style="color: red;">Error: ${error.message}. Pastikan RLS Policy tabel realtime_telemetry sudah diaktifkan.</p>`;
+        console.error("Error fetching latest telemetry:", error);
     }
 }
 
-// --- 2. Fungsi Ketika Mesin Dipilih ---
-function selectMachine(machineId, allData) {
-    document.querySelectorAll('.machine-item').forEach(el => el.classList.remove('active'));
-    document.getElementById(`machine-${machineId}`).classList.add('active');
+// 4. Rendering Gauge Charts
+function renderCoreParameters(data) {
+    const coreParams = [
+        { id: 'gauge-voltage', label: 'Voltage (V)', key: 'v_a', max: 500, unit: 'V' },
+        { id: 'gauge-current', label: 'Current (A)', key: 'i_a', max: 50, unit: 'A' },
+        { id: 'gauge-power', label: 'Active Power (kW)', key: 'p_a', max: 100, unit: 'kW' },
+        { id: 'gauge-frequency', label: 'Frequency (Hz)', key: 'frequency', max: 70, unit: 'Hz' }
+    ];
 
-    const selectedData = allData.find(m => m.machine_id === machineId);
-    if (!selectedData) return;
-
-    document.getElementById('selectedMachineTitle').textContent = `Detail Monitoring: ${machineId}`;
-    
-    document.getElementById('lastUpdateTimestamp').textContent = new Date(selectedData.timestamp).toLocaleString('id-ID');
-
-    // Render 
-    renderCoreParameters(selectedData);
-    renderAllParameters(selectedData);
+    coreParams.forEach(p => {
+        const ctx = document.getElementById(p.id).getContext('2d');
+        const value = parseFloat(data[p.key]) || 0;
+        
+        if (charts[p.id]) {
+            charts[p.id].data.datasets[0].value = value;
+            charts[p.id].update();
+        } else {
+            charts[p.id] = new Chart(ctx, {
+                type: 'gauge',
+                data: {
+                    datasets: [{
+                        data: [value],
+                        value: value,
+                        backgroundColor: ['#dc3545', '#ffc107', '#28a745'],
+                        borderWidth: 0,
+                        gaugeData: {
+                            value: value,
+                            valueColor: '#333',
+                            min: 0,
+                            max: p.max,
+                            units: p.unit,
+                            // Rentang warna (Danger, Warning, Safe)
+                            label: p.label,
+                            needleColor: '#333',
+                            needleLength: 90,
+                            data: [p.max * 0.5, p.max * 0.3, p.max * 0.2] 
+                        }
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    layout: { padding: { bottom: 10 } },
+                    events: ['resize'],
+                    plugins: { legend: { display: false }, tooltip: { enabled: false } }
+                }
+            });
+        }
+    });
 }
 
-// --- 3. Render Gauges (Core Parameters) ---
-function renderCoreParameters(data) {
-    const container = document.getElementById('coreParameters');
-    container.innerHTML = '';
+// 5. Rendering Detail Tabel
+function renderAllParameters(data) {
+    const tbody = document.querySelector('#detail-table tbody');
+    tbody.innerHTML = '';
 
-    for (const key in ALL_PARAMETERS_DEFINITION) {
-        const paramDef = ALL_PARAMETERS_DEFINITION[key];
+    const allParams = {
+        'Voltage Phase B (V)': data.v_b,
+        'Voltage Phase C (V)': data.v_c,
+        'Current Phase B (A)': data.i_b,
+        'Current Phase C (A)': data.i_c,
+        'Reactive Power (kVAR)': data.q_a,
+        'Apparent Power (kVA)': data.s_a,
+        'Power Factor': data.pf_a,
+        'Total Active Energy (kWh)': data.ea_total,
+        'Total Reactive Energy (kVARh)': data.er_total,
+        'Waktu Log': new Date(data.timestamp).toLocaleTimeString('id-ID')
+    };
+
+    const keys = Object.keys(allParams);
+    for (let i = 0; i < keys.length; i += 2) {
+        const row = tbody.insertRow();
         
-        if (paramDef.isCore) {
-            const value = data[paramDef.col] || 0;
-            const maxValue = MAX_VALUES[paramDef.col] || 100;
-            
-            // Hitung Persentase Isi Bar
-            let percentage = Math.min(100, (value / maxValue) * 100);
-            
-            // Logika Warna Warning/Danger
-            let colorClass = 'gauge-fill';
-            if (paramDef.col === 'pf_total') {
-                // PF Warning: Di bawah 0.85 (Danger) atau 0.95 (Warning)
-                if (value < 0.85) colorClass = 'gauge-fill danger';
-                else if (value < 0.95) colorClass = 'gauge-fill warning';
-            } else {
-                // Warning/Danger: Di atas 80% dan 95% dari Max
-                if (percentage > 95) colorClass = 'gauge-fill danger'; 
-                else if (percentage > 80) colorClass = 'gauge-fill warning';
-            }
-            
-            const box = document.createElement('div');
-            box.className = 'gauge-box';
-            box.innerHTML = `
-                <div class="gauge-label">${key}</div>
-                <div class="gauge-value">${value.toFixed(paramDef.precision)} ${paramDef.unit}</div>
-                <div class="gauge-visual">
-                    <div class="${colorClass}" style="width: ${percentage}%;"></div>
-                </div>
-            `;
-            container.appendChild(box);
+        // Kolom 1
+        row.insertCell().textContent = keys[i];
+        row.insertCell().textContent = parseFloat(allParams[keys[i]]).toFixed(2);
+        
+        // Kolom 2
+        if (keys[i + 1]) {
+            row.insertCell().textContent = keys[i + 1];
+            row.insertCell().textContent = parseFloat(allParams[keys[i + 1]]).toFixed(2);
+        } else {
+            row.insertCell().colSpan = 2; // Gabungkan sel jika ganjil
         }
     }
 }
-
-// --- 4. Render Tabel Detail (All Parameters) ---
-function renderAllParameters(data) {
-    const tbody = document.querySelector('#allParametersTable tbody');
-    tbody.innerHTML = '';
-    
-    for (const key in ALL_PARAMETERS_DEFINITION) {
-        const paramDef = ALL_PARAMETERS_DEFINITION[key];
-        const value = data[paramDef.col];
-        
-        const row = tbody.insertRow();
-        row.insertCell().textContent = key;
-        row.insertCell().textContent = value !== null ? value.toFixed(paramDef.precision) : 'N/A';
-        row.insertCell().textContent = paramDef.unit;
-    }
-}
-
-// Inisialisasi
-document.addEventListener('DOMContentLoaded', fetchMachineList);
