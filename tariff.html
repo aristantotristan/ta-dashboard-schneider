@@ -3,115 +3,86 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monitoring Tarif Mesin</title>
+    <title>Monitoring Tarif</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4; }
-        h1 { color: #ffc107; }
-        .back-button { margin-bottom: 20px; padding: 10px; background-color: #333; color: white; border: none; border-radius: 5px; cursor: pointer; }
-        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); margin-bottom: 20px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); }
+        h1 { color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
+        .back-button { padding: 10px 15px; background-color: #333; color: white; border: none; border-radius: 5px; cursor: pointer; margin-bottom: 20px; }
+        
+        /* Tarif & Filter Section */
+        .section { margin-bottom: 30px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; background: #f9f9f9; }
+        .section h2 { color: #007bff; margin-top: 0; }
+        .tariff-rate { font-size: 2em; font-weight: bold; color: #28a745; margin: 10px 0; }
+        
+        .filter-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; align-items: end; }
+        .filter-grid input[type="date"], .filter-grid input[type="time"], .filter-grid select { padding: 8px; width: 100%; box-sizing: border-box; }
+        .calculate-button { padding: 10px 15px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; width: 100%; }
+
+        /* Update Form */
+        .update-form { display: flex; gap: 10px; align-items: center; margin-top: 15px; }
+        .update-form input { padding: 8px; }
+        .update-button { padding: 10px 15px; background-color: #ffc107; color: #333; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+
+        /* Table Style */
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-        th { background-color: #ffe082; }
-        .rate-display { font-size: 1.5em; font-weight: bold; color: #ff9800; }
-        .audit-info { font-size: 0.9em; color: #666; margin-top: 10px; }
-        .filter-group { margin-bottom: 15px; padding: 15px; border: 1px dashed #ccc; border-radius: 5px; display: flex; flex-wrap: wrap; align-items: center; gap: 15px; }
-        .filter-item { margin-bottom: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 15px; }
-        .filter-item label { font-weight: bold; }
-        .filter-item input, .filter-item select { padding: 8px; }
-        .filter-item button { padding: 8px 15px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        th { background-color: #f2f2f2; }
     </style>
 </head>
 <body>
+    <div class="container">
+        <button class="back-button" onclick="window.location.href='index.html'">← Kembali</button>
+        <h1>Monitoring Tarif Mesin</h1>
 
-    <button class="back-button" onclick="window.location.href='index.html'">← Kembali ke Dashboard</button>
-    
-    <h1>Monitoring Tarif Mesin</h1>
-    
-    <div class="card">
-        <h2>Tarif Aktif Saat Ini</h2>
-        <p>Nama Tarif: <span id="currentTariffName">Memuat...</span></p>
-        <p>Tarif per kWh: <span id="currentTariffRate" class="rate-display">Memuat...</span></p>
-
-        <div class="audit-info">
-            <hr>
-            <p>Terakhir diperbarui oleh: <span id="updaterName">Memuat...</span> (<span id="updaterDivision"></span>)</p>
-            <p>Waktu Pembaruan: <span id="updaterTime">Memuat...</span></p>
-        </div>
-    </div>
-
-    <div class="card" id="adminUpdateSection" style="display: none;">
-        <h3>Ubah Tarif Aktif (Admin Access)</h3>
-        <label for="newRate">Tarif per kWh Baru (Rp):</label>
-        <input type="number" id="newRate" placeholder="Masukkan angka tarif baru" required style="padding: 8px; margin-right: 10px; width: 150px;">
-        
-        <button onclick="updateTariff()" style="padding: 10px; background-color: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer;">Simpan Perubahan Tarif</button>
-    </div>
-
-    <div class="card">
-        <h2>Laporan Estimasi Biaya (kWh Konsumsi)</h2>
-        
-        <div class="filter-group">
-            <div class="filter-item">
-                <label for="machineId">Pilih Mesin:</label>
-                <select id="machineId" required>
-                    <option value="">-- Pilih Mesin --</option>
-                    <option value="MESIN_01">MESIN_01</option>
-                    <option value="MESIN_02">MESIN_02</option>
-                </select>
-            </div>
-
-            <div class="filter-item">
-                <label for="startDate">Tanggal Mulai:</label>
-                <input type="date" id="startDate" required>
-                <label for="startTime">Jam Mulai:</label>
-                <input type="time" id="startTime" value="08:00" required>
-            </div>
-
-            <div class="filter-item">
-                <label for="endDate">Tanggal Akhir:</label>
-                <input type="date" id="endDate" required>
-                <label for="endTime">Jam Akhir:</label>
-                <input type="time" id="endTime" value="17:00" required>
-            </div>
-
-            <div class="filter-item">
-                <button onclick="fetchAndCalculateCost()">Hitung Biaya</button>
-            </div>
-        </div>
-        
-        <table id="tariffTable">
-            <thead>
-                <tr>
-                    <th>Mesin ID</th>
-                    <th>Konsumsi (kWh)</th>
-                    <th>Waktu Mulai Pembacaan</th>
-                    <th>Waktu Akhir Pembacaan</th>
-                    <th>Total Biaya Estimasi (Rp)</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr><td colspan="5">Pilih mesin, tanggal, jam, dan tekan 'Hitung Biaya' untuk melihat laporan.</td></tr>
-            </tbody>
-        </table>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="auth_script.js"></script> 
-    <script src="tariff_fetch.js"></script>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', async () => {
-            // 1. Ambil data tarif dan tampilkan (fungsi dari tariff_fetch.js)
-            await setupTariffData(); 
-
-            // 2. Pengecekan Role untuk mengaktifkan Form Update (Admin Safety)
-            const authStatus = await checkUserRole();
+        <div class="section">
+            <h2>Tarif Aktif (<span id="currentTariffName">Memuat...</span>)</h2>
+            <p>Rate per kWh:</p>
+            <div class="tariff-rate" id="currentTariffRate">Rp 0.00</div>
+            <p style="font-size: 0.9em; color: #666;">
+                Update Terakhir oleh: <span id="updaterName">N/A</span> (<span id="updaterDivision">N/A</span>) pada <span id="updaterTime">N/A</span>
+            </p>
             
-            if (authStatus.isLoggedIn && authStatus.role === 'admin') {
-                document.getElementById('adminUpdateSection').style.display = 'block';
-            }
-        });
-        // Note: updateTariff() dan fetchAndCalculateCost() ada di tariff_fetch.js
-    </script>
+            <div class="update-form">
+                <input type="number" id="newRate" placeholder="Masukkan Tarif Baru (Rp)" min="1" step="0.01" required>
+                <button class="update-button" onclick="updateTariff()">Update Tarif</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Kalkulasi Biaya Periode</h2>
+            <div class="filter-grid">
+                <div><label for="machineId">Mesin ID:</label><select id="machineId"><option value="">-- Pilih Mesin --</option></select></div>
+                <div><label for="startDate">Mulai Tanggal:</label><input type="date" id="startDate"></div>
+                <div><label for="startTime">Mulai Jam:</label><input type="time" id="startTime" value="00:00"></div>
+                <div><label for="endDate">Sampai Tanggal:</label><input type="date" id="endDate"></div>
+                <div><label for="endTime">Sampai Jam:</label><input type="time" id="endTime" value="23:59"></div>
+                <button class="calculate-button" onclick="fetchAndCalculateCost()">Hitung Biaya</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Hasil Kalkulasi Biaya</h2>
+            <table id="tariffTable">
+                <thead>
+                    <tr>
+                        <th>Mesin ID</th>
+                        <th>Konsumsi (kWh)</th>
+                        <th>Waktu Mulai</th>
+                        <th>Waktu Akhir</th>
+                        <th>Total Biaya</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td colspan="5">Pilih mesin, tanggal, jam, dan tekan 'Hitung Biaya'.</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <script src="config.js"></script>
+    <script src="tariff_fetch.js"></script>
 </body>
 </html>
