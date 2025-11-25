@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitoring Energi PT. Amarilys (SPA)</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script> 
+    <style>
+        /* ========================================================== */
+        /* CSS FINAL (Layout & Buttons) */
+        /* ========================================================== */
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; }
+        .dashboard-container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); }
+        h1 { color: #333; margin-bottom: 20px; }
+        
+        /* Navigasi Tombol */
+        .nav-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 15px; }
+        .nav-button { padding: 10px 15px; border-radius: 5px; text-align: center; cursor: pointer; color: white; font-weight: bold; transition: opacity 0.3s; }
+        .nav-button:hover { opacity: 0.8; }
+        
+        /* Warna Tombol Navigasi */
+        #nav-realtime { background-color: #28a745; }
+        #nav-tariff { background-color: #ffc107; color: #333; }
+        #nav-trouble { background-color: #dc3545; }
+        #nav-control { background-color: #17a2b8; }
+        
+        /* Konten Halaman */
+        .page-content { display: none; /* Semua halaman disembunyikan secara default */ }
+        .active-page { display: block; }
+
+        /* [Tambahkan SEMUA CSS dari file tariff.html, trouble.html, dll. di sini] */
+        /* Contoh: Filter grids, table styles, gauge styles */
+        .filter-group { display: flex; gap: 15px; margin-bottom: 20px; align-items: center; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+    </style>
+</head>
+<body>
+
+    <div class="dashboard-container">
+        <h1>Monitoring Energi PT. Amarilys</h1>
+        
+        <div class="nav-grid">
+            <div class="nav-button" id="nav-realtime" onclick="showPage('realtime-page')">Real Time</div>
+            <div class="nav-button" id="nav-tariff" onclick="showPage('tariff-page'); setupTariff();">Tarif Mesin</div>
+            <div class="nav-button" id="nav-trouble" onclick="showPage('trouble-page')">Trouble Mesin</div>
+            <div class="nav-button" id="nav-control" onclick="showPage('maintenance-page')">Maintenance Sistem</div>
+        </div>
+
+        <div id="realtime-page" class="page-content active-page">
+            <h2>Monitoring Real-Time (MQTT)</h2>
+            <p id="mqttStatus">Status Koneksi MQTT: Disconnecting...</p>
+            </div>
+
+        <div id="tariff-page" class="page-content">
+            <h2>Kalkulasi Biaya & Tarif</h2>
+            </div>
+
+        <div id="trouble-page" class="page-content">
+            <h2>Log Trouble Mesin Harian</h2>
+            </div>
+
+        <div id="maintenance-page" class="page-content">
+            <h2>Monitoring Downtime Koneksi</h2>
+            </div>
+
+    </div>
+
+    <script>
+        // 0. VARIBEL GLOBAL (Dari config.js)
+        const SUPABASE_URL = 'https://rojhcadtqfynlqzubftx.supabase.co'; 
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // ... (Variabel global lain seperti MQTT_BROKER, MQTT_TOPIC, dll.)
+
+        // 1. FUNGSI UTAMA ROUTING (SHOW/HIDE)
+        function showPage(pageId) {
+            document.querySelectorAll('.page-content').forEach(div => {
+                div.classList.remove('active-page');
+                div.style.display = 'none';
+            });
+            document.getElementById(pageId).classList.add('active-page');
+            document.getElementById(pageId).style.display = 'block';
+            
+            // Logika spesifik saat halaman diaktifkan (misal: refresh data)
+            if (pageId === 'tariff-page') { /* panggil setup tarif */ }
+            if (pageId === 'trouble-page') { /* panggil fetch trouble list */ }
+            // ...
+        }
+
+
+        // 2. [PASTE SEMUA FUNGSI DARI realtime_script.js DI SINI]
+        //    (Termasuk initMQTT, onMessageArrived, renderCoreParameters, dll.)
+
+
+        // 3. [PASTE SEMUA FUNGSI DARI tariff_fetch.js DI SINI]
+        //    (Termasuk setupTariffData, fetchAndCalculateCost, updateTariff, dll.)
+
+
+        // 4. [PASTE SEMUA FUNGSI DARI trouble_fetch.js DI SINI]
+        //    (Termasuk fetchTroubleData, groupDataByMachine, dll.)
+
+
+        // 5. [PASTE SEMUA FUNGSI DARI control_script.js DI SINI]
+        //    (Termasuk fetchDowntimeLog, displayLogTable, dll.)
+
+        // 6. INISIALISASI
+        document.addEventListener('DOMContentLoaded', () => {
+            showPage('realtime-page'); // Tampilkan Real Time saat pertama dimuat
+            // initMQTT(); // Panggil fungsi MQTT untuk memulai koneksi
+            // setupTariff(); // Panggil fungsi setup tarif untuk memuat rate awal
+        });
+    </script>
+</body>
+</html>
