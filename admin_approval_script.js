@@ -1,9 +1,10 @@
 // =======================================================
-// admin_approval_script.js: LOGIKA PERSETUJUAN ADMIN (FINAL)
+// admin_approval_script.js: LOGIKA PERSETUJUAN ADMIN (FINAL FIX MESSAGING)
 // =======================================================
-const PROFILES_TABLE = 'user_profiles'; // Nama tabel yang digunakan
+const SUPABASE_URL = 'https://khamzxkrvmnjhrgdqbkg.supabase.co'; 
+const PROFILES_TABLE = 'user_profiles';
 
-// Klien Supabase (variabel 'supabase' didefinisikan di config.js)
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); 
 
 // Ambil daftar pengguna yang belum disetujui
 async function fetchPendingUsers() {
@@ -29,7 +30,7 @@ async function fetchPendingUsers() {
     
     } catch (error) {
         console.error("Gagal memuat pengguna:", error);
-        document.querySelector('#approvalTable tbody').innerHTML = `<tr><td colspan="5">Error Memuat Data. Cek RLS Policy SELECT Admin. (${error.message})</td></tr>`;
+        document.querySelector('#approvalTable tbody').innerHTML = `<tr><td colspan="5" style="color: red;">Error: ${error.message}. Cek Policy RLS SELECT Admin.</td></tr>`;
     }
 }
 
@@ -38,8 +39,9 @@ function renderApprovalTable(users) {
     const tbody = document.querySelector('#approvalTable tbody');
     tbody.innerHTML = '';
     
+    // FIX: Memberi keterangan jelas jika tidak ada data (Sesuai permintaan Anda)
     if (!users || users.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: green;">Tidak ada akun yang menunggu persetujuan.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: green; font-weight: bold;">Tidak ada akun yang menunggu persetujuan saat ini.</td></tr>';
         return;
     }
 
