@@ -3,68 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monitoring Trouble Mesin</title>
+    <title>Monitoring Trouble</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4; }
-        h1 { color: #dc3545; }
-        .back-button { margin-bottom: 20px; padding: 10px; background-color: #333; color: white; border: none; border-radius: 5px; cursor: pointer; }
-        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); margin-bottom: 20px; }
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); }
+        h1 { color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
+        .back-button { padding: 10px 15px; background-color: #333; color: white; border: none; border-radius: 5px; cursor: pointer; margin-bottom: 20px; }
+        
+        .filter-area { display: flex; gap: 15px; align-items: end; margin-bottom: 20px; }
+        .filter-area label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .filter-area input[type="date"], .filter-area select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        .fetch-button { padding: 10px 15px; background-color: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f8d7da; color: #721c24; }
-        .filter-group { margin-bottom: 15px; padding: 15px; border: 1px dashed #ccc; border-radius: 5px; display: flex; flex-wrap: wrap; align-items: center; gap: 15px; }
-        .filter-group label { margin-right: 5px; font-weight: bold; }
-        .filter-group input, .filter-group select { padding: 8px; }
-        .filter-group button { padding: 8px 15px; background-color: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer; }
-        .status-on { color: green; font-weight: bold; }
-        .status-off { color: red; font-weight: bold; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .status-ON { background-color: #28a745; color: white; text-align: center; }
+        .status-OFF { background-color: #dc3545; color: white; text-align: center; }
     </style>
 </head>
 <body>
+    <div class="container">
+        <button class="back-button" onclick="window.location.href='index.html'">← Kembali</button>
+        <h1>Monitoring Trouble Mesin (Status Harian)</h1>
 
-    <button class="back-button" onclick="window.location.href='index.html'">← Kembali ke Dashboard</button>
+        <div class="filter-area">
+            <div>
+                <label for="machine-select">Pilih Mesin ID:</label>
+                <select id="machine-select">
+                    <option value="">-- Pilih Mesin --</option>
+                </select>
+            </div>
+            <div>
+                <label for="start-date">Dari Tanggal:</label>
+                <input type="date" id="start-date">
+            </div>
+            <div>
+                <label for="end-date">Sampai Tanggal:</label>
+                <input type="date" id="end-date">
+            </div>
+            <button class="fetch-button" onclick="fetchTroubleData()">Cari Status</button>
+        </div>
 
-    <h1>Monitoring Trouble Mesin (Log Harian)</h1>
-    
-    <div class="card filter-group">
-        <h2>Pilih Mesin & Periode Laporan</h2>
-        
-        <label for="machineId">Pilih Mesin:</label>
-        <select id="machineId" required>
-            <option value="">-- Pilih Mesin --</option>
-            <option value="MESIN_01">MESIN_01</option>
-            <option value="MESIN_02">MESIN_02</option>
-            </select>
-        
-        <label for="startDate">Tanggal Mulai:</label>
-        <input type="date" id="startDate" required>
-        
-        <label for="endDate">Tanggal Akhir:</label>
-        <input type="date" id="endDate" required>
-
-        <button onclick="fetchTroubleData()">Cek Trouble</button>
-    </div>
-
-    <div class="card">
-        <h2>Log Detail Harian: <span id="selectedMachineDisplay">N/A</span></h2>
-        <p id="dateRangeDisplay">Periode: Harap masukkan tanggal</p>
-        <table id="troubleTable">
+        <table id="trouble-table">
             <thead>
                 <tr>
                     <th>Tanggal</th>
-                    <th>Status</th>
-                    <th>Total Trouble Count</th>
-                    <th>Tipe Trouble</th>
-                    <th>Uptime (Jam)</th>
-                    <th>Downtime (Jam)</th>
+                    <th>Mesin ID</th>
+                    <th>Status Koneksi</th>
+                    <th>Total Logs</th>
+                    <th>Keterangan</th>
                 </tr>
             </thead>
             <tbody>
-                <tr><td colspan="6">Pilih mesin, tanggal, dan tekan 'Cek Trouble' untuk melihat laporan.</td></tr>
+                <tr><td colspan="5">Pilih mesin dan rentang tanggal untuk melihat status harian.</td></tr>
             </tbody>
         </table>
     </div>
-    
+
+    <script src="config.js"></script>
     <script src="trouble_fetch.js"></script>
 </body>
 </html>
