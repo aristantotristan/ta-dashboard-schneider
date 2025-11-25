@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Telemetri Schneider Mesin 01 - Real Time</title>
+    <title>Dashboard Telemetri Schneider Mesin 01 - FINAL</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; color: #333; margin: 0; padding: 20px; }
         .container { max-width: 1200px; margin: auto; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1); }
@@ -118,27 +118,24 @@
 </div>
 
 <script>
-    // --- KONFIGURASI MQTT (DIUBAH UNTUK WSS AMAN) ---
-    const host = "broker.hivemq.com";
-    const port = 8883; // <<< Ganti ke port WSS (WebSocket Secure)
-    const topic = "schneider/mesin01/telemetry";
+    // --- KONFIGURASI MQTT FINAL (MOSQUITTO WSS) ---
+    const host = "test.mosquitto.org"; // <<< BROKER BARU
+    const port = 8081; // <<< PORT WSS untuk Mosquitto
+    const topic = "schneider/mesin01/telemetry"; 
     const clientId = "WebClient-" + parseInt(Math.random() * 1000, 10); 
 
     const statusElement = document.getElementById('mqtt-status');
     
-    // Inisialisasi Klien Paho MQTT
     const client = new Paho.MQTT.Client(host, port, "/ws", clientId);
 
-    // Set Callbacks
     client.onConnectionLost = onConnectionLost;
     client.onMessageArrived = onMessageArrived;
     
-    // Coba Hubungkan ke Broker
     client.connect({ 
         onSuccess: onConnect,
         onFailure: onFailure,
         cleanSession: true,
-        useSSL: true // <<< DISET TRUE UNTUK KONEKSI AMAN (WSS)
+        useSSL: true // <<< Wajib TRUE untuk Port 8081
     });
 
     function onConnect() {
@@ -160,7 +157,6 @@
             statusElement.className = 'status-bar disconnected';
             statusElement.innerHTML = 'Status Koneksi: **Disconnected** (Lost). Reconnecting...';
         }
-        // Coba koneksi ulang setelah 5 detik
         setTimeout(() => client.connect({ onSuccess: onConnect, onFailure: onFailure, useSSL: true }), 5000);
     }
 
@@ -168,18 +164,10 @@
         try {
             const data = JSON.parse(message.payloadString);
             
-            // --- UPDATE NILAI DI DASHBOARD ---
-            
-            // Voltage (voltage_avg)
+            // Perbarui nilai
             document.getElementById('voltage').innerText = data.voltage_avg !== undefined ? data.voltage_avg.toFixed(2) : 'N/A';
-            
-            // Current (current_i1)
             document.getElementById('current').innerText = data.current_i1 !== undefined ? data.current_i1.toFixed(2) : 'N/A';
-            
-            // Power (power_p) 
             document.getElementById('power').innerText = data.power_p !== undefined ? data.power_p.toFixed(2) : 'N/A'; 
-            
-            // Power Factor (pf_total)
             document.getElementById('pf').innerText = data.pf_total !== undefined ? data.pf_total.toFixed(3) : 'N/A';
             
         } catch (e) {
