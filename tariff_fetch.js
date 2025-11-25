@@ -1,28 +1,53 @@
 // =======================================================
-// tariff_fetch.js: FINAL (MODE PUBLIK TANPA LOGIN)
+// tariff_fetch.js: LOGIC TARIF & KALKULASI
 // =======================================================
-// Pastikan variabel SUPABASE_URL dan SUPABASE_ANON_KEY dimuat dari config.js
-const SUPABASE_URL = 'https://khamzxkrvmnjhrgdqbkg.supabase.co'; 
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtoYW16eGtydm1uamhyZ2RxYmtnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM5NDg2MzcsImV4cCI6MjA3OTUyNDYzN30.SYZTZA3rxaE-kwFuKLlzkol_mLuwjYmVudGCN0imAM8'; 
-
-// FIX: Inisialisasi Klien Supabase (Pastikan sudah dimuat dari config.js)
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-
+// Kredensial di-load dari config.js
 const TARIFF_TABLE = 'tariff_settings';
 const TELEMETRY_TABLE = 'machine_telemetry';
 
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let activeRate = 0; 
+
+document.addEventListener('DOMContentLoaded', () => {
+    setupTariffData();
+    fetchMachineListForFilter();
+});
+
+// Mengambil daftar mesin untuk filter
+async function fetchMachineListForFilter() {
+    try {
+        const { data, error } = await supabase
+            .from(TELEMETRY_TABLE)
+            .select('machine_id')
+            .order('machine_id', { ascending: true })
+            .limit(100); 
+
+        if (error) throw error;
+
+        const uniqueMachines = [...new Set(data.map(item => item.machine_id))];
+        const select = document.getElementById('machineId');
+
+        uniqueMachines.forEach(id => {
+            const option = document.createElement('option');
+            option.value = id;
+            option.textContent = id;
+            select.appendChild(option);
+        });
+    } catch (error) {
+        console.error("Error fetching machine list:", error);
+    }
+}
 
 // Fungsi setup tarif awal
 async function setupTariffData() {
-    const tariffUrl = `${SUPABASE_URL}/rest/v1/${TARIFF_TABLE}?select=rate_per_kwh,tariff_name,updated_by_name,updated_by_division,updated_at&is_active=eq.true`;
-
     try {
-        const tariffRes = await fetch(tariffUrl, { headers: {'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY } });
-        if (!tariffRes.ok) throw new Error("Gagal mengambil tarif awal. Cek RLS.");
+        const { data: tariffData, error: tariffError } = await supabase
+            .from(TARIFF_TABLE)
+            .select(`rate_per_kwh, tariff_name, updated_by_name, updated_by_division, updated_at`)
+            .eq('is_active', true)
+            .limit(1);
 
-        const tariffData = await tariffRes.json();
+        if (tariffError) throw tariffError;
         
         activeRate = tariffData.length > 0 ? parseFloat(tariffData[0].rate_per_kwh) : 0;
         const activeName = tariffData.length > 0 ? tariffData[0].tariff_name : 'Tarif Default (Rp 0)';
@@ -31,7 +56,6 @@ async function setupTariffData() {
         document.getElementById('currentTariffRate').textContent = `Rp ${activeRate.toLocaleString('id-ID', { minimumFractionDigits: 2 })}`;
 
         if (tariffData.length > 0) {
-            // Audit trail tetap ditampilkan
             document.getElementById('updaterName').textContent = tariffData[0].updated_by_name || 'System';
             document.getElementById('updaterDivision').textContent = tariffData[0].updated_by_division || 'IT';
             document.getElementById('updaterTime').textContent = new Date(tariffData[0].updated_at).toLocaleString('id-ID');
@@ -42,7 +66,7 @@ async function setupTariffData() {
     }
 }
 
-// Fungsi Kunci: Mengambil dan Menghitung Biaya Berdasarkan Filter Mesin, Tanggal & Jam
+// Fungsi Kunci: Mengambil dan Menghitung Biaya Berdasarkan Filter
 async function fetchAndCalculateCost() {
     const machineId = document.getElementById('machineId').value;
     const startDateInput = document.getElementById('startDate').value;
@@ -59,7 +83,6 @@ async function fetchAndCalculateCost() {
         return;
     }
 
-    // --- Logika Penggabungan Tanggal dan Waktu ---
     const startDate = new Date(`${startDateInput}T${startTimeInput}:00`);
     const endDate = new Date(`${endDateInput}T${endTimeInput}:00`);
 
@@ -72,17 +95,19 @@ async function fetchAndCalculateCost() {
     const startFilter = startDate.toISOString();
     const endFilter = endDate.toISOString();
     
-    // URL API Supabase: FILTER BERDASARKAN MACHINE_ID & WAKTU
-    const telemetryUrl = `${SUPABASE_URL}/rest/v1/${TELEMETRY_TABLE}?select=machine_id,ea_total,timestamp&machine_id=eq.${machineId}&timestamp=gte.${startFilter}&timestamp=lte.${endFilter}&order=timestamp.asc`; 
-    
     try {
-        const telemetryRes = await fetch(telemetryUrl, { headers: {'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY } });
-        if (!telemetryRes.ok) throw new Error("Gagal mengambil data historis.");
+        const { data: telemetryData, error } = await supabase
+            .from(TELEMETRY_TABLE)
+            .select(`machine_id, ea_total, timestamp`)
+            .eq('machine_id', machineId)
+            .gte('timestamp', startFilter)
+            .lte('timestamp', endFilter)
+            .order('timestamp', { ascending: true });
         
-        const telemetryData = await telemetryRes.json();
+        if (error) throw error;
         
         if (telemetryData.length < 2) {
-            tbody.innerHTML = `<tr><td colspan="5">Hanya ditemukan 1 atau 0 pembacaan untuk ${machineId} dalam periode tersebut. Minimal butuh 2 log.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="5">Hanya ditemukan ${telemetryData.length} pembacaan untuk ${machineId} dalam periode tersebut. Minimal butuh 2 log.</td></tr>`;
             return;
         }
 
@@ -97,14 +122,14 @@ async function fetchAndCalculateCost() {
 
     } catch (error) {
         console.error("Gagal menghitung biaya:", error);
-        tbody.innerHTML = `<tr><td colspan="5">Error: ${error.message}. Cek RLS Policy SELECT.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5">Error: ${error.message}. Cek Policy RLS SELECT.</td></tr>`;
     }
 }
 
 // Fungsi Kunci: Menghitung Konsumsi & Biaya
 function calculateConsumptionByPeriod(telemetryData, ratePerKwh) {
     const machineLogs = {};
-
+    // Group logs by machine_id
     telemetryData.forEach(record => {
         if (!machineLogs[record.machine_id]) {
             machineLogs[record.machine_id] = [];
@@ -145,13 +170,14 @@ function displayCostData(costSummary) {
     tbody.innerHTML = '';
 
     const formatRupiah = (value) => value.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 });
+    const formatKwh = (value) => value.toLocaleString('id-ID', { minimumFractionDigits: 2 });
 
     for (const machineId in costSummary) {
         const data = costSummary[machineId];
         
         const row = tbody.insertRow();
         row.insertCell().textContent = machineId;
-        row.insertCell().textContent = data.kwhConsumed.toFixed(2);
+        row.insertCell().textContent = formatKwh(data.kwhConsumed);
         row.insertCell().textContent = data.startTime.toLocaleString('id-ID');
         row.insertCell().textContent = data.endTime.toLocaleString('id-ID');
         row.insertCell().textContent = formatRupiah(data.totalCost);
@@ -167,41 +193,31 @@ async function updateTariff() {
         return;
     }
     
-    // Audit Trail di-hardcode karena tidak ada login
-    const userName = 'System Admin'; 
-    const userDivision = 'IT';
-    const activeTariffId = 1; 
+    const activeTariffId = 1; // Asumsi ID tarif aktif selalu 1
 
     const payload = {
         rate_per_kwh: parseFloat(newRate),
-        updated_by_name: userName,
-        updated_by_division: userDivision,
+        // Hardcode Audit Trail (karena tidak ada login)
+        updated_by_name: 'System Admin', 
+        updated_by_division: 'IT',
         updated_at: new Date().toISOString()
     };
     
-    const updateUrl = `${SUPABASE_URL}/rest/v1/${TARIFF_TABLE}?id=eq.${activeTariffId}`;
-
     try {
-        const response = await fetch(updateUrl, {
-            method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json',
-                'apikey': SUPABASE_ANON_KEY 
-            },
-            body: JSON.stringify(payload)
-        });
+        const { error } = await supabase
+            .from(TARIFF_TABLE)
+            .update(payload)
+            .eq('id', activeTariffId);
 
-        if (response.ok) {
-            alert(`✅ Tarif berhasil diperbarui menjadi Rp ${newRate}! Dicatat oleh System Admin.`);
-            setupTariffData(); 
-        } else {
-            alert('❌ Gagal memperbarui tarif. Cek Policy RLS UPDATE.');
-        }
+        if (error) throw error;
+
+        alert(`✅ Tarif berhasil diperbarui menjadi Rp ${newRate}! Dicatat oleh System Admin.`);
+        setupTariffData(); 
     } catch (error) {
         console.error("Error update tarif:", error);
-        alert("Terjadi error saat komunikasi dengan server.");
+        alert(`❌ Gagal memperbarui tarif: ${error.message}. Pastikan Policy RLS UPDATE sudah diatur!`);
     }
 }
 
-
-document.addEventListener('DOMContentLoaded', setupTariffData);
+window.fetchAndCalculateCost = fetchAndCalculateCost;
+window.updateTariff = updateTariff;
