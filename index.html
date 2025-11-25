@@ -3,46 +3,162 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monitoring Energi PT. Amarilys</title>
+    <title>Dashboard Telemetri Schneider Mesin 01</title>
     <style>
-        /* CSS FINAL (Layout Fixed) */
-        body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; display: flex; flex-direction: column; justify-content: flex-start; align-items: center; min-height: 100vh; }
-        .dashboard-container { max-width: 450px; width: 100%; margin: 100px auto; text-align: center; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); }
-        h1 { color: #333; margin-bottom: 30px; }
-        .button-grid { display: grid; gap: 15px; } 
-        .dashboard-button {
-            color: white;
-            padding: 15px 20px;
-            border-radius: 8px;
-            font-size: 1.1em;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background-color 0.3s;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-        .dashboard-button:hover { opacity: 0.9; }
-        #btn-realtime { background-color: #28a745; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; color: #333; margin: 0; padding: 20px; }
+        .container { max-width: 1000px; margin: auto; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1); }
+        h1, h2 { text-align: center; color: #007bff; }
+        .status-bar { padding: 10px; margin-bottom: 20px; border-radius: 8px; text-align: center; font-weight: bold; }
+        .connected { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .disconnected { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+        .card { background: #e9f7fe; padding: 20px; border-radius: 10px; border-left: 5px solid #007bff; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05); }
+        .card h3 { margin-top: 0; font-size: 1.1em; color: #0056b3; }
+        .value { font-size: 2.2em; font-weight: 700; color: #333; }
+        .unit { font-size: 0.9em; color: #666; }
+        
+        /* Tabel Metadata */
+        .metadata-table { margin-top: 30px; }
+        .metadata-table table { width: 100%; border-collapse: collapse; margin-top: 10px; background: #fff; }
+        .metadata-table th, .metadata-table td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        .metadata-table th { background-color: #007bff; color: white; }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js" type="text/javascript"></script>
 </head>
 <body>
 
-    <div class="dashboard-container">
-        <h1>Monitoring Energi<br>(Mesin Tunggal)</h1>
-        
-        <div class="button-grid">
-            
-            <div class="dashboard-button" id="btn-realtime" onclick="goToPage('realtime.html')">
-                Monitoring Real Time MESIN_01
-            </div>
-            
+<div class="container">
+    <h1>Dashboard Telemetri Mesin 01</h1>
+    <div id="mqtt-status" class="status-bar disconnected">
+        Status Koneksi: **Disconnected**
+    </div>
+    
+    <h2>Data Real-time Utama</h2>
+    <div class="grid">
+        <div class="card">
+            <h3>Voltage (L-L Avg)</h3>
+            <div class="value" id="voltage">---</div>
+            <div class="unit">Volt</div>
+        </div>
+        <div class="card">
+            <h3>Current (I1)</h3>
+            <div class="value" id="current">---</div>
+            <div class="unit">Ampere</div>
+        </div>
+        <div class="card">
+            <h3>Power (P Active)</h3>
+            <div class="value" id="power">---</div>
+            <div class="unit">kW</div>
+        </div>
+        <div class="card">
+            <h3>Power Factor (Total)</h3>
+            <div class="value" id="pf">---</div>
+            <div class="unit">-</div>
         </div>
     </div>
+    
+    <hr>
+    
+    <div class="metadata-table">
+        <h2>Peta Register Modbus (Statis)</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Parameter</th>
+                    <th>Register (Holding)</th>
+                    <th>Keterangan</th>
+                    <th>Satuan</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>Total Ea</td><td>3204</td><td>Energi Aktif Total</td><td>kWh</td></tr>
+                <tr><td>Total Er</td><td>3220</td><td>Energi Reaktif Total</td><td>kVARh</td></tr>
+                <tr><td>Partial Ea</td><td>3256</td><td>Energi Aktif Parsial</td><td>kWh</td></tr>
+                <tr><td>Partial Er</td><td>3272</td><td>Energi Reaktif Parsial</td><td>kVARh</td></tr>
+                <tr><td>Voltage</td><td>3020</td><td>L-L Avg</td><td>Volt</td></tr>
+                <tr><td>Current</td><td>3000, 3002, 3004</td><td>I1, I2, I3</td><td>Ampere</td></tr>
+                <tr><td>Power (P)</td><td>3054</td><td>Total Active</td><td>Watt (x1000)</td></tr>
+                <tr><td>Power (Q)</td><td>3060</td><td>Total Reactive</td><td>VAR (x1000)</td></tr>
+                <tr><td>Power (S)</td><td>3068</td><td>Total Apparent</td><td>kVA</td></tr>
+                <tr><td>PF</td><td>3084</td><td>Total PF</td><td>-</td></tr>
+                <tr><td>Freq</td><td>3110</td><td>Frekuensi</td><td>Hz</td></tr>
+                <tr><td>Op Time</td><td>3399</td><td>Load Time</td><td>Jam</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', async () => {});
-        function goToPage(page) {
-            window.location.href = page; 
+<script>
+    // --- KONFIGURASI MQTT ---
+    const host = "broker.hivemq.com";
+    const port = 8000; // Port WebSocket HiveMQ
+    const topic = "schneider/mesin01/telemetry";
+    const clientId = "WebClient-" + parseInt(Math.random() * 100, 10);
+
+    const statusElement = document.getElementById('mqtt-status');
+    
+    // Inisialisasi Klien
+    const client = new Paho.MQTT.Client(host, port, "/ws", clientId);
+
+    // Set Callbacks
+    client.onConnectionLost = onConnectionLost;
+    client.onMessageArrived = onMessageArrived;
+    
+    // Hubungkan ke Broker
+    client.connect({ 
+        onSuccess: onConnect,
+        onFailure: onFailure,
+        cleanSession: true,
+        useSSL: false
+    });
+
+    function onConnect() {
+        console.log("MQTT Connected");
+        statusElement.className = 'status-bar connected';
+        statusElement.innerHTML = 'Status Koneksi: **Connected**';
+        
+        // Subscribe ke Topik setelah berhasil terhubung
+        client.subscribe(topic);
+        console.log(`Subscribed to: ${topic}`);
+    }
+
+    function onFailure(responseObject) {
+        console.error("MQTT Connection Failed:", responseObject.errorMessage);
+        statusElement.className = 'status-bar disconnected';
+        statusElement.innerHTML = `Status Koneksi: **Failed (${responseObject.errorMessage})**`;
+    }
+
+    function onConnectionLost(responseObject) {
+        if (responseObject.errorCode !== 0) {
+            console.log("onConnectionLost:" + responseObject.errorMessage);
+            statusElement.className = 'status-bar disconnected';
+            statusElement.innerHTML = 'Status Koneksi: **Disconnected** (Lost)';
         }
-    </script>
+        // Coba koneksi ulang
+        setTimeout(() => client.connect({ onSuccess: onConnect, onFailure: onFailure }), 5000);
+    }
+
+    function onMessageArrived(message) {
+        console.log("Message Arrived:", message.payloadString);
+        try {
+            const data = JSON.parse(message.payloadString);
+            
+            // --- UPDATE NILAI DI DASHBOARD ---
+            // Data dari ESP32 (sesuai publish_mqtt_data())
+            
+            document.getElementById('voltage').innerText = data.voltage_avg ? data.voltage_avg.toFixed(2) : 'N/A';
+            document.getElementById('current').innerText = data.current_i1 ? data.current_i1.toFixed(2) : 'N/A';
+            
+            // Power P adalah 35.0 (Placeholder) - kita asumsikan dalam kW
+            document.getElementById('power').innerText = data.power_p ? data.power_p.toFixed(2) : 'N/A'; 
+            
+            document.getElementById('pf').innerText = data.pf_total ? data.pf_total.toFixed(3) : 'N/A';
+            
+        } catch (e) {
+            console.error("Error parsing JSON:", e);
+        }
+    }
+</script>
+
 </body>
 </html>
