@@ -5,35 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Monitoring Energi PT. Amarilys</title>
     <style>
-        /* ========================================================== */
-        /* CSS FINAL (Untuk Fix Tampilan Tombol yang Rusak)           */
-        /* ========================================================== */
-        body { 
-            font-family: Arial, sans-serif; 
-            background-color: #f4f4f4; 
-            margin: 0; 
-            padding: 20px; 
-            display: flex; 
-            flex-direction: column; 
-            justify-content: flex-start; 
-            align-items: center; 
-            min-height: 100vh; 
-        }
-        .dashboard-container { 
-            max-width: 450px; 
-            width: 100%; 
-            margin: 20px auto; 
-            text-align: center; 
-            background: white; 
-            padding: 30px; 
-            border-radius: 10px; 
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); 
-        }
-        h1 { 
-            color: #333; 
-            margin-bottom: 30px; 
-        }
-        
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; display: flex; flex-direction: column; justify-content: flex-start; align-items: center; min-height: 100vh; }
+        .dashboard-container { max-width: 450px; width: 100%; margin: 20px auto; text-align: center; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); }
+        h1 { color: #333; margin-bottom: 30px; }
         .button-grid {
             display: grid;
             gap: 15px;
@@ -48,11 +22,7 @@
             transition: background-color 0.3s;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
-        .dashboard-button:hover { 
-            opacity: 0.9; 
-        }
-        
-        /* Warna Tombol */
+        .dashboard-button:hover { opacity: 0.9; }
         #btn-realtime { background-color: #28a745; }
         #btn-tariff { background-color: #ffc107; color: #333;}
         #btn-trouble { background-color: #dc3545; }
@@ -87,7 +57,7 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
-            // Dashboard langsung terbuka karena Auth dihapus
+            // Dashboard langsung terbuka
         });
 
         function goToPage(page) {
