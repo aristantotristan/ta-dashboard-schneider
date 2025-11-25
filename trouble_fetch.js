@@ -1,110 +1,95 @@
 // =======================================================
-// KODE LENGKAP trouble_fetch.js DENGAN LOG DETAIL HARIAN
+// trouble_fetch.js: LOGIC TROUBLE & LOG HARIAN
 // =======================================================
-const SUPABASE_URL = 'https://khamzxkrvmnjhrgdqbkg.supabase.co'; 
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtoYW16eGtydm1uamhyZ2RxYmtnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM5NDg2MzcsImV4cCI6MjA3OTUyNDYzN30.SYZTZA3rxaE-kwFuKLlzkol_mLuwjYmVudGCN0imAM8'; 
+// Kredensial di-load dari config.js
 const TABLE_NAME = 'machine_daily_status';
+const TELEMETRY_TABLE = 'machine_telemetry'; // Untuk mengambil daftar mesin
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+document.addEventListener('DOMContentLoaded', fetchMachineListForTrouble);
+
+// Mengambil daftar mesin untuk filter
+async function fetchMachineListForTrouble() {
+    try {
+        const { data, error } = await supabase
+            .from(TELEMETRY_TABLE)
+            .select('machine_id')
+            .order('machine_id', { ascending: true })
+            .limit(100); 
+
+        if (error) throw error;
+
+        const uniqueMachines = [...new Set(data.map(item => item.machine_id))];
+        const select = document.getElementById('machine-select');
+
+        uniqueMachines.forEach(id => {
+            const option = document.createElement('option');
+            option.value = id;
+            option.textContent = id;
+            select.appendChild(option);
+        });
+    } catch (error) {
+        console.error("Error fetching machine list:", error);
+    }
+}
 
 // Fungsi utama untuk mengambil data trouble
 async function fetchTroubleData() {
-    const machineId = document.getElementById('machineId').value;
-    const startDateInput = document.getElementById('startDate').value;
-    const endDateInput = document.getElementById('endDate').value;
-    const tbody = document.querySelector('#troubleTable tbody');
-    
-    tbody.innerHTML = `<tr><td colspan="6">Mencari log trouble untuk ${machineId}...</td></tr>`;
+    const machineId = document.getElementById('machine-select').value;
+    const startDate = document.getElementById('start-date').value;
+    const endDate = document.getElementById('end-date').value;
 
-    // 1. Validasi input
-    if (!machineId || !startDateInput || !endDateInput) {
-        alert("Mohon pilih Mesin ID, Tanggal Mulai dan Tanggal Akhir.");
-        document.getElementById('selectedMachineDisplay').textContent = "N/A";
-        tbody.innerHTML = `<tr><td colspan="6">Pilih mesin, tanggal, dan tekan 'Cek Trouble' untuk melihat laporan.</td></tr>`;
+    const tbody = document.querySelector('#trouble-table tbody');
+    tbody.innerHTML = `<tr><td colspan="5">Mencari data status harian...</td></tr>`;
+
+    if (!machineId || !startDate || !endDate) {
+        alert("Mohon lengkapi Mesin ID dan rentang tanggal.");
+        tbody.innerHTML = `<tr><td colspan="5">Pilih mesin dan rentang tanggal.</td></tr>`;
         return;
     }
-
-    // Tampilkan Mesin ID yang dipilih
-    document.getElementById('selectedMachineDisplay').textContent = machineId;
-    
-    // --- Logika Penentuan Filter Waktu ---
-    const startDate = new Date(startDateInput);
-    const endDate = new Date(endDateInput);
-    endDate.setHours(23, 59, 59, 999); 
-    
-    if (startDate.getTime() >= endDate.getTime()) {
-        alert("Tanggal Mulai harus lebih awal dari Tanggal Akhir.");
-        tbody.innerHTML = `<tr><td colspan="6">Tanggal tidak valid.</td></tr>`;
-        return;
-    }
-
-    // Tampilkan rentang tanggal yang dipilih di UI
-    document.getElementById('dateRangeDisplay').textContent = 
-        `Periode: ${startDate.toLocaleDateString('id-ID')} - ${new Date(endDateInput).toLocaleDateString('id-ID')}`;
-    
-    // URL API Supabase: FILTER BERDASARKAN MACHINE_ID dan REPORT_DATE
-    const url = `${SUPABASE_URL}/rest/v1/${TABLE_NAME}?select=*&machine_id=eq.${machineId}&report_date=gte.${startDateInput}&report_date=lte.${endDateInput}&order=report_date.asc`;
 
     try {
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'apikey': SUPABASE_ANON_KEY 
-            }
-        });
+        const { data, error } = await supabase
+            .from(TABLE_NAME)
+            .select('*')
+            .eq('machine_id', machineId)
+            .gte('log_date', startDate)
+            .lte('log_date', endDate)
+            .order('log_date', { ascending: true });
 
-        if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}. Cek RLS Policy.`);
-        }
+        if (error) throw error;
 
-        const data = await response.json();
-        
-        if (data.length === 0) {
-             tbody.innerHTML = `<tr><td colspan="6">Tidak ada log harian yang tercatat untuk ${machineId} dalam periode ini.</td></tr>`;
-             return;
-        }
+        displayTroubleTable(data);
 
-        // Langsung tampilkan data karena tidak perlu agregasi (NEW)
-        displayDetailedLog(data);
-        
     } catch (error) {
         console.error("Gagal mengambil data trouble:", error);
-        tbody.innerHTML = `<tr><td colspan='6'>Error: ${error.message}.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5">Error: ${error.message}. Cek Policy RLS SELECT.</td></tr>`;
     }
 }
 
-// Fungsi BARU: Menampilkan Log Harian Satu per Satu
-function displayDetailedLog(data) {
-    const tbody = document.querySelector('#troubleTable tbody');
+// Fungsi display hasil
+function displayTroubleTable(data) {
+    const tbody = document.querySelector('#trouble-table tbody');
     tbody.innerHTML = '';
-    
-    data.forEach(record => {
-        const row = tbody.insertRow();
-        const statusText = record.is_operational ? 'ON (Stabil)' : 'OFF (Trouble)';
-        const statusClass = record.is_operational ? 'status-on' : 'status-off';
-        
-        // Tanggal
-        row.insertCell().textContent = new Date(record.report_date).toLocaleDateString('id-ID');
-        
-        // Status Harian
-        const statusCell = row.insertCell();
-        statusCell.textContent = statusText;
-        statusCell.className = statusClass;
-        
-        // Detail Trouble
-        row.insertCell().textContent = record.trouble_count;
-        row.insertCell().textContent = record.trouble_type || 'N/A';
-        row.insertCell().textContent = record.uptime_hours.toFixed(1);
-        row.insertCell().textContent = record.downtime_hours.toFixed(1);
 
-        // Jika ada trouble, beri highlight pada baris
-        if (!record.is_operational) {
-            row.style.backgroundColor = '#fce4e4'; // Merah muda pudar
-        }
+    if (data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5">Tidak ada status harian ditemukan dalam periode tersebut.</td></tr>`;
+        return;
+    }
+
+    data.forEach(item => {
+        const row = tbody.insertRow();
+        const status = item.connection_status;
+        const statusClass = status === 'ON' ? 'status-ON' : 'status-OFF';
+        const keterangan = status === 'ON' ? 'Beroperasi normal' : 'Terjadi gangguan koneksi atau mesin OFF';
+
+        row.insertCell().textContent = item.log_date;
+        row.insertCell().textContent = item.machine_id;
+        row.insertCell().innerHTML = `<span class="${statusClass}">${status}</span>`;
+        row.insertCell().textContent = item.total_logs;
+        row.insertCell().textContent = keterangan;
     });
 }
 
-// Fungsi groupDataByMachine (dihapus/tidak digunakan)
-
-document.addEventListener('DOMContentLoaded', () => {
-    // Inisialisasi tidak diperlukan, tunggu user input
-});
+window.fetchTroubleData = fetchTroubleData;
