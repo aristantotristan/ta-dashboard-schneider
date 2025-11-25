@@ -5,19 +5,40 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Monitoring Energi Index</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f0f0; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card-container { background: #fff; padding: 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); text-align: center; }
-        h1 { color: #333; margin-bottom: 30px; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background-color: #f0f0f0; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            margin: 0; 
+        }
+        .card-container { 
+            background: #fff; 
+            padding: 40px; 
+            border-radius: 8px; /* Lebih kecil agar mirip gambar */
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); 
+            text-align: center; 
+            width: 300px; /* Ukuran yang lebih terdefinisi */
+        }
+        h1 { 
+            color: #333; 
+            font-size: 1.2em; 
+            margin-bottom: 25px; 
+        }
         .monitor-button {
             display: inline-block;
-            padding: 12px 25px;
-            background-color: #28a745; /* Warna hijau */
+            padding: 12px 15px;
+            background-color: #28a745; /* Hijau */
             color: white;
-            text-decoration: none; /* Hilangkan garis bawah link */
-            border-radius: 8px;
-            font-size: 1.1em;
-            font-weight: bold;
+            text-decoration: none; /* Menghilangkan garis bawah link */
+            border-radius: 4px;
+            font-size: 0.9em;
+            font-weight: 500;
             transition: background-color 0.3s;
+            width: 90%;
+            text-align: center;
         }
         .monitor-button:hover {
             background-color: #218838;
@@ -27,7 +48,11 @@
 <body>
 
 <div class="card-container">
-    <h1>Monitoring Energi (Mesin Tunggal)</h1>
+    <h1>
+        Monitoring Energi
+        <br>
+        (Mesin Tunggal)
+    </h1>
     <a href="dashboard.html" class="monitor-button">
         Monitoring Real Time MESIN_01
     </a>
