@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Telemetri Schneider Mesin 01 - Real Time</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; color: #333; margin: 0; padding: 20px; }
+        .container { max-width: 1200px; margin: auto; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1); }
+        h1, h2 { text-align: center; color: #007bff; }
+        .back-button { 
+            display: inline-block; 
+            padding: 8px 15px; 
+            margin-bottom: 20px;
+            background-color: #6c757d; 
+            color: white; 
+            text-decoration: none; 
+            border-radius: 5px; 
+            transition: background-color 0.3s;
+        }
+        .back-button:hover { background-color: #5a6268; }
+        .status-bar { padding: 10px; margin-bottom: 20px; border-radius: 8px; text-align: center; font-weight: bold; }
+        .connected { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .disconnected { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
+            gap: 20px; 
+            margin-bottom: 40px;
+        }
+        .card { 
+            background: #e9f7fe; 
+            padding: 20px; 
+            border-radius: 10px; 
+            border-left: 5px solid #007bff; 
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05); 
+        }
+        .card h3 { margin-top: 0; font-size: 1.1em; color: #0056b3; }
+        .value { font-size: 2.5em; font-weight: 700; color: #333; line-height: 1; }
+        .unit { font-size: 0.9em; color: #666; margin-top: 5px; display: block; }
+        
+        /* Tabel Metadata */
+        .metadata-table { margin-top: 30px; }
+        .metadata-table table { width: 100%; border-collapse: collapse; margin-top: 10px; background: #fff; font-size: 0.9em; }
+        .metadata-table th, .metadata-table td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        .metadata-table th { background-color: #007bff; color: white; }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js" type="text/javascript"></script>
+</head>
+<body>
+
+<div class="container">
+    <a href="index.html" class="back-button">← Kembali ke Index</a>
+    
+    <h1>Dashboard Telemetri MESIN 01</h1>
+    
+    <div id="mqtt-status" class="status-bar disconnected">
+        Status Koneksi: **Disconnected**
+    </div>
+    
+    <h2>Nilai Real-time Utama</h2>
+    <div class="grid">
+        <div class="card">
+            <h3>Voltage (L-L Avg)</h3>
+            <span class="value" id="voltage">---</span>
+            <span class="unit">Volt</span>
+        </div>
+        <div class="card">
+            <h3>Current (I1)</h3>
+            <span class="value" id="current">---</span>
+            <span class="unit">Ampere</span>
+        </div>
+        <div class="card">
+            <h3>Power (P Active)</h3>
+            <span class="value" id="power">---</span>
+            <span class="unit">kW</span>
+        </div>
+        <div class="card">
+            <h3>Power Factor (Total)</h3>
+            <span class="value" id="pf">---</span>
+            <span class="unit">-</span>
+        </div>
+    </div>
+    
+    <hr>
+    
+    <div class="metadata-table">
+        <h2>Peta Register Modbus & Spesifikasi Data</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Parameter</th>
+                    <th>Register (Holding)</th>
+                    <th>Keterangan</th>
+                    <th>Satuan Kirim</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>Total Ea</td><td>3204</td><td>OK</td><td>kWh</td></tr>
+                <tr><td>Total Er</td><td>3220</td><td>OK</td><td>kVARh</td></tr>
+                <tr><td>Partial Ea</td><td>3256</td><td>OK</td><td>kWh</td></tr>
+                <tr><td>Partial Er</td><td>3272</td><td>OK</td><td>kVARh</td></tr>
+                <tr><td>Voltage</td><td>3020</td><td>OK (L-L Avg)</td><td>Volt</td></tr>
+                <tr><td>Current</td><td>3000, 3002, 3004</td><td>OK (I1, I2, I3)</td><td>Ampere</td></tr>
+                <tr><td>Power (P)</td><td>3054</td><td>OK (Total Active)</td><td>Watt (x1000)</td></tr>
+                <tr><td>Power (Q)</td><td>3060</td><td>OK (Total Reactive)</td><td>VAR (x1000)</td></tr>
+                <tr><td>Power (S)</td><td>3068</td><td>OK (Total Apparent)</td><td>kVA (Tetap)</td></tr>
+                <tr><td>PF</td><td>3084</td><td>OK (Total PF)</td><td>-</td></tr>
+                <tr><td>Freq</td><td>3110</td><td>OK</td><td>Hz</td></tr>
+                <tr><td>Op Time</td><td>3399</td><td>OK (Load Time)</td><td>Jam</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // --- KONFIGURASI MQTT ---
+    const host = "broker.hivemq.com";
+    const port = 8000; // Port WebSocket HiveMQ (Penting: Beda dengan port 1883 di ESP32)
+    const topic = "schneider/mesin01/telemetry";
+    // Buat Client ID unik agar broker tidak menolak
+    const clientId = "WebClient-" + parseInt(Math.random() * 1000, 10); 
+
+    const statusElement = document.getElementById('mqtt-status');
+    
+    // Inisialisasi Klien Paho MQTT
+    const client = new Paho.MQTT.Client(host, port, "/ws", clientId);
+
+    // Set Callbacks
+    client.onConnectionLost = onConnectionLost;
+    client.onMessageArrived = onMessageArrived;
+    
+    // Coba Hubungkan ke Broker
+    client.connect({ 
+        onSuccess: onConnect,
+        onFailure: onFailure,
+        cleanSession: true,
+        useSSL: false // HiveMQ umumnya tidak memerlukan SSL untuk port 8000
+    });
+
+    function onConnect() {
+        console.log("MQTT Connected");
+        statusElement.className = 'status-bar connected';
+        statusElement.innerHTML = 'Status Koneksi: **Connected**';
+        
+        // Subscribe ke Topik setelah berhasil terhubung
+        client.subscribe(topic);
+        console.log(`Subscribed to: ${topic}`);
+    }
+
+    function onFailure(responseObject) {
+        console.error("MQTT Connection Failed:", responseObject.errorMessage);
+        statusElement.className = 'status-bar disconnected';
+        statusElement.innerHTML = `Status Koneksi: **Failed** (${responseObject.errorMessage})`;
+    }
+
+    function onConnectionLost(responseObject) {
+        if (responseObject.errorCode !== 0) {
+            console.log("onConnectionLost:" + responseObject.errorMessage);
+            statusElement.className = 'status-bar disconnected';
+            statusElement.innerHTML = 'Status Koneksi: **Disconnected** (Lost). Reconnecting...';
+        }
+        // Coba koneksi ulang setelah 5 detik
+        setTimeout(() => client.connect({ onSuccess: onConnect, onFailure: onFailure }), 5000);
+    }
+
+    function onMessageArrived(message) {
+        console.log("Message Arrived:", message.payloadString);
+        try {
+            // Parsing payload JSON dari ESP32
+            const data = JSON.parse(message.payloadString);
+            
+            // --- UPDATE NILAI DI DASHBOARD ---
+            
+            // 1. Voltage (voltage_avg)
+            if (data.voltage_avg !== undefined) {
+                document.getElementById('voltage').innerText = data.voltage_avg.toFixed(2);
+            } else {
+                document.getElementById('voltage').innerText = 'N/A';
+            }
+            
+            // 2. Current (current_i1)
+            if (data.current_i1 !== undefined) {
+                document.getElementById('current').innerText = data.current_i1.toFixed(2);
+            } else {
+                 document.getElementById('current').innerText = 'N/A';
+            }
+            
+            // 3. Power (power_p) - Asumsi dalam kW untuk tampilan
+            if (data.power_p !== undefined) {
+                 // Pembacaan ESP32 Anda adalah 35.0 (kita asumsikan sudah dalam kW atau nilai yang wajar)
+                document.getElementById('power').innerText = data.power_p.toFixed(2); 
+            } else {
+                 document.getElementById('power').innerText = 'N/A';
+            }
+            
+            // 4. Power Factor (pf_total)
+            if (data.pf_total !== undefined) {
+                document.getElementById('pf').innerText = data.pf_total.toFixed(3);
+            } else {
+                 document.getElementById('pf').innerText = 'N/A';
+            }
+            
+        } catch (e) {
+            console.error("Error parsing JSON or updating UI:", e);
+        }
+    }
+</script>
+
+</body>
+</html>
