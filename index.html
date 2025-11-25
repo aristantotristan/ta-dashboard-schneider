@@ -5,7 +5,38 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Monitoring Energi PT. Amarilys</title>
     <style>
-        /* ... (CSS Anda) ... */
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; display: flex; flex-direction: column; justify-content: flex-start; align-items: center; min-height: 100vh; }
+        .dashboard-container { max-width: 450px; width: 100%; margin: 20px auto; text-align: center; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); }
+        h1 { color: #333; margin-bottom: 30px; }
+        
+        /* Info Panel */
+        .info-panel { margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; background: #f9f9f9; width: 100%; box-sizing: border-box;}
+        .info-panel p { margin: 5px 0; font-size: 0.95em; }
+
+        .button-grid {
+            display: grid;
+            gap: 15px;
+        }
+        .dashboard-button {
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .dashboard-button:hover { opacity: 0.9; }
+        
+        /* Warna Tombol */
+        #btn-realtime { background-color: #28a745; }
+        #btn-tariff { background-color: #ffc107; color: #333;}
+        #btn-trouble { background-color: #dc3545; }
+        #btn-control { background-color: #17a2b8; }
+
+        /* Logout */
+        .logout-button { margin-top: 30px; padding: 10px; background-color: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -13,6 +44,11 @@
     <div class="dashboard-container">
         <h1>Monitoring Energi<br>(Halaman Utama)</h1>
         
+        <div class="info-panel" style="display: none;">
+            <p>User: <span id="authStatus">Memuat...</span></p>
+            <p>Role: <span id="userRoleDisplay">N/A</span></p>
+        </div>
+
         <div class="button-grid">
             
             <div class="dashboard-button" id="btn-realtime" onclick="goToPage('realtime.html')">
@@ -37,7 +73,8 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
-            // Logika Auth Dihapus - Dashboard kini terbuka
+            // Karena login dihapus, tidak ada pengecekan autentikasi di sini.
+            // Dashboard langsung terbuka.
         });
 
         function goToPage(page) {
