@@ -146,10 +146,10 @@
 // --- CONFIG (Pastikan ini sesuai dengan setup Anda) ---
 const SUPABASE_URL = "https://rojhcadtqfynlqzubftx.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs";
-const MQTT_HOST = "3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud"; // Ganti ke alamat ESP32
-const MQTT_PORT = 8884; // Tetap gunakan 8884 (WebSocket) untuk browser!
-const MQTT_USER = "vercel_client"; // Gunakan user ESP32 (meski web harusnya user berbeda)
-const MQTT_PASS = "VercelPass123!"; // Gunakan password ESP32
+const MQTT_HOST = "3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud";
+const MQTT_PORT = 8884; // Port WebSocket untuk browser
+const MQTT_USER = "vercel_client"; 
+const MQTT_PASS = "VercelPass123!";
 const MQTT_TOPIC = "politeknik/meter/data";
 
 let supabaseClient, mqttClient;
@@ -162,7 +162,7 @@ let lastUpdateTimes = {};
 const fmt = (val, dig) => (val != null && !isNaN(val)) ? Number(val).toFixed(dig) : "0";
 const fmtRp = (val) => (val != null && !isNaN(val)) ? 'Rp ' + Number(val).toLocaleString('id-ID') : "0";
 
-// Fungsi untuk rata-rata arus (I1+I2+I3) / 3
+// Fungsi untuk rata-rata arus
 const fmtAvgCurrent = (i1, i2, i3) => {
     const v1 = parseFloat(i1) || 0;
     const v2 = parseFloat(i2) || 0;
@@ -171,9 +171,9 @@ const fmtAvgCurrent = (i1, i2, i3) => {
     return avg.toFixed(2);
 };
 
+// Fungsi untuk Operation Time (Jam ke Hari/Jam)
 function fmtTime(val) {
     if (val == null || isNaN(val) || val == 0) return "0 Hari 0 Jam";
-    // val adalah Jam (H), konversi ke Hari dan Jam
     const days = Math.floor(val / 24);
     const hours = val % 24;
     return `${days} Hari ${hours.toFixed(1)} Jam`;
@@ -182,21 +182,19 @@ function fmtTime(val) {
 window.onload = function() {
     try {
         supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        // NOTE: Untuk browser, kita harus menggunakan port WebSocket (8884)
+        // Menggunakan port WebSocket (8884)
         mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "/mqtt", "web_" + Date.now()); 
         
         mqttClient.onConnectionLost = (r) => { if (r.errorCode !== 0) { setStatus("Koneksi Putus...", "bg-err"); setTimeout(connectMQTT, 3000); } };
         mqttClient.onMessageArrived = (m) => {
             const d = JSON.parse(m.payloadString);
             
-            // Menggunakan key "id" dari payload ESP32 Anda
             if(!d.id) return;
             
             latestDataCache[d.id] = d;
             lastUpdateTimes[d.id] = Date.now();
             updateCardStatus(d);
             
-            // Hanya update tampilan detail jika user sedang melihat mesin tersebut
             if(d.id === activeMachineId) updateDetailView(d);
         };
 
@@ -207,7 +205,6 @@ window.onload = function() {
 
 function initApp() {
     let gM = "", gT = "";
-    // Membuat card untuk Mesin 1 sampai 18
     for(let i=1; i<=18; i++) {
         gM += `<div class="menu-card" id="mon-${i}" onclick="goMonitor(${i})">Mesin ${i}<span class="menu-badge">OFFLINE</span></div>`;
         gT += `<div class="menu-card" onclick="goTarif(${i})">Mesin ${i}</div>`;
@@ -220,8 +217,7 @@ function initApp() {
 
 function checkTimeouts() {
     const now = Date.now();
-    // TIMEOUT 3 MENIT (180000 ms)
-    const TIMEOUT = 180000; 
+    const TIMEOUT = 180000; // 3 Menit
 
     for(let i=1; i<=18; i++) {
         if(lastUpdateTimes[i] && (now - lastUpdateTimes[i] > TIMEOUT)) {
@@ -237,7 +233,6 @@ function checkTimeouts() {
 function connectMQTT() {
     setStatus("Menghubungkan...", "bg-wait");
     mqttClient.connect({
-        // HiveMQ Cloud WebSockets menggunakan port 8884 dan harus SSL=true
         useSSL: true, 
         userName: MQTT_USER, 
         password: MQTT_PASS,
@@ -291,11 +286,13 @@ function updateCardStatus(d) {
     }
 }
 
+// --- FUNGSI UTAMA MAPPING DATA ESP32 KE HTML ---
 function updateDetailView(d) {
-    const avgI = fmtAvgCurrent(d.I1, d.I2, d.I3); // Hitung rata-rata I
+    // Pastikan d.I1, d.I2, d.I3 ada sebelum menghitung rata-rata
+    const avgI = fmtAvgCurrent(d.I1, d.I2, d.I3); 
 
-    // Jika OFFLINE -> RESET 0
     if(d.status === 'offline') {
+        // Reset semua nilai jika offline
         const elements = ['v-ea-t','v-er-t','v-ea-p','v-er-p','v-v','v-i-avg','v-i1','v-i2','v-i3','v-p-w','v-q-var','v-s-kva','v-pf','v-hz'];
         elements.forEach(k => { 
             if(document.getElementById(k)) document.getElementById(k).innerText = "0"; 
@@ -305,29 +302,34 @@ function updateDetailView(d) {
         return;
     }
 
-    // ONLINE -> UPDATE DENGAN KEY DARI PAYLOAD ESP32
+    // ONLINE -> MAPPING DARI KEY ESP32 V12:
+    
+    // Energi (Ea_T, Er_T, Ea_P, Er_P)
     document.getElementById('v-ea-t').innerText = fmt(d.Ea_T, 2);
     document.getElementById('v-er-t').innerText = fmt(d.Er_T, 2);
     document.getElementById('v-ea-p').innerText = fmt(d.Ea_P, 2);
     document.getElementById('v-er-p').innerText = fmt(d.Er_P, 2);
     
+    // Kelistrikan (V, I1, I2, I3)
     document.getElementById('v-v').innerText = fmt(d.V, 1);
     document.getElementById('v-i-avg').innerText = avgI; // Menggunakan hasil perhitungan rata-rata
     document.getElementById('v-i1').innerText = fmt(d.I1, 2);
     document.getElementById('v-i2').innerText = fmt(d.I2, 2);
     document.getElementById('v-i3').innerText = fmt(d.I3, 2);
     
-    document.getElementById('v-p-w').innerText = fmt(d.P_W, 0);
-    document.getElementById('v-q-var').innerText = fmt(d.Q_VAR, 0);
-    document.getElementById('v-s-kva').innerText = fmt(d.S_kVA, 2);
+    // Daya & Kualitas (P_W, Q_VAR, S_kVA, PF, Hz)
+    document.getElementById('v-p-w').innerText = fmt(d.P_W, 0); // Watt
+    document.getElementById('v-q-var').innerText = fmt(d.Q_VAR, 0); // VAR
+    document.getElementById('v-s-kva').innerText = fmt(d.S_kVA, 2); // kVA
     document.getElementById('v-pf').innerText = fmt(d.PF, 3);
     document.getElementById('v-hz').innerText = fmt(d.Hz, 1);
+    
+    // Waktu (Op_H)
     document.getElementById('v-op-h').innerText = fmtTime(d.Op_H);
 
     if(gaugesInitialized) {
-        // Gauge diisi dengan nilai yang sesuai (W, V, A, Hz)
         gaugeV.set(d.V); 
-        gaugeA.set(avgI); // Gunakan rata-rata untuk gauge arus
+        gaugeA.set(avgI); 
         gaugeP.set(d.P_W); 
         gaugeHz.set(d.Hz);
     }
@@ -346,7 +348,6 @@ window.switchTab = (tab) => {
         document.getElementById('btn-full').classList.remove('active');
         document.getElementById('btn-gauge').classList.add('active');
         
-        // Setup gauge hanya jika tab ini dibuka pertama kali
         if(!gaugesInitialized) { 
             setupGauges(); 
             gaugesInitialized = true; 
@@ -358,7 +359,7 @@ window.switchTab = (tab) => {
 function setupGauges() {
     var opts = { angle: 0, lineWidth: 0.2, radiusScale: 1, pointer: { length: 0.5, strokeWidth: 0.03, color: '#000' }, limitMax: false, limitMin: false, colorStart: '#6FADCF', colorStop: '#8FC0DA', strokeColor: '#E0E0E0', generateGradient: true, highDpiSupport: true };
     
-    // Asumsi batas max aman: V=450 (3 phase), A=100, P=20000 W (20kW)
+    // Max values disesuaikan untuk Watt dan Volt 3 Phase
     gaugeV = new Gauge(document.getElementById("g-v")).setOptions(opts); gaugeV.maxValue = 450; gaugeV.setMinValue(0); gaugeV.set(0);
     gaugeA = new Gauge(document.getElementById("g-a")).setOptions(opts); gaugeA.maxValue = 100; gaugeA.setMinValue(0); gaugeA.set(0);
     gaugeP = new Gauge(document.getElementById("g-p")).setOptions(opts); gaugeP.maxValue = 20000; gaugeP.setMinValue(0); gaugeP.set(0);
