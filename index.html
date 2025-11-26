@@ -1,3 +1,95 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MONITORING ENERGI (Mesin 1 Direct View)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gauge.js/1.3.7/gauge.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; padding: 20px; color: #333; }
+        h1 { text-align: center; color: #0d47a1; margin-bottom: 5px; }
+        h2 { text-align: center; color: #546e7a; margin-top: 0; margin-bottom: 25px; }
+        #status { text-align: center; padding: 10px; margin-bottom: 20px; font-weight: bold; color: white; border-radius: 5px; }
+        .bg-ok { background: #27ae60; } .bg-err { background: #c0392b; } .bg-wait { background: #f39c12; }
+        
+        .page { display: none; } .page.active { display: block; }
+        
+        /* DETAIL */
+        .gauge-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 20px; }
+        .gauge-box { background: #fff; padding: 15px; border-radius: 10px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .gauge-box canvas { width: 100%; height: auto; }
+        
+        .data-card { background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .data-table { width: 100%; border-collapse: collapse; }
+        .data-table td { padding: 10px 15px; border-bottom: 1px solid #eee; }
+        .lbl { color: #7f8c8d; font-weight: 500; }
+        .val { text-align: right; font-weight: bold; color: #2c3e50; }
+        .unit { color: #95a5a6; font-size: 0.85em; width: 50px; text-align: right; }
+        
+        .row-head { background: #ecf0f1; font-weight: bold; color: #2c3e50; }
+        .row-time { background: #eafaf1; }
+        .row-sub { background: #f9f9f9; font-size: 0.9em; color: #666; }
+        
+        /* TAB */
+        .tab-container { display: flex; margin-bottom: 20px; }
+        .tab-button { flex: 1; padding: 10px; border: none; background: #ddd; cursor: pointer; font-weight: bold; color: #666; }
+        .tab-button.active { background: #0d47a1; color: white; }
+        .tab-content { display: none; } .tab-content.active { display: block; }
+    </style>
+</head>
+<body>
+
+    <h1>MONITORING ENERGI</h1>
+    <h2>PT. Amarilys Karisma Gemilang</h2>
+    <div id="status" class="bg-wait">Memuat Sistem...</div>
+
+    <div id="page-monitor-detail" class="page active">
+        <h2 id="monitor-detail-title">Detail Mesin 1</h2>
+
+        <div class="tab-container">
+            <button class="tab-button active" id="btn-full" onclick="switchTab('full')">Full Parameters</button>
+            <button class="tab-button" id="btn-gauge" onclick="switchTab('gauge')">Core Parameters</button>
+        </div>
+
+        <div id="view-full" class="tab-content active">
+            <div class="data-card">
+                <table class="data-table">
+                    <tr class="row-head"><td colspan="3">1. Energi (Akumulasi)</td></tr>
+                    <tr><td class="lbl">Total Ea Import</td><td class="val" id="v-ea-t">0</td><td class="unit">kWh</td></tr>
+                    <tr><td class="lbl">Total Er Import</td><td class="val" id="v-er-t">0</td><td class="unit">kVARh</td></tr>
+                    <tr><td class="lbl">Partial Active E</td><td class="val" id="v-ea-p">0</td><td class="unit">kWh</td></tr>
+                    <tr><td class="lbl">Partial Reactive E</td><td class="val" id="v-er-p">0</td><td class="unit">kVARh</td></tr>
+                    
+                    <tr class="row-head"><td colspan="3">2. Kelistrikan</td></tr>
+                    <tr><td class="lbl">Voltage (Avg)</td><td class="val" id="v-v">0</td><td class="unit">V</td></tr>
+                    <tr><td class="lbl">Current (Avg)</td><td class="val" id="v-i-avg">0</td><td class="unit">A</td></tr>
+                    <tr class="row-sub"><td class="lbl" style="padding-left:30px">Phase 1 (I1)</td><td class="val" id="v-i1">0</td><td class="unit">A</td></tr>
+                    <tr class="row-sub"><td class="lbl" style="padding-left:30px">Phase 2 (I2)</td><td class="val" id="v-i2">0</td><td class="unit">A</td></tr>
+                    <tr class="row-sub"><td class="lbl" style="padding-left:30px">Phase 3 (I3)</td><td class="val" id="v-i3">0</td><td class="unit">A</td></tr>
+                    
+                    <tr class="row-head"><td colspan="3">3. Daya & Kualitas</td></tr>
+                    <tr><td class="lbl">Active Power</td><td class="val" id="v-p-w">0</td><td class="unit">W</td></tr>
+                    <tr><td class="lbl">Reactive Power</td><td class="val" id="v-q-var">0</td><td class="unit">VAR</td></tr>
+                    <tr><td class="lbl">Apparent Power</td><td class="val" id="v-s-kva">0</td><td class="unit">kVA</td></tr>
+                    <tr><td class="lbl">Power Factor</td><td class="val" id="v-pf">0</td><td class="unit"></td></tr>
+                    <tr><td class="lbl">Frequency</td><td class="val" id="v-hz">0</td><td class="unit">Hz</td></tr>
+
+                    <tr class="row-time"><td class="lbl">Operation Time</td><td class="val" id="v-op-h">0 Hari 0 Jam</td><td class="unit"></td></tr>
+                </table>
+            </div>
+        </div>
+
+        <div id="view-gauge" class="tab-content">
+            <div class="gauge-grid">
+                <div class="gauge-box"><canvas id="g-v"></canvas><div>Voltage (V)</div></div>
+                <div class="gauge-box"><canvas id="g-a"></canvas><div>Current (A)</div></div>
+                <div class="gauge-box"><canvas id="g-p"></canvas><div>Power (W)</div></div>
+                <div class="gauge-box"><canvas id="g-f"></canvas><div>Freq (Hz)</div></div>
+            </div>
+        </div>
+    </div>
+    
 <script>
 // --- CONFIG MQTT ---
 const MQTT_HOST = "3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud";
@@ -8,7 +100,7 @@ const MQTT_TOPIC = "politeknik/meter/data";
 
 let mqttClient; 
 let gaugeV, gaugeA, gaugeP, gaugeHz;
-let activeMachineId = 0;
+let activeMachineId = 1; // Default ke ID 1
 let gaugesInitialized = false;
 let latestDataCache = {};
 let lastUpdateTimes = {};
@@ -48,27 +140,19 @@ window.onload = function() {
             lastUpdateTimes[d.id] = Date.now();
             updateCardStatus(d);
             
-            // JIKA KITA SUDAH DI HALAMAN DETAIL, UPDATE DATANYA
+            // Panggil updateDetailView saat data diterima
             if(d.id === activeMachineId) updateDetailView(d);
         };
 
-        initApp();
+        // Langsung panggil connectMQTT, tidak perlu initApp karena tidak ada menu.
+        connectMQTT();
+        
+        // Atur activeMachineId ke 1 dan panggil update view untuk inisialisasi display
+        window.goMonitor(1); 
+        
         setInterval(checkTimeouts, 1000);
     } catch (e) { setStatus("Error Init: " + e.message, "bg-err"); }
 };
-
-function initApp() {
-    let gM = "";
-    const ONLY_ID = 1;
-    
-    // HANYA membuat card untuk Mesin 1
-    gM += `<div class="menu-card" id="mon-${ONLY_ID}" onclick="goMonitor(${ONLY_ID})">Mesin ${ONLY_ID}<span class="menu-badge">OFFLINE</span></div>`;
-    
-    document.getElementById("monitor-grid-container").innerHTML = gM;
-    // KEMBALI KE FLOW AWAL: Tampilkan menu utama dulu
-    showPage('page-main-menu'); 
-    connectMQTT();
-}
 
 function checkTimeouts() {
     const now = Date.now();
@@ -79,7 +163,8 @@ function checkTimeouts() {
         if(lastUpdateTimes[i] && (now - lastUpdateTimes[i] > TIMEOUT)) {
             const off = {id: i, status: 'offline'};
             latestDataCache[i] = off;
-            updateCardStatus(off);
+            // Hanya ganti status jika ada card (sekarang tidak ada card di mode direct)
+            // updateCardStatus(off); 
             if(activeMachineId === i) updateDetailView(off);
             delete lastUpdateTimes[i];
         }
@@ -95,10 +180,6 @@ function connectMQTT() {
         onSuccess: () => { 
             setStatus("ONLINE", "bg-ok"); 
             mqttClient.subscribe(MQTT_TOPIC); 
-            
-            // JANGAN PAKSA ke goMonitor(1) di sini. Biarkan user mengklik.
-            // Atau, jika ingin otomatis:
-            // window.goMonitor(1); 
         },
         onFailure: (r) => { 
             setStatus(`Gagal Konek (${r.errorMessage})`, "bg-err"); 
@@ -107,33 +188,19 @@ function connectMQTT() {
     });
 }
 
-window.showPage = (id) => {
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
-};
-
+// Fungsi ini digunakan untuk inisialisasi tampilan, bukan ganti halaman
 window.goMonitor = (id) => {
     activeMachineId = id;
     document.getElementById("monitor-detail-title").textContent = "Detail Mesin " + id;
     
+    // Inisialisasi awal dengan data kosong atau cache
     if(latestDataCache[id]) updateDetailView(latestDataCache[id]);
     else updateDetailView({status:'offline'});
 
     window.switchTab('full');
-    showPage('page-monitor-detail');
+    // showPage('page-monitor-detail'); <-- Halaman sudah active saat loading
 };
 
-function updateCardStatus(d) {
-    const el = document.getElementById(`mon-${d.id}`);
-    if(el) {
-        const badge = el.querySelector('.menu-badge');
-        if(d.status === 'online') {
-            el.classList.add('online'); badge.innerText = "ONLINE"; badge.style.color = "green";
-        } else {
-            el.classList.remove('online'); badge.innerText = "OFFLINE"; badge.style.color = "gray";
-        }
-    }
-}
 
 function updateDetailView(d) {
     console.log("DEBUG 2: UPDATE FUNGSI TERPANGGIL DENGAN DATA:", d.V, d.P_W); 
@@ -141,11 +208,10 @@ function updateDetailView(d) {
     const avgI = fmtAvgCurrent(d.I1, d.I2, d.I3); 
 
     if(d.status === 'offline') {
-        const elements = ['v-ea-t','v-er-t','v-ea-p','v-er-p','v-v','v-i-avg','v-i1','v-i2','v-i3','v-p-w','v-q-var','v-s-kva','v-pf','v-hz'];
+        const elements = ['v-ea-t','v-er-t','v-ea-p','v-er-p','v-v','v-i-avg','v-i1','v-i2','v-i3','v-p-w','v-q-var','v-s-kva','v-pf','v-hz','v-op-h'];
         elements.forEach(k => { 
             if(document.getElementById(k)) document.getElementById(k).innerText = "0"; 
         });
-        if(document.getElementById('v-op-h')) document.getElementById('v-op-h').innerText = "0 Hari 0 Jam";
         if(gaugesInitialized) { gaugeV.set(0); gaugeA.set(0); gaugeP.set(0); gaugeHz.set(0); }
         return;
     }
@@ -179,6 +245,7 @@ function updateDetailView(d) {
 }
 
 window.switchTab = (tab) => {
+    // Fungsi switch tab dipertahankan untuk Full Parameters / Core Parameters
     if(tab === 'full') {
         document.getElementById('view-full').classList.add('active');
         document.getElementById('view-gauge').classList.remove('active');
@@ -212,3 +279,5 @@ function setStatus(msg, cls) {
     if(s) { s.textContent = msg; s.className = cls; }
 }
 </script>
+</body>
+</html>
