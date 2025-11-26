@@ -49,8 +49,8 @@
         <div class="card"><div class="card-label">Faktor Daya (PF)</div><div id="PF" class="card-value">N/A</div></div>
         
         <div class="card"><div class="card-label">Arus I1 (A)</div><div id="I1" class="card-value">N/A</div></div>
-        <div class="card"><div class="card-label">Arus I2 (A)</div><div class="card-value">N/A</div></div>
-        <div class="card"><div class="card-label">Arus I3 (A)</div><div class="card-value">N/A</div></div>
+        <div class="card"><div class="card-label">Arus I2 (A)</div><div id="I2" class="card-value">N/A</div></div>
+        <div class="card"><div class="card-label">Arus I3 (A)</div><div id="I3" class="card-value">N/A</div></div>
         <div class="card"><div class="card-label">Daya Semu (kVA)</div><div id="S_kVA" class="card-value">N/A</div></div>
 
         <div class="card"><div class="card-label">Energi Aktif Total (kWh)</div><div id="Ea_T" class="card-value">N/A</div></div>
@@ -69,7 +69,7 @@
 
 <script>
     // =================================================================
-    // !!! PENTING !!! GANTI URL INI DENGAN ALAMAT API SERVER BACKEND ANDA
+    // !!! PENTING !!! GANTI PLACEHOLDER INI DENGAN ALAMAT API SERVER BACKEND ASLI ANDA
     // =================================================================
     const API_ENDPOINT = 'https://politeknik-mqtt-bridge.com/api/v1/meter/1'; 
     const REFRESH_INTERVAL = 5000; // Polling data setiap 5 detik
@@ -86,7 +86,6 @@
         try {
             const response = await fetch(API_ENDPOINT);
             if (!response.ok) {
-                // Jika server backend tidak merespons 200 OK
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             const data = await response.json();
@@ -117,14 +116,12 @@
                 const element = document.getElementById(key);
                 if (element && data[key] !== undefined) {
                     let value = data[key];
-                    // Format angka dengan pemisah ribuan (Locale Indonesia)
                     value = (typeof value === 'number') ? value.toLocaleString('id-ID', { maximumFractionDigits: 3 }) : value;
                     element.textContent = value;
                 }
             }
             document.getElementById('last-update').textContent = new Date().toLocaleTimeString('id-ID');
         } else {
-            // Reset nilai jika status offline
              for (const key in dataMapping) {
                 const element = document.getElementById(key);
                 if (element) { element.textContent = 'N/A'; }
