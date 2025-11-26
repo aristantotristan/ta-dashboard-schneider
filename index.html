@@ -16,7 +16,6 @@
         .page { display: none; } .page.active { display: block; }
         
         /* MENU */
-        /* Mengurangi grid menjadi satu kolom agar Mesin 1 terlihat besar */
         .menu-grid { display: grid; grid-template-columns: 1fr; max-width: 300px; margin: 0 auto; gap: 15px; }
         .menu-card { background: #fff; padding: 20px; border-radius: 10px; text-align: center; font-weight: 600; color: #555; border-top: 5px solid #bdc3c7; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .menu-card:hover { transform: translateY(-5px); }
@@ -152,10 +151,10 @@ function fmtTime(val) {
 
 window.onload = function() {
     try {
-        // Slave ID 001 diterjemahkan sebagai ID 1 di JavaScript
         const ONLY_ID = 1; 
-
-        mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "/mqtt", "web_" + Date.now()); 
+        
+        // FIX: Hapus jalur resource yang menyebabkan 404
+        mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_" + Date.now()); 
         
         mqttClient.onConnectionLost = (r) => { if (r.errorCode !== 0) { setStatus("Koneksi Putus...", "bg-err"); setTimeout(connectMQTT, 3000); } };
         mqttClient.onMessageArrived = (m) => {
@@ -184,7 +183,7 @@ function initApp() {
     gM += `<div class="menu-card" id="mon-${ONLY_ID}" onclick="goMonitor(${ONLY_ID})">Mesin ${ONLY_ID}<span class="menu-badge">OFFLINE</span></div>`;
     
     document.getElementById("monitor-grid-container").innerHTML = gM;
-    showPage('page-monitor-menu'); // Langsung tampilkan menu monitoring
+    showPage('page-monitor-menu'); 
     connectMQTT();
 }
 
@@ -213,7 +212,7 @@ function connectMQTT() {
         onSuccess: () => { 
             setStatus("ONLINE", "bg-ok"); 
             mqttClient.subscribe(MQTT_TOPIC); 
-            // Setelah koneksi, langsung tampilkan detail Mesin 1 (opsional)
+            // Langsung tampilkan detail Mesin 1
             window.goMonitor(1);
         },
         onFailure: (r) => { 
