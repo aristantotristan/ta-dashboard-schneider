@@ -1,137 +1,108 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Power Meter Dashboard</title>
+<meta charset="UTF-8">
+<title>ESP32 Power Meter - ID 1</title>
 
-  <!-- MQTT.js CDN -->
-  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #111;
-      color: #eee;
-      padding: 20px;
-    }
-    table {
-      border-collapse: collapse;
-      width: 100%;
-      background: #1c1c1c;
-    }
-    th, td {
-      border: 1px solid #333;
-      padding: 6px;
-      text-align: center;
-      font-size: 13px;
-    }
-    th {
-      background: #222;
-    }
-    .online {
-      color: #00ff99;
-      font-weight: bold;
-    }
-    .offline {
-      color: #ff4d4d;
-      font-weight: bold;
-    }
-  </style>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #111;
+    color: #fff;
+  }
+  h2 {
+    text-align: center;
+  }
+  table {
+    margin: auto;
+    border-collapse: collapse;
+    width: 60%;
+    background: #1c1c1c;
+  }
+  th, td {
+    border: 1px solid #444;
+    padding: 8px 12px;
+    text-align: left;
+  }
+  th {
+    background: #333;
+    width: 40%;
+  }
+  td {
+    background: #222;
+  }
+  .online { color: #00ff88; }
+  .offline { color: #ff4444; }
+</style>
 </head>
 
 <body>
 
-  <h2>⚡ Power Meter Dashboard</h2>
-  <p>Status: <span id="mqttStatus">Connecting...</span></p>
+<h2>ESP32 Power Meter<br>ID 1</h2>
 
-  <table>
-    <thead>
-      <tr>
-        <th>ID</th>
-        <th>Status</th>
-        <th>V (V)</th>
-        <th>I1 (A)</th>
-        <th>I2 (A)</th>
-        <th>I3 (A)</th>
-        <th>P (W)</th>
-        <th>Q (VAR)</th>
-        <th>S (kVA)</th>
-        <th>PF</th>
-        <th>Hz</th>
-        <th>E Total (kWh)</th>
-      </tr>
-    </thead>
-    <tbody id="tableBody"></tbody>
-  </table>
+<table>
+  <tr><th>Status</th><td id="status">Waiting...</td></tr>
+  <tr><th>Total Energy (EaT)</th><td id="EaT">-</td></tr>
+  <tr><th>Total Reactive (ErT)</th><td id="ErT">-</td></tr>
+  <tr><th>Partial Energy (EaP)</th><td id="EaP">-</td></tr>
+  <tr><th>Partial Reactive (ErP)</th><td id="ErP">-</td></tr>
+  <tr><th>Voltage (V)</th><td id="V">-</td></tr>
+  <tr><th>Current I1 (A)</th><td id="I1">-</td></tr>
+  <tr><th>Current I2 (A)</th><td id="I2">-</td></tr>
+  <tr><th>Current I3 (A)</th><td id="I3">-</td></tr>
+  <tr><th>Active Power P (W)</th><td id="P">-</td></tr>
+  <tr><th>Reactive Power Q (VAR)</th><td id="Q">-</td></tr>
+  <tr><th>Apparent Power S (kVA)</th><td id="S">-</td></tr>
+  <tr><th>Power Factor</th><td id="PF">-</td></tr>
+  <tr><th>Frequency (Hz)</th><td id="Hz">-</td></tr>
+  <tr><th>Operation Time (h)</th><td id="OpH">-</td></tr>
+</table>
 
-  <script>
-    const broker = "wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt";
-    const topic  = "politeknik/meter/data";
+<script>
+const options = {
+  username: "vercel_client",
+  password: "VercelPass123!",
+  reconnectPeriod: 2000,
+};
 
-    const options = {
-      username: "web_dashboard",
-      password: "Tristan12",
-      clean: true,
-      reconnectPeriod: 3000,
-      connectTimeout: 5000
-    };
+const client = mqtt.connect(
+  "wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt",
+  options
+);
 
-    const client = mqtt.connect(broker, options);
+client.on("connect", () => {
+  console.log("✅ MQTT connected");
+  client.subscribe("politeknik/meter/data");
+});
 
-    const tableBody = document.getElementById("tableBody");
-    const mqttStatus = document.getElementById("mqttStatus");
+client.on("message", (topic, message) => {
+  const data = JSON.parse(message.toString());
 
-    const meters = {}; // simpan data per ID
+  if (data.id !== 1) return;
 
-    function renderTable() {
-      tableBody.innerHTML = "";
+  document.getElementById("status").innerHTML =
+    data.status === "online"
+      ? '<span class="online">ONLINE</span>'
+      : '<span class="offline">OFFLINE</span>';
 
-      Object.keys(meters).sort().forEach(id => {
-        const d = meters[id];
+  const keys = [
+    "EaT","ErT","EaP","ErP",
+    "V","I1","I2","I3",
+    "P","Q","S","PF","Hz","OpH"
+  ];
 
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${id}</td>
-          <td class="${d.status === 'online' ? 'online' : 'offline'}">${d.status}</td>
-          <td>${d.V ?? "-"}</td>
-          <td>${d.I1 ?? "-"}</td>
-          <td>${d.I2 ?? "-"}</td>
-          <td>${d.I3 ?? "-"}</td>
-          <td>${d.P ?? "-"}</td>
-          <td>${d.Q ?? "-"}</td>
-          <td>${d.S ?? "-"}</td>
-          <td>${d.PF ?? "-"}</td>
-          <td>${d.Hz ?? "-"}</td>
-          <td>${d.EaT ?? "-"}</td>
-        `;
-        tableBody.appendChild(tr);
-      });
-    }
+  keys.forEach(k => {
+    if (data[k] !== undefined)
+      document.getElementById(k).innerText = data[k];
+  });
+});
 
-    client.on("connect", () => {
-      mqttStatus.textContent = "Connected ✅";
-      client.subscribe(topic);
-    });
-
-    client.on("message", (topic, message) => {
-      try {
-        const data = JSON.parse(message.toString());
-        meters[data.id] = data;
-        renderTable();
-      } catch (e) {
-        console.error("JSON error", e);
-      }
-    });
-
-    client.on("error", err => {
-      mqttStatus.textContent = "Error ❌";
-      console.error(err);
-    });
-
-    client.on("reconnect", () => {
-      mqttStatus.textContent = "Reconnecting...";
-    });
-  </script>
+client.on("error", err => {
+  console.error("MQTT error", err);
+});
+</script>
 
 </body>
 </html>
