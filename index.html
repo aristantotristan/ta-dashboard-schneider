@@ -42,13 +42,13 @@ window.onload = function() {
             
             if(d.id !== ONLY_ID) return; 
             
-            // --- DEBUG 1: DATA RECEIVED ---
             console.log("DEBUG 1: PAYLOAD MENTAH DITERIMA:", d); 
             
             latestDataCache[d.id] = d;
             lastUpdateTimes[d.id] = Date.now();
             updateCardStatus(d);
             
+            // JIKA KITA SUDAH DI HALAMAN DETAIL, UPDATE DATANYA
             if(d.id === activeMachineId) updateDetailView(d);
         };
 
@@ -61,10 +61,12 @@ function initApp() {
     let gM = "";
     const ONLY_ID = 1;
     
+    // HANYA membuat card untuk Mesin 1
     gM += `<div class="menu-card" id="mon-${ONLY_ID}" onclick="goMonitor(${ONLY_ID})">Mesin ${ONLY_ID}<span class="menu-badge">OFFLINE</span></div>`;
     
     document.getElementById("monitor-grid-container").innerHTML = gM;
-    showPage('page-monitor-menu'); 
+    // KEMBALI KE FLOW AWAL: Tampilkan menu utama dulu
+    showPage('page-main-menu'); 
     connectMQTT();
 }
 
@@ -93,7 +95,10 @@ function connectMQTT() {
         onSuccess: () => { 
             setStatus("ONLINE", "bg-ok"); 
             mqttClient.subscribe(MQTT_TOPIC); 
-            window.goMonitor(1);
+            
+            // JANGAN PAKSA ke goMonitor(1) di sini. Biarkan user mengklik.
+            // Atau, jika ingin otomatis:
+            // window.goMonitor(1); 
         },
         onFailure: (r) => { 
             setStatus(`Gagal Konek (${r.errorMessage})`, "bg-err"); 
@@ -131,9 +136,7 @@ function updateCardStatus(d) {
 }
 
 function updateDetailView(d) {
-    // --- DEBUG 2: UPDATE FUNGSI TERPANGGIL ---
-    console.log("DEBUG 2: UPDATE TERPANGGIL DENGAN DATA:", d.V, d.P_W); 
-    // ------------------------------------------
+    console.log("DEBUG 2: UPDATE FUNGSI TERPANGGIL DENGAN DATA:", d.V, d.P_W); 
 
     const avgI = fmtAvgCurrent(d.I1, d.I2, d.I3); 
 
