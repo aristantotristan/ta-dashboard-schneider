@@ -1,147 +1,71 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<title>⚡ Power Meter Dashboard</title>
-
+<title>Power Meter Dashboard</title>
 <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-
 <style>
-  body {
-    background:#111;
-    font-family:Arial, sans-serif;
-    color:#fff;
-  }
-  h2 {
-    text-align:center;
-    margin-bottom:5px;
-  }
-  .status {
-    text-align:center;
-    margin-bottom:20px;
-    font-weight:bold;
-  }
-  .online { color:#00ff88; }
-  .offline { color:#ff4444; }
-
-  table {
-    margin:auto;
-    width:70%;
-    border-collapse:collapse;
-    background:#1c1c1c;
-  }
-  th, td {
-    padding:8px 12px;
-    border:1px solid #444;
-  }
-  th {
-    width:50%;
-    background:#222;
-    text-align:left;
-  }
-  td {
-    background:#111;
-    text-align:right;
-  }
+body{background:#111;color:#fff;font-family:Arial}
+.list button{width:100%;padding:10px;margin:4px;background:#222;color:#fff;border:1px solid #444}
+.active{background:#00aa66}
+table{width:100%;border-collapse:collapse;margin-top:10px}
+th,td{border:1px solid #444;padding:6px}
+th{background:#222}
 </style>
 </head>
-
 <body>
 
-<h2>⚡ Power Meter Dashboard</h2>
-<div class="status" id="connStatus">Status: Connecting...</div>
+<h2>⚡ Power Meter (1–18)</h2>
 
-<table>
-<tr><th>Status</th><td id="status">-</td></tr>
+<div style="display:flex">
+  <div class="list" style="width:20%">
+    <script>
+      for(let i=1;i<=18;i++)
+        document.write(`<button onclick="select(${i})" id="btn${i}">Mesin ${i}</button>`)
+    </script>
+  </div>
 
-<tr><th>Voltage (V)</th><td id="V">-</td></tr>
-<tr><th>Current I1 (A)</th><td id="I1">-</td></tr>
-<tr><th>Current I2 (A)</th><td id="I2">-</td></tr>
-<tr><th>Current I3 (A)</th><td id="I3">-</td></tr>
-
-<tr><th>Active Power P (W)</th><td id="P">-</td></tr>
-<tr><th>Reactive Power Q (VAR)</th><td id="Q">-</td></tr>
-<tr><th>Apparent Power S (kVA)</th><td id="S">-</td></tr>
-
-<tr><th>Power Factor</th><td id="PF">-</td></tr>
-<tr><th>Frequency (Hz)</th><td id="Hz">-</td></tr>
-
-<tr><th>Total Energy (kWh)</th><td id="EaT">-</td></tr>
-<tr><th>Total Reactive (kVARh)</th><td id="ErT">-</td></tr>
-
-<tr><th>Partial Energy (kWh)</th><td id="EaP">-</td></tr>
-<tr><th>Partial Reactive (kVARh)</th><td id="ErP">-</td></tr>
-
-<tr><th>Operation Time (h)</th><td id="OpH">-</td></tr>
-</table>
+  <div style="width:80%;padding-left:10px">
+    <h3 id="title">Pilih Mesin</h3>
+    <table>
+      <tbody id="detail"></tbody>
+    </table>
+  </div>
+</div>
 
 <script>
-/* ================= MQTT CONFIG ================= */
-const client = mqtt.connect(
-  "wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt",
-  {
-    username: "vercel_client",
-    password: "VercelPass123!",
-    reconnectPeriod: 2000
-  }
-);
+let active=1;
+const dataStore={};
 
-let lastUpdate = 0;
-
-/* ================= HELPERS ================= */
-function val(v, unit="") {
-  if (v === null || v === undefined || isNaN(v)) return "-";
-  return v + unit;
+function select(id){
+  active=id;
+  document.querySelectorAll("button").forEach(b=>b.classList.remove("active"));
+  document.getElementById("btn"+id).classList.add("active");
+  render();
 }
 
-/* ================= MQTT EVENTS ================= */
-client.on("connect", () => {
-  document.getElementById("connStatus").innerHTML =
-    "Status: Connected ✅";
-  client.subscribe("politeknik/meter/data");
+function render(){
+  const d=dataStore[active];
+  if(!d) return;
+  document.getElementById("title").innerText="Mesin "+active+" ("+d.status+")";
+  const keys=["EaT","ErT","EaP","ErP","V","I1","I2","I3","P","Q","S","PF","Hz","OpH"];
+  detail.innerHTML="";
+  keys.forEach(k=>{
+    detail.innerHTML+=`<tr><th>${k}</th><td>${d[k]??"-"}</td></tr>`;
+  });
+}
+
+const client=mqtt.connect(
+ "wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt",
+ {username:"web_dashboard",password:"Tristan12"}
+);
+
+client.on("message",(_,m)=>{
+ const d=JSON.parse(m);
+ dataStore[d.id]=d;
+ if(d.id===active) render();
 });
 
-client.on("message", (topic, msg) => {
-  const d = JSON.parse(msg.toString());
-
-  if (d.id !== 1) return;
-
-  lastUpdate = Date.now();
-
-  document.getElementById("status").innerHTML =
-    `<span class="online">ONLINE</span>`;
-
-  document.getElementById("V").innerText   = val(d.V);
-  document.getElementById("I1").innerText  = val(d.I1);
-  document.getElementById("I2").innerText  = val(d.I2);
-  document.getElementById("I3").innerText  = val(d.I3);
-
-  document.getElementById("P").innerText   = val(d.P);
-  document.getElementById("Q").innerText   = val(d.Q);
-  document.getElementById("S").innerText   = val(d.S);
-
-  document.getElementById("PF").innerText  = val(d.PF);
-  document.getElementById("Hz").innerText  = val(d.Hz);
-
-  document.getElementById("EaT").innerText = val(d.EaT);
-  document.getElementById("ErT").innerText = val(d.ErT);
-  document.getElementById("EaP").innerText = val(d.EaP);
-  document.getElementById("ErP").innerText = val(d.ErP);
-
-  document.getElementById("OpH").innerText = val(d.OpH);
-});
-
-/* ================= OFFLINE DETECTOR ================= */
-setInterval(() => {
-  if (Date.now() - lastUpdate > 5000) {
-    document.getElementById("status").innerHTML =
-      `<span class="offline">OFFLINE</span>`;
-  }
-}, 1000);
-
-client.on("error", err => {
-  console.error("MQTT Error:", err);
-});
+client.on("connect",()=>client.subscribe("politeknik/meter/data"));
 </script>
 
 </body>
