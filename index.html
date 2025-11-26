@@ -1,212 +1,117 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Monitoring Energi Modbus (ID 01)</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f9; color: #333; margin: 20px; }
+        .container { max-width: 900px; margin: auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        h1 { color: #007bff; text-align: center; }
+        .status-badge { padding: 5px 10px; border-radius: 4px; font-weight: bold; margin-bottom: 15px; display: inline-block; }
+        .online { background-color: #28a745; color: white; }
+        .offline { background-color: #dc3545; color: white; }
+        .data-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px; }
+        .card { background: #e9ecef; padding: 15px; border-radius: 6px; }
+        .card-value { font-size: 1.8em; font-weight: bold; color: #007bff; }
+        .card-label { font-size: 0.9em; color: #6c757d; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>⚡ Monitoring Energi Modbus</h1>
+    <p>Lokasi: Politeknik | Meter ID: **01**</p>
+    <div id="meter-status" class="status-badge offline">STATUS: METER OFFLINE</div>
+    
+    <div class="data-grid">
+        <div class="card"><div class="card-label">Tegangan (V)</div><div id="V" class="card-value">N/A</div></div>
+        <div class="card"><div class="card-label">Daya Aktif (W)</div><div id="P_W" class="card-value">N/A</div></div>
+        <div class="card"><div class="card-label">Daya Reaktif (VAR)</div><div id="Q_VAR" class="card-value">N/A</div></div>
+        <div class="card"><div class="card-label">Daya Semu (kVA)</div><div id="S_kVA" class="card-value">N/A</div></div>
+        <div class="card"><div class="card-label">Faktor Daya (PF)</div><div id="PF" class="card-value">N/A</div></div>
+        <div class="card"><div class="card-label">Frekuensi (Hz)</div><div id="Hz" class="card-value">N/A</div></div>
+
+        <div class="card"><div class="card-label">Arus I1 (A)</div><div id="I1" class="card-value">N/A</div></div>
+        <div class="card"><div class="card-label">Arus I2 (A)</div><div id="I2" class="card-value">N/A</div></div>
+        <div class="card"><div class="card-label">Arus I3 (A)</div><div id="I3" class="card-value">N/A</div></div>
+        <div class="card"><div class="card-label">Waktu Operasi (Jam)</div><div id="Op_H" class="card-value">N/A</div></div>
+
+        <div class="card"><div class="card-label">Energi Aktif Total (kWh)</div><div id="Ea_T" class="card-value">N/A</div></div>
+        <div class="card"><div class="card-label">Energi Reaktif Total (kVARh)</div><div id="Er_T" class="card-value">N/A</div></div>
+        <div class="card"><div class="card-label">Energi Aktif Parsial (kWh)</div><div id="Ea_P" class="card-value">N/A</div></div>
+        <div class="card"><div class="card-label">Energi Reaktif Parsial (kVARh)</div><div id="Er_P" class="card-value">N/A</div></div>
+    </div>
+    
+    <p style="margin-top: 20px; text-align: right; font-size: 0.8em;">Data terakhir diperbarui: <span id="last-update">N/A</span></p>
+</div>
+
 <script>
-// --- CONFIG MQTT ---
-const MQTT_HOST = "3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud";
-const MQTT_PORT = 8884; 
-const MQTT_USER = "vercel_client"; 
-const MQTT_PASS = "VercelPass123!";
-const MQTT_TOPIC = "politeknik/meter/data";
+    // ASUMSI: Ada backend server (misalnya API di Node.js) yang menyimpan data 
+    // terakhir dari MQTT dan menyediakannya di endpoint ini.
+    const API_ENDPOINT = 'http://localhost:3000/api/v1/meter/1'; 
+    const REFRESH_INTERVAL = 5000; // Refresh setiap 5 detik
 
-let mqttClient; 
-let gaugeV, gaugeA, gaugeP, gaugeHz;
-let activeMachineId = 0;
-let gaugesInitialized = false;
-let latestDataCache = {};
-let lastUpdateTimes = {};
+    const dataMapping = {
+        'V': 'V', 'I1': 'I1', 'I2': 'I2', 'I3': 'I3',
+        'P_W': 'P_W', 'Q_VAR': 'Q_VAR', 'S_kVA': 'S_kVA',
+        'PF': 'PF', 'Hz': 'Hz', 'Op_H': 'Op_H',
+        'Ea_T': 'Ea_T', 'Er_T': 'Er_T', 'Ea_P': 'Ea_P', 'Er_P': 'Er_P'
+    };
 
-const fmt = (val, dig) => (val != null && !isNaN(val)) ? Number(val).toFixed(dig) : "0";
-
-const fmtAvgCurrent = (i1, i2, i3) => {
-    const v1 = parseFloat(i1) || 0;
-    const v2 = parseFloat(i2) || 0;
-    const v3 = parseFloat(i3) || 0;
-    const avg = (v1 + v2 + v3) / 3;
-    return avg.toFixed(2);
-};
-
-function fmtTime(val) {
-    if (val == null || isNaN(val) || val == 0) return "0 Hari 0 Jam";
-    const days = Math.floor(val / 24);
-    const hours = val % 24;
-    return `${days} Hari ${hours.toFixed(1)} Jam`;
-}
-
-window.onload = function() {
-    try {
-        const ONLY_ID = 1; 
-        
-        mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_" + Date.now()); 
-        
-        mqttClient.onConnectionLost = (r) => { if (r.errorCode !== 0) { setStatus("Koneksi Putus...", "bg-err"); setTimeout(connectMQTT, 3000); } };
-        mqttClient.onMessageArrived = (m) => {
-            const d = JSON.parse(m.payloadString);
-            
-            if(d.id !== ONLY_ID) return; 
-            
-            // --- DEBUGGING: Tampilkan data mentah di Console ---
-            console.log("Data diterima untuk Mesin 1:", d); 
-            // ----------------------------------------------------
-            
-            latestDataCache[d.id] = d;
-            lastUpdateTimes[d.id] = Date.now();
-            updateCardStatus(d);
-            
-            if(d.id === activeMachineId) updateDetailView(d);
-        };
-
-        initApp();
-        setInterval(checkTimeouts, 1000);
-    } catch (e) { setStatus("Error Init: " + e.message, "bg-err"); }
-};
-
-function initApp() {
-    let gM = "";
-    const ONLY_ID = 1;
-    
-    gM += `<div class="menu-card" id="mon-${ONLY_ID}" onclick="goMonitor(${ONLY_ID})">Mesin ${ONLY_ID}<span class="menu-badge">OFFLINE</span></div>`;
-    
-    document.getElementById("monitor-grid-container").innerHTML = gM;
-    showPage('page-monitor-menu'); 
-    connectMQTT();
-}
-
-function checkTimeouts() {
-    const now = Date.now();
-    const TIMEOUT = 180000; 
-    const MAX_ID_CHECK = 1; 
-
-    for(let i=1; i<=MAX_ID_CHECK; i++) {
-        if(lastUpdateTimes[i] && (now - lastUpdateTimes[i] > TIMEOUT)) {
-            const off = {id: i, status: 'offline'};
-            latestDataCache[i] = off;
-            updateCardStatus(off);
-            if(activeMachineId === i) updateDetailView(off);
-            delete lastUpdateTimes[i];
+    async function fetchAndDisplayData() {
+        try {
+            const response = await fetch(API_ENDPOINT);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            updateDashboard(data);
+        } catch (error) {
+            console.error("Gagal mengambil data:", error);
+            updateStatus('offline', 'Gagal koneksi ke API backend.');
         }
     }
-}
 
-function connectMQTT() {
-    setStatus("Menghubungkan...", "bg-wait");
-    mqttClient.connect({
-        useSSL: true, 
-        userName: MQTT_USER, 
-        password: MQTT_PASS,
-        onSuccess: () => { 
-            setStatus("ONLINE", "bg-ok"); 
-            mqttClient.subscribe(MQTT_TOPIC); 
-            window.goMonitor(1);
-        },
-        onFailure: (r) => { 
-            setStatus(`Gagal Konek (${r.errorMessage})`, "bg-err"); 
-            setTimeout(connectMQTT, 5000);
+    function updateStatus(status, message) {
+        const statusEl = document.getElementById('meter-status');
+        statusEl.textContent = `STATUS: METER ${status.toUpperCase()}`;
+        statusEl.className = 'status-badge ' + status;
+        if (status === 'offline') {
+            document.getElementById('last-update').textContent = message || 'N/A';
         }
-    });
-}
+    }
 
-window.showPage = (id) => {
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
-};
+    function updateDashboard(data) {
+        const status = data.status || 'offline';
+        updateStatus(status);
 
-window.goMonitor = (id) => {
-    activeMachineId = id;
-    document.getElementById("monitor-detail-title").textContent = "Detail Mesin " + id;
-    
-    if(latestDataCache[id]) updateDetailView(latestDataCache[id]);
-    else updateDetailView({status:'offline'});
-
-    window.switchTab('full');
-    showPage('page-monitor-detail');
-};
-
-function updateCardStatus(d) {
-    const el = document.getElementById(`mon-${d.id}`);
-    if(el) {
-        const badge = el.querySelector('.menu-badge');
-        if(d.status === 'online') {
-            el.classList.add('online'); badge.innerText = "ONLINE"; badge.style.color = "green";
+        if (status === 'online') {
+            for (const key in dataMapping) {
+                const element = document.getElementById(key);
+                if (element && data[key] !== undefined) {
+                    // Gunakan toLocaleString untuk pemisah ribuan
+                    element.textContent = data[key].toLocaleString('id-ID', { maximumFractionDigits: 3 });
+                }
+            }
+            document.getElementById('last-update').textContent = new Date().toLocaleTimeString('id-ID');
         } else {
-            el.classList.remove('online'); badge.innerText = "OFFLINE"; badge.style.color = "gray";
+            // Reset atau tampilkan N/A jika offline
+             for (const key in dataMapping) {
+                const element = document.getElementById(key);
+                if (element) {
+                    element.textContent = 'N/A';
+                }
+            }
+            document.getElementById('last-update').textContent = 'Meter Offline';
         }
     }
-}
 
-function updateDetailView(d) {
-    const avgI = fmtAvgCurrent(d.I1, d.I2, d.I3); 
+    // Panggil saat pertama kali dan atur interval
+    fetchAndDisplayData();
+    setInterval(fetchAndDisplayData, REFRESH_INTERVAL);
 
-    if(d.status === 'offline') {
-        const elements = ['v-ea-t','v-er-t','v-ea-p','v-er-p','v-v','v-i-avg','v-i1','v-i2','v-i3','v-p-w','v-q-var','v-s-kva','v-pf','v-hz'];
-        elements.forEach(k => { 
-            if(document.getElementById(k)) document.getElementById(k).innerText = "0"; 
-        });
-        if(document.getElementById('v-op-h')) document.getElementById('v-op-h').innerText = "0 Hari 0 Jam";
-        if(gaugesInitialized) { gaugeV.set(0); gaugeA.set(0); gaugeP.set(0); gaugeHz.set(0); }
-        return;
-    }
-
-    // --- MAPPING DARI KEY ESP32 V12 ---
-    document.getElementById('v-ea-t').innerText = fmt(d.Ea_T, 2);
-    document.getElementById('v-er-t').innerText = fmt(d.Er_T, 2);
-    document.getElementById('v-ea-p').innerText = fmt(d.Ea_P, 2);
-    document.getElementById('v-er-p').innerText = fmt(d.Er_P, 2);
-    
-    document.getElementById('v-v').innerText = fmt(d.V, 1);
-    document.getElementById('v-i-avg').innerText = avgI;
-    // Perhatikan: I1, I2, I3 di ESP32 bisa jadi float sangat kecil (0.000001), 
-    // jika di sini tetap 0, ini normal jika mesin tidak beroperasi.
-    document.getElementById('v-i1').innerText = fmt(d.I1, 2);
-    document.getElementById('v-i2').innerText = fmt(d.I2, 2);
-    document.getElementById('v-i3').innerText = fmt(d.I3, 2);
-    
-    document.getElementById('v-p-w').innerText = fmt(d.P_W, 0); 
-    document.getElementById('v-q-var').innerText = fmt(d.Q_VAR, 0); 
-    document.getElementById('v-s-kva').innerText = fmt(d.S_kVA, 2); 
-    document.getElementById('v-pf').innerText = fmt(d.PF, 3);
-    document.getElementById('v-hz').innerText = fmt(d.Hz, 1);
-    
-    document.getElementById('v-op-h').innerText = fmtTime(d.Op_H);
-
-    if(gaugesInitialized) {
-        gaugeV.set(d.V); 
-        gaugeA.set(avgI); 
-        gaugeP.set(d.P_W); 
-        gaugeHz.set(d.Hz);
-    }
-}
-
-window.switchTab = (tab) => {
-    if(tab === 'full') {
-        document.getElementById('view-full').classList.add('active');
-        document.getElementById('view-gauge').classList.remove('active');
-        document.getElementById('btn-full').classList.add('active');
-        document.getElementById('btn-gauge').classList.remove('active');
-    } else {
-        document.getElementById('view-full').classList.remove('active');
-        document.getElementById('view-gauge').classList.add('active');
-        document.getElementById('btn-full').classList.remove('active');
-        document.getElementById('btn-gauge').classList.add('active');
-        
-        if(!gaugesInitialized) { 
-            setupGauges(); 
-            gaugesInitialized = true; 
-            if(latestDataCache[activeMachineId]) updateDetailView(latestDataCache[activeMachineId]);
-        }
-    }
-};
-
-function setupGauges() {
-    var opts = { angle: 0, lineWidth: 0.2, radiusScale: 1, pointer: { length: 0.5, strokeWidth: 0.03, color: '#000' }, limitMax: false, limitMin: false, colorStart: '#6FADCF', colorStop: '#8FC0DA', strokeColor: '#E0E0E0', generateGradient: true, highDpiSupport: true };
-    
-    gaugeV = new Gauge(document.getElementById("g-v")).setOptions(opts); gaugeV.maxValue = 450; gaugeV.setMinValue(0); gaugeV.set(0);
-    gaugeA = new Gauge(document.getElementById("g-a")).setOptions(opts); gaugeA.maxValue = 100; gaugeA.setMinValue(0); gaugeA.set(0);
-    gaugeP = new Gauge(document.getElementById("g-p")).setOptions(opts); gaugeP.maxValue = 20000; gaugeP.setMinValue(0); gaugeP.set(0);
-    gaugeHz = new Gauge(document.getElementById("g-f")).setOptions(opts); gaugeHz.maxValue = 60; gaugeHz.setMinValue(40); gaugeHz.set(0);
-}
-
-function setStatus(msg, cls) { 
-    const s = document.getElementById("status");
-    if(s) { s.textContent = msg; s.className = cls; }
-}
 </script>
+
 </body>
 </html>
