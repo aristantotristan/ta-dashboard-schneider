@@ -1,237 +1,121 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MONITORING ENERGI (Mesin 1 DUMMY DATA)</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gauge.js/1.3.7/gauge.min.js"></script>
-    <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; padding: 20px; color: #333; }
-        h1 { text-align: center; color: #0d47a1; margin-bottom: 5px; }
-        h2 { text-align: center; color: #546e7a; margin-top: 0; margin-bottom: 25px; }
-        #status { text-align: center; padding: 10px; margin-bottom: 20px; font-weight: bold; color: white; border-radius: 5px; }
-        .bg-ok { background: #27ae60; } .bg-err { background: #c0392b; } .bg-wait { background: #f39c12; }
-        
-        .page { display: none; } .page.active { display: block; }
-        
-        /* DETAIL */
-        .gauge-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 20px; }
-        .gauge-box { background: #fff; padding: 15px; border-radius: 10px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .gauge-box canvas { width: 100%; height: auto; }
-        
-        .data-card { background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .data-table { width: 100%; border-collapse: collapse; }
-        .data-table td { padding: 10px 15px; border-bottom: 1px solid #eee; }
-        .lbl { color: #7f8c8d; font-weight: 500; }
-        .val { text-align: right; font-weight: bold; color: #2c3e50; }
-        .unit { color: #95a5a6; font-size: 0.85em; width: 50px; text-align: right; }
-        
-        .row-head { background: #ecf0f1; font-weight: bold; color: #2c3e50; }
-        .row-time { background: #eafaf1; }
-        .row-sub { background: #f9f9f9; font-size: 0.9em; color: #666; }
-        
-        /* TAB */
-        .tab-container { display: flex; margin-bottom: 20px; }
-        .tab-button { flex: 1; padding: 10px; border: none; background: #ddd; cursor: pointer; font-weight: bold; color: #666; }
-        .tab-button.active { background: #0d47a1; color: white; }
-        .tab-content { display: none; } .tab-content.active { display: block; }
-    </style>
-</head>
-<body>
-
-    <h1>MONITORING ENERGI</h1>
-    <h2>PT. Amarilys Karisma Gemilang</h2>
-    <div id="status" class="bg-wait">Memuat Sistem...</div>
-
-    <div id="page-monitor-detail" class="page active">
-        <h2 id="monitor-detail-title">Detail Mesin 1 (DUMMY DATA)</h2>
-
-        <div class="tab-container">
-            <button class="tab-button active" id="btn-full" onclick="switchTab('full')">Full Parameters</button>
-            <button class="tab-button" id="btn-gauge" onclick="switchTab('gauge')">Core Parameters</button>
-        </div>
-
-        <div id="view-full" class="tab-content active">
-            <div class="data-card">
-                <table class="data-table">
-                    <tr class="row-head"><td colspan="3">1. Energi (Akumulasi)</td></tr>
-                    <tr><td class="lbl">Total Ea Import</td><td class="val" id="v-ea-t">0</td><td class="unit">kWh</td></tr>
-                    <tr><td class="lbl">Total Er Import</td><td class="val" id="v-er-t">0</td><td class="unit">kVARh</td></tr>
-                    <tr><td class="lbl">Partial Active E</td><td class="val" id="v-ea-p">0</td><td class="unit">kWh</td></tr>
-                    <tr><td class="lbl">Partial Reactive E</td><td class="val" id="v-er-p">0</td><td class="unit">kVARh</td></tr>
-                    
-                    <tr class="row-head"><td colspan="3">2. Kelistrikan</td></tr>
-                    <tr><td class="lbl">Voltage (Avg)</td><td class="val" id="v-v">0</td><td class="unit">V</td></tr>
-                    <tr><td class="lbl">Current (Avg)</td><td class="val" id="v-i-avg">0</td><td class="unit">A</td></tr>
-                    <tr class="row-sub"><td class="lbl" style="padding-left:30px">Phase 1 (I1)</td><td class="val" id="v-i1">0</td><td class="unit">A</td></tr>
-                    <tr class="row-sub"><td class="lbl" style="padding-left:30px">Phase 2 (I2)</td><td class="val" id="v-i2">0</td><td class="unit">A</td></tr>
-                    <tr class="row-sub"><td class="lbl" style="padding-left:30px">Phase 3 (I3)</td><td class="val" id="v-i3">0</td><td class="unit">A</td></tr>
-                    
-                    <tr class="row-head"><td colspan="3">3. Daya & Kualitas</td></tr>
-                    <tr><td class="lbl">Active Power</td><td class="val" id="v-p-w">0</td><td class="unit">W</td></tr>
-                    <tr><td class="lbl">Reactive Power</td><td class="val" id="v-q-var">0</td><td class="unit">VAR</td></tr>
-                    <tr><td class="lbl">Apparent Power</td><td class="val" id="v-s-kva">0</td><td class="unit">kVA</td></tr>
-                    <tr><td class="lbl">Power Factor</td><td class="val" id="v-pf">0</td><td class="unit"></td></tr>
-                    <tr><td class="lbl">Frequency</td><td class="val" id="v-hz">0</td><td class="unit">Hz</td></tr>
-
-                    <tr class="row-time"><td class="lbl">Operation Time</td><td class="val" id="v-op-h">0 Hari 0 Jam</td><td class="unit"></td></tr>
-                </table>
-            </div>
-        </div>
-
-        <div id="view-gauge" class="tab-content">
-            <div class="gauge-grid">
-                <div class="gauge-box"><canvas id="g-v"></canvas><div>Voltage (V)</div></div>
-                <div class="gauge-box"><canvas id="g-a"></canvas><div>Current (A)</div></div>
-                <div class="gauge-box"><canvas id="g-p"></canvas><div>Power (W)</div></div>
-                <div class="gauge-box"><canvas id="g-f"></canvas><div>Freq (Hz)</div></div>
-            </div>
-        </div>
-    </div>
-    
 <script>
-// --- CONFIG MQTT DUMMY ---
-// Variabel ini tidak digunakan, tapi dipertahankan untuk struktur
-const MQTT_HOST = "DUMMY_HOST";
-const MQTT_PORT = 0; 
-
 let gaugeV, gaugeA, gaugeP, gaugeHz;
 let activeMachineId = 1; 
 let gaugesInitialized = false;
-let latestDataCache = {};
-let lastUpdateTimes = {};
-let currentEnergy = 100.0; // Untuk simulasi akumulasi energy
+let currentEnergy = 100.0; 
+let currentOpTime = 500.5;
 
-const fmt = (val, dig) => (val != null && !isNaN(val)) ? Number(val).toFixed(dig) : "0";
-
-const fmtAvgCurrent = (i1, i2, i3) => {
-    const v1 = parseFloat(i1) || 0;
-    const v2 = parseFloat(i2) || 0;
-    const v3 = parseFloat(i3) || 0;
-    const avg = (v1 + v2 + v3) / 3;
-    return avg.toFixed(2);
-};
-
-function fmtTime(val) {
+function simpleTime(val) {
     if (val == null || isNaN(val) || val == 0) return "0 Hari 0 Jam";
     const days = Math.floor(val / 24);
     const hours = val % 24;
-    return `${days} Hari ${hours.toFixed(1)} Jam`;
+    return `${days} Hari ${hours.toFixed(2)} Jam`;
 }
 
 window.onload = function() {
-    try {
-        // Langsung panggil loadDummyData
-        loadDummyData(); 
-        
-        // Atur tampilan awal ke Mesin 1
-        window.goMonitor(1); 
-        
-    } catch (e) { setStatus("Error Init: " + e.message, "bg-err"); }
+    loadDummyData(); 
+    window.goMonitor(1); // Atur tampilan awal ke Mesin 1
 };
 
 // --- FUNGSI DUMMY DATA ---
 function loadDummyData() {
-    setStatus("DUMMY DATA (Simulasi ESP32)", "bg-ok");
+    // Status di DOM
+    const statusEl = document.getElementById("status");
+    if(statusEl) statusEl.className = "bg-ok";
+    if(statusEl) statusEl.textContent = "DUMMY DATA (Simulasi Aktif)";
     
     // Simulasikan data yang stabil dan berubah sedikit
     setInterval(() => {
-        // Simulasikan perubahan kecil pada Tegangan
-        const randomVoltage = 115.0 + Math.random() * 2.0; 
+        const V_in = 115.0 + Math.random() * 2.0; 
+        const I_in = 5.0 + Math.random() * 5.0; 
+        const PF_in = 0.95;
         
-        // Simulasikan Mesin BERJALAN (Tarik Arus 5-10A)
-        const currentPhase = 5.0 + Math.random() * 5.0; 
+        const P_W_in = V_in * I_in * PF_in; 
+        currentEnergy += (P_W_in / 3600 / 1000); 
+        currentOpTime += (1 / 3600);
         
-        // Hitung Power (P = V * I * PF / 1000)
-        const powerPF = 0.95;
-        const activePowerW = randomVoltage * currentPhase * powerPF;
-        const reactivePowerVAR = activePowerW * 0.3; // Asumsi Q=30% P
-        const apparentPowerKVA = (activePowerW / 1000) / powerPF;
-        
-        // Simulasikan Energy bertambah setiap detik (ini kWh/detik)
-        currentEnergy += (activePowerW / 3600 / 1000); 
-
-        // Payload yang persis seperti yang dikirim ESP32 Anda
         const dummyPayload = {
             "id": 1,
             "status": "online",
-            "Ea_T": currentEnergy,         // Total Ea (kWh)
-            "Er_T": 150.55,                // Total Er (kVARh)
-            "Ea_P": currentEnergy / 2.0,   // Partial Ea (kWh)
-            "Er_P": 75.25,                 // Partial Er (kVARh)
-            "V": randomVoltage,            // Voltage L-L Avg (Volt)
-            "I1": currentPhase,            // Current Phase 1 (A)
-            "I2": currentPhase * 0.95,     // Current Phase 2 (A)
-            "I3": currentPhase * 1.05,     // Current Phase 3 (A)
-            "P_W": activePowerW,           // Active Power (Watt)
-            "Q_VAR": reactivePowerVAR,     // Reactive Power (VAR)
-            "S_kVA": apparentPowerKVA,     // Apparent Power (kVA)
-            "PF": powerPF,                 // Power Factor
-            "Hz": 50.0 + Math.random() * 0.2, // Frequency
-            "Op_H": 500.5 + Math.random() * 0.1 // Operation Time (Jam)
+            "Ea_T": currentEnergy,
+            "Er_T": 150.55,
+            "Ea_P": currentEnergy / 2.0, 
+            "Er_P": 75.25,
+            "V": V_in, // KEY HARUS INI!
+            "I1": I_in,
+            "I2": I_in * 0.95,
+            "I3": I_in * 1.05,
+            "P_W": P_W_in,
+            "Q_VAR": P_W_in * 0.3,
+            "S_kVA": (P_W_in / 1000) / PF_in, 
+            "PF": PF_in,
+            "Hz": 50.0 + Math.random() * 0.2,
+            "Op_H": currentOpTime
         };
         
-        // Simulasi penerimaan data
         updateDetailView(dummyPayload);
-        console.log("Simulasi Data:", dummyPayload);
         
     }, 1000); // Update setiap 1 detik
 }
 
 
-// --- FUNGSI TAMPILAN (DIPERTAHANKAN SAMA PERSIS) ---
+// --- FUNGSI TAMPILAN MENTAH ---
 window.goMonitor = (id) => {
     activeMachineId = id;
-    
-    if(latestDataCache[id]) updateDetailView(latestDataCache[id]);
-    else updateDetailView({status:'offline'});
-
+    updateDetailView({status:'offline'}); // Reset tampilan awal
     window.switchTab('full');
 };
 
 function updateDetailView(d) {
-    // Pastikan V_val adalah float, terutama saat debugging
+    // Dapatkan nilai V, pastikan JSON.parse menghasilkan objek dengan key 'V'
     const V_val = parseFloat(d.V);
-    const avgI = fmtAvgCurrent(d.I1, d.I2, d.I3); 
+    
+    console.log("DEBUG FINAL: ID:", d.id, " | V_mentah:", d.V, " | P_mentah:", d.P_W); 
 
-    if(d.status === 'offline') {
+    if(d.status === 'offline' || isNaN(V_val)) { // Jika V_val gagal diparse (NaN), anggap error
         const elements = ['v-ea-t','v-er-t','v-ea-p','v-er-p','v-v','v-i-avg','v-i1','v-i2','v-i3','v-p-w','v-q-var','v-s-kva','v-pf','v-hz','v-op-h'];
         elements.forEach(k => { 
             const el = document.getElementById(k);
-            if(el) el.innerText = "0"; 
+            if(el) el.innerHTML = "0"; 
         });
         if(gaugesInitialized) { gaugeV.set(0); gaugeA.set(0); gaugeP.set(0); gaugeHz.set(0); }
         return;
     }
 
-    // MAPPING DARI KEY ESP32 V12:
-    document.getElementById('v-ea-t').innerText = fmt(d.Ea_T, 2);
-    document.getElementById('v-er-t').innerText = fmt(d.Er_T, 2);
-    document.getElementById('v-ea-p').innerText = fmt(d.Ea_P, 2);
-    document.getElementById('v-er-p').innerText = fmt(d.Er_P, 2);
+    // --- MAPPING DATA MENTAH DARI DUMMY PAYLOAD ---
     
-    document.getElementById('v-v').innerText = fmt(V_val, 1);
-    document.getElementById('v-i-avg').innerText = avgI;
-    document.getElementById('v-i1').innerText = fmt(d.I1, 2);
-    document.getElementById('v-i2').innerText = fmt(d.I2, 2);
-    document.getElementById('v-i3').innerText = fmt(d.I3, 2);
+    // Energy
+    document.getElementById('v-ea-t').innerHTML = d.Ea_T.toFixed(2);
+    document.getElementById('v-er-t').innerHTML = d.Er_T.toFixed(2);
+    document.getElementById('v-ea-p').innerHTML = d.Ea_P.toFixed(2);
+    document.getElementById('v-er-p').innerHTML = d.Er_P.toFixed(2);
     
-    document.getElementById('v-p-w').innerText = fmt(d.P_W, 0); 
-    document.getElementById('v-q-var').innerText = fmt(d.Q_VAR, 0); 
-    document.getElementById('v-s-kva').innerText = fmt(d.S_kVA, 2); 
-    document.getElementById('v-pf').innerText = fmt(d.PF, 3);
-    document.getElementById('v-hz').innerText = fmt(d.Hz, 1);
+    // Kelistrikan
+    document.getElementById('v-v').innerHTML = V_val.toFixed(1); // HARUS MENAMPILKAN NILAI
+    document.getElementById('v-i-avg').innerHTML = ((d.I1 + d.I2 + d.I3) / 3).toFixed(2);
+    document.getElementById('v-i1').innerHTML = d.I1.toFixed(2);
+    document.getElementById('v-i2').innerHTML = d.I2.toFixed(2);
+    document.getElementById('v-i3').innerHTML = d.I3.toFixed(2);
     
-    document.getElementById('v-op-h').innerText = fmtTime(d.Op_H);
+    // Daya & Kualitas
+    document.getElementById('v-p-w').innerHTML = d.P_W.toFixed(0); 
+    document.getElementById('v-q-var').innerHTML = d.Q_VAR.toFixed(0); 
+    document.getElementById('v-s-kva').innerHTML = d.S_kVA.toFixed(2); 
+    document.getElementById('v-pf').innerHTML = d.PF.toFixed(3);
+    document.getElementById('v-hz').innerHTML = d.Hz.toFixed(1);
+    
+    // Waktu (Menggunakan fungsi sederhana)
+    document.getElementById('v-op-h').innerHTML = simpleTime(d.Op_H);
 
     if(gaugesInitialized) {
         gaugeV.set(V_val); 
-        gaugeA.set(avgI); 
+        gaugeA.set((d.I1 + d.I2 + d.I3) / 3); 
         gaugeP.set(d.P_W); 
         gaugeHz.set(d.Hz);
     }
 }
 
+// --- LOGIKA TAB DAN GAUGE (SAMA) ---
 window.switchTab = (tab) => {
     if(tab === 'full') {
         document.getElementById('view-full').classList.add('active');
@@ -247,7 +131,6 @@ window.switchTab = (tab) => {
         if(!gaugesInitialized) { 
             setupGauges(); 
             gaugesInitialized = true; 
-            if(latestDataCache[activeMachineId]) updateDetailView(latestDataCache[activeMachineId]);
         }
     }
 };
