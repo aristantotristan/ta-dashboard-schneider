@@ -2,38 +2,46 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>ESP32 Meter – MQTT Table Dashboard</title>
+<title>Power Meter Dashboard</title>
 
 <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 
 <style>
 body {
   font-family: Arial, sans-serif;
-  background:#0b1220;
-  color:#fff;
-  padding:20px;
+  background: #0f172a;
+  color: #e5e7eb;
 }
+
+h1 {
+  text-align: center;
+}
+
 table {
+  width: 100%;
   border-collapse: collapse;
-  width:100%;
+  font-size: 12px;
 }
+
 th, td {
-  border:1px solid #333;
-  padding:8px;
-  text-align:center;
+  border: 1px solid #334155;
+  padding: 6px;
+  text-align: center;
 }
+
 th {
-  background:#111827;
+  background: #020617;
 }
-.status-online { color:#22c55e; font-weight:bold; }
-.status-offline { color:#ef4444; font-weight:bold; }
+
+.online { background: #064e3b; }
+.offline { background: #450a0a; }
+
 </style>
 </head>
 
 <body>
 
-<h2>ESP32 Meter – MQTT Table Dashboard</h2>
-<p id="conn">Connecting...</p>
+<h1>⚡ Power Meter Dashboard – 18 Mesin</h1>
 
 <table>
 <thead>
@@ -46,27 +54,25 @@ th {
   <th>I3 (A)</th>
   <th>P (W)</th>
   <th>Q (VAR)</th>
-  <th>S (kVA)</th>
+  <th>S (VA)</th>
   <th>PF</th>
   <th>Hz</th>
-  <th>OpH (h)</th>
-  <th>E Active Tot (kWh)</th>
-  <th>E Reactive Tot (kVARh)</th>
-  <th>E Active Part</th>
-  <th>E Reactive Part</th>
+  <th>EaT (kWh)</th>
+  <th>ErT (kWh)</th>
+  <th>EaP (kWh)</th>
+  <th>ErP (kWh)</th>
+  <th>OpH (Jam)</th>
 </tr>
 </thead>
-<tbody id="tableBody">
-<tr><td colspan="16">Waiting MQTT data...</td></tr>
-</tbody>
+<tbody id="tableBody"></tbody>
 </table>
 
 <script>
+// ================= MQTT CONFIG =================
 const options = {
   username: "web_dashboard",
-  password: "Tristan12",
-  connectTimeout: 4000,
-  reconnectPeriod: 2000,
+  password: "Dashboard123!",
+  protocol: "wss",
 };
 
 const client = mqtt.connect(
@@ -74,61 +80,72 @@ const client = mqtt.connect(
   options
 );
 
+// ================= INIT TABLE =================
 const tableBody = document.getElementById("tableBody");
-const conn = document.getElementById("conn");
-const devices = {}; // store row per ID
 
+const mesin = {};
+for (let i = 1; i <= 18; i++) {
+  mesin[i] = {};
+  insertRow(i);
+}
+
+function insertRow(id) {
+  const row = document.createElement("tr");
+  row.id = `row-${id}`;
+  row.className = "offline";
+  row.innerHTML = `
+    <td>${id}</td>
+    <td>OFFLINE</td>
+    ${"<td>-</td>".repeat(14)}
+  `;
+  tableBody.appendChild(row);
+}
+
+// ================= MQTT EVENT =================
 client.on("connect", () => {
-  conn.innerHTML = "✅ MQTT Connected";
+  console.log("✅ MQTT Connected");
   client.subscribe("politeknik/meter/data");
 });
 
-client.on("error", err => {
-  conn.innerHTML = "❌ MQTT Error";
-  console.error(err);
-});
-
 client.on("message", (topic, message) => {
-  try {
-    const d = JSON.parse(message.toString());
-    const id = d.id;
-
-    if (!devices[id]) {
-      const row = document.createElement("tr");
-      row.innerHTML = `
-        <td>${id}</td>
-        <td></td><td></td><td></td><td></td><td></td>
-        <td></td><td></td><td></td><td></td>
-        <td></td><td></td><td></td><td></td>
-        <td></td><td></td>
-      `;
-      tableBody.innerHTML = "";
-      tableBody.appendChild(row);
-      devices[id] = row;
-    }
-
-    const cells = devices[id].children;
-    cells[1].innerHTML = d.status;
-    cells[1].className = d.status === "online" ? "status-online" : "status-offline";
-    cells[2].innerHTML = d.V;
-    cells[3].innerHTML = d.I1;
-    cells[4].innerHTML = d.I2;
-    cells[5].innerHTML = d.I3;
-    cells[6].innerHTML = d.P;
-    cells[7].innerHTML = d.Q;
-    cells[8].innerHTML = d.S;
-    cells[9].innerHTML = d.PF;
-    cells[10].innerHTML = d.Hz;
-    cells[11].innerHTML = d.OpH;
-    cells[12].innerHTML = d.EaT;
-    cells[13].innerHTML = d.ErT;
-    cells[14].innerHTML = d.EaP;
-    cells[15].innerHTML = d.ErP;
-
-  } catch (e) {
-    console.error("JSON Error", e);
-  }
+  const data = JSON.parse(message.toString());
+  updateRow(data);
 });
+
+// ================= UPDATE TABLE =================
+function updateRow(d) {
+  const row = document.getElementById(`row-${d.id}`);
+  if (!row) return;
+
+  if (d.status === "online") {
+    row.className = "online";
+    row.innerHTML = `
+      <td>${d.id}</td>
+      <td>ONLINE</td>
+      <td>${d.V?.toFixed(1)}</td>
+      <td>${d.I1?.toFixed(2)}</td>
+      <td>${d.I2?.toFixed(2)}</td>
+      <td>${d.I3?.toFixed(2)}</td>
+      <td>${d.P}</td>
+      <td>${d.Q}</td>
+      <td>${d.S?.toFixed(2)}</td>
+      <td>${d.PF?.toFixed(3)}</td>
+      <td>${d.Hz?.toFixed(2)}</td>
+      <td>${d.EaT?.toFixed(2)}</td>
+      <td>${d.ErT?.toFixed(2)}</td>
+      <td>${d.EaP?.toFixed(2)}</td>
+      <td>${d.ErP?.toFixed(2)}</td>
+      <td>${d.OpH?.toFixed(2)}</td>
+    `;
+  } else {
+    row.className = "offline";
+    row.innerHTML = `
+      <td>${d.id}</td>
+      <td>OFFLINE</td>
+      ${"<td>-</td>".repeat(14)}
+    `;
+  }
+}
 </script>
 
 </body>
