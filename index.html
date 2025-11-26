@@ -134,7 +134,7 @@ window.onload = function() {
         // FIX: Inisialisasi Paho tanpa jalur resource (path)
         mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_" + Date.now()); 
         
-        mqttClient.onConnectionLost = (r) => { if (r.errorCode !== 0) { setStatus("Koneksi Putus...", "bg-err"); setTimeout(connectMQTT, 3000); } };
+        mqttClient.onConnectionLost = (r) => { if (setStatus("Koneksi Putus...", "bg-err"); setTimeout(connectMQTT, 3000); } };
         mqttClient.onMessageArrived = (m) => {
             const d = JSON.parse(m.payloadString);
             
@@ -153,8 +153,8 @@ window.onload = function() {
         
         setInterval(checkTimeouts, 1000);
     } catch (e) { 
-        // Ini akan menangkap error Paho is not defined
-        setStatus("Error: Gagal memuat library MQTT. Cek koneksi atau CDN.", "bg-err"); 
+        // Tangkap error Paho is not defined di sini
+        setStatus("Error: Gagal memuat library MQTT. Cek koneksi/CDN.", "bg-err"); 
         console.error("Gagal menjalankan Paho MQTT:", e);
     }
 };
