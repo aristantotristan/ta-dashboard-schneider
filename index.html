@@ -1,139 +1,135 @@
-<!doctype html>
-<html lang="id">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ESP32 Meter – MQTT Table Dashboard (Revised)</title>
-  <style>
-    body{font-family:system-ui,Segoe UI,Roboto,Arial;background:#0f1724;color:#e6eef6;margin:0;padding:24px}
-    h1{margin:0 0 16px 0}
-    .controls{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
-    input,button{background:#0b1220;border:1px solid #1f2a36;padding:8px 10px;border-radius:8px;color:#e6eef6}
-    button{cursor:pointer}
-    .status{padding:8px 12px;border-radius:8px;background:#0b1220}
-    table{width:100%;border-collapse:collapse;background:#0b1220;border-radius:10px;overflow:hidden}
-    th,td{padding:10px;border-bottom:1px solid #1f2a36;text-align:center}
-    th{background:#111a2b;color:#9aa7b2;font-weight:600;font-size:13px}
-    tr:last-child td{border-bottom:none}
-    .online{color:#22c55e;font-weight:700}
-    .offline{color:#ef4444;font-weight:700}
-    footer{margin-top:16px;color:#9aa7b2;font-size:13px}
-  </style>
+<meta charset="UTF-8">
+<title>ESP32 Meter – MQTT Table Dashboard</title>
+
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background:#0b1220;
+  color:#fff;
+  padding:20px;
+}
+table {
+  border-collapse: collapse;
+  width:100%;
+}
+th, td {
+  border:1px solid #333;
+  padding:8px;
+  text-align:center;
+}
+th {
+  background:#111827;
+}
+.status-online { color:#22c55e; font-weight:bold; }
+.status-offline { color:#ef4444; font-weight:bold; }
+</style>
 </head>
+
 <body>
-  <h1>ESP32 Meter – MQTT Table Dashboard</h1>
 
-  <div class="controls">
-    <input id="broker" style="width:360px"
-      value="wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt" />
-    <input id="username" style="width:150px" value="vercel_client" />
-    <input id="password" style="width:150px" value="VercelPass123!" />
-    <input id="topic" style="width:200px" value="politeknik/meter/data" />
-    <button onclick="connectMQTT()">Connect</button>
-    <div id="connStatus" class="status">disconnected</div>
-  </div>
+<h2>ESP32 Meter – MQTT Table Dashboard</h2>
+<p id="conn">Connecting...</p>
 
-  <table>
-    <thead>
-      <tr>
-        <th>ID</th>
-        <th>Status</th>
-        <th>V (V)</th>
-        <th>I1 (A)</th>
-        <th>I2 (A)</th>
-        <th>I3 (A)</th>
-        <th>P (W)</th>
-        <th>Q (VAR)</th>
-        <th>S (kVA)</th>
-        <th>PF</th>
-        <th>Hz</th>
-        <th>OpH (h)</th>
-        <th>E Act Tot</th>
-        <th>E React Tot</th>
-        <th>E Act Part</th>
-        <th>E React Part</th>
-      </tr>
-    </thead>
-    <tbody id="tbody">
-      <tr><td colspan="16">Waiting MQTT data...</td></tr>
-    </tbody>
-  </table>
+<table>
+<thead>
+<tr>
+  <th>ID</th>
+  <th>Status</th>
+  <th>V (V)</th>
+  <th>I1 (A)</th>
+  <th>I2 (A)</th>
+  <th>I3 (A)</th>
+  <th>P (W)</th>
+  <th>Q (VAR)</th>
+  <th>S (kVA)</th>
+  <th>PF</th>
+  <th>Hz</th>
+  <th>OpH (h)</th>
+  <th>E Active Tot (kWh)</th>
+  <th>E Reactive Tot (kVARh)</th>
+  <th>E Active Part</th>
+  <th>E Reactive Part</th>
+</tr>
+</thead>
+<tbody id="tableBody">
+<tr><td colspan="16">Waiting MQTT data...</td></tr>
+</tbody>
+</table>
 
-  <footer>
-    Data realtime langsung dari MQTT HiveMQ Cloud (WebSocket).
-  </footer>
+<script>
+const options = {
+  username: "web_dashboard",
+  password: "Tristan12",
+  connectTimeout: 4000,
+  reconnectPeriod: 2000,
+};
 
-  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-  <script>
-    let client = null;
+const client = mqtt.connect(
+  "wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt",
+  options
+);
 
-    function connectMQTT(){
-      if(client){ client.end(true); }
+const tableBody = document.getElementById("tableBody");
+const conn = document.getElementById("conn");
+const devices = {}; // store row per ID
 
-      const broker = document.getElementById('broker').value.trim();
-      const username = document.getElementById('username').value.trim();
-      const password = document.getElementById('password').value;
-      const topic = document.getElementById('topic').value.trim();
-      const statusEl = document.getElementById('connStatus');
+client.on("connect", () => {
+  conn.innerHTML = "✅ MQTT Connected";
+  client.subscribe("politeknik/meter/data");
+});
 
-      statusEl.textContent = 'connecting...';
+client.on("error", err => {
+  conn.innerHTML = "❌ MQTT Error";
+  console.error(err);
+});
 
-      client = mqtt.connect(broker, {
-        username,
-        password,
-        reconnectPeriod: 3000,
-        clean: true
-      });
+client.on("message", (topic, message) => {
+  try {
+    const d = JSON.parse(message.toString());
+    const id = d.id;
 
-      client.on('connect', () => {
-        statusEl.textContent = 'connected';
-        console.log('MQTT connected');
-        client.subscribe(topic, err => {
-          if(err) console.error('SUBSCRIBE ERROR', err);
-          else console.log('Subscribed to', topic);
-        });
-      });
-
-      client.on('error', err => {
-        statusEl.textContent = 'error';
-        console.error('MQTT error', err);
-      });
-
-      client.on('offline', () => statusEl.textContent = 'offline');
-      client.on('reconnect', () => statusEl.textContent = 'reconnecting');
-
-      client.on('message', (t, msg) => {
-        console.log('TOPIC:', t);
-        console.log('PAYLOAD:', msg.toString());
-        try{
-          const d = JSON.parse(msg.toString());
-          renderRow(d);
-        }catch(e){ console.error('JSON parse error', e); }
-      });
+    if (!devices[id]) {
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${id}</td>
+        <td></td><td></td><td></td><td></td><td></td>
+        <td></td><td></td><td></td><td></td>
+        <td></td><td></td><td></td><td></td>
+        <td></td><td></td>
+      `;
+      tableBody.innerHTML = "";
+      tableBody.appendChild(row);
+      devices[id] = row;
     }
 
-    function renderRow(d){
-      const tbody = document.getElementById('tbody');
-      tbody.innerHTML = `
-        <tr>
-          <td>${d.id ?? '-'}</td>
-          <td class="${d.status === 'online' ? 'online':'offline'}">${d.status ?? '-'}</td>
-          <td>${d.V ?? 0}</td>
-          <td>${d.I1 ?? 0}</td>
-          <td>${d.I2 ?? 0}</td>
-          <td>${d.I3 ?? 0}</td>
-          <td>${d.P ?? 0}</td>
-          <td>${d.Q ?? 0}</td>
-          <td>${d.S ?? 0}</td>
-          <td>${d.PF ?? 0}</td>
-          <td>${d.Hz ?? 0}</td>
-          <td>${d.OpH ?? 0}</td>
-          <td>${d.EaT ?? 0}</td>
-          <td>${d.ErT ?? 0}</td>
-          <td>${d.EaP ?? 0}</td>
-          <td>${d.ErP ?? 0}</td>
-        </tr>`;
-    }
-  </script>
+    const cells = devices[id].children;
+    cells[1].innerHTML = d.status;
+    cells[1].className = d.status === "online" ? "status-online" : "status-offline";
+    cells[2].innerHTML = d.V;
+    cells[3].innerHTML = d.I1;
+    cells[4].innerHTML = d.I2;
+    cells[5].innerHTML = d.I3;
+    cells[6].innerHTML = d.P;
+    cells[7].innerHTML = d.Q;
+    cells[8].innerHTML = d.S;
+    cells[9].innerHTML = d.PF;
+    cells[10].innerHTML = d.Hz;
+    cells[11].innerHTML = d.OpH;
+    cells[12].innerHTML = d.EaT;
+    cells[13].innerHTML = d.ErT;
+    cells[14].innerHTML = d.EaP;
+    cells[15].innerHTML = d.ErP;
+
+  } catch (e) {
+    console.error("JSON Error", e);
+  }
+});
+</script>
+
 </body>
 </html>
