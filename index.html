@@ -2,187 +2,197 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Power Meter Dashboard</title>
-
+<title>Industrial Power Meter Dashboard</title>
 <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 
 <style>
 body {
+  margin: 0;
   font-family: Arial, sans-serif;
-  background: #0f0f0f;
+  background: #0e0e0e;
   color: #fff;
 }
 
-h2 {
-  text-align: center;
+/* HEADER */
+header {
+  background: #161616;
+  padding: 10px 20px;
+  border-bottom: 2px solid #222;
+}
+header span {
+  font-weight: bold;
 }
 
-/* STATUS BAR */
-#statusBar {
-  margin: 10px auto;
-  width: 90%;
-  padding: 10px;
-  border: 1px solid #333;
-  background: #1a1a1a;
-}
-
-.online { color: #00ff88; }
-.offline { color: #ff4444; }
-.waiting { color: orange; }
-
-/* DASHBOARD */
-.container {
+/* LAYOUT */
+.main {
   display: flex;
-  justify-content: center;
-  gap: 20px;
+  height: calc(100vh - 60px);
 }
 
-.machine-list {
-  width: 200px;
-  border: 1px solid #333;
-  background: #1c1c1c;
-}
-
-.machine-item {
+/* MACHINE GRID */
+.machine-panel {
+  width: 280px;
+  border-right: 2px solid #222;
   padding: 10px;
-  border-bottom: 1px solid #333;
+  overflow-y: auto;
+}
+
+.machine {
+  padding: 10px;
+  margin-bottom: 8px;
+  background: #1b1b1b;
+  border-left: 6px solid gray;
   cursor: pointer;
 }
-
-.machine-item.active {
-  background: #333;
-}
-
-.param-table {
-  width: 500px;
-  border-collapse: collapse;
-  background: #1c1c1c;
-}
-
-.param-table th,
-.param-table td {
-  border: 1px solid #333;
-  padding: 8px;
-}
-
-.param-table th {
+.machine.active {
   background: #2a2a2a;
+}
+.machine.online { border-color: #00ff88; }
+.machine.offline { border-color: #ff4444; }
+
+/* DETAIL PANEL */
+.detail {
+  flex: 1;
+  padding: 20px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #1b1b1b;
+}
+th, td {
+  padding: 10px;
+  border: 1px solid #333;
+}
+th {
+  background: #242424;
   width: 60%;
 }
+
+/* STATUS COLORS */
+.online { color: #00ff88; }
+.offline { color: #ff4444; }
+.wait { color: orange; }
 </style>
 </head>
 
 <body>
 
-<h2>⚡ Power Meter Dashboard</h2>
+<header>
+  MQTT Status : <span id="mqttStatus" class="wait">CONNECTING...</span> |
+  Selected Mesin : <span id="selectedMachine">1</span>
+</header>
 
-<!-- MQTT STATUS -->
-<div id="statusBar">
-  MQTT : <span id="mqttStatus" class="waiting">CONNECTING...</span><br>
-  Mesin 1 : <span id="machineStatus" class="offline">OFFLINE</span>
-</div>
-
-<div class="container">
+<div class="main">
 
   <!-- MACHINE LIST -->
-  <div class="machine-list">
-    <div class="machine-item active">Mesin 1</div>
-  </div>
+  <div class="machine-panel" id="machineList"></div>
 
-  <!-- PARAMETER TABLE -->
-  <table class="param-table">
-    <tr><th>Total Ea (kWh)</th><td id="EaT">0</td></tr>
-    <tr><th>Total Er (kVARh)</th><td id="ErT">0</td></tr>
-    <tr><th>Partial Ea (kWh)</th><td id="EaP">0</td></tr>
-    <tr><th>Partial Er (kVARh)</th><td id="ErP">0</td></tr>
-    <tr><th>Voltage (V)</th><td id="V">0</td></tr>
-    <tr><th>Current I1 (A)</th><td id="I1">0</td></tr>
-    <tr><th>Current I2 (A)</th><td id="I2">0</td></tr>
-    <tr><th>Current I3 (A)</th><td id="I3">0</td></tr>
-    <tr><th>Active Power (W)</th><td id="P">0</td></tr>
-    <tr><th>Reactive Power (VAR)</th><td id="Q">0</td></tr>
-    <tr><th>Apparent Power (kVA)</th><td id="S">0</td></tr>
-    <tr><th>Power Factor</th><td id="PF">0</td></tr>
-    <tr><th>Frequency (Hz)</th><td id="Hz">0</td></tr>
-    <tr><th>Operation Time (h)</th><td id="OpH">0</td></tr>
-  </table>
+  <!-- DETAIL -->
+  <div class="detail">
+    <h2>📊 Mesin <span id="detailId">1</span></h2>
+    Status : <span id="detailStatus" class="offline">OFFLINE</span>
+
+    <table>
+      <tr><th>Total Ea (kWh)</th><td id="EaT">0</td></tr>
+      <tr><th>Total Er (kVARh)</th><td id="ErT">0</td></tr>
+      <tr><th>Partial Ea (kWh)</th><td id="EaP">0</td></tr>
+      <tr><th>Partial Er (kVARh)</th><td id="ErP">0</td></tr>
+      <tr><th>Voltage (V)</th><td id="V">0</td></tr>
+      <tr><th>Current I1 (A)</th><td id="I1">0</td></tr>
+      <tr><th>Current I2 (A)</th><td id="I2">0</td></tr>
+      <tr><th>Current I3 (A)</th><td id="I3">0</td></tr>
+      <tr><th>Active Power (W)</th><td id="P">0</td></tr>
+      <tr><th>Reactive Power (VAR)</th><td id="Q">0</td></tr>
+      <tr><th>Apparent Power (kVA)</th><td id="S">0</td></tr>
+      <tr><th>Power Factor</th><td id="PF">0</td></tr>
+      <tr><th>Frequency (Hz)</th><td id="Hz">0</td></tr>
+      <tr><th>Operation Time (h)</th><td id="OpH">0</td></tr>
+    </table>
+  </div>
 
 </div>
 
 <script>
-// ================= MQTT SETUP =================
-const options = {
-  username: "vercel_client",
-  password: "VercelPass123!",
-  reconnectPeriod: 2000
-};
+/* ================= CONFIG ================= */
+const TOTAL_MACHINE = 18;
+let activeId = 1;
+const cache = {};
 
+/* ================= INIT MACHINE GRID ================= */
+const machineList = document.getElementById("machineList");
+
+for (let i = 1; i <= TOTAL_MACHINE; i++) {
+  const div = document.createElement("div");
+  div.className = "machine offline";
+  div.id = "machine-" + i;
+  div.innerText = "Mesin " + i;
+  div.onclick = () => selectMachine(i);
+  machineList.appendChild(div);
+
+  cache[i] = { status: "offline" };
+}
+
+/* ================= SELECT MACHINE ================= */
+function selectMachine(id) {
+  activeId = id;
+  document.getElementById("detailId").innerText = id;
+  document.getElementById("selectedMachine").innerText = id;
+
+  document.querySelectorAll(".machine").forEach(m => m.classList.remove("active"));
+  document.getElementById("machine-" + id).classList.add("active");
+
+  updateDetail(cache[id]);
+}
+
+/* ================= UPDATE DETAIL ================= */
+const fields = ["EaT","ErT","EaP","ErP","V","I1","I2","I3","P","Q","S","PF","Hz","OpH"];
+
+function updateDetail(data) {
+  document.getElementById("detailStatus").innerText =
+    data.status === "online" ? "ONLINE ✅" : "OFFLINE ❌";
+  document.getElementById("detailStatus").className =
+    data.status === "online" ? "online" : "offline";
+
+  fields.forEach(f => {
+    document.getElementById(f).innerText =
+      data[f] !== undefined && data[f] !== null ? data[f] : "0";
+  });
+}
+
+/* ================= MQTT ================= */
 const client = mqtt.connect(
   "wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt",
-  options
+  { username: "vercel_client", password: "VercelPass123!", reconnectPeriod: 2000 }
 );
 
-const mqttStatus = document.getElementById("mqttStatus");
-const machineStatus = document.getElementById("machineStatus");
-
 client.on("connect", () => {
-  mqttStatus.innerText = "CONNECTED ✅";
-  mqttStatus.className = "online";
+  document.getElementById("mqttStatus").innerText = "CONNECTED ✅";
+  document.getElementById("mqttStatus").className = "online";
   client.subscribe("politeknik/meter/data");
 });
 
-client.on("reconnect", () => {
-  mqttStatus.innerText = "RECONNECTING...";
-  mqttStatus.className = "waiting";
-});
-
 client.on("offline", () => {
-  mqttStatus.innerText = "DISCONNECTED ❌";
-  mqttStatus.className = "offline";
+  document.getElementById("mqttStatus").innerText = "DISCONNECTED ❌";
+  document.getElementById("mqttStatus").className = "offline";
 });
 
-client.on("error", () => {
-  mqttStatus.innerText = "ERROR ❌";
-  mqttStatus.className = "offline";
+client.on("message", (_, msg) => {
+  const data = JSON.parse(msg.toString());
+  const id = data.id;
+
+  cache[id] = { ...cache[id], ...data };
+
+  const el = document.getElementById("machine-" + id);
+  el.classList.remove("online","offline");
+  el.classList.add(data.status === "online" ? "online" : "offline");
+
+  if (id === activeId) updateDetail(cache[id]);
 });
 
-// ================= DATA HANDLING =================
-const fields = [
-  "EaT","ErT","EaP","ErP","V",
-  "I1","I2","I3",
-  "P","Q","S","PF","Hz","OpH"
-];
-
-let lastUpdateTimer = null;
-
-client.on("message", (topic, message) => {
-  const data = JSON.parse(message.toString());
-
-  if (data.id !== 1) return;
-
-  // STATUS MESIN
-  if (data.status === "online") {
-    machineStatus.innerText = "ONLINE ✅";
-    machineStatus.className = "online";
-  } else {
-    machineStatus.innerText = "OFFLINE ❌";
-    machineStatus.className = "offline";
-  }
-
-  // UPDATE DATA
-  fields.forEach(f => {
-    if (data[f] !== undefined && data[f] !== null) {
-      document.getElementById(f).innerText = data[f];
-    }
-  });
-
-  // TIMEOUT OFFLINE DETECTION
-  if (lastUpdateTimer) clearTimeout(lastUpdateTimer);
-  lastUpdateTimer = setTimeout(() => {
-    machineStatus.innerText = "OFFLINE (TIMEOUT)";
-    machineStatus.className = "offline";
-  }, 35000);
-});
+// default select
+selectMachine(1);
 </script>
 
 </body>
