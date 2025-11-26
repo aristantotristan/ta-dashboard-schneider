@@ -100,7 +100,7 @@ const MQTT_TOPIC = "politeknik/meter/data";
 
 let mqttClient; 
 let gaugeV, gaugeA, gaugeP, gaugeHz;
-let activeMachineId = 1; // Default ke ID 1
+let activeMachineId = 1; 
 let gaugesInitialized = false;
 let latestDataCache = {};
 let lastUpdateTimes = {};
@@ -126,6 +126,7 @@ window.onload = function() {
     try {
         const ONLY_ID = 1; 
         
+        // FIX: Hapus jalur resource yang menyebabkan 404
         mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_" + Date.now()); 
         
         mqttClient.onConnectionLost = (r) => { if (r.errorCode !== 0) { setStatus("Koneksi Putus...", "bg-err"); setTimeout(connectMQTT, 3000); } };
@@ -138,16 +139,16 @@ window.onload = function() {
             
             latestDataCache[d.id] = d;
             lastUpdateTimes[d.id] = Date.now();
-            updateCardStatus(d);
             
-            // Panggil updateDetailView saat data diterima
+            // JANGAN panggil updateCardStatus karena sudah tidak ada card menu
+            
             if(d.id === activeMachineId) updateDetailView(d);
         };
 
-        // Langsung panggil connectMQTT, tidak perlu initApp karena tidak ada menu.
+        // Langsung panggil connectMQTT
         connectMQTT();
         
-        // Atur activeMachineId ke 1 dan panggil update view untuk inisialisasi display
+        // Inisialisasi tampilan awal
         window.goMonitor(1); 
         
         setInterval(checkTimeouts, 1000);
@@ -155,6 +156,7 @@ window.onload = function() {
 };
 
 function checkTimeouts() {
+    // Timeout logic tidak terlalu relevan di mode Direct View, tapi tetap dipertahankan
     const now = Date.now();
     const TIMEOUT = 180000; 
     const MAX_ID_CHECK = 1; 
@@ -163,8 +165,6 @@ function checkTimeouts() {
         if(lastUpdateTimes[i] && (now - lastUpdateTimes[i] > TIMEOUT)) {
             const off = {id: i, status: 'offline'};
             latestDataCache[i] = off;
-            // Hanya ganti status jika ada card (sekarang tidak ada card di mode direct)
-            // updateCardStatus(off); 
             if(activeMachineId === i) updateDetailView(off);
             delete lastUpdateTimes[i];
         }
@@ -188,29 +188,31 @@ function connectMQTT() {
     });
 }
 
-// Fungsi ini digunakan untuk inisialisasi tampilan, bukan ganti halaman
+// Fungsi ini hanya digunakan untuk inisialisasi tampilan
 window.goMonitor = (id) => {
     activeMachineId = id;
-    document.getElementById("monitor-detail-title").textContent = "Detail Mesin " + id;
     
     // Inisialisasi awal dengan data kosong atau cache
     if(latestDataCache[id]) updateDetailView(latestDataCache[id]);
     else updateDetailView({status:'offline'});
 
     window.switchTab('full');
-    // showPage('page-monitor-detail'); <-- Halaman sudah active saat loading
 };
 
+// Fungsi updateCardStatus Dihapus/Dikosongkan karena tidak ada card menu lagi.
 
 function updateDetailView(d) {
-    console.log("DEBUG 2: UPDATE FUNGSI TERPANGGIL DENGAN DATA:", d.V, d.P_W); 
-
+    // FIX MAPPING: Pastikan nilai yang diparse adalah nilai numerik dari payload
+    const V_val = parseFloat(d.V);
     const avgI = fmtAvgCurrent(d.I1, d.I2, d.I3); 
+    
+    console.log("DEBUG 2: Nilai V Mentah Diterima:", d.V, " | V_val (Parsed):", V_val); 
 
     if(d.status === 'offline') {
         const elements = ['v-ea-t','v-er-t','v-ea-p','v-er-p','v-v','v-i-avg','v-i1','v-i2','v-i3','v-p-w','v-q-var','v-s-kva','v-pf','v-hz','v-op-h'];
         elements.forEach(k => { 
-            if(document.getElementById(k)) document.getElementById(k).innerText = "0"; 
+            const el = document.getElementById(k);
+            if(el) el.innerText = "0"; 
         });
         if(gaugesInitialized) { gaugeV.set(0); gaugeA.set(0); gaugeP.set(0); gaugeHz.set(0); }
         return;
@@ -222,7 +224,7 @@ function updateDetailView(d) {
     document.getElementById('v-ea-p').innerText = fmt(d.Ea_P, 2);
     document.getElementById('v-er-p').innerText = fmt(d.Er_P, 2);
     
-    document.getElementById('v-v').innerText = fmt(d.V, 1);
+    document.getElementById('v-v').innerText = fmt(V_val, 1); // Menggunakan V_val yang sudah diparse
     document.getElementById('v-i-avg').innerText = avgI;
     document.getElementById('v-i1').innerText = fmt(d.I1, 2);
     document.getElementById('v-i2').innerText = fmt(d.I2, 2);
@@ -237,7 +239,7 @@ function updateDetailView(d) {
     document.getElementById('v-op-h').innerText = fmtTime(d.Op_H);
 
     if(gaugesInitialized) {
-        gaugeV.set(d.V); 
+        gaugeV.set(V_val); 
         gaugeA.set(avgI); 
         gaugeP.set(d.P_W); 
         gaugeHz.set(d.Hz);
@@ -245,7 +247,6 @@ function updateDetailView(d) {
 }
 
 window.switchTab = (tab) => {
-    // Fungsi switch tab dipertahankan untuk Full Parameters / Core Parameters
     if(tab === 'full') {
         document.getElementById('view-full').classList.add('active');
         document.getElementById('view-gauge').classList.remove('active');
