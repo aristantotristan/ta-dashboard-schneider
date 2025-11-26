@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ESP32 Meter – Table Dashboard</title>
+  <title>ESP32 Meter – MQTT Table Dashboard (Revised)</title>
   <style>
     body{font-family:system-ui,Segoe UI,Roboto,Arial;background:#0f1724;color:#e6eef6;margin:0;padding:24px}
     h1{margin:0 0 16px 0}
@@ -13,7 +13,7 @@
     .status{padding:8px 12px;border-radius:8px;background:#0b1220}
     table{width:100%;border-collapse:collapse;background:#0b1220;border-radius:10px;overflow:hidden}
     th,td{padding:10px;border-bottom:1px solid #1f2a36;text-align:center}
-    th{background:#111a2b;color:#9aa7b2;font-weight:600}
+    th{background:#111a2b;color:#9aa7b2;font-weight:600;font-size:13px}
     tr:last-child td{border-bottom:none}
     .online{color:#22c55e;font-weight:700}
     .offline{color:#ef4444;font-weight:700}
@@ -24,10 +24,11 @@
   <h1>ESP32 Meter – MQTT Table Dashboard</h1>
 
   <div class="controls">
-    <input id="broker" style="width:320px" value="wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt" placeholder="Broker (wss://…)" />
-    <input id="username" style="width:150px" value="vercel_client" placeholder="Username" />
-    <input id="password" style="width:150px" value="VercelPass123!" placeholder="Password" />
-    <input id="topic" style="width:190px" value="politeknik/meter/data" placeholder="MQTT Topic" />
+    <input id="broker" style="width:360px"
+      value="wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt" />
+    <input id="username" style="width:150px" value="vercel_client" />
+    <input id="password" style="width:150px" value="VercelPass123!" />
+    <input id="topic" style="width:200px" value="politeknik/meter/data" />
     <button onclick="connectMQTT()">Connect</button>
     <div id="connStatus" class="status">disconnected</div>
   </div>
@@ -37,7 +38,7 @@
       <tr>
         <th>ID</th>
         <th>Status</th>
-        <th>V (Volt)</th>
+        <th>V (V)</th>
         <th>I1 (A)</th>
         <th>I2 (A)</th>
         <th>I3 (A)</th>
@@ -47,21 +48,19 @@
         <th>PF</th>
         <th>Hz</th>
         <th>OpH (h)</th>
-        <th>E Active Tot (kWh)</th>
-        <th>E Reactive Tot (kVARh)</th>
-        <th>E Active Part</th>
-        <th>E Reactive Part</th>
+        <th>E Act Tot</th>
+        <th>E React Tot</th>
+        <th>E Act Part</th>
+        <th>E React Part</th>
       </tr>
     </thead>
-    <tbody id="dataRow">
-      <tr>
-        <td colspan="16">No data</td>
-      </tr>
+    <tbody id="tbody">
+      <tr><td colspan="16">Waiting MQTT data...</td></tr>
     </tbody>
   </table>
 
   <footer>
-    Semua data di tabel ini murni diambil dari payload MQTT <code>politeknik/meter/data</code> (HiveMQ Cloud).
+    Data realtime langsung dari MQTT HiveMQ Cloud (WebSocket).
   </footer>
 
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
@@ -69,41 +68,52 @@
     let client = null;
 
     function connectMQTT(){
-      const broker = document.getElementById('broker').value;
-      const username = document.getElementById('username').value;
+      if(client){ client.end(true); }
+
+      const broker = document.getElementById('broker').value.trim();
+      const username = document.getElementById('username').value.trim();
       const password = document.getElementById('password').value;
-      const topic = document.getElementById('topic').value;
+      const topic = document.getElementById('topic').value.trim();
       const statusEl = document.getElementById('connStatus');
 
-      statusEl.textContent = 'connecting…';
+      statusEl.textContent = 'connecting...';
 
       client = mqtt.connect(broker, {
         username,
         password,
-        reconnectPeriod: 4000
+        reconnectPeriod: 3000,
+        clean: true
       });
 
       client.on('connect', () => {
         statusEl.textContent = 'connected';
-        client.subscribe(topic);
+        console.log('MQTT connected');
+        client.subscribe(topic, err => {
+          if(err) console.error('SUBSCRIBE ERROR', err);
+          else console.log('Subscribed to', topic);
+        });
       });
 
-      client.on('reconnect', () => statusEl.textContent = 'reconnecting');
+      client.on('error', err => {
+        statusEl.textContent = 'error';
+        console.error('MQTT error', err);
+      });
+
       client.on('offline', () => statusEl.textContent = 'offline');
-      client.on('error', () => statusEl.textContent = 'error');
+      client.on('reconnect', () => statusEl.textContent = 'reconnecting');
 
       client.on('message', (t, msg) => {
+        console.log('TOPIC:', t);
+        console.log('PAYLOAD:', msg.toString());
         try{
           const d = JSON.parse(msg.toString());
-          updateTable(d);
-        }catch(e){
-          console.error('JSON error', e);
-        }
+          renderRow(d);
+        }catch(e){ console.error('JSON parse error', e); }
       });
     }
 
-    function updateTable(d){
-      const tbody = document.getElementById('dataRow');
+    function renderRow(d){
+      const tbody = document.getElementById('tbody');
       tbody.innerHTML = `
         <tr>
           <td>${d.id ?? '-'}</td>
