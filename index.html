@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MONITORING ENERGI (Mesin 1 FINAL FIX)</title>
+    <title>MONITORING ENERGI (Mesin 1 SINKRON)</title>
     
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.1.0/mqttws31.min.js"></script>
+    <script src="https://unpkg.com/paho-mqtt@1.1.0/mqttws31.js" type="text/javascript"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gauge.js/1.3.7/gauge.min.js"></script>
     
     <style>
@@ -93,11 +93,11 @@
     </div>
     
 <script>
-// --- CONFIG MQTT ---
+// --- CONFIG MQTT (SINKRON DENGAN HIVEMQ) ---
 const MQTT_HOST = "3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud";
 const MQTT_PORT = 8884; 
-const MQTT_USER = "web_dashboard"; 
-const MQTT_PASS = "Tristan12";
+const MQTT_USER = "web_dashboard"; // DIGUNAKAN UNTUK SUBSCRIBE
+const MQTT_PASS = "Tristan12"; // ASUMSI PASSWORD SAMA
 const MQTT_TOPIC = "politeknik/meter/data";
 
 let mqttClient; 
@@ -140,7 +140,7 @@ window.onload = function() {
             
             if(d.id !== ONLY_ID) return; 
             
-            console.log(`REAL DATA DITERIMA (V: ${d.V} | P: ${d.P_W})`); 
+            console.log(`REAL DATA DITERIMA (V: ${d.V} | P: ${d.P})`); 
             
             latestDataCache[d.id] = d;
             lastUpdateTimes[d.id] = Date.now();
@@ -153,7 +153,6 @@ window.onload = function() {
         
         setInterval(checkTimeouts, 1000);
     } catch (e) { 
-        // Tangkap error Paho is not defined
         setStatus("Error: Gagal memuat library MQTT. Cek koneksi/CDN.", "bg-err"); 
         console.error("Gagal menjalankan Paho MQTT:", e);
     }
@@ -214,11 +213,11 @@ function updateDetailView(d) {
         return;
     }
 
-    // MAPPING DATA REAL
-    document.getElementById('v-ea-t').innerText = fmt(d.Ea_T, 2);
-    document.getElementById('v-er-t').innerText = fmt(d.Er_T, 2);
-    document.getElementById('v-ea-p').innerText = fmt(d.Ea_P, 2);
-    document.getElementById('v-er-p').innerText = fmt(d.Er_P, 2);
+    // MAPPING DATA REAL (KEY BARU)
+    document.getElementById('v-ea-t').innerText = fmt(d.EaT, 2);
+    document.getElementById('v-er-t').innerText = fmt(d.ErT, 2);
+    document.getElementById('v-ea-p').innerText = fmt(d.EaP, 2);
+    document.getElementById('v-er-p').innerText = fmt(d.ErP, 2);
     
     document.getElementById('v-v').innerText = fmt(V_val, 1);
     document.getElementById('v-i-avg').innerText = avgI;
@@ -226,18 +225,18 @@ function updateDetailView(d) {
     document.getElementById('v-i2').innerText = fmt(d.I2, 2);
     document.getElementById('v-i3').innerText = fmt(d.I3, 2);
     
-    document.getElementById('v-p-w').innerText = fmt(d.P_W, 0); 
-    document.getElementById('v-q-var').innerText = fmt(d.Q_VAR, 0); 
-    document.getElementById('v-s-kva').innerText = fmt(d.S_kVA, 2); 
+    document.getElementById('v-p-w').innerText = fmt(d.P, 0); // P (WATT)
+    document.getElementById('v-q-var').innerText = fmt(d.Q, 0); // Q (VAR)
+    document.getElementById('v-s-kva').innerText = fmt(d.S, 2); // S (kVA)
     document.getElementById('v-pf').innerText = fmt(d.PF, 3);
     document.getElementById('v-hz').innerText = fmt(d.Hz, 1);
     
-    document.getElementById('v-op-h').innerText = fmtTime(d.Op_H);
+    document.getElementById('v-op-h').innerText = fmtTime(d.OpH); // OpH (JAM)
 
     if(gaugesInitialized) {
         gaugeV.set(V_val); 
         gaugeA.set(avgI); 
-        gaugeP.set(d.P_W); 
+        gaugeP.set(d.P); // Gauge Power diisi WATT
         gaugeHz.set(d.Hz);
     }
 }
