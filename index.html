@@ -3,166 +3,127 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ESP32 Meter Dashboard</title>
+  <title>ESP32 Meter – Table Dashboard</title>
   <style>
-    :root{--bg:#0f1724;--card:#0b1220;--muted:#9aa7b2;--accent:#1e90ff}
-    body{font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial;background:linear-gradient(180deg,#071022 0%,#071827 100%);color:#e6eef6;margin:0;padding:24px}
-    .wrap{max-width:1100px;margin:0 auto}
-    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
-    h1{font-size:20px;margin:0}
-    .controls{display:flex;gap:8px;align-items:center}
-    input,select,button{background:transparent;border:1px solid #1f2a36;padding:8px 10px;border-radius:8px;color:inherit}
+    body{font-family:system-ui,Segoe UI,Roboto,Arial;background:#0f1724;color:#e6eef6;margin:0;padding:24px}
+    h1{margin:0 0 16px 0}
+    .controls{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+    input,button{background:#0b1220;border:1px solid #1f2a36;padding:8px 10px;border-radius:8px;color:#e6eef6}
     button{cursor:pointer}
-    .status{padding:6px 10px;border-radius:8px;font-weight:600}
-    .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}
-    .card{background:var(--card);padding:12px;border-radius:10px;box-shadow:0 6px 18px rgba(2,6,23,0.6)}
-    .card h2{font-size:12px;margin:0;color:var(--muted)}
-    .card p{font-size:18px;margin:6px 0 0;font-weight:700}
-    #chartWrap{margin-top:16px;background:var(--card);padding:12px;border-radius:10px}
-    pre{white-space:pre-wrap;word-break:break-word;color:var(--muted);font-size:12px}
-    footer{margin-top:16px;color:var(--muted);font-size:13px}
-    @media (max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}}
-    @media (max-width:520px){.grid{grid-template-columns:1fr}}
+    .status{padding:8px 12px;border-radius:8px;background:#0b1220}
+    table{width:100%;border-collapse:collapse;background:#0b1220;border-radius:10px;overflow:hidden}
+    th,td{padding:10px;border-bottom:1px solid #1f2a36;text-align:center}
+    th{background:#111a2b;color:#9aa7b2;font-weight:600}
+    tr:last-child td{border-bottom:none}
+    .online{color:#22c55e;font-weight:700}
+    .offline{color:#ef4444;font-weight:700}
+    footer{margin-top:16px;color:#9aa7b2;font-size:13px}
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <header>
-      <h1>ESP32 Meter Dashboard</h1>
-      <div class="controls">
-        <input id="broker" placeholder="Broker (wss://...)" style="width:300px" value="wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt" />
-        <input id="username" placeholder="username" style="width:130px" value="vercel_client" />
-        <input id="password" placeholder="password" style="width:130px" value="VercelPass123!" />
-        <input id="topic" placeholder="topic" style="width:160px" value="politeknik/meter/data" />
-        <button id="btnConnect">Connect</button>
-        <div id="connStatus" class="status">disconnected</div>
-      </div>
-    </header>
+  <h1>ESP32 Meter – MQTT Table Dashboard</h1>
 
-    <section id="mainCards" class="grid">
-      <div class="card"><h2>Device</h2><p id="deviceId">-</p></div>
-      <div class="card"><h2>Voltage (V)</h2><p id="V">-</p></div>
-      <div class="card"><h2>Current I1 (A)</h2><p id="I1">-</p></div>
-      <div class="card"><h2>Current I2 (A)</h2><p id="I2">-</p></div>
-      <div class="card"><h2>Current I3 (A)</h2><p id="I3">-</p></div>
-      <div class="card"><h2>Active Power (W)</h2><p id="P">-</p></div>
-      <div class="card"><h2>Reactive Power (VAR)</h2><p id="Q">-</p></div>
-      <div class="card"><h2>Apparent (kVA)</h2><p id="S">-</p></div>
-      <div class="card"><h2>Power Factor</h2><p id="PF">-</p></div>
-      <div class="card"><h2>Frequency (Hz)</h2><p id="Hz">-</p></div>
-      <div class="card"><h2>Op Hours</h2><p id="OpH">-</p></div>
-      <div class="card"><h2>Status</h2><p id="status">-</p></div>
-    </section>
-
-    <div id="chartWrap">
-      <canvas id="chart"></canvas>
-    </div>
-
-    <details style="margin-top:12px;background:var(--card);padding:10px;border-radius:8px">
-      <summary style="cursor:pointer">Raw payload & logs</summary>
-      <pre id="raw">no data yet</pre>
-    </details>
-
-    <footer>
-      Open this file in a browser (Chrome/Edge). Make sure your HiveMQ Cloud broker has WebSocket enabled. If you can't connect try switching the broker URL to use port 8883 or 8884 depending on your broker's WebSocket configuration.
-    </footer>
+  <div class="controls">
+    <input id="broker" style="width:320px" value="wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt" placeholder="Broker (wss://…)" />
+    <input id="username" style="width:150px" value="vercel_client" placeholder="Username" />
+    <input id="password" style="width:150px" value="VercelPass123!" placeholder="Password" />
+    <input id="topic" style="width:190px" value="politeknik/meter/data" placeholder="MQTT Topic" />
+    <button onclick="connectMQTT()">Connect</button>
+    <div id="connStatus" class="status">disconnected</div>
   </div>
 
-  <!-- Libraries -->
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Status</th>
+        <th>V (Volt)</th>
+        <th>I1 (A)</th>
+        <th>I2 (A)</th>
+        <th>I3 (A)</th>
+        <th>P (W)</th>
+        <th>Q (VAR)</th>
+        <th>S (kVA)</th>
+        <th>PF</th>
+        <th>Hz</th>
+        <th>OpH (h)</th>
+        <th>E Active Tot (kWh)</th>
+        <th>E Reactive Tot (kVARh)</th>
+        <th>E Active Part</th>
+        <th>E Reactive Part</th>
+      </tr>
+    </thead>
+    <tbody id="dataRow">
+      <tr>
+        <td colspan="16">No data</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <footer>
+    Semua data di tabel ini murni diambil dari payload MQTT <code>politeknik/meter/data</code> (HiveMQ Cloud).
+  </footer>
+
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
   <script>
-    // Minimal dashboard logic
-    const brokerEl = document.getElementById('broker');
-    const userEl = document.getElementById('username');
-    const passEl = document.getElementById('password');
-    const topicEl = document.getElementById('topic');
-    const btn = document.getElementById('btnConnect');
-    const connStatus = document.getElementById('connStatus');
-
-    const fields = ['deviceId','V','I1','I2','I3','P','Q','S','PF','Hz','OpH','status','raw'];
-    const elems = {};
-    fields.forEach(f => elems[f] = document.getElementById(f) || document.getElementById('raw'));
-
-    // Chart setup
-    const ctx = document.getElementById('chart').getContext('2d');
-    const data = {
-      labels: [],
-      datasets: [
-        { label: 'Power (W)', data: [], fill:false, tension:0.2, borderWidth:2 },
-        { label: 'Voltage (V)', data: [], fill:false, tension:0.2, borderWidth:2 }
-      ]
-    };
-    const chart = new Chart(ctx, { type: 'line', data, options: { responsive:true, interaction:{mode:'index',intersect:false}, scales:{x:{display:true},y:{display:true}} }});
-
     let client = null;
-    let historyLen = 50;
 
-    function updateCards(obj){
-      elems.deviceId.textContent = obj.id ?? '-';
-      elems.V.textContent = obj.V ?? '-';
-      elems.I1.textContent = obj.I1 ?? '-';
-      elems.I2.textContent = obj.I2 ?? '-';
-      elems.I3.textContent = obj.I3 ?? '-';
-      elems.P.textContent = obj.P ?? '-';
-      elems.Q.textContent = obj.Q ?? '-';
-      elems.S.textContent = obj.S ?? '-';
-      elems.PF.textContent = obj.PF ?? '-';
-      elems.Hz.textContent = obj.Hz ?? '-';
-      elems.OpH.textContent = obj.OpH ?? '-';
-      elems.status.textContent = obj.status ?? '-';
-      elems.raw.textContent = JSON.stringify(obj, null, 2);
-    }
+    function connectMQTT(){
+      const broker = document.getElementById('broker').value;
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+      const topic = document.getElementById('topic').value;
+      const statusEl = document.getElementById('connStatus');
 
-    function pushToChart(ts, power, volt){
-      data.labels.push(ts);
-      data.datasets[0].data.push(power);
-      data.datasets[1].data.push(volt);
-      if(data.labels.length>historyLen){ data.labels.shift(); data.datasets.forEach(ds=>ds.data.shift()); }
-      chart.update();
-    }
+      statusEl.textContent = 'connecting…';
 
-    function connect() {
-      if(client){ try{ client.end(true); }catch(e){} }
-      const brokerUrl = brokerEl.value.trim();
-      const username = userEl.value.trim();
-      const password = passEl.value;
-      const topic = topicEl.value.trim() || 'politeknik/meter/data';
+      client = mqtt.connect(broker, {
+        username,
+        password,
+        reconnectPeriod: 4000
+      });
 
-      if(!brokerUrl){ alert('Please fill broker URL (wss://...)'); return; }
+      client.on('connect', () => {
+        statusEl.textContent = 'connected';
+        client.subscribe(topic);
+      });
 
-      connStatus.textContent = 'connecting...';
+      client.on('reconnect', () => statusEl.textContent = 'reconnecting');
+      client.on('offline', () => statusEl.textContent = 'offline');
+      client.on('error', () => statusEl.textContent = 'error');
 
-      try{
-        client = mqtt.connect(brokerUrl, { username, password, reconnectPeriod: 4000, connectTimeout: 10_000 });
-      }catch(err){ connStatus.textContent = 'error'; console.error(err); return; }
-
-      client.on('connect', () => { connStatus.textContent = 'connected'; client.subscribe(topic, (err)=>{ if(err) console.warn('sub err',err); }); });
-      client.on('reconnect', ()=> connStatus.textContent = 'reconnecting');
-      client.on('close', ()=> connStatus.textContent = 'closed');
-      client.on('offline', ()=> connStatus.textContent = 'offline');
-      client.on('error', (e)=>{ connStatus.textContent = 'error'; console.error(e); });
-
-      client.on('message', (t, payload) => {
+      client.on('message', (t, msg) => {
         try{
-          const txt = payload.toString();
-          const obj = JSON.parse(txt);
-          // Update display
-          updateCards(obj);
-          // push to chart (P in W and V)
-          const now = new Date().toLocaleTimeString();
-          const power = Number(obj.P) || 0;
-          const volt = Number(obj.V) || 0;
-          pushToChart(now, power, volt);
-        }catch(e){ console.error('parse err', e); }
+          const d = JSON.parse(msg.toString());
+          updateTable(d);
+        }catch(e){
+          console.error('JSON error', e);
+        }
       });
     }
 
-    btn.addEventListener('click', connect);
-
-    // Auto-connect on load (optional)
-    window.addEventListener('load', () => { /*connect();*/ });
+    function updateTable(d){
+      const tbody = document.getElementById('dataRow');
+      tbody.innerHTML = `
+        <tr>
+          <td>${d.id ?? '-'}</td>
+          <td class="${d.status === 'online' ? 'online':'offline'}">${d.status ?? '-'}</td>
+          <td>${d.V ?? 0}</td>
+          <td>${d.I1 ?? 0}</td>
+          <td>${d.I2 ?? 0}</td>
+          <td>${d.I3 ?? 0}</td>
+          <td>${d.P ?? 0}</td>
+          <td>${d.Q ?? 0}</td>
+          <td>${d.S ?? 0}</td>
+          <td>${d.PF ?? 0}</td>
+          <td>${d.Hz ?? 0}</td>
+          <td>${d.OpH ?? 0}</td>
+          <td>${d.EaT ?? 0}</td>
+          <td>${d.ErT ?? 0}</td>
+          <td>${d.EaP ?? 0}</td>
+          <td>${d.ErP ?? 0}</td>
+        </tr>`;
+    }
   </script>
 </body>
 </html>
