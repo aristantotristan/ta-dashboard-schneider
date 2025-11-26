@@ -55,9 +55,9 @@ const activeId = 1;
 const fields = ["V","I1","I2","I3","P","Q","S","PF","Hz","EaT","ErT","EaP","ErP","OpH"];
 const cache = {};
 
-// ================= MQTT CONNECT =================
+// ================= MQTT CONNECT (non-TLS WS) =================
 const client = mqtt.connect(
-  "wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt",
+  "ws://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8000/mqtt",
   {
     username: "web_dashboard",
     password: "Tristan12",
