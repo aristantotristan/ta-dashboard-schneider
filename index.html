@@ -4,35 +4,72 @@
 <meta charset="UTF-8">
 <title>Industrial Power Meter Dashboard</title>
 <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+
 <style>
-body { margin: 0; font-family: Arial, sans-serif; background: #0e0e0e; color: #fff; }
-header { background: #161616; padding: 10px 20px; border-bottom: 2px solid #222; }
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #0e0e0e;
+  color: #fff;
+}
+header {
+  background: #161616;
+  padding: 10px 20px;
+  border-bottom: 2px solid #222;
+}
 header span { font-weight: bold; }
-.main { display: flex; height: calc(100vh - 60px); }
-.machine-panel { width: 280px; border-right: 2px solid #222; padding: 10px; overflow-y: auto; }
-.machine { padding: 10px; margin-bottom: 8px; background: #1b1b1b; border-left: 6px solid gray; cursor: pointer; }
+.main {
+  display: flex;
+  height: calc(100vh - 60px);
+}
+.machine-panel {
+  width: 280px;
+  border-right: 2px solid #222;
+  padding: 10px;
+  overflow-y: auto;
+}
+.machine {
+  padding: 10px;
+  margin-bottom: 8px;
+  background: #1b1b1b;
+  border-left: 6px solid gray;
+  cursor: pointer;
+}
 .machine.active { background: #2a2a2a; }
 .machine.online { border-color: #00ff88; }
 .machine.offline { border-color: #ff4444; }
-.detail { flex: 1; padding: 20px; }
-table { width: 100%; border-collapse: collapse; background: #1b1b1b; }
-th, td { padding: 10px; border: 1px solid #333; }
+.detail {
+  flex: 1;
+  padding: 20px;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #1b1b1b;
+}
+th, td {
+  padding: 10px;
+  border: 1px solid #333;
+}
 th { background: #242424; width: 60%; }
 .online { color: #00ff88; }
 .offline { color: #ff4444; }
 .wait { color: orange; }
 </style>
 </head>
+
 <body>
 <header>
-  MQTT Status : <span id="mqttStatus" class="wait">CONNECTING...</span> |
-  Selected Mesin : <span id="selectedMachine">1</span>
+  MQTT Status: <span id="mqttStatus" class="wait">CONNECTING...</span> |
+  Selected Mesin: <span id="selectedMachine">1</span>
 </header>
+
 <div class="main">
   <div class="machine-panel" id="machineList"></div>
+
   <div class="detail">
     <h2>📊 Mesin <span id="detailId">1</span></h2>
-    Status : <span id="detailStatus" class="offline">OFFLINE</span>
+    Status: <span id="detailStatus" class="offline">OFFLINE</span>
     <table>
       <tr><th>Total Ea (kWh)</th><td id="EaT">0</td></tr>
       <tr><th>Total Er (kVARh)</th><td id="ErT">0</td></tr>
@@ -53,66 +90,66 @@ th { background: #242424; width: 60%; }
 </div>
 
 <script>
-const TOTAL_MACHINE = 18;
+const TOTAL_MACHINE = 1; // Sesuaikan jumlah meter
 let activeId = 1;
 const cache = {};
 const machineList = document.getElementById("machineList");
+const fields = ["EaT","ErT","EaP","ErP","V","I1","I2","I3","P","Q","S","PF","Hz","OpH"];
 
-for (let i = 1; i <= TOTAL_MACHINE; i++) {
+for (let i=1;i<=TOTAL_MACHINE;i++){
   const div = document.createElement("div");
   div.className = "machine offline";
   div.id = "machine-" + i;
   div.innerText = "Mesin " + i;
-  div.onclick = () => selectMachine(i);
+  div.onclick = ()=>selectMachine(i);
   machineList.appendChild(div);
-  cache[i] = { status: "offline" };
+  cache[i] = {status:"offline"};
 }
 
-function selectMachine(id) {
+function selectMachine(id){
   activeId = id;
   document.getElementById("detailId").innerText = id;
   document.getElementById("selectedMachine").innerText = id;
-  document.querySelectorAll(".machine").forEach(m => m.classList.remove("active"));
+  document.querySelectorAll(".machine").forEach(m=>m.classList.remove("active"));
   document.getElementById("machine-" + id).classList.add("active");
   updateDetail(cache[id]);
 }
 
-const fields = ["EaT","ErT","EaP","ErP","V","I1","I2","I3","P","Q","S","PF","Hz","OpH"];
-function updateDetail(data) {
-  document.getElementById("detailStatus").innerText =
-    data.status === "online" ? "ONLINE ✅" : "OFFLINE ❌";
-  document.getElementById("detailStatus").className =
-    data.status === "online" ? "online" : "offline";
-  fields.forEach(f => document.getElementById(f).innerText = data[f] || 0);
+function updateDetail(data){
+  document.getElementById("detailStatus").innerText = data.status==="online"?"ONLINE ✅":"OFFLINE ❌";
+  document.getElementById("detailStatus").className = data.status==="online"?"online":"offline";
+  fields.forEach(f=>{
+    document.getElementById(f).innerText = data[f]!==undefined?data[f]:"0";
+  });
 }
 
-const client = mqtt.connect(
-  "wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt",
-  { username: "vercel_client", password: "VercelPass123!", reconnectPeriod: 2000 }
+/* ================= MQTT ================= */
+const client = mqtt.connect("wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt",
+  {username:"vercel_client", password:"VercelPass123!", reconnectPeriod:2000}
 );
 
-client.on("connect", () => {
-  document.getElementById("mqttStatus").innerText = "CONNECTED ✅";
-  document.getElementById("mqttStatus").className = "online";
+client.on("connect",()=>{
+  document.getElementById("mqttStatus").innerText="CONNECTED ✅";
+  document.getElementById("mqttStatus").className="online";
   client.subscribe("politeknik/meter/data");
 });
 
-client.on("offline", () => {
-  document.getElementById("mqttStatus").innerText = "DISCONNECTED ❌";
-  document.getElementById("mqttStatus").className = "offline";
+client.on("offline",()=>{
+  document.getElementById("mqttStatus").innerText="DISCONNECTED ❌";
+  document.getElementById("mqttStatus").className="offline";
 });
 
-client.on("message", (_, msg) => {
+client.on("message",(_,msg)=>{
   const data = JSON.parse(msg.toString());
   const id = data.id;
-  cache[id] = { ...cache[id], ...data };
+  cache[id] = {...cache[id], ...data};
   const el = document.getElementById("machine-" + id);
   el.classList.remove("online","offline");
-  el.classList.add(data.status === "online" ? "online" : "offline");
-  if (id === activeId) updateDetail(cache[id]);
+  el.classList.add(data.status==="online"?"online":"offline");
+  if(id===activeId) updateDetail(cache[id]);
 });
 
-// default select
+// Default select
 selectMachine(1);
 </script>
 </body>
