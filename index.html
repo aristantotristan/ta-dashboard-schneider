@@ -3,24 +3,72 @@
 <head>
 <meta charset="UTF-8">
 <title>Power Meter Dashboard</title>
+
 <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 
 <style>
-body { background:#111; color:#fff; font-family:Arial }
-.container { display:flex }
-.list { width:25% }
-.list button {
-  width:100%; padding:10px; margin:4px 0;
-  background:#222; color:#fff;
-  border:1px solid #444;
-  cursor:pointer;
+body {
+  font-family: Arial, sans-serif;
+  background: #0f0f0f;
+  color: #fff;
 }
-.list button.active { background:#00aa66 }
 
-table { width:100%; border-collapse:collapse }
-th, td { border:1px solid #444; padding:6px }
-th { background:#222; width:40% }
-.value { text-align:right }
+h2 {
+  text-align: center;
+}
+
+/* STATUS BAR */
+#statusBar {
+  margin: 10px auto;
+  width: 90%;
+  padding: 10px;
+  border: 1px solid #333;
+  background: #1a1a1a;
+}
+
+.online { color: #00ff88; }
+.offline { color: #ff4444; }
+.waiting { color: orange; }
+
+/* DASHBOARD */
+.container {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+
+.machine-list {
+  width: 200px;
+  border: 1px solid #333;
+  background: #1c1c1c;
+}
+
+.machine-item {
+  padding: 10px;
+  border-bottom: 1px solid #333;
+  cursor: pointer;
+}
+
+.machine-item.active {
+  background: #333;
+}
+
+.param-table {
+  width: 500px;
+  border-collapse: collapse;
+  background: #1c1c1c;
+}
+
+.param-table th,
+.param-table td {
+  border: 1px solid #333;
+  padding: 8px;
+}
+
+.param-table th {
+  background: #2a2a2a;
+  width: 60%;
+}
 </style>
 </head>
 
@@ -28,87 +76,112 @@ th { background:#222; width:40% }
 
 <h2>⚡ Power Meter Dashboard</h2>
 
+<!-- MQTT STATUS -->
+<div id="statusBar">
+  MQTT : <span id="mqttStatus" class="waiting">CONNECTING...</span><br>
+  Mesin 1 : <span id="machineStatus" class="offline">OFFLINE</span>
+</div>
+
 <div class="container">
-  <div class="list" id="machineList"></div>
 
-  <div style="width:75%; padding-left:10px">
-    <h3 id="title">Mesin 1</h3>
-
-    <table>
-      <tbody>
-        <tr><th>Total Ea (kWh)</th><td class="value" id="EaT">-</td></tr>
-        <tr><th>Total Er (kVARh)</th><td class="value" id="ErT">-</td></tr>
-        <tr><th>Partial Ea (kWh)</th><td class="value" id="EaP">-</td></tr>
-        <tr><th>Partial Er (kVARh)</th><td class="value" id="ErP">-</td></tr>
-        <tr><th>Voltage (V)</th><td class="value" id="V">-</td></tr>
-        <tr><th>Current I1 (A)</th><td class="value" id="I1">-</td></tr>
-        <tr><th>Current I2 (A)</th><td class="value" id="I2">-</td></tr>
-        <tr><th>Current I3 (A)</th><td class="value" id="I3">-</td></tr>
-        <tr><th>Active Power P (W)</th><td class="value" id="P">-</td></tr>
-        <tr><th>Reactive Power Q (VAR)</th><td class="value" id="Q">-</td></tr>
-        <tr><th>Apparent Power S (kVA)</th><td class="value" id="S">-</td></tr>
-        <tr><th>Power Factor</th><td class="value" id="PF">-</td></tr>
-        <tr><th>Frequency (Hz)</th><td class="value" id="Hz">-</td></tr>
-        <tr><th>Operation Time (h)</th><td class="value" id="OpH">-</td></tr>
-      </tbody>
-    </table>
+  <!-- MACHINE LIST -->
+  <div class="machine-list">
+    <div class="machine-item active">Mesin 1</div>
   </div>
+
+  <!-- PARAMETER TABLE -->
+  <table class="param-table">
+    <tr><th>Total Ea (kWh)</th><td id="EaT">0</td></tr>
+    <tr><th>Total Er (kVARh)</th><td id="ErT">0</td></tr>
+    <tr><th>Partial Ea (kWh)</th><td id="EaP">0</td></tr>
+    <tr><th>Partial Er (kVARh)</th><td id="ErP">0</td></tr>
+    <tr><th>Voltage (V)</th><td id="V">0</td></tr>
+    <tr><th>Current I1 (A)</th><td id="I1">0</td></tr>
+    <tr><th>Current I2 (A)</th><td id="I2">0</td></tr>
+    <tr><th>Current I3 (A)</th><td id="I3">0</td></tr>
+    <tr><th>Active Power (W)</th><td id="P">0</td></tr>
+    <tr><th>Reactive Power (VAR)</th><td id="Q">0</td></tr>
+    <tr><th>Apparent Power (kVA)</th><td id="S">0</td></tr>
+    <tr><th>Power Factor</th><td id="PF">0</td></tr>
+    <tr><th>Frequency (Hz)</th><td id="Hz">0</td></tr>
+    <tr><th>Operation Time (h)</th><td id="OpH">0</td></tr>
+  </table>
+
 </div>
 
 <script>
-const TOTAL_MACHINE = 18;
-let selected = 1;
-const store = {};
+// ================= MQTT SETUP =================
+const options = {
+  username: "vercel_client",
+  password: "VercelPass123!",
+  reconnectPeriod: 2000
+};
 
-/* ========== BUTTON MACHINE ========== */
-const list = document.getElementById('machineList');
-for(let i=1;i<=TOTAL_MACHINE;i++){
-  const b=document.createElement('button');
-  b.textContent='Mesin '+i;
-  b.id='btn'+i;
-  b.onclick=()=>selectMachine(i);
-  if(i===1) b.classList.add('active');
-  list.appendChild(b);
-}
-
-/* ========== SELECT MACHINE ========== */
-function selectMachine(id){
-  selected=id;
-  document.querySelectorAll('.list button')
-    .forEach(x=>x.classList.remove('active'));
-  document.getElementById('btn'+id).classList.add('active');
-
-  document.getElementById('title').innerText='Mesin '+id;
-  updateTable();
-}
-
-/* ========== UPDATE VALUE ONLY ========== */
-function updateTable(){
-  const d = store[selected];
-  const fields=[
-    "EaT","ErT","EaP","ErP","V",
-    "I1","I2","I3",
-    "P","Q","S","PF","Hz","OpH"
-  ];
-
-  fields.forEach(f=>{
-    document.getElementById(f).innerText =
-      d && d[f]!=null ? d[f] : '-';
-  });
-}
-
-/* ========== MQTT ========== */
 const client = mqtt.connect(
-  'wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt',
-  { username:'web_dashboard', password:'Tristan12' }
+  "wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt",
+  options
 );
 
-client.on('connect',()=>client.subscribe('politeknik/meter/data'));
+const mqttStatus = document.getElementById("mqttStatus");
+const machineStatus = document.getElementById("machineStatus");
 
-client.on('message',(t,m)=>{
-  const data=JSON.parse(m.toString());
-  store[data.id]=data;
-  if(data.id===selected) updateTable();
+client.on("connect", () => {
+  mqttStatus.innerText = "CONNECTED ✅";
+  mqttStatus.className = "online";
+  client.subscribe("politeknik/meter/data");
+});
+
+client.on("reconnect", () => {
+  mqttStatus.innerText = "RECONNECTING...";
+  mqttStatus.className = "waiting";
+});
+
+client.on("offline", () => {
+  mqttStatus.innerText = "DISCONNECTED ❌";
+  mqttStatus.className = "offline";
+});
+
+client.on("error", () => {
+  mqttStatus.innerText = "ERROR ❌";
+  mqttStatus.className = "offline";
+});
+
+// ================= DATA HANDLING =================
+const fields = [
+  "EaT","ErT","EaP","ErP","V",
+  "I1","I2","I3",
+  "P","Q","S","PF","Hz","OpH"
+];
+
+let lastUpdateTimer = null;
+
+client.on("message", (topic, message) => {
+  const data = JSON.parse(message.toString());
+
+  if (data.id !== 1) return;
+
+  // STATUS MESIN
+  if (data.status === "online") {
+    machineStatus.innerText = "ONLINE ✅";
+    machineStatus.className = "online";
+  } else {
+    machineStatus.innerText = "OFFLINE ❌";
+    machineStatus.className = "offline";
+  }
+
+  // UPDATE DATA
+  fields.forEach(f => {
+    if (data[f] !== undefined && data[f] !== null) {
+      document.getElementById(f).innerText = data[f];
+    }
+  });
+
+  // TIMEOUT OFFLINE DETECTION
+  if (lastUpdateTimer) clearTimeout(lastUpdateTimer);
+  lastUpdateTimer = setTimeout(() => {
+    machineStatus.innerText = "OFFLINE (TIMEOUT)";
+    machineStatus.className = "offline";
+  }, 35000);
 });
 </script>
 
