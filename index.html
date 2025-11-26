@@ -3,41 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Monitoring Energi Modbus (ID 01)</title>
+    <title>Dashboard Monitoring Energi Modbus (Direct MQTT)</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js" type="text/javascript"></script>
+    
     <style>
-        /* --- STYLE CSS DASHBOARD --- */
+        /* --- STYLE CSS DASHBOARD (Sama seperti sebelumnya) --- */
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; color: #333; margin: 0; padding: 20px; }
         .container { max-width: 1000px; margin: auto; background: #ffffff; padding: 30px; border-radius: 12px; box-shadow: 0 6px 15px rgba(0,0,0,0.1); }
         h1 { color: #007bff; text-align: center; margin-bottom: 5px; }
         p.subtitle { text-align: center; color: #6c757d; margin-bottom: 25px; }
-        
-        /* Status Badge */
         .status-badge { padding: 8px 15px; border-radius: 6px; font-weight: bold; margin: 10px auto 25px; display: table; font-size: 1em; }
         .online { background-color: #28a745; color: white; box-shadow: 0 2px 4px rgba(40, 167, 69, 0.5); }
         .offline { background-color: #dc3545; color: white; box-shadow: 0 2px 4px rgba(220, 53, 69, 0.5); }
-        
-        /* Data Grid */
         .data-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
-        .card { 
-            background: #e9ecef; 
-            padding: 20px; 
-            border-radius: 8px; 
-            transition: transform 0.2s;
-            border-left: 5px solid #007bff;
-        }
-        .card:hover { transform: translateY(-3px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        
+        .card { background: #e9ecef; padding: 20px; border-radius: 8px; border-left: 5px solid #007bff; }
         .card-value { font-size: 2.2em; font-weight: 700; color: #007bff; margin-bottom: 5px; }
         .card-label { font-size: 0.9em; color: #6c757d; text-transform: uppercase; letter-spacing: 0.5px; }
-        
-        /* Footer */
         .footer { margin-top: 30px; padding-top: 15px; border-top: 1px solid #dee2e6; text-align: right; font-size: 0.85em; color: #6c757d; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>⚡ Live Monitoring Energi Modbus</h1>
+    <h1>⚡ Live Monitoring Energi Modbus (Direct MQTT)</h1>
     <p class="subtitle">Lokasi: Politeknik | Meter ID: **01**</p>
     
     <div id="meter-status" class="status-badge offline">STATUS: METER OFFLINE</div>
@@ -47,32 +36,33 @@
         <div class="card"><div class="card-label">Daya Aktif (W)</div><div id="P_W" class="card-value">N/A</div></div>
         <div class="card"><div class="card-label">Daya Reaktif (VAR)</div><div id="Q_VAR" class="card-value">N/A</div></div>
         <div class="card"><div class="card-label">Faktor Daya (PF)</div><div id="PF" class="card-value">N/A</div></div>
-        
         <div class="card"><div class="card-label">Arus I1 (A)</div><div id="I1" class="card-value">N/A</div></div>
         <div class="card"><div class="card-label">Arus I2 (A)</div><div id="I2" class="card-value">N/A</div></div>
         <div class="card"><div class="card-label">Arus I3 (A)</div><div id="I3" class="card-value">N/A</div></div>
         <div class="card"><div class="card-label">Daya Semu (kVA)</div><div id="S_kVA" class="card-value">N/A</div></div>
-
         <div class="card"><div class="card-label">Energi Aktif Total (kWh)</div><div id="Ea_T" class="card-value">N/A</div></div>
         <div class="card"><div class="card-label">Energi Reaktif Total (kVARh)</div><div id="Er_T" class="card-value">N/A</div></div>
         <div class="card"><div class="card-label">Frekuensi (Hz)</div><div id="Hz" class="card-value">N/A</div></div>
         <div class="card"><div class="card-label">Waktu Operasi (Jam)</div><div id="Op_H" class="card-value">N/A</div></div>
-        
         <div class="card"><div class="card-label">Energi Aktif Parsial (kWh)</div><div id="Ea_P" class="card-value">N/A</div></div>
         <div class="card"><div class="card-label">Energi Reaktif Parsial (kVARh)</div><div id="Er_P" class="card-value">N/A</div></div>
     </div>
     
     <div class="footer">
-        Data diambil dari **MQTT Bridge Server**. Update terakhir: <span id="last-update">N/A</span>
+        Koneksi langsung ke HiveMQ via WebSockets. Update terakhir: <span id="last-update">N/A</span>
     </div>
 </div>
 
 <script>
-    // =================================================================
-    // !!! PENTING !!! GANTI PLACEHOLDER INI DENGAN ALAMAT API SERVER BACKEND ASLI ANDA
-    // =================================================================
-    const API_ENDPOINT = 'https://politeknik-mqtt-bridge.com/api/v1/meter/1'; 
-    const REFRESH_INTERVAL = 5000; // Polling data setiap 5 detik
+    // --- 2. KONFIGURASI MQTT ---
+    const MQTT_BROKER_HOST = '3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud';
+    const MQTT_BROKER_PORT = 8884; // Port WSS (WebSockets Secure) HiveMQ
+    const MQTT_USER = 'vercel_client';
+    const MQTT_PASS = 'VercelPass123!';
+    const MQTT_TOPIC_DATA = 'politeknik/meter/data';
+    const CLIENT_ID = 'WebClient-' + Math.random().toString(16).substr(2, 8);
+
+    let client = null;
 
     const dataMapping = {
         'V': 'V', 'I1': 'I1', 'I2': 'I2', 'I3': 'I3',
@@ -81,32 +71,16 @@
         'Ea_T': 'Ea_T', 'Er_T': 'Er_T', 'Ea_P': 'Ea_P', 'Er_P': 'Er_P'
     };
 
-    /** Mengambil data dari Backend API **/
-    async function fetchAndDisplayData() {
-        try {
-            const response = await fetch(API_ENDPOINT);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const data = await response.json();
-            updateDashboard(data);
-        } catch (error) {
-            console.error("Gagal mengambil data dari API backend:", error);
-            updateStatus('offline', 'Gagal koneksi atau data kosong.');
-        }
-    }
-
-    /** Memperbarui Status Meter (Online/Offline) **/
+    // --- FUNGSI UTILITY DASHBOARD (Sama seperti sebelumnya) ---
     function updateStatus(status, message) {
         const statusEl = document.getElementById('meter-status');
         statusEl.textContent = `STATUS: METER ${status.toUpperCase()}`;
         statusEl.className = 'status-badge ' + status;
         if (status === 'offline') {
-            document.getElementById('last-update').textContent = message || 'N/A';
+            document.getElementById('last-update').textContent = message || 'Menunggu koneksi...';
         }
     }
 
-    /** Memperbarui Nilai di Card **/
     function updateDashboard(data) {
         const status = data.status || 'offline';
         updateStatus(status);
@@ -122,17 +96,67 @@
             }
             document.getElementById('last-update').textContent = new Date().toLocaleTimeString('id-ID');
         } else {
+             // Reset nilai jika status offline
              for (const key in dataMapping) {
                 const element = document.getElementById(key);
                 if (element) { element.textContent = 'N/A'; }
             }
-            document.getElementById('last-update').textContent = 'Meter Offline, menunggu data...';
         }
     }
 
-    // Panggil saat pertama kali dan atur interval polling
-    fetchAndDisplayData();
-    setInterval(fetchAndDisplayData, REFRESH_INTERVAL);
+    // --- FUNGSI PUSTAKA PAHO MQTT ---
+    function onConnect() {
+        console.log("MQTT Connected! Subscribing to topic: " + MQTT_TOPIC_DATA);
+        updateStatus('online', 'Koneksi MQTT sukses');
+        client.subscribe(MQTT_TOPIC_DATA);
+    }
+
+    function onConnectionLost(responseObject) {
+        if (responseObject.errorCode !== 0) {
+            console.log("Koneksi terputus: " + responseObject.errorMessage);
+            updateStatus('offline', 'Koneksi terputus: ' + responseObject.errorMessage);
+        }
+    }
+
+    function onMessageArrived(message) {
+        console.log("Pesan MQTT diterima di " + message.destinationName);
+        try {
+            const data = JSON.parse(message.payloadString);
+            updateDashboard(data);
+        } catch (e) {
+            console.error("Gagal parse JSON dari MQTT:", e);
+        }
+    }
+
+    function startMqttClient() {
+        client = new Paho.MQTT.Client(MQTT_BROKER_HOST, Number(MQTT_BROKER_PORT), "/mqtt", CLIENT_ID);
+
+        // Set callback handlers
+        client.onConnectionLost = onConnectionLost;
+        client.onMessageArrived = onMessageArrived;
+
+        // Connect options
+        const options = {
+            useSSL: true, 
+            timeout: 3, 
+            cleanSession: true,
+            userName: MQTT_USER,
+            password: MQTT_PASS,
+            onSuccess: onConnect,
+            onFailure: (response) => {
+                console.log("Koneksi gagal: " + response.errorMessage);
+                updateStatus('offline', 'Koneksi gagal: ' + response.errorMessage);
+            }
+        };
+
+        // Attempt connection
+        console.log(`Menghubungkan ke ${MQTT_BROKER_HOST}:${MQTT_BROKER_PORT}...`);
+        client.connect(options);
+    }
+
+    // Mulai koneksi saat halaman dimuat
+    window.onload = startMqttClient;
+
 </script>
 
 </body>
