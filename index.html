@@ -2,69 +2,97 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>ESP32 Power Meter - ID 1</title>
+<title>⚡ Power Meter Dashboard</title>
 
 <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 
 <style>
   body {
     font-family: Arial, sans-serif;
-    background: #111;
-    color: #fff;
+    background: #0e0e0e;
+    color: #ffffff;
   }
   h2 {
     text-align: center;
+    margin-top: 20px;
   }
-  table {
-    margin: auto;
-    border-collapse: collapse;
-    width: 60%;
-    background: #1c1c1c;
-  }
-  th, td {
-    border: 1px solid #444;
-    padding: 8px 12px;
-    text-align: left;
-  }
-  th {
-    background: #333;
-    width: 40%;
-  }
-  td {
-    background: #222;
+  .status {
+    text-align: center;
+    font-size: 18px;
+    margin-bottom: 15px;
   }
   .online { color: #00ff88; }
   .offline { color: #ff4444; }
+
+  table {
+    margin: auto;
+    border-collapse: collapse;
+    width: 90%;
+    background: #1a1a1a;
+  }
+  th, td {
+    border: 1px solid #333;
+    padding: 8px;
+    text-align: center;
+    font-size: 14px;
+  }
+  th {
+    background: #2b2b2b;
+  }
 </style>
 </head>
 
 <body>
 
-<h2>ESP32 Power Meter<br>ID 1</h2>
+<h2>⚡ Power Meter Dashboard</h2>
+<div class="status">
+  Status: <span id="statusText" class="offline">DISCONNECTED</span>
+</div>
 
 <table>
-  <tr><th>Status</th><td id="status">Waiting...</td></tr>
-  <tr><th>Total Energy (EaT)</th><td id="EaT">-</td></tr>
-  <tr><th>Total Reactive (ErT)</th><td id="ErT">-</td></tr>
-  <tr><th>Partial Energy (EaP)</th><td id="EaP">-</td></tr>
-  <tr><th>Partial Reactive (ErP)</th><td id="ErP">-</td></tr>
-  <tr><th>Voltage (V)</th><td id="V">-</td></tr>
-  <tr><th>Current I1 (A)</th><td id="I1">-</td></tr>
-  <tr><th>Current I2 (A)</th><td id="I2">-</td></tr>
-  <tr><th>Current I3 (A)</th><td id="I3">-</td></tr>
-  <tr><th>Active Power P (W)</th><td id="P">-</td></tr>
-  <tr><th>Reactive Power Q (VAR)</th><td id="Q">-</td></tr>
-  <tr><th>Apparent Power S (kVA)</th><td id="S">-</td></tr>
-  <tr><th>Power Factor</th><td id="PF">-</td></tr>
-  <tr><th>Frequency (Hz)</th><td id="Hz">-</td></tr>
-  <tr><th>Operation Time (h)</th><td id="OpH">-</td></tr>
+<thead>
+<tr>
+  <th>ID</th>
+  <th>Status</th>
+  <th>V (V)</th>
+  <th>I1 (A)</th>
+  <th>I2 (A)</th>
+  <th>I3 (A)</th>
+  <th>P (W)</th>
+  <th>Q (VAR)</th>
+  <th>S (kVA)</th>
+  <th>PF</th>
+  <th>Hz</th>
+  <th>E Total (kWh)</th>
+  <th>OpH (h)</th>
+</tr>
+</thead>
+
+<tbody>
+<tr>
+  <td>1</td>
+  <td id="status">-</td>
+  <td id="V">-</td>
+  <td id="I1">-</td>
+  <td id="I2">-</td>
+  <td id="I3">-</td>
+  <td id="P">-</td>
+  <td id="Q">-</td>
+  <td id="S">-</td>
+  <td id="PF">-</td>
+  <td id="Hz">-</td>
+  <td id="EaT">-</td>
+  <td id="OpH">-</td>
+</tr>
+</tbody>
 </table>
 
 <script>
+/* ================= MQTT CONFIG ================= */
 const options = {
   username: "vercel_client",
   password: "VercelPass123!",
-  reconnectPeriod: 2000,
+  reconnectPeriod: 2000
 };
 
 const client = mqtt.connect(
@@ -72,35 +100,65 @@ const client = mqtt.connect(
   options
 );
 
+/* ================= STATE DATA ================= */
+const meter = {
+  id: 1,
+  status: "-",
+  V: "-",
+  I1: "-",
+  I2: "-",
+  I3: "-",
+  P: "-",
+  Q: "-",
+  S: "-",
+  PF: "-",
+  Hz: "-",
+  EaT: "-",
+  OpH: "-"
+};
+
+/* ================= DOM UPDATE ================= */
+function setField(id, value) {
+  if (value !== null && value !== undefined) {
+    meter[id] = value;
+    document.getElementById(id).innerText = value;
+  }
+}
+
+/* ================= MQTT HANDLER ================= */
 client.on("connect", () => {
-  console.log("✅ MQTT connected");
+  console.log("✅ MQTT Connected");
+  document.getElementById("statusText").innerText = "CONNECTED";
+  document.getElementById("statusText").className = "online";
   client.subscribe("politeknik/meter/data");
 });
 
 client.on("message", (topic, message) => {
   const data = JSON.parse(message.toString());
-
   if (data.id !== 1) return;
 
-  document.getElementById("status").innerHTML =
-    data.status === "online"
-      ? '<span class="online">ONLINE</span>'
-      : '<span class="offline">OFFLINE</span>';
+  if (data.status) {
+    document.getElementById("status").innerHTML =
+      data.status === "online"
+        ? '<span class="online">ONLINE</span>'
+        : '<span class="offline">OFFLINE</span>';
+  }
 
-  const keys = [
-    "EaT","ErT","EaP","ErP",
-    "V","I1","I2","I3",
-    "P","Q","S","PF","Hz","OpH"
-  ];
-
-  keys.forEach(k => {
-    if (data[k] !== undefined)
-      document.getElementById(k).innerText = data[k];
-  });
+  setField("V", data.V);
+  setField("I1", data.I1);
+  setField("I2", data.I2);
+  setField("I3", data.I3);
+  setField("P", data.P);
+  setField("Q", data.Q);
+  setField("S", data.S);
+  setField("PF", data.PF);
+  setField("Hz", data.Hz);
+  setField("EaT", data.EaT);
+  setField("OpH", data.OpH);
 });
 
 client.on("error", err => {
-  console.error("MQTT error", err);
+  console.error("❌ MQTT Error:", err);
 });
 </script>
 
