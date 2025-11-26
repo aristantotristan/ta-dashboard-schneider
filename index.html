@@ -1,207 +1,168 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monitoring Real-Time MESIN_01</title>
-    <!-- Library Klien MQTT (Paho) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js" type="text/javascript"></script>
-    
-    <style>
-        body { font-family: Arial, sans-serif; margin: 0; background-color: #f4f4f4; padding: 20px; }
-        .back-button { padding: 10px 15px; background-color: #333; color: white; border: none; border-radius: 5px; cursor: pointer; margin-bottom: 20px; }
-        .detail-pane { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); max-width: 1000px; margin: 0 auto; }
-        
-        /* Gauges Style */
-        .gauge-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 30px; }
-        .gauge-box { background: #f9f9f9; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #ccc; position: relative; }
-        .gauge-value { font-size: 2.5em; font-weight: bold; color: #007bff; }
-        .gauge-label { font-size: 0.9em; color: #555; margin-bottom: 10px; }
-        .gauge-visual { width: 100%; height: 10px; background-color: #e0e0e0; border-radius: 5px; margin-top: 5px; overflow: hidden; }
-        .gauge-fill { height: 100%; width: 0; background-color: #28a745; transition: width 0.5s; }
-        .gauge-fill.warning { background-color: orange; }
-        .gauge-fill.danger { background-color: red; }
-
-        /* Detail Table */
-        .detail-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        .detail-table th, .detail-table td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-        .detail-table th { background-color: #eee; }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ESP32 Meter Dashboard</title>
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--muted:#9aa7b2;--accent:#1e90ff}
+    body{font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial;background:linear-gradient(180deg,#071022 0%,#071827 100%);color:#e6eef6;margin:0;padding:24px}
+    .wrap{max-width:1100px;margin:0 auto}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+    h1{font-size:20px;margin:0}
+    .controls{display:flex;gap:8px;align-items:center}
+    input,select,button{background:transparent;border:1px solid #1f2a36;padding:8px 10px;border-radius:8px;color:inherit}
+    button{cursor:pointer}
+    .status{padding:6px 10px;border-radius:8px;font-weight:600}
+    .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}
+    .card{background:var(--card);padding:12px;border-radius:10px;box-shadow:0 6px 18px rgba(2,6,23,0.6)}
+    .card h2{font-size:12px;margin:0;color:var(--muted)}
+    .card p{font-size:18px;margin:6px 0 0;font-weight:700}
+    #chartWrap{margin-top:16px;background:var(--card);padding:12px;border-radius:10px}
+    pre{white-space:pre-wrap;word-break:break-word;color:var(--muted);font-size:12px}
+    footer{margin-top:16px;color:var(--muted);font-size:13px}
+    @media (max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}}
+    @media (max-width:520px){.grid{grid-template-columns:1fr}}
+  </style>
 </head>
 <body>
+  <div class="wrap">
+    <header>
+      <h1>ESP32 Meter Dashboard</h1>
+      <div class="controls">
+        <input id="broker" placeholder="Broker (wss://...)" style="width:300px" value="wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt" />
+        <input id="username" placeholder="username" style="width:130px" value="vercel_client" />
+        <input id="password" placeholder="password" style="width:130px" value="VercelPass123!" />
+        <input id="topic" placeholder="topic" style="width:160px" value="politeknik/meter/data" />
+        <button id="btnConnect">Connect</button>
+        <div id="connStatus" class="status">disconnected</div>
+      </div>
+    </header>
 
-    <button class="back-button" onclick="window.location.href='index.html'">← Kembali</button>
-    
-    <div class="detail-pane">
-        <h1>Monitoring Real-Time: MESIN_01</h1>
-        <p id="mqttStatus" style="font-weight: bold; color: blue;">Status Koneksi MQTT: Disconnecting...</p>
+    <section id="mainCards" class="grid">
+      <div class="card"><h2>Device</h2><p id="deviceId">-</p></div>
+      <div class="card"><h2>Voltage (V)</h2><p id="V">-</p></div>
+      <div class="card"><h2>Current I1 (A)</h2><p id="I1">-</p></div>
+      <div class="card"><h2>Current I2 (A)</h2><p id="I2">-</p></div>
+      <div class="card"><h2>Current I3 (A)</h2><p id="I3">-</p></div>
+      <div class="card"><h2>Active Power (W)</h2><p id="P">-</p></div>
+      <div class="card"><h2>Reactive Power (VAR)</h2><p id="Q">-</p></div>
+      <div class="card"><h2>Apparent (kVA)</h2><p id="S">-</p></div>
+      <div class="card"><h2>Power Factor</h2><p id="PF">-</p></div>
+      <div class="card"><h2>Frequency (Hz)</h2><p id="Hz">-</p></div>
+      <div class="card"><h2>Op Hours</h2><p id="OpH">-</p></div>
+      <div class="card"><h2>Status</h2><p id="status">-</p></div>
+    </section>
 
-        <p>Data terakhir diperbarui pada: <span id="lastUpdateTimestamp">N/A</span></p>
-        
-        <hr>
-        
-        <!-- Area 1: Parameter Inti (Gauges) -->
-        <h2>Parameter Inti (Core)</h2>
-        <div class="gauge-container" id="coreParameters">
-            Menunggu data...
-        </div>
-        
-        <hr>
-        
-        <!-- Area 2: Semua Parameter (Tabel Detail) -->
-        <h2>Semua Parameter Detail</h2>
-        <table class="detail-table" id="allParametersTable">
-            <thead>
-                <tr><th>Parameter</th><th>Nilai</th><th>Satuan</th></tr>
-            </thead>
-            <tbody>
-                <tr><td colspan="3">Menunggu data dari HiveMQ...</td></tr>
-            </tbody>
-        </table>
-
+    <div id="chartWrap">
+      <canvas id="chart"></canvas>
     </div>
 
-    <script>
-        // =======================================================
-        // LOGIC MQTT SUBSCRIBER FINAL (HARUS SAMA DENGAN ESP32)
-        // =======================================================
+    <details style="margin-top:12px;background:var(--card);padding:10px;border-radius:8px">
+      <summary style="cursor:pointer">Raw payload & logs</summary>
+      <pre id="raw">no data yet</pre>
+    </details>
 
-        const MQTT_BROKER = "broker.hivemq.com";
-        const MQTT_PORT = 8000; // Port standar Websocket MQTT
-        const MQTT_TOPIC = "power/iem3255/data"; // Topik yang sama dengan ESP32
-        const CLIENT_ID = "WebApp-Subscriber-" + parseInt(Math.random() * 100000);
+    <footer>
+      Open this file in a browser (Chrome/Edge). Make sure your HiveMQ Cloud broker has WebSocket enabled. If you can't connect try switching the broker URL to use port 8883 or 8884 depending on your broker's WebSocket configuration.
+    </footer>
+  </div>
 
-        let client = null;
+  <!-- Libraries -->
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-        // Definisikan Parameter (Wajib sama persis dengan payload JSON dari ESP32)
-        const ALL_PARAMETERS_DEFINITION = {
-            // Core Parameters (untuk Gauge)
-            'Voltage (L-L Avg)': { col: 'V_LL_Avg', unit: 'Volt', isCore: true, precision: 1, max: 400 },
-            'Current (I1)': { col: 'I1', unit: 'Ampere', isCore: true, precision: 1, max: 100 },
-            'Power (P Total/kW)': { col: 'P', unit: 'W', isCore: true, precision: 0, max: 50000 }, // Dikirimlkan dalam Watt
-            'Power Factor (Total)': { col: 'PF', unit: '-', isCore: true, precision: 3, max: 1.0 },
-            
-            // Non-Core Parameters (Sisanya)
-            'Total Ea': { col: 'Ea_Total', unit: 'kWh', isCore: false, precision: 2 },
-            'Total Er': { col: 'Er_Total', unit: 'kVARh', isCore: false, precision: 2 },
-            'Partial Ea': { col: 'Ea_Partial', unit: 'kWh', isCore: false, precision: 2 },
-            'Partial Er': { col: 'Er_Partial', unit: 'kVARh', isCore: false, precision: 2 },
-            'Current (I2)': { col: 'I2', unit: 'Ampere', isCore: false, precision: 1 },
-            'Current (I3)': { col: 'I3', unit: 'Ampere', isCore: false, precision: 1 },
-            'Power (Q VAR)': { col: 'Q', unit: 'VAR', isCore: false, precision: 0 },
-            'Power (S VA)': { col: 'S', unit: 'VA', isCore: false, precision: 0 },
-            'Frequency': { col: 'Freq', unit: 'Hz', isCore: false, precision: 2 },
-            'Operating Time (Sec)': { col: 'OpTime', unit: 'Sec', isCore: false, precision: 0 },
-        };
+  <script>
+    // Minimal dashboard logic
+    const brokerEl = document.getElementById('broker');
+    const userEl = document.getElementById('username');
+    const passEl = document.getElementById('password');
+    const topicEl = document.getElementById('topic');
+    const btn = document.getElementById('btnConnect');
+    const connStatus = document.getElementById('connStatus');
 
-        // --- 1. FUNGSI KONEKSI MQTT ---
-        function initMQTT() {
-            // Paho client global
-            var wsclient = new Paho.MQTT.Client(MQTT_BROKER, MQTT_PORT, "/mqtt", CLIENT_ID);
-            
-            wsclient.onConnectionLost = onConnectionLost;
-            wsclient.onMessageArrived = onMessageArrived;
+    const fields = ['deviceId','V','I1','I2','I3','P','Q','S','PF','Hz','OpH','status','raw'];
+    const elems = {};
+    fields.forEach(f => elems[f] = document.getElementById(f) || document.getElementById('raw'));
 
-            wsclient.connect({
-                onSuccess: onConnect,
-                onFailure: onFailure,
-                cleanSession: true,
-                useSSL: false
-            });
-            client = wsclient; // Tetapkan client global
-        }
+    // Chart setup
+    const ctx = document.getElementById('chart').getContext('2d');
+    const data = {
+      labels: [],
+      datasets: [
+        { label: 'Power (W)', data: [], fill:false, tension:0.2, borderWidth:2 },
+        { label: 'Voltage (V)', data: [], fill:false, tension:0.2, borderWidth:2 }
+      ]
+    };
+    const chart = new Chart(ctx, { type: 'line', data, options: { responsive:true, interaction:{mode:'index',intersect:false}, scales:{x:{display:true},y:{display:true}} }});
 
-        function onFailure(responseObject) {
-            document.getElementById('mqttStatus').textContent = 'Koneksi GAGAL: ' + responseObject.errorMessage;
-            document.getElementById('mqttStatus').style.color = 'red';
-            setTimeout(initMQTT, 5000); 
-        }
+    let client = null;
+    let historyLen = 50;
 
-        function onConnectionLost(responseObject) {
-            document.getElementById('mqttStatus').textContent = 'Koneksi Hilang. Mencoba sambung ulang...';
-            document.getElementById('mqttStatus').style.color = 'red';
-            // Mencoba reconnect
-        }
+    function updateCards(obj){
+      elems.deviceId.textContent = obj.id ?? '-';
+      elems.V.textContent = obj.V ?? '-';
+      elems.I1.textContent = obj.I1 ?? '-';
+      elems.I2.textContent = obj.I2 ?? '-';
+      elems.I3.textContent = obj.I3 ?? '-';
+      elems.P.textContent = obj.P ?? '-';
+      elems.Q.textContent = obj.Q ?? '-';
+      elems.S.textContent = obj.S ?? '-';
+      elems.PF.textContent = obj.PF ?? '-';
+      elems.Hz.textContent = obj.Hz ?? '-';
+      elems.OpH.textContent = obj.OpH ?? '-';
+      elems.status.textContent = obj.status ?? '-';
+      elems.raw.textContent = JSON.stringify(obj, null, 2);
+    }
 
-        function onConnect() {
-            document.getElementById('mqttStatus').textContent = 'Koneksi BERHASIL!';
-            document.getElementById('mqttStatus').style.color = 'green';
-            client.subscribe(MQTT_TOPIC);
-        }
+    function pushToChart(ts, power, volt){
+      data.labels.push(ts);
+      data.datasets[0].data.push(power);
+      data.datasets[1].data.push(volt);
+      if(data.labels.length>historyLen){ data.labels.shift(); data.datasets.forEach(ds=>ds.data.shift()); }
+      chart.update();
+    }
 
-        // --- 2. FUNGSI PENERIMA PESAN (Updater) ---
-        function onMessageArrived(message) {
-            document.getElementById('lastUpdateTimestamp').textContent = new Date().toLocaleTimeString('id-ID');
-            
-            try {
-                const data = JSON.parse(message.payloadString);
-                
-                renderCoreParameters(data);
-                renderAllParameters(data);
+    function connect() {
+      if(client){ try{ client.end(true); }catch(e){} }
+      const brokerUrl = brokerEl.value.trim();
+      const username = userEl.value.trim();
+      const password = passEl.value;
+      const topic = topicEl.value.trim() || 'politeknik/meter/data';
 
-            } catch (e) {
-                console.error("Gagal parsing JSON dari MQTT:", e);
-                document.getElementById('mqttStatus').textContent = 'Error Parsing Data!';
-            }
-        }
+      if(!brokerUrl){ alert('Please fill broker URL (wss://...)'); return; }
 
-        // --- 3. FUNGSI RENDERING (Core Parameters / Gauges) ---
-        function renderCoreParameters(data) {
-            const container = document.getElementById('coreParameters');
-            container.innerHTML = '';
-            
-            for (const key in ALL_PARAMETERS_DEFINITION) {
-                const paramDef = ALL_PARAMETERS_DEFINITION[key];
-                if (paramDef.isCore) {
-                    const value = data[paramDef.col] || 0;
-                    const maxValue = paramDef.max;
+      connStatus.textContent = 'connecting...';
 
-                    // Hitung Persentase Isi Bar
-                    let percentage = Math.min(100, (value / maxValue) * 100);
-                    
-                    // Logic Warna
-                    let colorClass = 'gauge-fill';
-                    if (paramDef.col === 'PF') {
-                        if (value < 0.85) colorClass = 'gauge-fill danger';
-                        else if (value < 0.95) colorClass = 'gauge-fill warning';
-                    } else {
-                        if (percentage > 95) colorClass = 'gauge-fill danger'; 
-                        else if (percentage > 80) colorClass = 'gauge-fill warning';
-                    }
+      try{
+        client = mqtt.connect(brokerUrl, { username, password, reconnectPeriod: 4000, connectTimeout: 10_000 });
+      }catch(err){ connStatus.textContent = 'error'; console.error(err); return; }
 
-                    const box = document.createElement('div');
-                    box.className = 'gauge-box';
-                    box.innerHTML = `
-                        <div class="gauge-label">${key}</div>
-                        <div class="gauge-value">${value.toFixed(paramDef.precision)} ${paramDef.unit}</div>
-                        <div class="gauge-visual">
-                            <div class="${colorClass}" style="width: ${percentage}%;"></div>
-                        </div>
-                    `;
-                    container.appendChild(box);
-                }
-            }
-        }
+      client.on('connect', () => { connStatus.textContent = 'connected'; client.subscribe(topic, (err)=>{ if(err) console.warn('sub err',err); }); });
+      client.on('reconnect', ()=> connStatus.textContent = 'reconnecting');
+      client.on('close', ()=> connStatus.textContent = 'closed');
+      client.on('offline', ()=> connStatus.textContent = 'offline');
+      client.on('error', (e)=>{ connStatus.textContent = 'error'; console.error(e); });
 
-        // --- 4. FUNGSI RENDERING (All Parameters / Tabel) ---
-        function renderAllParameters(data) {
-            const tbody = document.querySelector('#allParametersTable tbody');
-            tbody.innerHTML = '';
-            
-            for (const key in ALL_PARAMETERS_DEFINITION) {
-                const paramDef = ALL_PARAMETERS_DEFINITION[key];
-                const value = data[paramDef.col];
-                
-                const row = tbody.insertRow();
-                row.insertCell().textContent = key;
-                row.insertCell().textContent = value !== null ? value.toFixed(paramDef.precision) : 'N/A';
-                row.insertCell().textContent = paramDef.unit;
-            }
-        }
+      client.on('message', (t, payload) => {
+        try{
+          const txt = payload.toString();
+          const obj = JSON.parse(txt);
+          // Update display
+          updateCards(obj);
+          // push to chart (P in W and V)
+          const now = new Date().toLocaleTimeString();
+          const power = Number(obj.P) || 0;
+          const volt = Number(obj.V) || 0;
+          pushToChart(now, power, volt);
+        }catch(e){ console.error('parse err', e); }
+      });
+    }
 
+    btn.addEventListener('click', connect);
 
-        // --- INISIALISASI ---
-        document.addEventListener('DOMContentLoaded', initMQTT);
-    </script>
+    // Auto-connect on load (optional)
+    window.addEventListener('load', () => { /*connect();*/ });
+  </script>
 </body>
 </html>
