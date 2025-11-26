@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MONITORING ENERGI (Mesin 1 REAL-TIME)</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.1.0/mqttws31.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gauge.js/1.3.7/gauge.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; padding: 20px; color: #333; }
@@ -105,7 +105,6 @@ let gaugesInitialized = false;
 let latestDataCache = {};
 let lastUpdateTimes = {};
 
-// Fungsi format dan perhitungan yang sudah teruji bekerja
 const fmt = (val, dig) => (val != null && !isNaN(val)) ? Number(val).toFixed(dig) : "0";
 
 const fmtAvgCurrent = (i1, i2, i3) => {
@@ -127,7 +126,7 @@ window.onload = function() {
     try {
         const ONLY_ID = 1; 
         
-        // FIX: Hapus jalur resource yang menyebabkan 404
+        // FIX: Menggunakan Paho 1.1.0 dan menghapus jalur resource
         mqttClient = new Paho.MQTT.Client(MQTT_HOST, MQTT_PORT, "web_" + Date.now()); 
         
         mqttClient.onConnectionLost = (r) => { if (r.errorCode !== 0) { setStatus("Koneksi Putus...", "bg-err"); setTimeout(connectMQTT, 3000); } };
@@ -136,18 +135,17 @@ window.onload = function() {
             
             if(d.id !== ONLY_ID) return; 
             
-            // LOGGING DITERIMA
-            console.log("REAL DATA DITERIMA:", d); 
+            // LOGGING DATA MENTAH
+            console.log(`REAL DATA V: ${d.V} | P_W: ${d.P_W}`); 
             
             latestDataCache[d.id] = d;
             lastUpdateTimes[d.id] = Date.now();
             
-            // Panggil updateDetailView saat data diterima
             if(d.id === activeMachineId) updateDetailView(d);
         };
 
         connectMQTT();
-        window.goMonitor(1); // Inisialisasi tampilan awal
+        window.goMonitor(1); 
         
         setInterval(checkTimeouts, 1000);
     } catch (e) { setStatus("Error Init: " + e.message, "bg-err"); }
@@ -199,9 +197,6 @@ function updateDetailView(d) {
     const V_val = parseFloat(d.V);
     const avgI = fmtAvgCurrent(d.I1, d.I2, d.I3); 
     
-    // Log di console untuk verifikasi
-    console.log(`UPDATE V: ${d.V} | P: ${d.P_W}`); 
-
     if(d.status === 'offline') {
         const elements = ['v-ea-t','v-er-t','v-ea-p','v-er-p','v-v','v-i-avg','v-i1','v-i2','v-i3','v-p-w','v-q-var','v-s-kva','v-pf','v-hz','v-op-h'];
         elements.forEach(k => { 
