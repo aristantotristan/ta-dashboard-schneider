@@ -8,52 +8,57 @@
 
 <style>
 body {
-  font-family: Arial, sans-serif;
-  background:#0b1220;
-  color:#fff;
-  padding:20px;
+  font-family: Arial, sans-serif;
+  background:#0b1220;
+  color:#fff;
+  padding:20px;
+}
+h2 {
+    color: #38bdf8; /* Warna biru muda */
 }
 table {
-  border-collapse: collapse;
-  width:100%;
+  border-collapse: collapse;
+  width:100%;
 }
 th, td {
-  border:1px solid #333;
-  padding:8px;
-  text-align:center;
+  border:1px solid #333;
+  padding:8px;
+  text-align:center;
 }
 th {
-  background:#111827;
+  background:#111827;
+  color: #cbd5e1;
 }
 .status-online { color:#22c55e; font-weight:bold; }
 .status-offline { color:#ef4444; font-weight:bold; }
+.col-power { background-color: #1f2937; } /* Styling tambahan untuk kolom power */
 </style>
 </head>
 
 <body>
 
-<h2>ESP32 Meter – MQTT Table Dashboard</h2>
+<h2>⚡ ESP32 Meter – MQTT Real-time Dashboard</h2>
 <p id="conn">Connecting...</p>
 
 <table>
 <thead>
 <tr>
-  <th>ID</th>
-  <th>Status</th>
-  <th>V (V)</th>
-  <th>I1 (A)</th>
-  <th>I2 (A)</th>
-  <th>I3 (A)</th>
-  <th>P (W)</th>
-  <th>Q (VAR)</th>
-  <th>S (kVA)</th>
-  <th>PF</th>
-  <th>Hz</th>
-  <th>OpH (h)</th>
-  <th>E Active Tot (kWh)</th>
-  <th>E Reactive Tot (kVARh)</th>
-  <th>E Active Part</th>
-  <th>E Reactive Part</th>
+  <th>ID</th>
+  <th>Status</th>
+  <th>V (V)</th>
+  <th>I1 (A)</th>
+  <th>I2 (A)</th>
+  <th>I3 (A)</th>
+  <th class="col-power">P (Watt)</th>
+  <th class="col-power">Q (VAR)</th>
+  <th class="col-power">S (kVA)</th>
+  <th>PF</th>
+  <th>Hz</th>
+  <th>OpH (Jam)</th>
+  <th>Ea Tot (kWh)</th>
+  <th>Er Tot (kVARh)</th>
+  <th>Ea Part (kWh)</th>
+  <th>Er Part (kVARh)</th>
 </tr>
 </thead>
 <tbody id="tableBody">
@@ -62,16 +67,17 @@ th {
 </table>
 
 <script>
+// --- KONFIGURASI MQTT WEB CLIENT ---
 const options = {
-  username: "web_dashboard",
-  password: "Tristan12",
-  connectTimeout: 4000,
-  reconnectPeriod: 2000,
+  username: "web_dashboard",
+  password: "Tristan12",
+  connectTimeout: 4000,
+  reconnectPeriod: 2000,
 };
 
 const client = mqtt.connect(
-  "wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt",
-  options
+  "wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt",
+  options
 );
 
 const tableBody = document.getElementById("tableBody");
@@ -79,55 +85,61 @@ const conn = document.getElementById("conn");
 const devices = {}; // store row per ID
 
 client.on("connect", () => {
-  conn.innerHTML = "✅ MQTT Connected";
-  client.subscribe("politeknik/meter/data");
+  conn.innerHTML = "✅ MQTT Connected";
+  client.subscribe("politeknik/meter/data");
 });
 
 client.on("error", err => {
-  conn.innerHTML = "❌ MQTT Error";
-  console.error(err);
+  conn.innerHTML = "❌ MQTT Error";
+  console.error(err);
 });
 
 client.on("message", (topic, message) => {
-  try {
-    const d = JSON.parse(message.toString());
-    const id = d.id;
+  try {
+    const d = JSON.parse(message.toString());
+    const id = d.id;
 
-    if (!devices[id]) {
-      const row = document.createElement("tr");
-      row.innerHTML = `
-        <td>${id}</td>
-        <td></td><td></td><td></td><td></td><td></td>
-        <td></td><td></td><td></td><td></td>
-        <td></td><td></td><td></td><td></td>
-        <td></td><td></td>
-      `;
-      tableBody.innerHTML = "";
-      tableBody.appendChild(row);
-      devices[id] = row;
-    }
+    if (!devices[id]) {
+      const row = document.createElement("tr");
+      // Menyiapkan 16 sel untuk 1 ID + 1 Status + 14 Data
+      row.innerHTML = `
+        <td>${id}</td>
+        <td class="status-offline">offline</td>
+        <td></td><td></td><td></td><td></td>
+        <td class="col-power"></td><td class="col-power"></td><td class="col-power"></td>
+        <td></td><td></td><td></td>
+        <td></td><td></td><td></td><td></td>
+      `;
+      tableBody.innerHTML = ""; // Hapus pesan "Waiting..."
+      tableBody.appendChild(row);
+      devices[id] = row;
+    }
 
-    const cells = devices[id].children;
-    cells[1].innerHTML = d.status;
-    cells[1].className = d.status === "online" ? "status-online" : "status-offline";
-    cells[2].innerHTML = d.V;
-    cells[3].innerHTML = d.I1;
-    cells[4].innerHTML = d.I2;
-    cells[5].innerHTML = d.I3;
-    cells[6].innerHTML = d.P;
-    cells[7].innerHTML = d.Q;
-    cells[8].innerHTML = d.S;
-    cells[9].innerHTML = d.PF;
-    cells[10].innerHTML = d.Hz;
-    cells[11].innerHTML = d.OpH;
-    cells[12].innerHTML = d.EaT;
-    cells[13].innerHTML = d.ErT;
-    cells[14].innerHTML = d.EaP;
-    cells[15].innerHTML = d.ErP;
+    const cells = devices[id].children;
+    
+    // Update Status
+    cells[1].innerHTML = d.status;
+    cells[1].className = d.status === "online" ? "status-online" : "status-offline";
+    
+    // Update Data - Pastikan urutannya benar!
+    cells[2].innerHTML = d.V;   // V (Volt)
+    cells[3].innerHTML = d.I1; // I1 (Ampere)
+    cells[4].innerHTML = d.I2; // I2 (Ampere)
+    cells[5].innerHTML = d.I3; // I3 (Ampere)
+    cells[6].innerHTML = d.P;   // P (Watt)
+    cells[7].innerHTML = d.Q;   // Q (VAR)
+    cells[8].innerHTML = d.S;   // S (kVA)
+    cells[9].innerHTML = d.PF; // PF
+    cells[10].innerHTML = d.Hz; // Freq (Hz)
+    cells[11].innerHTML = d.OpH; // OpH (Jam)
+    cells[12].innerHTML = d.EaT; // Ea Total (kWh)
+    cells[13].innerHTML = d.ErT; // Er Total (kVARh)
+    cells[14].innerHTML = d.EaP; // Ea Partial (kWh)
+    cells[15].innerHTML = d.ErP; // Er Partial (kVARh)
 
-  } catch (e) {
-    console.error("JSON Error", e);
-  }
+  } catch (e) {
+    console.error("JSON Error", e);
+  }
 });
 </script>
 
