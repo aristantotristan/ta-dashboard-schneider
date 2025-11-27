@@ -3,44 +3,85 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>💰 Monitoring Tarif (Supabase Historis)</title>
+<title>💰 Monitoring Biaya & Tarif (Historis)</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script> 
 
 <style>
-/* Styling menyesuaikan mode Vertikal sebelumnya */
-body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121212; color: #E0E0E0; padding: 20px; }
-h2 { color: #FFD700; border-bottom: 2px solid #FFD700; padding-bottom: 10px; margin-bottom: 5px; }
-#conn { margin-bottom: 25px; font-size: 1.1em; font-weight: bold; }
+/* Reset dan Basic Styling */
+body { font-family: 'Poppins', sans-serif; background: #121212; color: #E0E0E0; padding: 20px; }
 
-.status-box { background: #2A2A2A; padding: 15px; border-radius: 8px; margin-bottom: 20px; color: #00FFC2; }
-.status-box h3 { margin-top: 0; color: #FFD700; }
+/* Header & Navigasi */
+.header-container { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 2px solid #3A3A3A; padding-bottom: 10px; }
+h2 { color: #FFD700; margin: 0; }
+#conn { font-weight: bold; }
+.nav-button {
+    background-color: #00FFC2; /* Warna hijau/biru untuk Realtime */
+    color: #121212;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    text-decoration: none;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    display: inline-block;
+}
+.nav-button:hover { background-color: #00E0A7; }
 
-.container { display: flex; flex-wrap: wrap; gap: 20px; max-width: 1200px; margin: 0 auto; }
-.meter-card { flex: 1 1 calc(33.33% - 20px); min-width: 350px; background: #1E1E1E; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5); overflow: hidden; }
+/* Status Tarif Global */
+.tarif-status-box { background: #1E1E1E; padding: 20px; border-radius: 8px; margin-bottom: 30px; border: 1px solid #FFD700; }
+.tarif-status-box h3 { margin-top: 0; color: #FFD700; border-bottom: 1px dashed #3A3A3A; padding-bottom: 5px; }
+.tarif-rate { display: flex; justify-content: space-around; font-size: 0.9em; }
+.tarif-rate div { text-align: center; }
+.tarif-rate strong { display: block; font-size: 1.2em; color: #4ADE80; }
+.tarif-note { font-size: 0.8em; color: #94A3B8; margin-top: 10px; }
 
-.card-header { background: #111827; padding: 10px; font-size: 1.2em; font-weight: bold; color: #B0B0B0; }
+/* Layout Grid Kartu Meteran */
+.container { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; max-width: 1400px; margin: 0 auto; }
+.meter-card { background: #1E1E1E; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5); overflow: hidden; border-left: 5px solid #FFD700; }
+
+.card-header { background: #2A2A2A; padding: 12px 15px; font-size: 1.2em; font-weight: bold; color: #B0B0B0; }
 .card-body { padding: 15px; }
 
 /* Vertical Table inside card */
 .tarif-table { width: 100%; border-collapse: collapse; }
-.tarif-table td { padding: 8px 10px; border-bottom: 1px solid #3A3A3A; text-align: left; background: #1E1E1E; }
+.tarif-table td { padding: 8px 10px; border-bottom: 1px solid #3A3A3A; text-align: left; }
 .tarif-table td:first-child { width: 60%; color: #94A3B8; }
-.tarif-table td:nth-child(2) { font-weight: bold; color: #4ADE80; text-align: right; }
-.tarif-table td:last-child { color: #FFD700; font-size: 1.1em; } /* Total Cost */
+.tarif-table td:nth-child(2) { font-weight: bold; text-align: right; }
+.tarif-table .value-energy { color: #4ADE80; }
+.tarif-table .value-rupiah { color: #38BDF8; }
 
-.tarif-table .total-row td { background: #0F334A; color: white; font-size: 1.2em; border-top: 2px solid #FFD700; }
+.tarif-table .total-row td { 
+    background: #0F334A; 
+    color: white; 
+    font-size: 1.3em; 
+    font-weight: bold;
+    border-top: 3px double #FFD700; 
+    padding: 12px 10px;
+}
 </style>
 </head>
 
 <body>
 
-<h2>💰 Monitoring Biaya & Tarif (Data Historis Konsumsi)</h2>
-<p id="conn">Connecting to Supabase...</p>
-<div class="status-box">
-    <h3>Konfigurasi Tarif Aktif:</h3>
-    <p>LWBP (Rp/kWh): <span id="rate_lwbp">...</span> | WBP (Rp/kWh): <span id="rate_wbp">...</span> | Denda Reaktif (Rp/kVARh): <span id="rate_reaktif">...</span></p>
+<div class="header-container">
+    <h2>💰 Monitoring Biaya & Tarif (Data Historis)</h2>
+    <a href="./index.html" class="nav-button">Lihat Realtime Monitoring</a>
 </div>
+<p id="conn">Initializing Supabase...</p>
+
+
+<div class="tarif-status-box">
+    <h3>Konfigurasi Tarif Aktif (diambil dari tabel `config_tarif`):</h3>
+    <div class="tarif-rate">
+        <div>Tarif LWBP (Rp/kWh)<br><strong>Rp <span id="rate_lwbp">...</span></strong></div>
+        <div>Tarif WBP (Rp/kWh)<br><strong>Rp <span id="rate_wbp">...</span></strong></div>
+        <div>Denda Reaktif (Rp/kVARh)<br><strong>Rp <span id="rate_reaktif">...</span></strong></div>
+    </div>
+    <p class="tarif-note">* Perhitungan biaya menggunakan **Tarif Rata-Rata** dan **Konsumsi 15 detik terakhir** sebagai estimasi laju biaya saat ini.</p>
+</div>
+
 
 <div class="container" id="meter-container">
     <p>Loading meter summaries...</p>
@@ -48,7 +89,6 @@ h2 { color: #FFD700; border-bottom: 2px solid #FFD700; padding-bottom: 10px; mar
 
 <script>
 // --- KONFIGURASI SUPABASE ---
-// GANTI DENGAN KREDENSIAL PROYEK SUPABASE KAMU
 const SUPABASE_URL = 'https://rojhcadtqfynlqzubftx.supabase.co'; 
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs';
 
@@ -59,13 +99,23 @@ let tarifConfig = {};
 
 // --- UTILITY FUNGSI ---
 
-/** Menghitung Biaya Total dan Denda (Menggunakan Konstanta Global) */
+/** Format angka menjadi format Rupiah Indonesia */
+function formatRupiah(number) {
+    return number.toLocaleString('id-ID', { maximumFractionDigits: 0 });
+}
+
+/** Format angka menjadi format Energi dengan 3 desimal */
+function formatEnergy(number) {
+    return parseFloat(number).toLocaleString('id-ID', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+}
+
+/** Menghitung Biaya Total dan Denda */
 function calculateCost(eaTotal, erTotal) {
     const rate_lwbp = tarifConfig.rate_lwbp || 1000;
     const rate_wbp = tarifConfig.rate_wbp || 1500;
     const rate_reaktif = tarifConfig.rate_reaktif || 800;
     
-    // Simplifikasi: Menggunakan rata-rata tarif karena tidak ada pembagian waktu di Log 24 jam
+    // LOGIKA PENTING: Menggunakan Tarif Rata-Rata karena tidak ada pembagian WBP/LWBP per log
     const rate_rata = (rate_lwbp + rate_wbp) / 2;
 
     const cost_aktif = Math.round(eaTotal * rate_rata);
@@ -86,7 +136,7 @@ function calculateCost(eaTotal, erTotal) {
  * Memuat Konfigurasi Tarif dan kemudian memuat data Meteran.
  */
 async function loadData() {
-    conn.innerHTML = "🟡 Memuat konfigurasi tarif...";
+    document.getElementById('conn').innerHTML = "🟡 Memuat konfigurasi tarif...";
     
     // 1. Ambil Konfigurasi Tarif
     const { data: tarifData, error: tarifError } = await supabase
@@ -95,20 +145,20 @@ async function loadData() {
         .limit(1);
 
     if (tarifError || !tarifData || tarifData.length === 0) {
-        conn.innerHTML = "❌ Gagal memuat Tarif. Pastikan tabel 'config_tarif' terisi.";
+        document.getElementById('conn').innerHTML = "❌ Gagal memuat Tarif. Pastikan tabel 'config_tarif' terisi dan kuncinya benar.";
         return;
     } 
     
-    // Simpan konfigurasi tarif
+    // Simpan dan tampilkan konfigurasi tarif
     tarifConfig = tarifData[0];
-    document.getElementById('rate_lwbp').textContent = tarifConfig.rate_lwbp.toLocaleString('id-ID');
-    document.getElementById('rate_wbp').textContent = tarifConfig.rate_wbp.toLocaleString('id-ID');
-    document.getElementById('rate_reaktif').textContent = tarifConfig.rate_reaktif.toLocaleString('id-ID');
-    conn.innerHTML = "✅ Supabase Connected (Tarif Dimuat)";
+    document.getElementById('rate_lwbp').textContent = formatRupiah(tarifConfig.rate_lwbp);
+    document.getElementById('rate_wbp').textContent = formatRupiah(tarifConfig.rate_wbp);
+    document.getElementById('rate_reaktif').textContent = formatRupiah(tarifConfig.rate_reaktif);
+    document.getElementById('conn').innerHTML = "✅ Supabase Connected (Tarif Dimuat)";
 
 
     // --- 2. QUERY RINGKASAN DATA METERAN ---
-    conn.innerHTML = "🟡 Mengambil ringkasan data 18 meteran...";
+    document.getElementById('conn').innerHTML = "🟡 Mengambil ringkasan data 18 meteran...";
     
     const container = document.getElementById('meter-container');
     container.innerHTML = '';
@@ -128,7 +178,7 @@ async function loadData() {
         
         if (meterError) {
              console.error(`Error fetching data for ID ${id}:`, meterError);
-             renderErrorCard(id);
+             renderErrorCard(id, container);
              continue;
         }
 
@@ -141,7 +191,7 @@ async function loadData() {
                  summary.erTotal = Math.max(0, meterData[0].erp - meterData[1].erp);
 
             } else {
-                 // Jika hanya ada 1 record, total konsumsi dianggap nol
+                 // Jika hanya ada 1 record, konsumsi dianggap nol
                  summary.eaTotal = 0; 
                  summary.erTotal = 0;
             }
@@ -151,46 +201,48 @@ async function loadData() {
         const costResult = calculateCost(summary.eaTotal, summary.erTotal);
         
         // Render Card
-        renderMeterCard(id, summary, costResult, meterData.length);
+        renderMeterCard(id, summary, costResult, container, meterData.length);
     }
     
-    conn.innerHTML = "✅ Data Tarif Selesai Dimuat.";
+    document.getElementById('conn').innerHTML = "✅ Data Tarif Selesai Dimuat.";
 }
 
-function renderMeterCard(id, summary, costResult, recordCount) {
-    const container = document.getElementById('meter-container');
+function renderMeterCard(id, summary, costResult, container, recordCount) {
     const card = document.createElement('div');
     card.className = 'meter-card';
     
-    const currentCost = costResult.cost_aktif + costResult.cost_reaktif;
+    const currentCost = costResult.total;
     
     const statusMessage = recordCount < 2 
-        ? `<p style="color: #FFC200;">* Hanya ${recordCount} record, Menunggu data berikutnya...</p>` 
+        ? `<p style="color: #FFC200; font-size: 0.9em; font-weight: bold;">* EST. TIDAK LENGKAP: Hanya ${recordCount} record ditemukan. Menunggu data berikutnya...</p>` 
         : '';
         
     card.innerHTML = `
-        <div class="card-header">Meter ID ${id} - Konsumsi Terakhir</div>
+        <div class="card-header">Meter ID ${id}</div>
         <div class="card-body">
             ${statusMessage}
             <table class="tarif-table">
-                <tr><td>Energi Aktif (Konsumsi)</td><td style="color: #4ADE80;">${summary.eaTotal.toFixed(3)}</td><td>kWh</td></tr>
-                <tr><td>Energi Reaktif (Konsumsi)</td><td style="color: #4ADE80;">${summary.erTotal.toFixed(3)}</td><td>kVARh</td></tr>
-                <tr><td colspan="3" style="height: 10px; background: transparent;"></td></tr>
-                <tr><td>Biaya Energi Aktif (Est.)</td><td style="color: #38BDF8;">Rp ${costResult.cost_aktif.toLocaleString('id-ID')}</td><td></td></tr>
-                <tr><td>Biaya Denda Reaktif</td><td style="color: #38BDF8;">Rp ${costResult.cost_reaktif.toLocaleString('id-ID')}</td><td></td></tr>
-                <tr class="total-row"><td>TOTAL BIAYA KONSUMSI</td><td colspan="2">Rp ${currentCost.toLocaleString('id-ID')}</td></tr>
+                <tr><td>Energi Aktif (Konsumsi Terakhir)</td><td class="value-energy">${formatEnergy(summary.eaTotal)}</td><td>kWh</td></tr>
+                <tr><td>Energi Reaktif (Konsumsi Terakhir)</td><td class="value-energy">${formatEnergy(summary.erTotal)}</td><td>kVARh</td></tr>
+                
+                <tr><td colspan="3" style="height: 10px; background: transparent; border-bottom: none;"></td></tr>
+                
+                <tr><td>Biaya Energi Aktif (Est.)</td><td class="value-rupiah">Rp ${formatRupiah(costResult.cost_aktif)}</td><td></td></tr>
+                <tr><td>Biaya Denda Reaktif</td><td class="value-rupiah">Rp ${formatRupiah(costResult.cost_reaktif)}</td><td></td></tr>
+                
+                <tr class="total-row"><td>TOTAL BIAYA ESTIMASI</td><td colspan="2">Rp ${formatRupiah(currentCost)}</td></tr>
             </table>
         </div>
     `;
     container.appendChild(card);
 }
 
-function renderErrorCard(id) {
-    const container = document.getElementById('meter-container');
+function renderErrorCard(id, container) {
     const card = document.createElement('div');
     card.className = 'meter-card';
-    card.innerHTML = `<div class="card-header" style="background: #8b0000;">Meter ID ${id} - ERROR</div>
-                      <div class="card-body" style="color: #ffaaaa;">Gagal mengambil data dari Supabase. Cek console log.</div>`;
+    card.style.borderLeftColor = '#8b0000';
+    card.innerHTML = `<div class="card-header" style="background: #4A0F0F;">Meter ID ${id} - ERROR</div>
+                      <div class="card-body" style="color: #ffaaaa; font-size: 0.9em;">Gagal mengambil data dari Supabase. Cek koneksi internet dan izin API key.</div>`;
     container.appendChild(card);
 }
 
