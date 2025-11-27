@@ -1,50 +1,118 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>POWER METER DASHBOARD</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Power Meter + Tarif</title>
+
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
 <style>
-body { font-family: Arial; background:#0f172a; color:#e5e7eb; }
-.card { background:#020617; padding:20px; border-radius:10px; margin:10px; }
-.grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); }
-.value { font-size:28px; font-weight:bold; }
-label { color:#94a3b8;}
+body { background:#111; color:#eee; font-family:Arial; padding:20px }
+button { padding:6px 12px; margin-left:6px; cursor:pointer }
+table { border-collapse:collapse; width:100%; margin-top:12px }
+th, td { border:1px solid #333; padding:6px; text-align:center }
 </style>
 </head>
+
 <body>
 
-<h2>⚡ POWER METER DASHBOARD</h2>
+<h2>⚡ Power Meter Dashboard</h2>
 
-<div class="grid">
-<div class="card"><label>Status</label><div class="value" id="status">-</div></div>
-<div class="card"><label>Voltage (V)</label><div class="value" id="v">-</div></div>
-<div class="card"><label>Power (W)</label><div class="value" id="p">-</div></div>
-<div class="card"><label>Energy (kWh)</label><div class="value" id="e">-</div></div>
+<!-- TARIF SECTION -->
+<div>
+  Tarif:
+  <b><span id="tarif">-</span></b> Rp/kWh
+  <button onclick="changeTarif()">Change Tarif</button>
 </div>
 
+<!-- TABLE -->
+<table>
+<thead>
+<tr>
+  <th>ID</th>
+  <th>Status</th>
+  <th>Energy (kWh)</th>
+  <th>Biaya (Rp)</th>
+</tr>
+</thead>
+<tbody id="body"></tbody>
+</table>
+
 <script>
-const SUPABASE_URL = "https://YOUR_PROJECT_ID.supabase.co";
-const API_KEY = "YOUR_ANON_KEY";
+// ================= SUPABASE =================
+const supabaseUrl = "SUPABASE_URL";
+const supabaseKey = "SUPABASE_ANON_KEY";
+const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-async function loadData(){
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/meter_data?select=*&order=timestamp.desc&limit=1`,{
-    headers:{
-      "apikey":API_KEY,
-      "Authorization":"Bearer "+API_KEY
-    }
-  });
-  const d = (await res.json())[0];
-  if(!d) return;
+let tarif = 0;
 
-  status.innerText = d.status || "ONLINE";
-  v.innerText = d.v?.toFixed(1);
-  p.innerText = d.p?.toFixed(1);
-  e.innerText = d.eat?.toFixed(3);
+// BACA TARIF
+async function loadTarif() {
+  const { data } = await supabase
+    .from("tarif")
+    .select("harga_per_kwh")
+    .eq("id", 1)
+    .single();
+
+  if (data) {
+    tarif = data.harga_per_kwh;
+    document.getElementById("tarif").innerText = tarif;
+  }
+}
+loadTarif();
+
+// TOMBOL GANTI TARIF
+async function changeTarif() {
+  const val = prompt("Tarif baru (Rp/kWh):", tarif);
+  if (!val) return;
+
+  await supabase
+    .from("tarif")
+    .update({ harga_per_kwh: parseFloat(val) })
+    .eq("id", 1);
+
+  loadTarif();
 }
 
-loadData();
-setInterval(loadData,2000);
+// ================= MQTT =================
+const client = mqtt.connect(
+  "wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt",
+  {
+    username: "web_dashboard",
+    password: "Tristan12"
+  }
+);
+
+const body = document.getElementById("body");
+const rows = {};
+
+client.on("connect", () => {
+  client.subscribe("politeknik/meter/data");
+});
+
+client.on("message", (topic, message) => {
+  const d = JSON.parse(message.toString());
+  const id = d.id;
+
+  if (!rows[id]) {
+    const row = body.insertRow();
+    rows[id] = row;
+    row.insertCell().innerText = id;
+    row.insertCell();
+    row.insertCell();
+    row.insertCell();
+  }
+
+  const row = rows[id];
+  row.cells[1].innerText = d.status;
+  row.cells[2].innerText = d.EaT || 0;
+
+  // HITUNG BIAYA
+  const biaya = (d.EaT || 0) * tarif;
+  row.cells[3].innerText =
+    biaya.toLocaleString("id-ID");
+});
 </script>
 
 </body>
