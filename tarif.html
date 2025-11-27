@@ -4,12 +4,12 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Tarif — Monitoring Energi</title>
-  <link rel="stylesheet" href="/public/css/style.css">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body class="dark">
   <div class="container">
     <header class="header header-row">
-      <a class="back" href="/">← Home</a>
+      <a class="back" href="index.html">← Home</a>
       <div>
         <h1>Monitoring Tarif Mesin</h1>
         <p class="sub">Filter: Harian / Mingguan / Bulanan / Custom | LWBP 22:00–17:00</p>
@@ -64,14 +64,15 @@
         <label>LWBP Tarif (Rp/kWh): <input id="lwbpTarif" type="number" min="0"></label>
         <label>WBP Tarif (Rp/kWh): <input id="wbpTarif" type="number" min="0"></label>
         <p class="note">Jika hanya pakai single tarif, isi Single Tarif. Jika pakai LWBP/WBP, isi keduanya.</p>
-        <div class="modal-actions">
+        <div class="modal-actions" style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end">
           <button class="btn" id="saveTarif">Save</button>
+          <button class="btn small" onclick="closeTarifModal()">Cancel</button>
         </div>
       </div>
     </div>
 
   </div>
 
-  <script src="/public/js/tarif.js"></script>
+  <script src="tarif.js"></script>
 </body>
 </html>
