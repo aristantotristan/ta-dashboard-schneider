@@ -75,8 +75,7 @@ h2 { color: #FFD700; margin: 0; }
 </div>
 
 <script>
-// --- KONFIGURASI SUPABASE ---
-// GANTI DENGAN KREDENSIAL PROYEK SUPABASE KAMU
+// --- KONFIGURASI SUPABASE (PASTI BENAR) ---
 const SUPABASE_URL = 'https://rojhcadtqfynlqzubftx.supabase.co'; 
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs';
 
@@ -121,16 +120,25 @@ function calculateCost(eaTotal, erTotal) {
 async function loadData() {
     document.getElementById('conn').innerHTML = "🟡 Memuat konfigurasi tarif...";
     
+    // 1. Ambil Konfigurasi Tarif
     const { data: tarifData, error: tarifError } = await supabase
         .from('config_tarif')
         .select('*')
         .limit(1);
 
-    if (tarifError || !tarifData || tarifData.length === 0) {
-        document.getElementById('conn').innerHTML = "❌ Gagal memuat Tarif. Pastikan tabel 'config_tarif' terisi dan kuncinya benar.";
+    if (tarifError) {
+        // Coba lihat error di console
+        console.error("SUPABASE CONFIG ERROR:", tarifError.message);
+        document.getElementById('conn').innerHTML = `❌ Gagal Koneksi/Izin (Cek Konsol Browser).`;
         return;
     } 
     
+    if (!tarifData || tarifData.length === 0) {
+         document.getElementById('conn').innerHTML = "❌ Tabel 'config_tarif' kosong atau tidak ditemukan.";
+         return;
+    }
+    
+    // Simpan dan tampilkan konfigurasi tarif
     tarifConfig = tarifData[0];
     document.getElementById('rate_lwbp').textContent = formatRupiah(tarifConfig.rate_lwbp);
     document.getElementById('rate_wbp').textContent = formatRupiah(tarifConfig.rate_wbp);
@@ -167,10 +175,12 @@ async function loadData() {
             summary.records = meterData.length;
             
             if (meterData.length >= 2) {
+                 // Konsumsi = Data Terbaru - Data Lama (Selisih)
                  summary.eaTotal = Math.max(0, meterData[0].eap - meterData[1].eap);
                  summary.erTotal = Math.max(0, meterData[0].erp - meterData[1].erp);
 
             } else {
+                 // Jika hanya ada 1 record, konsumsi dianggap nol
                  summary.eaTotal = 0; 
                  summary.erTotal = 0;
             }
@@ -215,7 +225,7 @@ function renderErrorCard(id, container) {
     card.className = 'meter-card';
     card.style.borderLeftColor = '#8b0000';
     card.innerHTML = `<div class="card-header" style="background: #4A0F0F;">Meter ID ${id} - ERROR</div>
-                      <div class="card-body" style="color: #ffaaaa; font-size: 0.9em;">Gagal mengambil data dari Supabase. Cek koneksi internet dan izin API key.</div>`;
+                      <div class="card-body" style="color: #ffaaaa; font-size: 0.9em;">Gagal mengambil data dari Supabase. Cek console log.</div>`;
     container.appendChild(card);
 }
 
