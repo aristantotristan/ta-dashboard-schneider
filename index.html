@@ -1,62 +1,51 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Sistem Monitoring Energi - Pilih Dashboard</title>
+<meta charset="UTF-8">
+<title>POWER METER DASHBOARD</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-  :root{
-    --bg:#0f1724; --panel:#111827; --muted:#94a3b8; --accent:#00FFC2; --gold:#FFD700;
-    --card:#0b1220; --success:#10B981; --danger:#EF4444;
-    font-synthesis: none;
-  }
-  *{box-sizing:border-box}
-  body{
-    margin:0;min-height:100vh;
-    font-family: Inter, "Segoe UI", Roboto, system-ui, -apple-system, "Helvetica Neue", Arial;
-    background: linear-gradient(180deg,#07111a 0%, #08121a 100%);
-    color:#e6eef6; display:flex; align-items:center; justify-content:center; padding:28px;
-  }
-  .frame{width:100%;max-width:980px}
-  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px}
-  h1{margin:0;font-size:1.7rem;color:var(--accent)}
-  p.lead{margin:0;color:var(--muted)}
-  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:22px;margin-top:22px}
-  .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.06));padding:28px;border-radius:12px;border:1px solid rgba(255,255,255,0.03);box-shadow:0 6px 24px rgba(2,6,23,0.6)}
-  .big-btn{display:flex;flex-direction:column;align-items:center;gap:8px;text-decoration:none;padding:28px;border-radius:10px;min-height:160px;justify-content:center;color:#eafaf4;font-weight:700;transition:transform .12s ease, box-shadow .12s; text-align:center}
-  .big-btn:hover{transform:translateY(-6px);box-shadow:0 12px 36px rgba(0,0,0,0.6)}
-  .btn-realtime{background:linear-gradient(180deg,#062936,#04272a);border-left:6px solid #38BDF8}
-  .btn-tarif{background:linear-gradient(180deg,#2a1f00,#211800);border-left:6px solid var(--gold);color:#fff}
-  .icon{font-size:2.6rem}
-  footer{margin-top:20px;color:var(--muted);font-size:0.9rem;text-align:center}
-  @media(max-width:720px){ .grid{grid-template-columns:1fr; } .frame{padding:8px} }
+body { font-family: Arial; background:#0f172a; color:#e5e7eb; }
+.card { background:#020617; padding:20px; border-radius:10px; margin:10px; }
+.grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); }
+.value { font-size:28px; font-weight:bold; }
+label { color:#94a3b8;}
 </style>
 </head>
 <body>
-  <div class="frame">
-    <header>
-      <div>
-        <h1>⚡ Sistem Monitoring Energi — Poltek</h1>
-        <p class="lead">Realtime & Historis — Integrasi ESP32 (MQTT) & Supabase</p>
-      </div>
-      <div style="text-align:right;color:var(--muted)">User: <strong>Dashboard</strong></div>
-    </header>
 
-    <div class="grid">
-      <a class="card big-btn btn-realtime" href="./realtime.html" aria-label="Monitoring Realtime">
-        <div class="icon">⚡</div>
-        <div style="font-size:1.05rem">Monitoring Realtime</div>
-        <div style="font-size:0.9rem;color:var(--muted)">Subscribe MQTT — cepat untuk tampilan</div>
-      </a>
+<h2>⚡ POWER METER DASHBOARD</h2>
 
-      <a class="card big-btn btn-tarif" href="./tarif.html" aria-label="Monitoring Tarif & Historis">
-        <div class="icon">💰</div>
-        <div style="font-size:1.05rem">Monitoring Tarif & Historis</div>
-        <div style="font-size:0.9rem;color:var(--muted)">Fetch Supabase REST — logging historis & estimasi biaya</div>
-      </a>
-    </div>
+<div class="grid">
+<div class="card"><label>Status</label><div class="value" id="status">-</div></div>
+<div class="card"><label>Voltage (V)</label><div class="value" id="v">-</div></div>
+<div class="card"><label>Power (W)</label><div class="value" id="p">-</div></div>
+<div class="card"><label>Energy (kWh)</label><div class="value" id="e">-</div></div>
+</div>
 
-    <footer>© Sistem Monitoring Energi • ESP32 Hybrid MQTT + Supabase • Built for Tristan</footer>
-  </div>
+<script>
+const SUPABASE_URL = "https://YOUR_PROJECT_ID.supabase.co";
+const API_KEY = "YOUR_ANON_KEY";
+
+async function loadData(){
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/meter_data?select=*&order=timestamp.desc&limit=1`,{
+    headers:{
+      "apikey":API_KEY,
+      "Authorization":"Bearer "+API_KEY
+    }
+  });
+  const d = (await res.json())[0];
+  if(!d) return;
+
+  status.innerText = d.status || "ONLINE";
+  v.innerText = d.v?.toFixed(1);
+  p.innerText = d.p?.toFixed(1);
+  e.innerText = d.eat?.toFixed(3);
+}
+
+loadData();
+setInterval(loadData,2000);
+</script>
+
 </body>
 </html>
