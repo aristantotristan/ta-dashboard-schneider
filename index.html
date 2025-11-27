@@ -23,10 +23,30 @@ tbody tr:hover { background-color: #334155; }
 .col-power { background-color: #0F334A; color: #38BDF8; font-weight: 600; }
 .col-energy { color: #4ADE80; font-weight: 600; }
 .col-v, .col-i, .col-pf { font-weight: 500; }
+
+/* Styling Tombol Navigasi */
+.nav-button {
+    background-color: #FFD700; /* Warna kuning emas untuk tarif */
+    color: #121212;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    text-decoration: none;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    margin-bottom: 20px;
+    display: inline-block; /* Agar tombol tidak mengambil seluruh lebar */
+}
+.nav-button:hover {
+    background-color: #E0B400;
+}
 </style>
 </head>
 
 <body>
+
+<a href="./tarif.html" class="nav-button">Lihat Monitoring Tarif</a>
 
 <h2>⚡ Realtime Monitoring (18 Mesin - Static Deploy)</h2>
 <p id="conn">Connecting to HiveMQ...</p>
