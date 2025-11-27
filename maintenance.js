@@ -1,5 +1,5 @@
 /* Maintenance page
-   - Reads machines lastReceived simulated from realtime page (if same origin)
+   - Reads machines lastReceived from localStorage key 'machine_last'
    - Marks offline if > 5 minutes
    - Saves logs to localStorage: downtime events
 */
@@ -8,15 +8,18 @@ const maintenanceList = document.getElementById('maintenanceList');
 function now(){ return Date.now(); }
 
 function getLastReceives(){
-  // In this static dummy setup, we simulate or read from a shared storage if exists
-  // We'll create a fake set if nothing stored
   const saved = localStorage.getItem('machine_last');
   if(saved){
-    return JSON.parse(saved);
+    try {
+      return JSON.parse(saved);
+    } catch(e){
+      return {};
+    }
   }
+  // fallback: create a fake set if nothing stored
   const out = {};
   for(let i=1;i<=18;i++){
-    out[i] = now() - Math.floor(Math.random()*8*60*1000); // some are delayed
+    out[i] = now() - Math.floor(Math.random()*8*60*1000); // some delayed
   }
   localStorage.setItem('machine_last', JSON.stringify(out));
   return out;
@@ -27,17 +30,18 @@ function checkOfflineAndLog(){
   const logs = JSON.parse(localStorage.getItem('downtime_logs') || '[]');
   const list = [];
   for(let i=1;i<=18;i++){
-    const elapsed = now() - last[i];
+    const l = last[i] || now();
+    const elapsed = now() - l;
     const minutes = Math.floor(elapsed/60000);
     let status = 'ONLINE';
     if(minutes > 5) status = 'OFFLINE';
     else if(minutes > 0.5) status = 'DELAY';
-    list.push({id:i, last:last[i], minutes, status});
+    list.push({id:i, last:l, minutes, status});
     // if OFFLINE, push log if not already logged as open downtime
     if(status === 'OFFLINE'){
       const openKey = `down_open_${i}`;
       if(!localStorage.getItem(openKey)){
-        const entry = {machine:i, downAt: last[i], detectedAt: now()};
+        const entry = {machine:i, downAt: l, detectedAt: now(), recoveredAt: null};
         logs.push(entry);
         localStorage.setItem('downtime_logs', JSON.stringify(logs));
         localStorage.setItem(openKey, '1'); // mark open
@@ -46,13 +50,15 @@ function checkOfflineAndLog(){
       // if previously open downtime, close it
       const openKey = `down_open_${i}`;
       if(localStorage.getItem(openKey)){
-        // close by writing to logs with up time
+        // find last log for this machine without recoveredAt
         const logsArr = JSON.parse(localStorage.getItem('downtime_logs') || '[]');
-        const lastIdx = logsArr.length - 1;
-        if(lastIdx >=0 && logsArr[lastIdx].machine === i && !logsArr[lastIdx].recoveredAt){
-          logsArr[lastIdx].recoveredAt = now();
-          localStorage.setItem('downtime_logs', JSON.stringify(logsArr));
+        for(let j = logsArr.length - 1; j >= 0; j--){
+          if(logsArr[j].machine === i && !logsArr[j].recoveredAt){
+            logsArr[j].recoveredAt = now();
+            break;
+          }
         }
+        localStorage.setItem('downtime_logs', JSON.stringify(logsArr));
         localStorage.removeItem(openKey);
       }
     }
@@ -86,7 +92,19 @@ function renderMaintenance(list){
   const logs = JSON.parse(localStorage.getItem('downtime_logs') || '[]');
   const summary = document.createElement('div');
   summary.className = 'summary';
-  summary.innerHTML = `<strong>Downtime Logs:</strong> ${logs.length} events`;
+  if(logs.length === 0) summary.innerHTML = `<strong>Downtime Logs:</strong> 0 events`;
+  else {
+    let html = `<strong>Downtime Logs:</strong> ${logs.length} events<br/><div style="margin-top:8px">`;
+    // show last 5 logs
+    const last5 = logs.slice(-5).reverse();
+    last5.forEach(l=>{
+      const down = new Date(l.downAt).toLocaleString();
+      const rec = l.recoveredAt ? new Date(l.recoveredAt).toLocaleString() : '---';
+      html += `<div class="note">MESIN ${l.machine} → Down: ${down} • Recovered: ${rec}</div>`;
+    });
+    html += `</div>`;
+    summary.innerHTML = html;
+  }
   maintenanceList.appendChild(summary);
 }
 
@@ -117,3 +135,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
   // auto refresh every 20s
   setInterval(checkOfflineAndLog, 20000);
 });
+
+// expose functions globally for buttons
+window.forceOffline = forceOffline;
+window.forceRecover = forceRecover;
