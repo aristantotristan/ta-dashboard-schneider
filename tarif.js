@@ -54,15 +54,13 @@ function closeTarifModal(){
 }
 
 // Dummy consumption data generator (per hour entries)
-function generateDummyConsumption(rangeDays=1){
-  // generate hourly entries per machine for rangeDays
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (rangeDays-1), 0,0,0);
+function generateDummyConsumptionRange(from, to){
+  // generate hourly entries per machine for the given range (from/to Date)
   const data = {}; // machine -> array of {ts, kWh}
   for(let m=1;m<=18;m++){
     data[m] = [];
-    let t = new Date(start);
-    while(t <= now){
+    let t = new Date(from.getTime());
+    while(t <= to){
       const hour = t.getHours();
       const kwh = +(Math.random()*0.8 + 0.2).toFixed(3);
       data[m].push({ts: t.getTime(), kwh});
@@ -95,9 +93,8 @@ function applyFilter(range){
     to = new Date(t); to.setHours(23,59,59);
   }
 
-  // compute using dummy data generator approximated by days diff
-  const diffDays = Math.max(1, Math.ceil((to - from) / (24*60*60*1000)));
-  const dummy = generateDummyConsumption(diffDays);
+  // compute using dummy data generator
+  const dummy = generateDummyConsumptionRange(from, to);
   computeAndRender(dummy, from, to);
 }
 
