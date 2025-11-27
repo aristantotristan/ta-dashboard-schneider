@@ -28,53 +28,53 @@ h2 {
 
 /* Table Styling */
 table {
-  border-collapse: separate; /* Menggunakan separate agar border radius bisa diterapkan */
+  border-collapse: separate;
   border-spacing: 0;
   width: 100%;
   margin-top: 15px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  border-radius: 8px; /* Border radius untuk tabel */
-  overflow: hidden; /* Penting untuk menjaga border radius */
+  border-radius: 8px;
+  overflow: hidden; 
 }
 th, td {
-  border: none; /* Menghilangkan border antar cell */
+  border: none;
   padding: 12px 15px;
   text-align: center;
   transition: background-color 0.3s;
 }
 thead th {
-  background: #1E293B; /* Header background darker */
-  color: #94A3B8; /* Header text color */
+  background: #1E293B;
+  color: #94A3B8;
   font-weight: 600;
   text-transform: uppercase;
 }
 tbody tr {
-    background: #151F33; /* Row background */
+    background: #151F33; 
 }
 tbody tr:nth-child(even) {
-    background: #1E293B; /* Alternate row color */
+    background: #1E293B; 
 }
 tbody tr:hover {
-    background-color: #334155; /* Hover effect */
+    background-color: #334155; 
 }
 
 /* Specific Cell Styling (Data Groups) */
 .col-power { 
-    background-color: #0F334A !important; /* Biru Gelap untuk grup Power */
+    background-color: #0F334A !important; 
     font-weight: bold;
-    color: #38BDF8; /* Warna data Power */
+    color: #38BDF8; 
 }
 .col-energy {
     font-size: 1.1em;
-    color: #4ADE80; /* Warna data Energy */
+    color: #4ADE80; 
 }
 .col-i, .col-v, .col-pf {
     font-weight: 500;
 }
 
 /* Status Styling */
-.status-online { color: #10B981; font-weight: bold; } /* Hijau */
-.status-offline { color: #EF4444; font-weight: bold; } /* Merah */
+.status-online { color: #10B981; font-weight: bold; } 
+.status-offline { color: #EF4444; font-weight: bold; }
 .cell-id {
     font-weight: bold;
     background: #111827;
@@ -132,6 +132,24 @@ const tableBody = document.getElementById("tableBody");
 const conn = document.getElementById("conn");
 const devices = {}; // Menyimpan referensi baris tabel berdasarkan ID meter
 
+// Definisikan urutan KEY JSON dan CLASS CSS
+const dataMap = [
+    { key: 'V', class: 'col-v' },
+    { key: 'I1', class: 'col-i' },
+    { key: 'I2', class: 'col-i' },
+    { key: 'I3', class: 'col-i' },
+    { key: 'P', class: 'col-power' },
+    { key: 'Q', class: 'col-power' },
+    { key: 'S', class: 'col-power' },
+    { key: 'PF', class: 'col-pf' },
+    { key: 'Hz', class: 'col-pf' },
+    { key: 'OpH', class: 'col-pf' },
+    { key: 'EaT', class: 'col-energy' },
+    { key: 'ErT', class: 'col-energy' },
+    { key: 'EaP', class: 'col-energy' },
+    { key: 'ErP', class: 'col-energy' }
+];
+
 client.on("connect", () => {
   conn.innerHTML = "✅ MQTT Connected";
   client.subscribe("politeknik/meter/data");
@@ -150,16 +168,20 @@ client.on("message", (topic, message) => {
     // 1. Cek atau Buat Baris Baru
     if (!devices[id]) {
       const row = document.createElement("tr");
+      row.id = `row-${id}`;
       
-      // Membuat 16 cell, dan menerapkan CSS Class yang sudah ditentukan di TH
-      row.innerHTML = `
-        <td class="cell-id">${id}</td>
-        <td class="status-offline">offline</td>
-        <td class="col-v"></td><td class="col-i"></td><td class="col-i"></td><td class="col-i"></td>
-        <td class="col-power"></td><td class="col-power"></td><td class="col-power"></td>
-        <td class="col-pf"></td><td class="col-pf"></td><td class="col-pf"></td>
-        <td class="col-energy"></td><td class="col-energy"></td><td class="col-energy"></td><td class="col-energy"></td>
-      `;
+      // Cell 0: ID
+      let cellsHTML = `<td class="cell-id">${id}</td>`;
+      // Cell 1: Status
+      cellsHTML += `<td class="status-offline">offline</td>`;
+      
+      // Cell 2 - 15: Data
+      dataMap.forEach(item => {
+        // Membuat kolom kosong dengan class CSS yang sudah benar
+        cellsHTML += `<td class="${item.class}">---</td>`; 
+      });
+      
+      row.innerHTML = cellsHTML;
       
       tableBody.innerHTML = ""; // Hapus pesan "Awaiting Data..."
       tableBody.appendChild(row);
@@ -168,34 +190,21 @@ client.on("message", (topic, message) => {
 
     const cells = devices[id].children;
     
-    // 2. Update Status
+    // 2. Update Status (Cell Index 1)
     cells[1].innerHTML = d.status;
     cells[1].className = d.status === "online" ? "status-online" : "status-offline";
     
-    // 3. Update Data (Hanya nilai yang di-update)
-    // Urutan cell: [0]ID, [1]Status, [2]V, [3]I1, [4]I2, [5]I3, [6]P, [7]Q, [8]S, [9]PF, [10]Hz, [11]OpH, [12]EaT, [13]ErT, [14]EaP, [15]ErP
-    
-    // V, I
-    cells[2].innerHTML = d.V || '---'; 
-    cells[3].innerHTML = d.I1 || '---'; 
-    cells[4].innerHTML = d.I2 || '---'; 
-    cells[5].innerHTML = d.I3 || '---'; 
-
-    // Power
-    cells[6].innerHTML = d.P || '---'; 
-    cells[7].innerHTML = d.Q || '---'; 
-    cells[8].innerHTML = d.S || '---'; 
-
-    // Kualitas & Waktu
-    cells[9].innerHTML = d.PF || '---'; 
-    cells[10].innerHTML = d.Hz || '---'; 
-    cells[11].innerHTML = d.OpH || '---'; 
-
-    // Energi
-    cells[12].innerHTML = d.EaT || '---'; 
-    cells[13].innerHTML = d.ErT || '---'; 
-    cells[14].innerHTML = d.EaP || '---'; 
-    cells[15].innerHTML = d.ErP || '---'; 
+    // 3. Update Data (Mulai dari Cell Index 2)
+    dataMap.forEach((item, index) => {
+      // cellIndex = 0(ID) + 1(Status) + index
+      const cellIndex = index + 2; 
+      
+      // Mengambil nilai dari JSON
+      const value = d[item.key];
+      
+      // Jika nilai 0 atau memiliki nilai, tampilkan. Jika tidak, tampilkan '---'.
+      cells[cellIndex].innerHTML = (value === 0 || value) ? value : '---'; 
+    });
 
   } catch (e) {
     console.error("JSON Parsing Error:", e);
