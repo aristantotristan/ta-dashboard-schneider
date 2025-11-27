@@ -62,20 +62,36 @@ h2 { color: #FFD700; margin: 0; }
 <div class="tarif-status-box">
     <h3>Konfigurasi Tarif Aktif:</h3>
     <div class="tarif-rate">
-        <div>Tarif LWBP (Rp/kWh)<br><strong>Rp <span id="rate_lwbp">...</span></strong></div>
-        <div>Tarif WBP (Rp/kWh)<br><strong>Rp <span id="rate_wbp">...</span></strong></div>
-        <div>Denda Reaktif (Rp/kVARh)<br><strong>Rp <span id="rate_reaktif">...</span></strong></div>
+        <div>Tarif LWBP (Rp/kWh)<br><strong>Rp <span id="rate_lwbp">---</span></strong></div>
+        <div>Tarif WBP (Rp/kWh)<br><strong>Rp <span id="rate_wbp">---</span></strong></div>
+        <div>Denda Reaktif (Rp/kVARh)<br><strong>Rp <span id="rate_reaktif">---</span></strong></div>
     </div>
     <p class="tarif-note">* Perhitungan biaya menggunakan **Tarif Rata-Rata** dan **Konsumsi 15 detik terakhir** sebagai estimasi laju biaya saat ini.</p>
 </div>
 
 
 <div class="container" id="meter-container">
-    <p>Loading meter summaries...</p>
-</div>
+    ${Array.from({ length: 18 }, (_, id) => id + 1).map(id => `
+    <div class="meter-card" id="card-${id}">
+        <div class="card-header">Meter ID ${id}</div>
+        <div class="card-body">
+            <p id="msg-${id}" style="color: #FFC200; font-size: 0.9em; font-weight: bold;">* Loading data...</p>
+            <table class="tarif-table">
+                <tr><td>Energi Aktif (Konsumsi Terakhir)</td><td id="ea-${id}" class="value-energy">---</td><td>kWh</td></tr>
+                <tr><td>Energi Reaktif (Konsumsi Terakhir)</td><td id="er-${id}" class="value-energy">---</td><td>kVARh</td></tr>
+                <tr><td colspan="3" style="height: 10px; background: transparent; border-bottom: none;"></td></tr>
+                <tr><td>Biaya Energi Aktif (Est.)</td><td id="costA-${id}" class="value-rupiah">---</td><td></td></tr>
+                <tr><td>Biaya Denda Reaktif</td><td id="costR-${id}" class="value-rupiah">---</td><td></td></tr>
+                <tr class="total-row"><td>TOTAL BIAYA ESTIMASI</td><td id="costT-${id}" colspan="2">---</td></tr>
+            </table>
+        </div>
+    </div>
+    `).join('')}
+
+    </div>
 
 <script>
-// --- KONFIGURASI SUPABASE (PASTI BENAR) ---
+// --- KONFIGURASI SUPABASE ---
 const SUPABASE_URL = 'https://rojhcadtqfynlqzubftx.supabase.co'; 
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs';
 
@@ -85,12 +101,13 @@ const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let tarifConfig = {};
 
 // --- UTILITY FUNGSI ---
-
 function formatRupiah(number) {
-    return number.toLocaleString('id-ID', { maximumFractionDigits: 0 });
+    return `Rp ${number.toLocaleString('id-ID', { maximumFractionDigits: 0 })}`;
 }
 function formatEnergy(number) {
-    return parseFloat(number).toLocaleString('id-ID', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+    // Tampilkan --- jika nilainya 0 atau null
+    if (!number) return '---';
+    return number.toLocaleString('id-ID', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
 }
 
 /** Menghitung Biaya Total dan Denda */
@@ -127,9 +144,7 @@ async function loadData() {
         .limit(1);
 
     if (tarifError) {
-        // Coba lihat error di console
-        console.error("SUPABASE CONFIG ERROR:", tarifError.message);
-        document.getElementById('conn').innerHTML = `❌ Gagal Koneksi/Izin (Cek Konsol Browser).`;
+        document.getElementById('conn').innerHTML = `❌ Gagal Koneksi/Izin Tarif. Cek Konsol.`;
         return;
     } 
     
@@ -146,11 +161,8 @@ async function loadData() {
     document.getElementById('conn').innerHTML = "✅ Supabase Connected (Tarif Dimuat)";
 
 
-    // --- 2. QUERY RINGKASAN DATA METERAN ---
-    document.getElementById('conn').innerHTML = "🟡 Mengambil ringkasan data 18 meteran...";
-    
-    const container = document.getElementById('meter-container');
-    container.innerHTML = '';
+    // --- 2. QUERY DAN UPDATE STANDBY KARTU ---
+    document.getElementById('conn').innerHTML = "🟡 Mengambil data konsumsi terakhir 18 meteran...";
     
     const END_ID = 18;
     
@@ -165,9 +177,19 @@ async function loadData() {
 
         let summary = { eaTotal: 0, erTotal: 0, records: 0 };
         
+        // Dapatkan elemen yang akan di update
+        const eaElement = document.getElementById(`ea-${id}`);
+        const erElement = document.getElementById(`er-${id}`);
+        const costAElement = document.getElementById(`costA-${id}`);
+        const costRElement = document.getElementById(`costR-${id}`);
+        const costTElement = document.getElementById(`costT-${id}`);
+        const msgElement = document.getElementById(`msg-${id}`);
+        const cardElement = document.getElementById(`card-${id}`);
+
         if (meterError) {
              console.error(`Error fetching data for ID ${id}:`, meterError);
-             renderErrorCard(id, container);
+             if (cardElement) cardElement.style.borderLeftColor = '#8b0000'; // Merah error
+             if (msgElement) msgElement.textContent = '❌ KONEKSI DATABASE ERROR';
              continue;
         }
 
@@ -178,56 +200,35 @@ async function loadData() {
                  // Konsumsi = Data Terbaru - Data Lama (Selisih)
                  summary.eaTotal = Math.max(0, meterData[0].eap - meterData[1].eap);
                  summary.erTotal = Math.max(0, meterData[0].erp - meterData[1].erp);
+                 
+                 const costResult = calculateCost(summary.eaTotal, summary.erTotal);
+                 
+                 // --- UPDATE NILAI DI KARTU ---
+                 eaElement.textContent = formatEnergy(summary.eaTotal);
+                 erElement.textContent = formatEnergy(summary.erTotal);
+                 costAElement.textContent = formatRupiah(costResult.cost_aktif);
+                 costRElement.textContent = formatRupiah(costResult.cost_reaktif);
+                 costTElement.textContent = formatRupiah(costResult.total);
+                 
+                 msgElement.textContent = `✅ Konsumsi dihitung dari ${meterData.length} log.`;
+                 cardElement.style.borderLeftColor = '#4ADE80'; // Hijau sukses
 
             } else {
-                 // Jika hanya ada 1 record, konsumsi dianggap nol
-                 summary.eaTotal = 0; 
-                 summary.erTotal = 0;
+                 // Jika hanya ada 1 record, tampilkan pesan menunggu
+                 eaElement.textContent = formatEnergy(meterData[0].eap);
+                 erElement.textContent = formatEnergy(meterData[0].erp);
+                 msgElement.textContent = `* EST. TIDAK LENGKAP: Hanya 1 log ditemukan. Menunggu log berikutnya...`;
+                 cardElement.style.borderLeftColor = '#FFC200'; // Kuning warning
             }
+        } else {
+             // Jika tidak ada data sama sekali
+             if (msgElement) msgElement.textContent = '--- BELUM ADA LOG DATA ---';
         }
-        
-        const costResult = calculateCost(summary.eaTotal, summary.erTotal);
-        renderMeterCard(id, summary, costResult, container, meterData.length);
     }
     
     document.getElementById('conn').innerHTML = "✅ Data Tarif Selesai Dimuat.";
 }
 
-function renderMeterCard(id, summary, costResult, container, recordCount) {
-    const card = document.createElement('div');
-    card.className = 'meter-card';
-    
-    const currentCost = costResult.total;
-    
-    const statusMessage = recordCount < 2 
-        ? `<p style="color: #FFC200; font-size: 0.9em; font-weight: bold;">* EST. TIDAK LENGKAP: Hanya ${recordCount} record ditemukan. Menunggu data berikutnya...</p>` 
-        : '';
-        
-    card.innerHTML = `
-        <div class="card-header">Meter ID ${id}</div>
-        <div class="card-body">
-            ${statusMessage}
-            <table class="tarif-table">
-                <tr><td>Energi Aktif (Konsumsi Terakhir)</td><td class="value-energy">${formatEnergy(summary.eaTotal)}</td><td>kWh</td></tr>
-                <tr><td>Energi Reaktif (Konsumsi Terakhir)</td><td class="value-energy">${formatEnergy(summary.erTotal)}</td><td>kVARh</td></tr>
-                <tr><td colspan="3" style="height: 10px; background: transparent; border-bottom: none;"></td></tr>
-                <tr><td>Biaya Energi Aktif (Est.)</td><td class="value-rupiah">Rp ${formatRupiah(costResult.cost_aktif)}</td><td></td></tr>
-                <tr><td>Biaya Denda Reaktif</td><td class="value-rupiah">Rp ${formatRupiah(costResult.cost_reaktif)}</td><td></td></tr>
-                <tr class="total-row"><td>TOTAL BIAYA ESTIMASI</td><td colspan="2">Rp ${formatRupiah(currentCost)}</td></tr>
-            </table>
-        </div>
-    `;
-    container.appendChild(card);
-}
-
-function renderErrorCard(id, container) {
-    const card = document.createElement('div');
-    card.className = 'meter-card';
-    card.style.borderLeftColor = '#8b0000';
-    card.innerHTML = `<div class="card-header" style="background: #4A0F0F;">Meter ID ${id} - ERROR</div>
-                      <div class="card-body" style="color: #ffaaaa; font-size: 0.9em;">Gagal mengambil data dari Supabase. Cek console log.</div>`;
-    container.appendChild(card);
-}
 
 // --- RUNTIME START ---
 document.addEventListener('DOMContentLoaded', loadData);
