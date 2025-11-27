@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>💰 Monitoring Tarif (Supabase)</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script> 
+
+<style>
+/* Styling menyesuaikan mode Vertikal sebelumnya */
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121212; color: #E0E0E0; padding: 20px; }
+h2 { color: #FFD700; border-bottom: 2px solid #FFD700; padding-bottom: 10px; margin-bottom: 5px; }
+#conn { margin-bottom: 25px; font-size: 1.1em; font-weight: bold; }
+
+.status-box { background: #2A2A2A; padding: 15px; border-radius: 8px; margin-bottom: 20px; color: #00FFC2; }
+.status-box h3 { margin-top: 0; color: #FFD700; }
+
+.container { display: flex; flex-wrap: wrap; gap: 20px; max-width: 1200px; margin: 0 auto; }
+.meter-card { flex: 1 1 calc(33.33% - 20px); min-width: 350px; background: #1E1E1E; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5); overflow: hidden; }
+
+.card-header { background: #111827; padding: 10px; font-size: 1.2em; font-weight: bold; color: #B0B0B0; }
+.card-body { padding: 15px; }
+
+/* Vertical Table inside card */
+.tarif-table { width: 100%; border-collapse: collapse; }
+.tarif-table td { padding: 8px 10px; border-bottom: 1px solid #3A3A3A; text-align: left; background: #1E1E1E; }
+.tarif-table td:first-child { width: 60%; color: #94A3B8; }
+.tarif-table td:nth-child(2) { font-weight: bold; color: #4ADE80; text-align: right; }
+.tarif-table td:last-child { color: #FFD700; font-size: 1.1em; } /* Total Cost */
+
+.tarif-table .total-row td { background: #0F334A; color: white; font-size: 1.2em; border-top: 2px solid #FFD700; }
+</style>
+</head>
+
+<body>
+
+<h2>💰 Monitoring Biaya & Tarif (Data Historis 24 Jam)</h2>
+<p id="conn">Connecting to Supabase...</p>
+<div class="status-box">
+    <h3>Konfigurasi Tarif Aktif:</h3>
+    <p>LWBP (Rp/kWh): <span id="rate_lwbp">...</span> | WBP (Rp/kWh): <span id="rate_wbp">...</span> | Denda Reaktif (Rp/kVARh): <span id="rate_reaktif">...</span></p>
+</div>
+
+<div class="container" id="meter-container">
+    <p>Loading meter summaries...</p>
+</div>
+
+<script>
+// --- KONFIGURASI SUPABASE ---
+// GANTI DENGAN KREDENSIAL PROYEK SUPABASE KAMU
+const SUPABASE_URL = 'https://rojhcadtqfynlqzubftx.supabase.co'; 
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs';
+
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// --- VARIABEL TARIF GLOBAL ---
+let tarifConfig = {};
+
+// --- UTILITY FUNGSI ---
+
+/** Menghitung Biaya Total dan Denda (Menggunakan Konstanta Global) */
+function calculateCost(eaTotal, erTotal) {
+    const rate_lwbp = tarifConfig.rate_lwbp || 1000;
+    const rate_wbp = tarifConfig.rate_wbp || 1500;
+    const rate_reaktif = tarifConfig.rate_reaktif || 800;
+    
+    // Simplifikasi: Karena kita ambil TOTAL EaP dari 24 jam, kita anggap rata-rata tarif.
+    // Di dunia nyata, ini memerlukan SQL Function yang membagi data per jam.
+    // Untuk tujuan demonstrasi, kita akan menggunakan rata-rata: (LWBP + WBP) / 2
+    const rate_rata = (rate_lwbp + rate_wbp) / 2;
+
+    const cost_aktif = Math.round(eaTotal * rate_rata);
+
+    // Denda Reaktif: Denda jika kVARh > 50% dari kWh
+    const batas_reaktif = eaTotal * 0.5;
+    const kelebihan_reaktif = Math.max(0, erTotal - batas_reaktif);
+    const cost_reaktif = Math.round(kelebihan_reaktif * rate_reaktif);
+    
+    return {
+        cost_aktif: cost_aktif,
+        cost_reaktif: cost_reaktif,
+        total: cost_aktif + cost_reaktif
+    };
+}
+
+/**
+ * Memuat Konfigurasi Tarif dan kemudian memuat data Meteran.
+ */
+async function loadData() {
+    conn.innerHTML = "🟡 Memuat konfigurasi tarif...";
+    const { data: tarifData, error: tarifError } = await supabase
+        .from('config_tarif')
+        .select('*')
+        .limit(1);
+
+    if (tarifError || !tarifData || tarifData.length === 0) {
+        conn.innerHTML = "❌ Gagal memuat Tarif. Menggunakan default.";
+    } else {
+        tarifConfig = tarifData[0];
+        document.getElementById('rate_lwbp').textContent = tarifConfig.rate_lwbp.toLocaleString('id-ID');
+        document.getElementById('rate_wbp').textContent = tarifConfig.rate_wbp.toLocaleString('id-ID');
+        document.getElementById('rate_reaktif').textContent = tarifConfig.rate_reaktif.toLocaleString('id-ID');
+    }
+
+    // --- 2. QUERY RINGKASAN DATA METERAN ---
+    conn.innerHTML = "🟡 Mengambil ringkasan data 18 meteran...";
+    
+    // Kita perlu fungsi di Supabase untuk Aggregation (SUM EaP, SUM ErP per ID dalam 24 jam terakhir)
+    // Karena kita tidak bisa membuat SQL Function di sini, kita akan membuat 18 query terpisah (KURANG IDEAL TAPI PASTI JALAN)
+    
+    const endTime = new Date().toISOString();
+    const startTime = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(); // 24 jam lalu
+
+    const container = document.getElementById('meter-container');
+    container.innerHTML = '';
+    
+    for (let id = 1; id <= 18; id++) {
+        const { data: meterData, error: meterError } = await supabase
+            .from('meter_data')
+            .select('eap, erp')
+            .eq('id', id)
+            .gte('timestamp', startTime) // Greater than or equal to (>=)
+            .lte('timestamp', endTime); // Less than or equal to (<=)
+
+        let summary = { eaTotal: 0, erTotal: 0 };
+        
+        if (meterData && meterData.length > 0) {
+            summary = meterData.reduce((acc, current) => {
+                acc.eaTotal += current.eap;
+                acc.erTotal += current.erp;
+                return acc;
+            }, { eaTotal: 0, erTotal: 0 });
+        }
+        
+        // Hitung biaya
+        const costResult = calculateCost(summary.eaTotal, summary.erTotal);
+        
+        // Render Card
+        renderMeterCard(id, summary, costResult);
+    }
+    
+    conn.innerHTML = "✅ Data Historis Selesai Dimuat.";
+}
+
+function renderMeterCard(id, summary, costResult) {
+    const container = document.getElementById('meter-container');
+    const card = document.createElement('div');
+    card.className = 'meter-card';
+    
+    card.innerHTML = `
+        <div class="card-header">Meter ID ${id} - Ringkasan 24 Jam</div>
+        <div class="card-body">
+            <table class="tarif-table">
+                <tr><td>Energi Aktif Total (24 Jam)</td><td>${summary.eaTotal.toFixed(2)}</td><td>kWh</td></tr>
+                <tr><td>Energi Reaktif Total (24 Jam)</td><td>${summary.erTotal.toFixed(2)}</td><td>kVARh</td></tr>
+                <tr><td colspan="3" style="height: 10px; background: transparent;"></td></tr>
+                <tr><td>Biaya Energi Aktif (Est.)</td><td>Rp ${costResult.cost_aktif.toLocaleString('id-ID')}</td><td></td></tr>
+                <tr><td>Biaya Denda Reaktif</td><td>Rp ${costResult.cost_reaktif.toLocaleString('id-ID')}</td><td></td></tr>
+                <tr class="total-row"><td>TOTAL BIAYA ESTIMASI</td><td colspan="2">Rp ${costResult.total.toLocaleString('id-ID')}</td></tr>
+            </table>
+        </div>
+    `;
+    container.appendChild(card);
+}
+
+// --- RUNTIME START ---
+document.addEventListener('DOMContentLoaded', loadData);
+</script>
+
+</body>
+</html>
