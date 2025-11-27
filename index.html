@@ -2,67 +2,114 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>ESP32 Meter – MQTT Table Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚡ Real-time Power Meter Dashboard</title>
 
 <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 
 <style>
+/* Global Styling */
 body {
-  font-family: Arial, sans-serif;
-  background:#0b1220;
-  color:#fff;
-  padding:20px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #0F172A; /* Dark Blue/Slate Background */
+  color: #F8FAFC; /* Light Text */
+  padding: 20px;
 }
 h2 {
-    color: #38bdf8;
+    color: #4ADE80; /* Green highlight for title */
+    border-bottom: 2px solid #334155;
+    padding-bottom: 10px;
 }
+#conn {
+    margin-bottom: 20px;
+    font-size: 1.1em;
+    font-weight: bold;
+}
+
+/* Table Styling */
 table {
-  border-collapse: collapse;
-  width:100%;
+  border-collapse: separate; /* Menggunakan separate agar border radius bisa diterapkan */
+  border-spacing: 0;
+  width: 100%;
+  margin-top: 15px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border-radius: 8px; /* Border radius untuk tabel */
+  overflow: hidden; /* Penting untuk menjaga border radius */
 }
 th, td {
-  border:1px solid #333;
-  padding:8px;
-  text-align:center;
+  border: none; /* Menghilangkan border antar cell */
+  padding: 12px 15px;
+  text-align: center;
+  transition: background-color 0.3s;
 }
-th {
-  background:#111827;
-  color: #cbd5e1;
+thead th {
+  background: #1E293B; /* Header background darker */
+  color: #94A3B8; /* Header text color */
+  font-weight: 600;
+  text-transform: uppercase;
 }
-.status-online { color:#22c55e; font-weight:bold; }
-.status-offline { color:#ef4444; font-weight:bold; }
-.col-power { background-color: #1f2937; }
+tbody tr {
+    background: #151F33; /* Row background */
+}
+tbody tr:nth-child(even) {
+    background: #1E293B; /* Alternate row color */
+}
+tbody tr:hover {
+    background-color: #334155; /* Hover effect */
+}
+
+/* Specific Cell Styling (Data Groups) */
+.col-power { 
+    background-color: #0F334A !important; /* Biru Gelap untuk grup Power */
+    font-weight: bold;
+    color: #38BDF8; /* Warna data Power */
+}
+.col-energy {
+    font-size: 1.1em;
+    color: #4ADE80; /* Warna data Energy */
+}
+.col-i, .col-v, .col-pf {
+    font-weight: 500;
+}
+
+/* Status Styling */
+.status-online { color: #10B981; font-weight: bold; } /* Hijau */
+.status-offline { color: #EF4444; font-weight: bold; } /* Merah */
+.cell-id {
+    font-weight: bold;
+    background: #111827;
+}
 </style>
 </head>
 
 <body>
 
-<h2>⚡ ESP32 Meter – MQTT Real-time Dashboard</h2>
+<h2>⚡ Real-time Power Meter Dashboard</h2>
 <p id="conn">Connecting...</p>
 
 <table>
 <thead>
 <tr>
-  <th>ID</th>
+  <th class="cell-id">ID</th>
   <th>Status</th>
-  <th>V (V)</th>
-  <th>I1 (A)</th>
-  <th>I2 (A)</th>
-  <th>I3 (A)</th>
+  <th class="col-v">V (Volt)</th>
+  <th class="col-i">I1 (A)</th>
+  <th class="col-i">I2 (A)</th>
+  <th class="col-i">I3 (A)</th>
   <th class="col-power">P (Watt)</th>
   <th class="col-power">Q (VAR)</th>
   <th class="col-power">S (kVA)</th>
-  <th>PF</th>
-  <th>Hz</th>
-  <th>OpH (Jam)</th>
-  <th>Ea Tot (kWh)</th>
-  <th>Er Tot (kVARh)</th>
-  <th>Ea Part (kWh)</th>
-  <th>Er Part (kVARh)</th>
+  <th class="col-pf">PF</th>
+  <th class="col-pf">Hz</th>
+  <th class="col-pf">OpH (Jam)</th>
+  <th class="col-energy">Ea Tot (kWh)</th>
+  <th class="col-energy">Er Tot (kVARh)</th>
+  <th class="col-energy">Ea Part (kWh)</th>
+  <th class="col-energy">Er Part (kVARh)</th>
 </tr>
 </thead>
 <tbody id="tableBody">
-<tr><td colspan="16">Waiting MQTT data...</td></tr>
+<tr><td colspan="16" style="padding: 30px; color: #94A3B8;">Awaiting Real-time Data from ESP32...</td></tr>
 </tbody>
 </table>
 
@@ -75,7 +122,7 @@ const options = {
   reconnectPeriod: 2000,
 };
 
-// Pastikan protokol WSS dan port 8884 digunakan untuk koneksi dari web browser
+// Menggunakan WSS (WebSockets Secure) port 8884
 const client = mqtt.connect(
   "wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt",
   options
@@ -83,17 +130,16 @@ const client = mqtt.connect(
 
 const tableBody = document.getElementById("tableBody");
 const conn = document.getElementById("conn");
-const devices = {}; // Menyimpan baris tabel untuk setiap ID meter
+const devices = {}; // Menyimpan referensi baris tabel berdasarkan ID meter
 
 client.on("connect", () => {
   conn.innerHTML = "✅ MQTT Connected";
-  // Subscribe ke topik yang sama dengan tempat ESP32 mempublish data
   client.subscribe("politeknik/meter/data");
 });
 
 client.on("error", err => {
   conn.innerHTML = "❌ MQTT Error";
-  console.error(err);
+  console.error("MQTT Connection Error:", err);
 });
 
 client.on("message", (topic, message) => {
@@ -101,49 +147,58 @@ client.on("message", (topic, message) => {
     const d = JSON.parse(message.toString());
     const id = d.id;
 
+    // 1. Cek atau Buat Baris Baru
     if (!devices[id]) {
       const row = document.createElement("tr");
-      // Membuat 16 sel (1 ID + 1 Status + 14 Data)
+      
+      // Membuat 16 cell, dan menerapkan CSS Class yang sudah ditentukan di TH
       row.innerHTML = `
-        <td>${id}</td>
+        <td class="cell-id">${id}</td>
         <td class="status-offline">offline</td>
-        <td></td><td></td><td></td><td></td>
+        <td class="col-v"></td><td class="col-i"></td><td class="col-i"></td><td class="col-i"></td>
         <td class="col-power"></td><td class="col-power"></td><td class="col-power"></td>
-        <td></td><td></td><td></td>
-        <td></td><td></td><td></td><td></td>
+        <td class="col-pf"></td><td class="col-pf"></td><td class="col-pf"></td>
+        <td class="col-energy"></td><td class="col-energy"></td><td class="col-energy"></td><td class="col-energy"></td>
       `;
-      tableBody.innerHTML = ""; // Hapus pesan awal
+      
+      tableBody.innerHTML = ""; // Hapus pesan "Awaiting Data..."
       tableBody.appendChild(row);
       devices[id] = row;
     }
 
     const cells = devices[id].children;
     
-    // Update Status
+    // 2. Update Status
     cells[1].innerHTML = d.status;
     cells[1].className = d.status === "online" ? "status-online" : "status-offline";
     
-    // Update Data sesuai urutan kolom (Cek JSON keys)
-    cells[2].innerHTML = d.V; 
-    cells[3].innerHTML = d.I1; 
-    cells[4].innerHTML = d.I2; 
-    cells[5].innerHTML = d.I3; 
+    // 3. Update Data (Hanya nilai yang di-update)
+    // Urutan cell: [0]ID, [1]Status, [2]V, [3]I1, [4]I2, [5]I3, [6]P, [7]Q, [8]S, [9]PF, [10]Hz, [11]OpH, [12]EaT, [13]ErT, [14]EaP, [15]ErP
+    
+    // V, I
+    cells[2].innerHTML = d.V || '---'; 
+    cells[3].innerHTML = d.I1 || '---'; 
+    cells[4].innerHTML = d.I2 || '---'; 
+    cells[5].innerHTML = d.I3 || '---'; 
 
-    cells[6].innerHTML = d.P; 
-    cells[7].innerHTML = d.Q; 
-    cells[8].innerHTML = d.S; 
+    // Power
+    cells[6].innerHTML = d.P || '---'; 
+    cells[7].innerHTML = d.Q || '---'; 
+    cells[8].innerHTML = d.S || '---'; 
 
-    cells[9].innerHTML = d.PF; 
-    cells[10].innerHTML = d.Hz; 
-    cells[11].innerHTML = d.OpH; 
+    // Kualitas & Waktu
+    cells[9].innerHTML = d.PF || '---'; 
+    cells[10].innerHTML = d.Hz || '---'; 
+    cells[11].innerHTML = d.OpH || '---'; 
 
-    cells[12].innerHTML = d.EaT; 
-    cells[13].innerHTML = d.ErT; 
-    cells[14].innerHTML = d.EaP; 
-    cells[15].innerHTML = d.ErP; 
+    // Energi
+    cells[12].innerHTML = d.EaT || '---'; 
+    cells[13].innerHTML = d.ErT || '---'; 
+    cells[14].innerHTML = d.EaP || '---'; 
+    cells[15].innerHTML = d.ErP || '---'; 
 
   } catch (e) {
-    console.error("JSON Error", e);
+    console.error("JSON Parsing Error:", e);
   }
 });
 </script>
