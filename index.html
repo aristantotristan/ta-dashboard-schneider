@@ -2,101 +2,133 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>ESP32 Power Meter Dashboard - ID 1</title>
+<title>ESP32 Meter – MQTT Table Dashboard</title>
+
 <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+
 <style>
-body { margin:0; font-family: Arial; background:#0e0e0e; color:#fff; }
-header { background:#161616; padding:10px 20px; border-bottom:2px solid #222; }
-header span { font-weight:bold; }
-.main { display:flex; height: calc(100vh - 60px); }
-.detail { flex:1; padding:20px; }
-table { width:100%; border-collapse:collapse; background:#1b1b1b; }
-th, td { padding:10px; border:1px solid #333; }
-th { background:#242424; width:60%; }
-.online { color:#00ff88; }
-.offline { color:#ff4444; }
-.wait { color:orange; }
+body {
+  font-family: Arial, sans-serif;
+  background:#0b1220;
+  color:#fff;
+  padding:20px;
+}
+table {
+  border-collapse: collapse;
+  width:100%;
+}
+th, td {
+  border:1px solid #333;
+  padding:8px;
+  text-align:center;
+}
+th {
+  background:#111827;
+}
+.status-online { color:#22c55e; font-weight:bold; }
+.status-offline { color:#ef4444; font-weight:bold; }
 </style>
 </head>
 
 <body>
 
-<header>
-  MQTT Status: <span id="mqttStatus" class="wait">CONNECTING...</span> |
-  Selected Mesin: <span id="selectedMachine">1</span>
-</header>
+<h2>ESP32 Meter – MQTT Table Dashboard</h2>
+<p id="conn">Connecting...</p>
 
-<div class="main">
-  <div class="detail">
-    <h2>📊 Mesin <span id="detailId">1</span></h2>
-    Status: <span id="detailStatus" class="offline">OFFLINE</span>
-    <table>
-      <tr><th>Voltage (V)</th><td id="V">0</td></tr>
-      <tr><th>Current I1 (A)</th><td id="I1">0</td></tr>
-      <tr><th>Current I2 (A)</th><td id="I2">0</td></tr>
-      <tr><th>Current I3 (A)</th><td id="I3">0</td></tr>
-      <tr><th>Active Power (W)</th><td id="P">0</td></tr>
-      <tr><th>Reactive Power (VAR)</th><td id="Q">0</td></tr>
-      <tr><th>Apparent Power (kVA)</th><td id="S">0</td></tr>
-      <tr><th>Power Factor</th><td id="PF">0</td></tr>
-      <tr><th>Frequency (Hz)</th><td id="Hz">0</td></tr>
-      <tr><th>Total Ea (kWh)</th><td id="EaT">0</td></tr>
-      <tr><th>Total Er (kVARh)</th><td id="ErT">0</td></tr>
-      <tr><th>Partial Ea (kWh)</th><td id="EaP">0</td></tr>
-      <tr><th>Partial Er (kVARh)</th><td id="ErP">0</td></tr>
-      <tr><th>Operation Time (h)</th><td id="OpH">0</td></tr>
-    </table>
-  </div>
-</div>
+<table>
+<thead>
+<tr>
+  <th>ID</th>
+  <th>Status</th>
+  <th>V (V)</th>
+  <th>I1 (A)</th>
+  <th>I2 (A)</th>
+  <th>I3 (A)</th>
+  <th>P (W)</th>
+  <th>Q (VAR)</th>
+  <th>S (kVA)</th>
+  <th>PF</th>
+  <th>Hz</th>
+  <th>OpH (h)</th>
+  <th>E Active Tot (kWh)</th>
+  <th>E Reactive Tot (kVARh)</th>
+  <th>E Active Part</th>
+  <th>E Reactive Part</th>
+</tr>
+</thead>
+<tbody id="tableBody">
+<tr><td colspan="16">Waiting MQTT data...</td></tr>
+</tbody>
+</table>
 
 <script>
-// ================= CONFIG =================
-const activeId = 1;
-const fields = ["V","I1","I2","I3","P","Q","S","PF","Hz","EaT","ErT","EaP","ErP","OpH"];
-const cache = {};
+const options = {
+  username: "web_dashboard",
+  password: "PASSWORD_KAMU",
+  connectTimeout: 4000,
+  reconnectPeriod: 2000,
+};
 
-// ================= MQTT CONNECT (non-TLS WS) =================
 const client = mqtt.connect(
-  "ws://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8000/mqtt",
-  {
-    username: "web_dashboard",
-    password: "Tristan12",
-    reconnectPeriod: 2000
-  }
+  "wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt",
+  options
 );
 
+const tableBody = document.getElementById("tableBody");
+const conn = document.getElementById("conn");
+const devices = {}; // store row per ID
+
 client.on("connect", () => {
-  console.log("MQTT CONNECTED ✅");
-  document.getElementById("mqttStatus").innerText = "CONNECTED ✅";
-  document.getElementById("mqttStatus").className = "online";
+  conn.innerHTML = "✅ MQTT Connected";
   client.subscribe("politeknik/meter/data");
 });
 
-client.on("offline", () => {
-  console.log("MQTT DISCONNECTED ❌");
-  document.getElementById("mqttStatus").innerText = "DISCONNECTED ❌";
-  document.getElementById("mqttStatus").className = "offline";
+client.on("error", err => {
+  conn.innerHTML = "❌ MQTT Error";
+  console.error(err);
 });
 
-client.on("message", (_, msg) => {
-  console.log("MQTT msg received:", msg.toString()); // cek data masuk
+client.on("message", (topic, message) => {
   try {
-    const data = JSON.parse(msg.toString());
-    if (data.id === activeId) {
-      cache[activeId] = { ...cache[activeId], ...data };
-      updateDetail(cache[activeId]);
-    }
-  } catch(e) { console.error("JSON parse error:", e); }
-});
+    const d = JSON.parse(message.toString());
+    const id = d.id;
 
-// ================= UPDATE DETAIL =================
-function updateDetail(data) {
-  document.getElementById("detailStatus").innerText = data.status === "online"? "ONLINE ✅" : "OFFLINE ❌";
-  document.getElementById("detailStatus").className = data.status === "online"? "online":"offline";
-  fields.forEach(f => {
-    document.getElementById(f).innerText = data[f] !== undefined ? data[f] : 0;
-  });
-}
+    if (!devices[id]) {
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${id}</td>
+        <td></td><td></td><td></td><td></td><td></td>
+        <td></td><td></td><td></td><td></td>
+        <td></td><td></td><td></td><td></td>
+        <td></td><td></td>
+      `;
+      tableBody.innerHTML = "";
+      tableBody.appendChild(row);
+      devices[id] = row;
+    }
+
+    const cells = devices[id].children;
+    cells[1].innerHTML = d.status;
+    cells[1].className = d.status === "online" ? "status-online" : "status-offline";
+    cells[2].innerHTML = d.V;
+    cells[3].innerHTML = d.I1;
+    cells[4].innerHTML = d.I2;
+    cells[5].innerHTML = d.I3;
+    cells[6].innerHTML = d.P;
+    cells[7].innerHTML = d.Q;
+    cells[8].innerHTML = d.S;
+    cells[9].innerHTML = d.PF;
+    cells[10].innerHTML = d.Hz;
+    cells[11].innerHTML = d.OpH;
+    cells[12].innerHTML = d.EaT;
+    cells[13].innerHTML = d.ErT;
+    cells[14].innerHTML = d.EaP;
+    cells[15].innerHTML = d.ErP;
+
+  } catch (e) {
+    console.error("JSON Error", e);
+  }
+});
 </script>
 
 </body>
