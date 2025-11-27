@@ -14,7 +14,7 @@ body {
   padding:20px;
 }
 h2 {
-    color: #38bdf8; /* Warna biru muda */
+    color: #38bdf8;
 }
 table {
   border-collapse: collapse;
@@ -31,7 +31,7 @@ th {
 }
 .status-online { color:#22c55e; font-weight:bold; }
 .status-offline { color:#ef4444; font-weight:bold; }
-.col-power { background-color: #1f2937; } /* Styling tambahan untuk kolom power */
+.col-power { background-color: #1f2937; }
 </style>
 </head>
 
@@ -75,6 +75,7 @@ const options = {
   reconnectPeriod: 2000,
 };
 
+// Pastikan protokol WSS dan port 8884 digunakan untuk koneksi dari web browser
 const client = mqtt.connect(
   "wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt",
   options
@@ -82,10 +83,11 @@ const client = mqtt.connect(
 
 const tableBody = document.getElementById("tableBody");
 const conn = document.getElementById("conn");
-const devices = {}; // store row per ID
+const devices = {}; // Menyimpan baris tabel untuk setiap ID meter
 
 client.on("connect", () => {
   conn.innerHTML = "✅ MQTT Connected";
+  // Subscribe ke topik yang sama dengan tempat ESP32 mempublish data
   client.subscribe("politeknik/meter/data");
 });
 
@@ -101,7 +103,7 @@ client.on("message", (topic, message) => {
 
     if (!devices[id]) {
       const row = document.createElement("tr");
-      // Menyiapkan 16 sel untuk 1 ID + 1 Status + 14 Data
+      // Membuat 16 sel (1 ID + 1 Status + 14 Data)
       row.innerHTML = `
         <td>${id}</td>
         <td class="status-offline">offline</td>
@@ -110,7 +112,7 @@ client.on("message", (topic, message) => {
         <td></td><td></td><td></td>
         <td></td><td></td><td></td><td></td>
       `;
-      tableBody.innerHTML = ""; // Hapus pesan "Waiting..."
+      tableBody.innerHTML = ""; // Hapus pesan awal
       tableBody.appendChild(row);
       devices[id] = row;
     }
@@ -121,21 +123,24 @@ client.on("message", (topic, message) => {
     cells[1].innerHTML = d.status;
     cells[1].className = d.status === "online" ? "status-online" : "status-offline";
     
-    // Update Data - Pastikan urutannya benar!
-    cells[2].innerHTML = d.V;   // V (Volt)
-    cells[3].innerHTML = d.I1; // I1 (Ampere)
-    cells[4].innerHTML = d.I2; // I2 (Ampere)
-    cells[5].innerHTML = d.I3; // I3 (Ampere)
-    cells[6].innerHTML = d.P;   // P (Watt)
-    cells[7].innerHTML = d.Q;   // Q (VAR)
-    cells[8].innerHTML = d.S;   // S (kVA)
-    cells[9].innerHTML = d.PF; // PF
-    cells[10].innerHTML = d.Hz; // Freq (Hz)
-    cells[11].innerHTML = d.OpH; // OpH (Jam)
-    cells[12].innerHTML = d.EaT; // Ea Total (kWh)
-    cells[13].innerHTML = d.ErT; // Er Total (kVARh)
-    cells[14].innerHTML = d.EaP; // Ea Partial (kWh)
-    cells[15].innerHTML = d.ErP; // Er Partial (kVARh)
+    // Update Data sesuai urutan kolom (Cek JSON keys)
+    cells[2].innerHTML = d.V; 
+    cells[3].innerHTML = d.I1; 
+    cells[4].innerHTML = d.I2; 
+    cells[5].innerHTML = d.I3; 
+
+    cells[6].innerHTML = d.P; 
+    cells[7].innerHTML = d.Q; 
+    cells[8].innerHTML = d.S; 
+
+    cells[9].innerHTML = d.PF; 
+    cells[10].innerHTML = d.Hz; 
+    cells[11].innerHTML = d.OpH; 
+
+    cells[12].innerHTML = d.EaT; 
+    cells[13].innerHTML = d.ErT; 
+    cells[14].innerHTML = d.EaP; 
+    cells[15].innerHTML = d.ErP; 
 
   } catch (e) {
     console.error("JSON Error", e);
