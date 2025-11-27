@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚡ Realtime Monitoring (Static HTML)</title>
+
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+
+<style>
+/* Styling menyesuaikan mode Dark Theme Profesional */
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121212; color: #E0E0E0; padding: 20px; }
+h2 { color: #00FFC2; border-bottom: 2px solid #3A3A3A; padding-bottom: 10px; margin-bottom: 5px; }
+#conn { margin-bottom: 25px; font-size: 1.1em; font-weight: bold; }
+table { border-collapse: collapse; width: 100%; margin-top: 15px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5); border-radius: 8px; overflow: hidden; }
+th, td { border: 1px solid #2A2A2A; padding: 10px 12px; text-align: center; transition: background-color 0.3s; }
+thead th { background: #2A2A2A; color: #00FFC2; font-weight: 600; text-transform: uppercase; font-size: 0.9em; }
+tbody tr { background: #1E1E1E; }
+tbody tr:hover { background-color: #334155; }
+.cell-id { font-weight: bold; background: #111827; }
+.status-online { color: #10B981; font-weight: bold; } 
+.status-offline { color: #EF4444; font-weight: bold; }
+.col-power { background-color: #0F334A; color: #38BDF8; font-weight: 600; }
+.col-energy { color: #4ADE80; font-weight: 600; }
+.col-v, .col-i, .col-pf { font-weight: 500; }
+</style>
+</head>
+
+<body>
+
+<h2>⚡ Realtime Monitoring (18 Mesin - Static Deploy)</h2>
+<p id="conn">Connecting to HiveMQ...</p>
+
+<table>
+<thead>
+<tr>
+  <th class="cell-id">ID</th>
+  <th>Status</th>
+  <th class="col-v">V (Volt)</th>
+  <th class="col-i">I1 (A)</th>
+  <th class="col-i">I2 (A)</th>
+  <th class="col-i">I3 (A)</th>
+  <th class="col-power">P (Watt)</th>
+  <th class="col-power">Q (VAR)</th>
+  <th class="col-power">S (kVA)</th>
+  <th class="col-pf">PF</th>
+  <th class="col-pf">Hz</th>
+  <th class="col-pf">OpH (Hari/Jam)</th>
+  <th class="col-energy">Ea Tot (kWh)</th>
+  <th class="col-energy">Er Tot (kVARh)</th>
+  <th class="col-energy">Ea Part (kWh)</th>
+  <th class="col-energy">Er Part (kVARh)</th>
+</tr>
+</thead>
+<tbody id="tableBody">
+<tr id="row-1"><td class="cell-id">1</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
+<tr id="row-2"><td class="cell-id">2</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
+<tr id="row-3"><td class="cell-id">3</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
+<tr id="row-4"><td class="cell-id">4</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
+<tr id="row-5"><td class="cell-id">5</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
+<tr id="row-6"><td class="cell-id">6</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
+<tr id="row-7"><td class="cell-id">7</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
+<tr id="row-8"><td class="cell-id">8</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
+<tr id="row-9"><td class="cell-id">9</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
+<tr id="row-10"><td class="cell-id">10</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
+<tr id="row-11"><td class="cell-id">11</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
+<tr id="row-12"><td class="cell-id">12</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
+<tr id="row-13"><td class="cell-id">13</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
+<tr id="row-14"><td class="cell-id">14</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
+<tr id="row-15"><td class="cell-id">15</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
+<tr id="row-16"><td class="cell-id">16</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
+<tr id="row-17"><td class="cell-id">17</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
+<tr id="row-18"><td class="cell-id">18</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
+</tbody>
+</table>
+
+<script>
+// --- KONFIGURASI MQTT ---
+const MQTT_BROKER = 'wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt';
+const MQTT_TOPIC = 'politeknik/meter/data';
+const options = {
+    username: "web_dashboard",
+    password: "Tristan12",
+    connectTimeout: 4000,
+    reconnectPeriod: 2000,
+};
+
+// --- DOM REFERENCES ---
+const conn = document.getElementById("conn");
+
+// Definisikan urutan KEY JSON dan posisinya di sel
+const dataMap = [
+    { key: 'V', index: 2 }, { key: 'I1', index: 3 }, { key: 'I2', index: 4 }, 
+    { key: 'I3', index: 5 }, { key: 'P', index: 6 }, { key: 'Q', index: 7 }, 
+    { key: 'S', index: 8 }, { key: 'PF', index: 9 }, { key: 'Hz', index: 10 }, 
+    { key: 'OpH', index: 11 }, { key: 'EaT', index: 12 }, { key: 'ErT', index: 13 }, 
+    { key: 'EaP', index: 14 }, { key: 'ErP', index: 15 }
+];
+
+/** Mengonversi total jam (decimal) menjadi format Hari dan Jam. */
+function formatOperatingTime(totalHours) {
+    if (totalHours === undefined || totalHours === null || isNaN(totalHours) || totalHours < 0) {
+        return '---';
+    }
+    const totalMinutes = Math.round(parseFloat(totalHours) * 60);
+    const days = Math.floor(totalMinutes / (24 * 60));
+    const remainingMinutes = totalMinutes % (24 * 60);
+    const hours = Math.floor(remainingMinutes / 60);
+    const minutes = remainingMinutes % 60;
+    
+    let result = '';
+    if (days > 0) result += `${days} Hari `;
+    if (hours > 0 || (days === 0 && minutes > 0)) result += `${hours} Jam`;
+    if (minutes > 0) result += ` ${minutes} Mnt`;
+    
+    return result.trim() || '0 Jam'; 
+}
+
+// --- LOGIKA MQTT & UPDATE TABEL ---
+const client = mqtt.connect(MQTT_BROKER, options);
+
+client.on("connect", () => {
+    conn.innerHTML = "✅ HiveMQ Connected. Listening for Realtime data...";
+    client.subscribe(MQTT_TOPIC); 
+});
+
+client.on("error", err => {
+    conn.innerHTML = "❌ MQTT Error";
+    console.error("MQTT Connection Error:", err);
+});
+
+client.on("message", (topic, message) => {
+    try {
+        const d = JSON.parse(message.toString());
+        const id = d.id;
+
+        const row = document.getElementById(`row-${id}`);
+
+        if (row) {
+            const cells = row.cells;
+            
+            // 1. Update Status (Index 1)
+            cells[1].textContent = d.status.toUpperCase();
+            cells[1].className = d.status === "online" ? "status-online" : "status-offline";
+            
+            // 2. Update Data Teknis
+            dataMap.forEach(item => {
+                const cellIndex = item.index; 
+                const value = d[item.key];
+                
+                let displayValue;
+                
+                if (item.key === 'OpH') {
+                    displayValue = formatOperatingTime(value);
+                } else {
+                    displayValue = (value === 0 || value) ? value.toLocaleString('id-ID', { maximumFractionDigits: 3 }) : '---';
+                }
+                
+                cells[cellIndex].textContent = displayValue;
+            });
+        }
+
+    } catch (e) {
+        console.error(`JSON Parsing Error:`, e);
+    }
+});
+</script>
+
+</body>
+</html>
