@@ -3,251 +3,173 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>💰 Monitoring Biaya & Tarif (Historis)</title>
+<title>⚡ Realtime Monitoring (MQTT)</title>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script> 
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 
 <style>
-/* Reset dan Basic Styling */
-body { font-family: 'Poppins', sans-serif; background: #121212; color: #E0E0E0; padding: 20px; }
-
-/* Header & Navigasi */
+/* Styling menyesuaikan mode Dark Theme Profesional */
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121212; color: #E0E0E0; padding: 20px; }
 .header-container { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 2px solid #3A3A3A; padding-bottom: 10px; }
-h2 { color: #FFD700; margin: 0; }
+h2 { color: #00FFC2; margin: 0; }
 #conn { font-weight: bold; }
-.nav-button {
-    background-color: #00FFC2; /* Warna hijau/biru untuk Realtime */
-    color: #121212;
-    padding: 10px 20px;
-    border: none;
-    border-radius: 5px;
-    text-decoration: none;
-    font-weight: bold;
-    cursor: pointer;
-    transition: background-color 0.3s;
-    display: inline-block;
-}
-.nav-button:hover { background-color: #00E0A7; }
-
-/* Status Tarif Global */
-.tarif-status-box { background: #1E1E1E; padding: 20px; border-radius: 8px; margin-bottom: 30px; border: 1px solid #FFD700; }
-.tarif-status-box h3 { margin-top: 0; color: #FFD700; border-bottom: 1px dashed #3A3A3A; padding-bottom: 5px; }
-.tarif-rate { display: flex; justify-content: space-around; font-size: 0.9em; }
-.tarif-rate div { text-align: center; }
-.tarif-rate strong { display: block; font-size: 1.2em; color: #4ADE80; }
-.tarif-note { font-size: 0.8em; color: #94A3B8; margin-top: 10px; }
-
-/* Layout Grid Kartu Meteran */
-.container { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; max-width: 1400px; margin: 0 auto; }
-.meter-card { background: #1E1E1E; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5); overflow: hidden; border-left: 5px solid #FFD700; }
-
-.card-header { background: #2A2A2A; padding: 12px 15px; font-size: 1.2em; font-weight: bold; color: #B0B0B0; }
-.card-body { padding: 15px; }
-
-/* Vertical Table inside card */
-.tarif-table { width: 100%; border-collapse: collapse; }
-.tarif-table td { padding: 8px 10px; border-bottom: 1px solid #3A3A3A; text-align: left; }
-.tarif-table td:first-child { width: 60%; color: #94A3B8; }
-.tarif-table td:nth-child(2) { font-weight: bold; text-align: right; }
-.tarif-table .value-energy { color: #4ADE80; }
-.tarif-table .value-rupiah { color: #38BDF8; }
-
-.tarif-table .total-row td { 
-    background: #0F334A; 
-    color: white; 
-    font-size: 1.3em; 
-    font-weight: bold;
-    border-top: 3px double #FFD700; 
-    padding: 12px 10px;
-}
+table { border-collapse: collapse; width: 100%; margin-top: 15px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5); border-radius: 8px; overflow: hidden; }
+th, td { border: 1px solid #2A2A2A; padding: 10px 12px; text-align: center; transition: background-color 0.3s; }
+thead th { background: #2A2A2A; color: #00FFC2; font-weight: 600; text-transform: uppercase; font-size: 0.9em; }
+tbody tr { background: #1E1E1E; }
+tbody tr:hover { background-color: #334155; }
+.cell-id { font-weight: bold; background: #111827; }
+.status-online { color: #10B981; font-weight: bold; } 
+.status-offline { color: #EF4444; font-weight: bold; }
+.col-power { background-color: #0F334A; color: #38BDF8; font-weight: 600; }
+.col-energy { color: #4ADE80; font-weight: 600; }
+.col-v, .col-i, .col-pf { font-weight: 500; }
+.nav-button { background-color: #FFD700; color: #121212; padding: 10px 20px; border: none; border-radius: 5px; text-decoration: none; font-weight: bold; cursor: pointer; transition: background-color 0.3s; display: inline-block; }
+.nav-button:hover { background-color: #E0B400; }
 </style>
 </head>
 
 <body>
 
 <div class="header-container">
-    <h2>💰 Monitoring Biaya & Tarif (Data Historis)</h2>
-    <a href="./index.html" class="nav-button">Lihat Realtime Monitoring</a>
+    <h2>⚡ Realtime Monitoring (18 Mesin)</h2>
+    <a href="./tarif.html" class="nav-button">Lihat Monitoring Tarif</a>
 </div>
-<p id="conn">Initializing Supabase...</p>
+<p id="conn">Connecting to HiveMQ...</p>
 
-
-<div class="tarif-status-box">
-    <h3>Konfigurasi Tarif Aktif (diambil dari tabel `config_tarif`):</h3>
-    <div class="tarif-rate">
-        <div>Tarif LWBP (Rp/kWh)<br><strong>Rp <span id="rate_lwbp">...</span></strong></div>
-        <div>Tarif WBP (Rp/kWh)<br><strong>Rp <span id="rate_wbp">...</span></strong></div>
-        <div>Denda Reaktif (Rp/kVARh)<br><strong>Rp <span id="rate_reaktif">...</span></strong></div>
-    </div>
-    <p class="tarif-note">* Perhitungan biaya menggunakan **Tarif Rata-Rata** dan **Konsumsi 15 detik terakhir** sebagai estimasi laju biaya saat ini.</p>
-</div>
-
-
-<div class="container" id="meter-container">
-    <p>Loading meter summaries...</p>
-</div>
+<table>
+<thead>
+<tr>
+  <th class="cell-id">ID</th>
+  <th>Status</th>
+  <th class="col-v">V (Volt)</th>
+  <th class="col-i">I1 (A)</th>
+  <th class="col-i">I2 (A)</th>
+  <th class="col-i">I3 (A)</th>
+  <th class="col-power">P (Watt)</th>
+  <th class="col-power">Q (VAR)</th>
+  <th class="col-power">S (kVA)</th>
+  <th class="col-pf">PF</th>
+  <th class="col-pf">Hz</th>
+  <th class="col-pf">OpH (Hari/Jam)</th>
+  <th class="col-energy">Ea Tot (kWh)</th>
+  <th class="col-energy">Er Tot (kVARh)</th>
+  <th class="col-energy">Ea Part (kWh)</th>
+  <th class="col-energy">Er Part (kVARh)</th>
+</tr>
+</thead>
+<tbody id="tableBody">
+<tr id="row-1"><td class="cell-id">1</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
+<tr id="row-2"><td class="cell-id">2</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
+<tr id="row-3"><td class="cell-id">3</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
+<tr id="row-4"><td class="cell-id">4</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
+<tr id="row-5"><td class="cell-id">5</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
+<tr id="row-6"><td class="cell-id">6</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
+<tr id="row-7"><td class="cell-id">7</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
+<tr id="row-8"><td class="cell-id">8</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
+<tr id="row-9"><td class="cell-id">9</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
+<tr id="row-10"><td class="cell-id">10</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
+<tr id="row-11"><td class="cell-id">11</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
+<tr id="row-12"><td class="cell-id">12</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
+<tr id="row-13"><td class="cell-id">13</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
+<tr id="row-14"><td class="cell-id">14</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
+<tr id="row-15"><td class="cell-id">15</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
+<tr id="row-16"><td class="cell-id">16</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
+<tr id="row-17"><td class="cell-id">17</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
+<tr id="row-18"><td class="cell-id">18</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
+</tbody>
+</table>
 
 <script>
-// --- KONFIGURASI SUPABASE ---
-const SUPABASE_URL = 'https://rojhcadtqfynlqzubftx.supabase.co'; 
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs';
+// --- KONFIGURASI MQTT ---
+const MQTT_BROKER = 'wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt';
+const MQTT_TOPIC = 'politeknik/meter/data';
+const options = {
+    username: "web_dashboard",
+    password: "Tristan12",
+    connectTimeout: 4000,
+    reconnectPeriod: 2000,
+};
 
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// --- DOM REFERENCES ---
+const conn = document.getElementById("conn");
 
-// --- VARIABEL TARIF GLOBAL ---
-let tarifConfig = {};
+// Definisikan urutan KEY JSON dan posisinya di sel
+const dataMap = [
+    { key: 'V', index: 2 }, { key: 'I1', index: 3 }, { key: 'I2', index: 4 }, 
+    { key: 'I3', index: 5 }, { key: 'P', index: 6 }, { key: 'Q', index: 7 }, 
+    { key: 'S', index: 8 }, { key: 'PF', index: 9 }, { key: 'Hz', index: 10 }, 
+    { key: 'OpH', index: 11 }, { key: 'EaT', index: 12 }, { key: 'ErT', index: 13 }, 
+    { key: 'EaP', index: 14 }, { key: 'ErP', index: 15 }
+];
 
-// --- UTILITY FUNGSI ---
-
-/** Format angka menjadi format Rupiah Indonesia */
-function formatRupiah(number) {
-    return number.toLocaleString('id-ID', { maximumFractionDigits: 0 });
-}
-
-/** Format angka menjadi format Energi dengan 3 desimal */
-function formatEnergy(number) {
-    return parseFloat(number).toLocaleString('id-ID', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
-}
-
-/** Menghitung Biaya Total dan Denda */
-function calculateCost(eaTotal, erTotal) {
-    const rate_lwbp = tarifConfig.rate_lwbp || 1000;
-    const rate_wbp = tarifConfig.rate_wbp || 1500;
-    const rate_reaktif = tarifConfig.rate_reaktif || 800;
-    
-    // LOGIKA PENTING: Menggunakan Tarif Rata-Rata karena tidak ada pembagian WBP/LWBP per log
-    const rate_rata = (rate_lwbp + rate_wbp) / 2;
-
-    const cost_aktif = Math.round(eaTotal * rate_rata);
-
-    // Denda Reaktif: Denda jika kVARh > 50% dari kWh
-    const batas_reaktif = eaTotal * 0.5;
-    const kelebihan_reaktif = Math.max(0, erTotal - batas_reaktif);
-    const cost_reaktif = Math.round(kelebihan_reaktif * rate_reaktif);
-    
-    return {
-        cost_aktif: cost_aktif,
-        cost_reaktif: cost_reaktif,
-        total: cost_aktif + cost_reaktif
-    };
-}
-
-/**
- * Memuat Konfigurasi Tarif dan kemudian memuat data Meteran.
- */
-async function loadData() {
-    document.getElementById('conn').innerHTML = "🟡 Memuat konfigurasi tarif...";
-    
-    // 1. Ambil Konfigurasi Tarif
-    const { data: tarifData, error: tarifError } = await supabase
-        .from('config_tarif')
-        .select('*')
-        .limit(1);
-
-    if (tarifError || !tarifData || tarifData.length === 0) {
-        document.getElementById('conn').innerHTML = "❌ Gagal memuat Tarif. Pastikan tabel 'config_tarif' terisi dan kuncinya benar.";
-        return;
-    } 
-    
-    // Simpan dan tampilkan konfigurasi tarif
-    tarifConfig = tarifData[0];
-    document.getElementById('rate_lwbp').textContent = formatRupiah(tarifConfig.rate_lwbp);
-    document.getElementById('rate_wbp').textContent = formatRupiah(tarifConfig.rate_wbp);
-    document.getElementById('rate_reaktif').textContent = formatRupiah(tarifConfig.rate_reaktif);
-    document.getElementById('conn').innerHTML = "✅ Supabase Connected (Tarif Dimuat)";
-
-
-    // --- 2. QUERY RINGKASAN DATA METERAN ---
-    document.getElementById('conn').innerHTML = "🟡 Mengambil ringkasan data 18 meteran...";
-    
-    const container = document.getElementById('meter-container');
-    container.innerHTML = '';
-    
-    const END_ID = 18;
-    
-    for (let id = 1; id <= END_ID; id++) {
-        // Query hanya mengambil 2 record TERBARU 
-        const { data: meterData, error: meterError } = await supabase
-            .from('meter_data')
-            .select('eap, erp')
-            .eq('id', id)
-            .order('timestamp', { ascending: false })
-            .limit(2);
-
-        let summary = { eaTotal: 0, erTotal: 0, records: 0 };
-        
-        if (meterError) {
-             console.error(`Error fetching data for ID ${id}:`, meterError);
-             renderErrorCard(id, container);
-             continue;
-        }
-
-        if (meterData && meterData.length >= 1) {
-            summary.records = meterData.length;
-            
-            if (meterData.length >= 2) {
-                 // Konsumsi = Data Terbaru - Data Lama (Selisih)
-                 summary.eaTotal = Math.max(0, meterData[0].eap - meterData[1].eap);
-                 summary.erTotal = Math.max(0, meterData[0].erp - meterData[1].erp);
-
-            } else {
-                 // Jika hanya ada 1 record, konsumsi dianggap nol
-                 summary.eaTotal = 0; 
-                 summary.erTotal = 0;
-            }
-        }
-        
-        // Hitung biaya
-        const costResult = calculateCost(summary.eaTotal, summary.erTotal);
-        
-        // Render Card
-        renderMeterCard(id, summary, costResult, container, meterData.length);
+/** Mengonversi total jam (decimal) menjadi format Hari dan Jam. */
+function formatOperatingTime(totalHours) {
+    if (totalHours === undefined || totalHours === null || isNaN(totalHours) || totalHours < 0) {
+        return '---';
     }
+    const totalMinutes = Math.round(parseFloat(totalHours) * 60);
+    const days = Math.floor(totalMinutes / (24 * 60));
+    const remainingMinutes = totalMinutes % (24 * 60);
+    const hours = Math.floor(remainingMinutes / 60);
+    const minutes = remainingMinutes % 60;
     
-    document.getElementById('conn').innerHTML = "✅ Data Tarif Selesai Dimuat.";
+    let result = '';
+    if (days > 0) result += `${days} Hari `;
+    if (hours > 0 || (days === 0 && minutes > 0)) result += `${hours} Jam`;
+    if (minutes > 0) result += ` ${minutes} Mnt`;
+    
+    return result.trim() || '0 Jam'; 
 }
 
-function renderMeterCard(id, summary, costResult, container, recordCount) {
-    const card = document.createElement('div');
-    card.className = 'meter-card';
-    
-    const currentCost = costResult.total;
-    
-    const statusMessage = recordCount < 2 
-        ? `<p style="color: #FFC200; font-size: 0.9em; font-weight: bold;">* EST. TIDAK LENGKAP: Hanya ${recordCount} record ditemukan. Menunggu data berikutnya...</p>` 
-        : '';
-        
-    card.innerHTML = `
-        <div class="card-header">Meter ID ${id}</div>
-        <div class="card-body">
-            ${statusMessage}
-            <table class="tarif-table">
-                <tr><td>Energi Aktif (Konsumsi Terakhir)</td><td class="value-energy">${formatEnergy(summary.eaTotal)}</td><td>kWh</td></tr>
-                <tr><td>Energi Reaktif (Konsumsi Terakhir)</td><td class="value-energy">${formatEnergy(summary.erTotal)}</td><td>kVARh</td></tr>
-                
-                <tr><td colspan="3" style="height: 10px; background: transparent; border-bottom: none;"></td></tr>
-                
-                <tr><td>Biaya Energi Aktif (Est.)</td><td class="value-rupiah">Rp ${formatRupiah(costResult.cost_aktif)}</td><td></td></tr>
-                <tr><td>Biaya Denda Reaktif</td><td class="value-rupiah">Rp ${formatRupiah(costResult.cost_reaktif)}</td><td></td></tr>
-                
-                <tr class="total-row"><td>TOTAL BIAYA ESTIMASI</td><td colspan="2">Rp ${formatRupiah(currentCost)}</td></tr>
-            </table>
-        </div>
-    `;
-    container.appendChild(card);
-}
+// --- LOGIKA MQTT & UPDATE TABEL ---
+const client = mqtt.connect(MQTT_BROKER, options);
 
-function renderErrorCard(id, container) {
-    const card = document.createElement('div');
-    card.className = 'meter-card';
-    card.style.borderLeftColor = '#8b0000';
-    card.innerHTML = `<div class="card-header" style="background: #4A0F0F;">Meter ID ${id} - ERROR</div>
-                      <div class="card-body" style="color: #ffaaaa; font-size: 0.9em;">Gagal mengambil data dari Supabase. Cek koneksi internet dan izin API key.</div>`;
-    container.appendChild(card);
-}
+client.on("connect", () => {
+    conn.innerHTML = "✅ HiveMQ Connected. Listening for Realtime data...";
+    client.subscribe(MQTT_TOPIC); 
+});
 
-// --- RUNTIME START ---
-document.addEventListener('DOMContentLoaded', loadData);
+client.on("error", err => {
+    conn.innerHTML = "❌ MQTT Error";
+    console.error("MQTT Connection Error:", err);
+});
+
+client.on("message", (topic, message) => {
+    try {
+        const d = JSON.parse(message.toString());
+        const id = d.id;
+
+        const row = document.getElementById(`row-${id}`);
+
+        if (row) {
+            const cells = row.cells;
+            
+            // 1. Update Status (Index 1)
+            cells[1].textContent = d.status.toUpperCase();
+            cells[1].className = d.status === "online" ? "status-online" : "status-offline";
+            
+            // 2. Update Data Teknis
+            dataMap.forEach(item => {
+                const cellIndex = item.index; 
+                const value = d[item.key];
+                
+                let displayValue;
+                
+                if (item.key === 'OpH') {
+                    displayValue = formatOperatingTime(value);
+                } else {
+                    displayValue = (value === 0 || value) ? value.toLocaleString('id-ID', { maximumFractionDigits: 3 }) : '---';
+                }
+                
+                cells[cellIndex].textContent = displayValue;
+            });
+        }
+
+    } catch (e) {
+        console.error(`JSON Parsing Error:`, e);
+    }
+});
 </script>
 
 </body>
