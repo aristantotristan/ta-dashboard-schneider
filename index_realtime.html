@@ -97,8 +97,6 @@ const dataMap = [
     { key: 'EaP', index: 14 }, { key: 'ErP', index: 15 }
 ];
 
-// --- FUNGSI UTILITY ---
-
 /** Mengonversi total jam (decimal) menjadi format Hari dan Jam. */
 function formatOperatingTime(totalHours) {
     if (totalHours === undefined || totalHours === null || isNaN(totalHours) || totalHours < 0) {
@@ -123,6 +121,7 @@ const client = mqtt.connect(MQTT_BROKER, options);
 
 client.on("connect", () => {
     conn.innerHTML = "✅ HiveMQ Connected. Listening for Realtime data...";
+    client.subscribe(MQTT_TOPIC); // Subscribe di sini
 });
 
 client.on("error", err => {
