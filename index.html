@@ -101,6 +101,10 @@ td:last-child { /* Kolom Satuan */
 .group-power td:nth-child(2) { color: #38BDF8; } /* Biru Muda untuk Power */
 .group-energy td:nth-child(2) { color: #4ADE80; } /* Hijau untuk Energy */
 
+/* Special style for Operating Time */
+tr.group-quality td:nth-child(2)[data-key-value="OpH"] {
+    font-size: 1.1em; /* Sedikit lebih kecil karena teks lebih panjang */
+}
 </style>
 </head>
 
@@ -133,9 +137,7 @@ td:last-child { /* Kolom Satuan */
         
         <tr class="group-quality"><td data-key="PF">Power Factor (PF)</td><td>0.000</td><td></td></tr>
         <tr class="group-quality"><td data-key="Hz">Frequency</td><td>0.0</td><td>Hz</td></tr>
-        <tr class="group-quality"><td data-key="OpH">Load Time / Op Time</td><td>0.0</td><td>Jam</td></tr>
-        
-        <tr class="group-energy"><td data-key="EaT">Energy Active Total</td><td>0.00</td><td>kWh</td></tr>
+        <tr class="group-quality"><td data-key="OpH">Load Time / Op Time</td><td>0.0</td><td></td></tr> <tr class="group-energy"><td data-key="EaT">Energy Active Total</td><td>0.00</td><td>kWh</td></tr>
         <tr class="group-energy"><td data-key="ErT">Energy Reactive Total</td><td>0.00</td><td>kVARh</td></tr>
         <tr class="group-energy"><td data-key="EaP">Energy Active Partial</td><td>0.00</td><td>kWh</td></tr>
         <tr class="group-energy"><td data-key="ErP">Energy Reactive Partial</td><td>0.00</td><td>kVARh</td></tr>
@@ -162,6 +164,39 @@ const conn = document.getElementById("conn");
 const statusDisplay = document.getElementById("status-display");
 const meterIdDisplay = document.getElementById("meter-id-display");
 
+/**
+ * Mengonversi total jam (decimal) menjadi format Hari dan Jam.
+ * Contoh: 48.5 -> "2 Hari 0.5 Jam"
+ * @param {number} totalHours - Total jam dari data MQTT (OpH).
+ */
+function formatOperatingTime(totalHours) {
+    // Cek jika data invalid atau belum ada
+    if (totalHours === undefined || totalHours === null || isNaN(totalHours) || totalHours < 0) {
+        return '---';
+    }
+    
+    const hours = parseFloat(totalHours); 
+    
+    // Perhitungan
+    const days = Math.floor(hours / 24);
+    const remainingHours = hours % 24;
+    
+    let result = '';
+    
+    if (days > 0) {
+        result += `${days} Hari `;
+    }
+
+    // Jika total jam kurang dari 24 atau ada sisa jam, tampilkan jam
+    if (remainingHours > 0 || days === 0) {
+        // Tampilkan 1 angka di belakang koma untuk jam
+        result += `${remainingHours.toFixed(1)} Jam`;
+    }
+    
+    return result.trim();
+}
+
+
 client.on("connect", () => {
   conn.innerHTML = "✅ MQTT Connected";
   client.subscribe("politeknik/meter/data");
@@ -183,9 +218,6 @@ client.on("message", (topic, message) => {
     conn.style.display = 'none'; // Sembunyikan pesan connecting setelah data pertama masuk
 
     // 2. Update Data di Tabel
-    // Kita gunakan data-key untuk mencari baris mana yang harus diupdate
-    // data-key di HTML harus sama dengan key di JSON (d.V, d.P, d.EaT, dll.)
-
     const rows = tableBody.querySelectorAll('tr');
     rows.forEach(row => {
         // Ambil elemen <td> pertama yang berisi data-key
@@ -199,8 +231,13 @@ client.on("message", (topic, message) => {
             const valueCell = row.children[1]; 
             
             if (valueCell) {
-                // Tampilkan nilai jika ada (termasuk 0), jika tidak, tampilkan '---'
-                valueCell.textContent = (value === 0 || value) ? value : '---';
+                if (key === 'OpH') {
+                    // Gunakan fungsi konversi untuk Operating Time
+                    valueCell.textContent = formatOperatingTime(value);
+                } else {
+                    // Tampilkan nilai standar (0 atau angka)
+                    valueCell.textContent = (value === 0 || value) ? value : '---';
+                }
             }
         }
     });
