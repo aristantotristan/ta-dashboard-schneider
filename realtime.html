@@ -1,25 +1,32 @@
-// js/realtime.js - dummy data
-const voltageEl = document.getElementById("voltage");
-const currentEl = document.getElementById("current");
-const powerEl = document.getElementById("power");
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Realtime Dashboard 18 Mesin</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        body { font-family: Arial; padding: 20px; background: #f4f4f4; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+        th { background: #222; color: #fff; }
+    </style>
+</head>
+<body>
+    <h1>Realtime Dashboard 18 Mesin - Dummy</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Mesin</th>
+                <th>Voltage (V)</th>
+                <th>Current (A)</th>
+                <th>Power (W)</th>
+            </tr>
+        </thead>
+        <tbody id="machine-data">
+            <!-- Row 1 s/d 18 akan dibuat JS -->
+        </tbody>
+    </table>
 
-function getDummyData() {
-    return {
-        voltage: (220 + Math.random() * 5).toFixed(2),
-        current: (5 + Math.random() * 1).toFixed(2),
-        power: (1100 + Math.random() * 50).toFixed(2)
-    };
-}
-
-setInterval(() => {
-    const data = getDummyData();
-    voltageEl.innerText = data.voltage + " V";
-    currentEl.innerText = data.current + " A";
-    powerEl.innerText = data.power + " W";
-}, 1000);
-<h2>Realtime Data</h2>
-Voltage: <span id="voltage">0</span><br>
-Current: <span id="current">0</span><br>
-Power: <span id="power">0</span><br>
-
-<script src="js/realtime.js"></script>
+    <script src="js/realtime.js"></script>
+</body>
+</html>
