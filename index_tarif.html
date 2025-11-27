@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>💰 Monitoring Tarif (Supabase)</title>
+<title>💰 Monitoring Tarif (Supabase Historis)</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script> 
 
@@ -65,9 +65,7 @@ function calculateCost(eaTotal, erTotal) {
     const rate_wbp = tarifConfig.rate_wbp || 1500;
     const rate_reaktif = tarifConfig.rate_reaktif || 800;
     
-    // Simplifikasi: Karena kita ambil TOTAL EaP dari 24 jam, kita anggap rata-rata tarif.
-    // Di dunia nyata, ini memerlukan SQL Function yang membagi data per jam.
-    // Untuk tujuan demonstrasi, kita akan menggunakan rata-rata: (LWBP + WBP) / 2
+    // Simplifikasi: Menggunakan rata-rata tarif karena tidak ada pembagian waktu di Log 24 jam
     const rate_rata = (rate_lwbp + rate_wbp) / 2;
 
     const cost_aktif = Math.round(eaTotal * rate_rata);
@@ -95,72 +93,107 @@ async function loadData() {
         .limit(1);
 
     if (tarifError || !tarifData || tarifData.length === 0) {
-        conn.innerHTML = "❌ Gagal memuat Tarif. Menggunakan default.";
-    } else {
-        tarifConfig = tarifData[0];
-        document.getElementById('rate_lwbp').textContent = tarifConfig.rate_lwbp.toLocaleString('id-ID');
-        document.getElementById('rate_wbp').textContent = tarifConfig.rate_wbp.toLocaleString('id-ID');
-        document.getElementById('rate_reaktif').textContent = tarifConfig.rate_reaktif.toLocaleString('id-ID');
-    }
+        conn.innerHTML = "❌ Gagal memuat Tarif. Pastikan tabel 'config_tarif' terisi.";
+        return;
+    } 
+    
+    // Simpan konfigurasi tarif
+    tarifConfig = tarifData[0];
+    document.getElementById('rate_lwbp').textContent = tarifConfig.rate_lwbp.toLocaleString('id-ID');
+    document.getElementById('rate_wbp').textContent = tarifConfig.rate_wbp.toLocaleString('id-ID');
+    document.getElementById('rate_reaktif').textContent = tarifConfig.rate_reaktif.toLocaleString('id-ID');
+    conn.innerHTML = "✅ Supabase Connected (Tarif Dimuat)";
+
 
     // --- 2. QUERY RINGKASAN DATA METERAN ---
     conn.innerHTML = "🟡 Mengambil ringkasan data 18 meteran...";
     
-    // Kita perlu fungsi di Supabase untuk Aggregation (SUM EaP, SUM ErP per ID dalam 24 jam terakhir)
-    // Karena kita tidak bisa membuat SQL Function di sini, kita akan membuat 18 query terpisah (KURANG IDEAL TAPI PASTI JALAN)
-    
-    const endTime = new Date().toISOString();
-    const startTime = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(); // 24 jam lalu
-
     const container = document.getElementById('meter-container');
     container.innerHTML = '';
     
-    for (let id = 1; id <= 18; id++) {
+    const END_ID = 18;
+    
+    for (let id = 1; id <= END_ID; id++) {
+        // Query hanya mengambil 2 record TERBARU untuk membandingkan total EaP dan ErP
         const { data: meterData, error: meterError } = await supabase
             .from('meter_data')
             .select('eap, erp')
             .eq('id', id)
-            .gte('timestamp', startTime) // Greater than or equal to (>=)
-            .lte('timestamp', endTime); // Less than or equal to (<=)
+            .order('timestamp', { ascending: false })
+            .limit(2);
 
         let summary = { eaTotal: 0, erTotal: 0 };
         
-        if (meterData && meterData.length > 0) {
-            summary = meterData.reduce((acc, current) => {
-                acc.eaTotal += current.eap;
-                acc.erTotal += current.erp;
-                return acc;
-            }, { eaTotal: 0, erTotal: 0 });
+        if (meterError) {
+             console.error(`Error fetching data for ID ${id}:`, meterError);
+             renderErrorCard(id);
+             continue;
+        }
+
+        if (meterData && meterData.length >= 1) {
+            // Kita hitung selisih dari dua data terbaru sebagai konsumsi rata-rata saat ini
+            // Jika hanya ada 1 data, kita anggap totalnya 0 (sampai data berikutnya datang)
+            if (meterData.length >= 2) {
+                 // Konsumsi = Data Terbaru - Data Lama
+                 summary.eaTotal = meterData[0].eap - meterData[1].eap;
+                 summary.erTotal = meterData[0].erp - meterData[1].erp;
+                 
+                 // Pastikan tidak ada nilai negatif (jika meteran direset)
+                 summary.eaTotal = Math.max(0, summary.eaTotal);
+                 summary.erTotal = Math.max(0, summary.erTotal);
+
+            } else {
+                 // Jika hanya ada 1 record, tidak bisa dihitung selisihnya
+                 summary.eaTotal = meterData[0].eap; // Tampilkan EaP terakhir
+                 summary.erTotal = meterData[0].erp;
+            }
         }
         
         // Hitung biaya
         const costResult = calculateCost(summary.eaTotal, summary.erTotal);
         
         // Render Card
-        renderMeterCard(id, summary, costResult);
+        renderMeterCard(id, summary, costResult, meterData.length);
     }
     
     conn.innerHTML = "✅ Data Historis Selesai Dimuat.";
 }
 
-function renderMeterCard(id, summary, costResult) {
+function renderMeterCard(id, summary, costResult, recordCount) {
     const container = document.getElementById('meter-container');
     const card = document.createElement('div');
     card.className = 'meter-card';
     
+    const currentCost = costResult.cost_aktif + costResult.cost_reaktif;
+    
+    // Tampilkan pesan jika data kurang dari 2 record (belum bisa hitung selisih)
+    const statusMessage = recordCount < 2 
+        ? `<p style="color: #FFC200;">* Hanya ${recordCount} record, Menunggu data berikutnya...</p>` 
+        : '';
+        
     card.innerHTML = `
-        <div class="card-header">Meter ID ${id} - Ringkasan 24 Jam</div>
+        <div class="card-header">Meter ID ${id} - Konsumsi Terakhir</div>
         <div class="card-body">
+            ${statusMessage}
             <table class="tarif-table">
-                <tr><td>Energi Aktif Total (24 Jam)</td><td>${summary.eaTotal.toFixed(2)}</td><td>kWh</td></tr>
-                <tr><td>Energi Reaktif Total (24 Jam)</td><td>${summary.erTotal.toFixed(2)}</td><td>kVARh</td></tr>
+                <tr><td>Energi Aktif (Konsumsi)</td><td>${summary.eaTotal.toFixed(3)}</td><td>kWh</td></tr>
+                <tr><td>Energi Reaktif (Konsumsi)</td><td>${summary.erTotal.toFixed(3)}</td><td>kVARh</td></tr>
                 <tr><td colspan="3" style="height: 10px; background: transparent;"></td></tr>
                 <tr><td>Biaya Energi Aktif (Est.)</td><td>Rp ${costResult.cost_aktif.toLocaleString('id-ID')}</td><td></td></tr>
                 <tr><td>Biaya Denda Reaktif</td><td>Rp ${costResult.cost_reaktif.toLocaleString('id-ID')}</td><td></td></tr>
-                <tr class="total-row"><td>TOTAL BIAYA ESTIMASI</td><td colspan="2">Rp ${costResult.total.toLocaleString('id-ID')}</td></tr>
+                <tr class="total-row"><td>TOTAL BIAYA ESTIMASI</td><td colspan="2">Rp ${currentCost.toLocaleString('id-ID')}</td></tr>
             </table>
         </div>
     `;
+    container.appendChild(card);
+}
+
+function renderErrorCard(id) {
+    const container = document.getElementById('meter-container');
+    const card = document.createElement('div');
+    card.className = 'meter-card';
+    card.innerHTML = `<div class="card-header" style="background: #8b0000;">Meter ID ${id} - ERROR</div>
+                      <div class="card-body" style="color: #ffaaaa;">Gagal mengambil data dari Supabase. Cek console log.</div>`;
     container.appendChild(card);
 }
 
