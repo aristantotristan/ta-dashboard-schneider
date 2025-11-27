@@ -1,174 +1,264 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>⚡ Realtime Monitoring (MQTT)</title>
 
+<!-- MQTT over WebSocket -->
 <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 
 <style>
-/* Styling menyesuaikan mode Dark Theme Profesional */
-body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121212; color: #E0E0E0; padding: 20px; }
-.header-container { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 2px solid #3A3A3A; padding-bottom: 10px; }
-h2 { color: #00FFC2; margin: 0; }
-#conn { font-weight: bold; }
-table { border-collapse: collapse; width: 100%; margin-top: 15px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5); border-radius: 8px; overflow: hidden; }
-th, td { border: 1px solid #2A2A2A; padding: 10px 12px; text-align: center; transition: background-color 0.3s; }
-thead th { background: #2A2A2A; color: #00FFC2; font-weight: 600; text-transform: uppercase; font-size: 0.9em; }
-tbody tr { background: #1E1E1E; }
-tbody tr:hover { background-color: #334155; }
-.cell-id { font-weight: bold; background: #111827; }
-.status-online { color: #10B981; font-weight: bold; } 
-.status-offline { color: #EF4444; font-weight: bold; }
-.col-power { background-color: #0F334A; color: #38BDF8; font-weight: 600; }
-.col-energy { color: #4ADE80; font-weight: 600; }
-.col-v, .col-i, .col-pf { font-weight: 500; }
-.nav-button { background-color: #FFD700; color: #121212; padding: 10px 20px; border: none; border-radius: 5px; text-decoration: none; font-weight: bold; cursor: pointer; transition: background-color 0.3s; display: inline-block; }
-.nav-button:hover { background-color: #E0B400; }
+:root{--bg:#0b1220; --panel:#071028; --muted:#94a3b8; --accent:#00FFC2; --blue:#38BDF8; --gold:#FFD700; --ok:#10B981; --err:#EF4444}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter, "Segoe UI",system-ui,Roboto,Arial;background:linear-gradient(180deg,#021021,#041428);color:#e6eef6;padding:18px}
+.header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.title{display:flex;align-items:center;gap:12px}
+.title h2{margin:0;color:var(--accent);font-size:1.2rem}
+.controls{display:flex;gap:8px;align-items:center}
+.input{background:#0b1724;border:1px solid rgba(255,255,255,0.03);padding:8px 10px;border-radius:8px;color:#e6eef6}
+.button{background:var(--gold);color:#111;padding:8px 12px;border-radius:8px;border:none;cursor:pointer;font-weight:700}
+.statusBar{font-weight:700;color:var(--muted)}
+.table-wrap{overflow:auto;border-radius:10px;border:1px solid rgba(255,255,255,0.03);box-shadow:0 12px 40px rgba(0,0,0,0.6)}
+table{width:100%;border-collapse:collapse;min-width:1100px}
+th,td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.02);text-align:center;font-size:0.9rem}
+thead th{background:#071426;color:var(--blue);text-transform:uppercase;letter-spacing:0.5px;font-weight:700}
+tbody tr{background:#071a26}
+.cell-id{font-weight:800;background:#02131a;color:var(--muted)}
+.status-online{color:var(--ok);font-weight:700}
+.status-offline{color:var(--err);font-weight:700}
+.col-power{background:#062938;color:var(--blue);font-weight:700}
+.col-energy{color:#4ADE80;font-weight:700}
+.small{font-size:0.85rem;color:var(--muted)}
+.footer{margin-top:12px;color:var(--muted);font-size:0.9rem}
+.badge{background:rgba(255,255,255,0.03);padding:6px 10px;border-radius:10px;font-weight:700}
+@media(max-width:980px){ table{min-width:900px} }
+@media(max-width:720px){ thead th{font-size:0.72rem} td{font-size:0.78rem} }
 </style>
 </head>
-
 <body>
 
-<div class="header-container">
-    <h2>⚡ Realtime Monitoring (18 Mesin)</h2>
-    <a href="./tarif.html" class="nav-button">Lihat Monitoring Tarif</a>
-</div>
-<p id="conn">Connecting to HiveMQ...</p>
+<div class="header">
+  <div class="title">
+    <h2>⚡ Realtime Monitoring — 18 Meter</h2>
+    <div class="small">(MQTT → HiveMQ WebSocket)</div>
+  </div>
 
-<table>
-<thead>
-<tr>
-  <th class="cell-id">ID</th>
-  <th>Status</th>
-  <th class="col-v">V (Volt)</th>
-  <th class="col-i">I1 (A)</th>
-  <th class="col-i">I2 (A)</th>
-  <th class="col-i">I3 (A)</th>
-  <th class="col-power">P (Watt)</th>
-  <th class="col-power">Q (VAR)</th>
-  <th class="col-power">S (kVA)</th>
-  <th class="col-pf">PF</th>
-  <th class="col-pf">Hz</th>
-  <th class="col-pf">OpH (Hari/Jam)</th>
-  <th class="col-energy">Ea Tot (kWh)</th>
-  <th class="col-energy">Er Tot (kVARh)</th>
-  <th class="col-energy">Ea Part (kWh)</th>
-  <th class="col-energy">Er Part (kVARh)</th>
-</tr>
-</thead>
-<tbody id="tableBody">
-<tr id="row-1"><td class="cell-id">1</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
-<tr id="row-2"><td class="cell-id">2</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
-<tr id="row-3"><td class="cell-id">3</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
-<tr id="row-4"><td class="cell-id">4</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
-<tr id="row-5"><td class="cell-id">5</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
-<tr id="row-6"><td class="cell-id">6</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
-<tr id="row-7"><td class="cell-id">7</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
-<tr id="row-8"><td class="cell-id">8</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
-<tr id="row-9"><td class="cell-id">9</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
-<tr id="row-10"><td class="cell-id">10</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
-<tr id="row-11"><td class="cell-id">11</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
-<tr id="row-12"><td class="cell-id">12</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
-<tr id="row-13"><td class="cell-id">13</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
-<tr id="row-14"><td class="cell-id">14</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
-<tr id="row-15"><td class="cell-id">15</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
-<tr id="row-16"><td class="cell-id">16</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
-<tr id="row-17"><td class="cell-id">17</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
-<tr id="row-18"><td class="cell-id">18</td><td class="status-offline">---</td><td class="col-v">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-i">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-power">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-pf">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td><td class="col-energy">---</td></tr>
-</tbody>
-</table>
+  <div class="controls">
+    <input id="broker" class="input" style="width:360px" placeholder="wss://broker:port/mqtt" value="wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt">
+    <input id="topic" class="input" style="width:260px" value="politeknik/meter/data">
+    <input id="user" class="input" style="width:140px" value="web_dashboard">
+    <input id="pass" class="input" style="width:140px" value="Tristan12" type="password">
+    <button id="btnConnect" class="button">Connect</button>
+  </div>
+</div>
+
+<div id="connStatus" class="statusBar small">Not connected</div>
+
+<div style="height:12px"></div>
+
+<div class="table-wrap">
+  <table aria-live="polite">
+    <thead>
+      <tr>
+        <th class="cell-id">ID</th><th>Status / Last Seen</th><th>V (V)</th><th>I1 (A)</th><th>I2 (A)</th><th>I3 (A)</th>
+        <th class="col-power">P (W)</th><th class="col-power">Q (VAR)</th><th class="col-power">S (kVA)</th>
+        <th>PF</th><th>Hz</th><th>OpH</th><th class="col-energy">Ea Tot</th><th class="col-energy">Er Tot</th><th class="col-energy">Ea Part</th><th class="col-energy">Er Part</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody">
+      <!-- rows generated by JS -->
+    </tbody>
+  </table>
+</div>
+
+<div class="footer">
+  Broker: <span class="badge" id="brokerLabel">—</span> • Topic: <span class="badge" id="topicLabel">—</span>
+  • Status: <span id="summary">waiting</span>
+  <a style="margin-left:10px;color:var(--muted)" href="./index.html">← Back</a>
+</div>
 
 <script>
-// --- KONFIGURASI MQTT ---
-const MQTT_BROKER = 'wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt';
-const MQTT_TOPIC = 'politeknik/meter/data';
-const options = {
-    username: "web_dashboard",
-    password: "Tristan12",
-    connectTimeout: 4000,
-    reconnectPeriod: 2000,
-};
+/* ---------- Configuration & helpers ---------- */
+const START_ID = 1, END_ID = 18;
+const DEFAULT_BROKER = document.getElementById('broker').value;
+const tableBody = document.getElementById('tableBody');
+const connStatus = document.getElementById('connStatus');
+const brokerLabel = document.getElementById('brokerLabel');
+const topicLabel = document.getElementById('topicLabel');
+const summary = document.getElementById('summary');
 
-// --- DOM REFERENCES ---
-const conn = document.getElementById("conn");
+/* Build rows */
+function buildRows() {
+  tableBody.innerHTML = '';
+  for (let id = START_ID; id <= END_ID; id++) {
+    const tr = document.createElement('tr');
+    tr.id = `row-${id}`;
+    tr.innerHTML = `
+      <td class="cell-id">${id}</td>
+      <td class="small status-cell" id="status-${id}"><span class="status-offline">offline</span><div class="small" id="seen-${id}">--</div></td>
+      <td id="V-${id}">---</td>
+      <td id="I1-${id}">---</td>
+      <td id="I2-${id}">---</td>
+      <td id="I3-${id}">---</td>
+      <td id="P-${id}" class="col-power">---</td>
+      <td id="Q-${id}" class="col-power">---</td>
+      <td id="S-${id}" class="col-power">---</td>
+      <td id="PF-${id}">---</td>
+      <td id="Hz-${id}">---</td>
+      <td id="OpH-${id}">---</td>
+      <td id="EaT-${id}" class="col-energy">---</td>
+      <td id="ErT-${id}" class="col-energy">---</td>
+      <td id="EaP-${id}" class="col-energy">---</td>
+      <td id="ErP-${id}" class="col-energy">---</td>
+    `;
+    tableBody.appendChild(tr);
+  }
+}
+buildRows();
 
-// Definisikan urutan KEY JSON dan posisinya di sel
-const dataMap = [
-    { key: 'V', index: 2 }, { key: 'I1', index: 3 }, { key: 'I2', index: 4 }, 
-    { key: 'I3', index: 5 }, { key: 'P', index: 6 }, { key: 'Q', index: 7 }, 
-    { key: 'S', index: 8 }, { key: 'PF', index: 9 }, { key: 'Hz', index: 10 }, 
-    { key: 'OpH', index: 11 }, { key: 'EaT', index: 12 }, { key: 'ErT', index: 13 }, 
-    { key: 'EaP', index: 14 }, { key: 'ErP', index: 15 }
-];
-
-/** Mengonversi total jam (decimal) menjadi format Hari dan Jam. */
-function formatOperatingTime(totalHours) {
-    if (totalHours === undefined || totalHours === null || isNaN(totalHours) || totalHours < 0) {
-        return '---';
-    }
-    const totalMinutes = Math.round(parseFloat(totalHours) * 60);
-    const days = Math.floor(totalMinutes / (24 * 60));
-    const remainingMinutes = totalMinutes % (24 * 60);
-    const hours = Math.floor(remainingMinutes / 60);
-    const minutes = remainingMinutes % 60;
-    
-    let result = '';
-    if (days > 0) result += `${days} Hari `;
-    if (hours > 0 || (days === 0 && minutes > 0)) result += `${hours} Jam`;
-    if (minutes > 0) result += ` ${minutes} Mnt`;
-    
-    return result.trim() || '0 Jam'; 
+/* Format helpers */
+function fmtNum(v, digits = 3) {
+  if (v === null || v === undefined) return '---';
+  if (isNaN(v)) return '---';
+  if (Math.abs(v) >= 1000) return Number(v).toLocaleString('id-ID', { maximumFractionDigits: 0 });
+  return Number(v).toLocaleString('id-ID', { maximumFractionDigits: digits });
+}
+function fmtOpH(totalHours) {
+  if (totalHours === null || totalHours === undefined || isNaN(totalHours)) return '---';
+  totalHours = Number(totalHours);
+  const minutes = Math.round(totalHours * 60);
+  const days = Math.floor(minutes / (24 * 60));
+  const rem = minutes % (24 * 60);
+  const hours = Math.floor(rem / 60);
+  const mins = rem % 60;
+  let out = '';
+  if (days) out += `${days}d `;
+  if (hours || (!days && mins)) out += `${hours}h `;
+  if (mins) out += `${mins}m`;
+  return out.trim();
 }
 
-// --- LOGIKA MQTT & UPDATE TABEL ---
-const client = mqtt.connect(MQTT_BROKER, options);
+/* ---------- MQTT logic ---------- */
+let client = null;
+let lastMessageAt = Array(END_ID+1).fill(0);
+const OFFLINE_TIMEOUT = 12000; // ms -> mark offline if no message in 12s
 
-client.on("connect", () => {
-    conn.innerHTML = "✅ HiveMQ Connected. Listening for Realtime data...";
-    client.subscribe(MQTT_TOPIC); 
-});
+function connectMQTT(brokerUrl, topic, user, pass) {
+  if (client) { try { client.end(true); } catch(e){} client = null; }
+  connStatus.textContent = 'Connecting...';
+  brokerLabel.textContent = brokerUrl;
+  topicLabel.textContent = topic;
+  summary.textContent = 'connecting';
 
-client.on("error", err => {
-    conn.innerHTML = "❌ MQTT Error";
-    console.error("MQTT Connection Error:", err);
-});
+  const opts = { username: user || '', password: pass || '', reconnectPeriod: 3000, connectTimeout: 5000, keepalive: 30 };
+  try {
+    client = mqtt.connect(brokerUrl, opts);
+  } catch(e) {
+    connStatus.textContent = 'Invalid broker URL';
+    summary.textContent = 'error';
+    console.error(e);
+    return;
+  }
 
-client.on("message", (topic, message) => {
+  client.on('connect', () => {
+    connStatus.textContent = '✅ Connected to broker';
+    summary.textContent = 'subscribed';
+    client.subscribe(topic, { qos: 0 }, (err) => {
+      if (err) { connStatus.textContent = 'Subscribe failed'; console.error(err); }
+      else connStatus.textContent = '✅ Subscribed to ' + topic;
+    });
+  });
+
+  client.on('error', (err) => {
+    connStatus.textContent = '❌ MQTT Error';
+    summary.textContent = 'error';
+    console.error('MQTT error', err);
+  });
+
+  client.on('reconnect', () => { connStatus.textContent = 'Reconnecting...'; });
+
+  client.on('message', (topic, msg) => {
     try {
-        const d = JSON.parse(message.toString());
-        const id = d.id;
+      const d = JSON.parse(msg.toString());
+      if (!d || !d.id) return;
+      const id = Number(d.id);
+      lastMessageAt[id] = Date.now();
 
-        const row = document.getElementById(`row-${id}`);
+      // status
+      const statusEl = document.getElementById(`status-${id}`);
+      const seenEl = document.getElementById(`seen-${id}`);
+      statusEl.innerHTML = `<span class="status-online">online</span>`;
+      seenEl.textContent = new Date().toLocaleTimeString();
 
-        if (row) {
-            const cells = row.cells;
-            
-            // 1. Update Status (Index 1)
-            cells[1].textContent = d.status.toUpperCase();
-            cells[1].className = d.status === "online" ? "status-online" : "status-offline";
-            
-            // 2. Update Data Teknis
-            dataMap.forEach(item => {
-                const cellIndex = item.index; 
-                const value = d[item.key];
-                
-                let displayValue;
-                
-                if (item.key === 'OpH') {
-                    displayValue = formatOperatingTime(value);
-                } else {
-                    displayValue = (value === 0 || value) ? value.toLocaleString('id-ID', { maximumFractionDigits: 3 }) : '---';
-                }
-                
-                cells[cellIndex].textContent = displayValue;
-            });
-        }
+      // mapping keys (case-insensitive tolerance)
+      const map = key => d[key] !== undefined ? d[key] : (d[key.toUpperCase()] !== undefined ? d[key.toUpperCase()] : null);
 
+      // numeric update
+      const toUpdate = {
+        V: map('V'),
+        I1: map('I1'),
+        I2: map('I2'),
+        I3: map('I3'),
+        P: map('P'),
+        Q: map('Q'),
+        S: map('S'),
+        PF: map('PF'),
+        Hz: map('Hz'),
+        OpH: map('OpH'),
+        EaT: map('EaT'),
+        ErT: map('ErT'),
+        EaP: map('EaP'),
+        ErP: map('ErP')
+      };
+      for (const k in toUpdate) {
+        const el = document.getElementById(`${k}-${id}`);
+        if (!el) continue;
+        if (k === 'OpH') el.textContent = fmtOpH(Number(toUpdate[k]));
+        else el.textContent = (toUpdate[k] === 0 || toUpdate[k]) ? fmtNum(Number(toUpdate[k]), 3) : '---';
+      }
     } catch (e) {
-        console.error(`JSON Parsing Error:`, e);
+      console.error('Invalid message', e, msg.toString());
     }
+  });
+}
+
+/* Monitor offline states */
+setInterval(() => {
+  const now = Date.now();
+  let onlineCount = 0;
+  for (let id=START_ID; id<=END_ID; id++){
+    const last = lastMessageAt[id] || 0;
+    const statusCell = document.getElementById(`status-${id}`);
+    const seenCell = document.getElementById(`seen-${id}`);
+    if (!statusCell) continue;
+    if (last === 0 || (now - last) > OFFLINE_TIMEOUT){
+      statusCell.innerHTML = `<span class="status-offline">offline</span>`;
+      if (seenCell) seenCell.textContent = '--';
+    } else {
+      onlineCount++;
+    }
+  }
+  summary.textContent = `${onlineCount} online / ${END_ID} total`;
+}, 1500);
+
+/* UI connect button */
+document.getElementById('btnConnect').addEventListener('click', () => {
+  const broker = document.getElementById('broker').value.trim();
+  const topic = document.getElementById('topic').value.trim();
+  const user = document.getElementById('user').value.trim();
+  const pass = document.getElementById('pass').value.trim();
+  if (!broker || !topic) { alert('Isi broker & topic dulu'); return; }
+  connectMQTT(broker, topic, user, pass);
+});
+
+/* connect on load with defaults */
+window.addEventListener('load', () => {
+  const broker = document.getElementById('broker').value.trim();
+  const topic = document.getElementById('topic').value.trim();
+  const user = document.getElementById('user').value.trim();
+  const pass = document.getElementById('pass').value.trim();
+  connectMQTT(broker, topic, user, pass);
 });
 </script>
 
