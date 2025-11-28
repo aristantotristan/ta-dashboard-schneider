@@ -11,12 +11,12 @@
 /* Global Styling */
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: #121212; /* Deep Dark Background */
-    color: #E0E0E0; /* Soft White Text */
+    background: #121212;
+    color: #E0E0E0;
     padding: 20px;
 }
 h2 {
-    color: #00FFC2; /* Neon Green/Cyan for title */
+    color: #00FFC2;
     border-bottom: 2px solid #3A3A3A;
     padding-bottom: 10px;
     margin-bottom: 5px;
@@ -26,6 +26,34 @@ h2 {
     font-size: 1.1em;
     font-weight: bold;
 }
+
+/* Navbar Style */
+#nav-buttons {
+    margin-bottom: 20px;
+    display: flex;
+    gap: 15px;
+}
+.nav-btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.3s;
+    background-color: #2A2A2A;
+    color: #E0E0E0;
+    border: 1px solid #3A3A3A;
+}
+.nav-btn:hover {
+    background-color: #3A3A3A;
+}
+.nav-btn.active {
+    background-color: #00FFC2;
+    color: #121212;
+    box-shadow: 0 0 10px #00FFC280;
+}
+
+/* Tabel Styling (Sama seperti sebelumnya) */
 table {
     border-collapse: collapse;
     width: 100%;
@@ -35,7 +63,7 @@ table {
     overflow: hidden; 
 }
 th, td {
-    border: 1px solid #2A2A2A; /* Border antar sel */
+    border: 1px solid #2A2A2A;
     padding: 10px 12px;
     text-align: center;
     transition: background-color 0.3s;
@@ -50,19 +78,47 @@ thead th {
 tbody tr {
     background: #1E1E1E;
 }
-tbody tr:hover {
-    background-color: #334155; 
-}
-
-/* Data Group Styling */
 .cell-id { font-weight: bold; background: #111827; }
 .status-online { color: #10B981; font-weight: bold; } 
 .status-offline { color: #EF4444; font-weight: bold; }
-/* Status Standby/Initial */
 .status-standby { color: #F59E0B; font-weight: bold; } 
 .col-power { background-color: #0F334A; color: #38BDF8; font-weight: 600; }
 .col-energy { color: #4ADE80; font-weight: 600; }
-.col-v, .col-i, .col-pf { font-weight: 500; }
+
+/* Tarif Form Styling */
+.tarif-form {
+    background: #1E1E1E;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    max-width: 600px;
+    margin-top: 20px;
+}
+.tarif-form label {
+    display: block;
+    margin-top: 15px;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #00FFC2;
+}
+.tarif-form select, .tarif-form input[type="date"] {
+    width: 100%;
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #3A3A3A;
+    background: #2A2A2A;
+    color: #E0E0E0;
+}
+.tarif-form button {
+    margin-top: 20px;
+    background-color: #38BDF8;
+    color: #121212;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    font-weight: bold;
+    cursor: pointer;
+}
 </style>
 </head>
 
@@ -71,50 +127,19 @@ tbody tr:hover {
 <h2>⚡ Real-time Power Meter Dashboard (18 Mesin)</h2>
 <p id="conn">Connecting...</p>
 
-<table>
-<thead>
-<tr>
-  <th class="cell-id">ID</th>
-  <th>Status</th>
-  <th class="col-v">V (Volt)</th>
-  <th class="col-i">I1 (A)</th>
-  <th class="col-i">I2 (A)</th>
-  <th class="col-i">I3 (A)</th>
-  <th class="col-power">P (Watt)</th>
-  <th class="col-power">Q (VAR)</th>
-  <th class="col-power">S (kVA)</th>
-  <th class="col-pf">PF</th>
-  <th class="col-pf">Hz</th>
-  <th class="col-pf">OpH (Hari/Jam)</th>
-  <th class="col-energy">Ea Tot (kWh)</th>
-  <th class="col-energy">Er Tot (kVARh)</th>
-  <th class="col-energy">Ea Part (kWh)</th>
-  <th class="col-energy">Er Part (kVARh)</th>
-</tr>
-</thead>
-<tbody id="tableBody">
-</tbody>
-</table>
+<div id="nav-buttons">
+    <button class="nav-btn active" id="btn-realtime" onclick="showView('realtime')">Monitoring Realtime</button>
+    <button class="nav-btn" id="btn-tarif" onclick="showView('tarif')">Monitoring Tarif</button>
+</div>
+
+<div id="content">
+    </div>
+
 
 <script>
-// --- KONFIGURASI MQTT WEB CLIENT ---
-const options = {
-  username: "web_dashboard",
-  password: "Tristan12",
-  connectTimeout: 4000,
-  reconnectPeriod: 2000,
-};
-
-const client = mqtt.connect(
-  "wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt",
-  options
-);
-
-const tableBody = document.getElementById("tableBody");
-const conn = document.getElementById("conn");
-const devices = {}; // Menyimpan referensi baris tabel berdasarkan ID meter
-
-// Definisikan urutan KEY JSON dan CLASS CSS
+// --- KONFIGURASI UMUM ---
+const MAX_SLAVE_ID = 18; 
+const devices = {}; // Menyimpan referensi baris tabel
 const dataMap = [
     { key: 'V', class: 'col-v' }, { key: 'I1', class: 'col-i' }, { key: 'I2', class: 'col-i' }, 
     { key: 'I3', class: 'col-i' }, { key: 'P', class: 'col-power' }, { key: 'Q', class: 'col-power' }, 
@@ -123,26 +148,140 @@ const dataMap = [
     { key: 'EaP', class: 'col-energy' }, { key: 'ErP', class: 'col-energy' }
 ];
 
-const MAX_SLAVE_ID = 18; // Jumlah total mesin yang dipantau
+// --- FUNGSI UTILITY ---
+function formatOperatingTime(totalHours) {
+    if (totalHours === undefined || totalHours === null || isNaN(totalHours) || totalHours < 0) {
+        return '---';
+    }
+    const totalMinutes = Math.round(parseFloat(totalHours) * 60);
+    const days = Math.floor(totalMinutes / (24 * 60));
+    const remainingMinutes = totalMinutes % (24 * 60);
+    const hours = Math.floor(remainingMinutes / 60);
+    const minutes = remainingMinutes % 60;
+    
+    let result = '';
+    if (days > 0) result += `${days} Hari `;
+    if (hours > 0 || days === 0) {
+        result += `${hours} Jam`;
+        if (minutes > 0) result += ` ${minutes} Mnt`;
+    } else if (minutes > 0) {
+        result += `${minutes} Mnt`;
+    }
+    return result.trim() || '0 Jam'; 
+}
+
+// --- FUNGSI MQTT ---
+const mqttClient = (() => {
+    const options = {
+        username: "web_dashboard",
+        password: "Tristan12",
+        connectTimeout: 4000,
+        reconnectPeriod: 2000,
+    };
+
+    const client = mqtt.connect(
+        "wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt",
+        options
+    );
+
+    client.on("connect", () => {
+        document.getElementById("conn").innerHTML = "✅ MQTT Connected";
+        client.subscribe("politeknik/meter/data");
+    });
+
+    client.on("error", err => {
+        document.getElementById("conn").innerHTML = "❌ MQTT Error";
+        console.error("MQTT Connection Error:", err);
+    });
+    
+    // Handler Pesan
+    client.on("message", (topic, message) => {
+        try {
+            const d = JSON.parse(message.toString());
+            const id = d.id;
+
+            if (devices[id]) {
+                const row = devices[id];
+                const cells = row.cells;
+                
+                // Update Status (Index 1)
+                cells[1].textContent = d.status.toUpperCase();
+                cells[1].className = d.status === "online" ? "status-online" : "status-offline";
+                
+                // Update Data (Mulai dari Index 2)
+                dataMap.forEach((item, index) => {
+                    const cellIndex = index + 2; 
+                    const value = d[item.key];
+                    
+                    let displayValue;
+                    
+                    if (d.status === "offline") {
+                        displayValue = '---';
+                    } else if (item.key === 'OpH') {
+                        displayValue = formatOperatingTime(value);
+                    } else {
+                        displayValue = (value === 0 || value) ? value : '---';
+                    }
+                    
+                    cells[cellIndex].textContent = displayValue;
+                });
+            }
+        } catch (e) {
+            console.error(`JSON Parsing Error for ID ${d.id || 'Unknown'}:`, e);
+        }
+    });
+
+    return client;
+})();
+
+
+// --- FUNGSI MANAJEMEN TAMPILAN (UTAMA) ---
 
 /**
- * Fungsi untuk membuat baris tabel awal (Standby) untuk semua 18 mesin.
+ * Membuat dan menampilkan Tampilan Monitoring Realtime.
  */
-function createInitialTable() {
+function createRealtimeView() {
+    let html = `
+    <table>
+        <thead>
+        <tr>
+            <th class="cell-id">ID</th>
+            <th>Status</th>
+            <th class="col-v">V (Volt)</th>
+            <th class="col-i">I1 (A)</th>
+            <th class="col-i">I2 (A)</th>
+            <th class="col-i">I3 (A)</th>
+            <th class="col-power">P (Watt)</th>
+            <th class="col-power">Q (VAR)</th>
+            <th class="col-power">S (kVA)</th>
+            <th class="col-pf">PF</th>
+            <th class="col-pf">Hz</th>
+            <th class="col-pf">OpH (Hari/Jam)</th>
+            <th class="col-energy">Ea Tot (kWh)</th>
+            <th class="col-energy">Er Tot (kVARh)</th>
+            <th class="col-energy">Ea Part (kWh)</th>
+            <th class="col-energy">Er Part (kVARh)</th>
+        </tr>
+        </thead>
+        <tbody id="tableBodyRealtime">
+        </tbody>
+    </table>`;
+
+    document.getElementById('content').innerHTML = html;
+    const tableBody = document.getElementById("tableBodyRealtime");
+
+    // Inisiasi 18 Baris Standby
     for (let id = 1; id <= MAX_SLAVE_ID; id++) {
         const row = tableBody.insertRow(); 
         devices[id] = row;
         
-        // Sel 1: ID
         row.insertCell().textContent = id;
         row.cells[0].className = 'cell-id';
         
-        // Sel 2: Status Awal
         const statusCell = row.insertCell();
         statusCell.textContent = 'STANDBY';
         statusCell.className = 'status-standby';
         
-        // Sel 3 s/d 16: Data Awal
         dataMap.forEach(item => {
             const cell = row.insertCell();
             cell.className = item.class;
@@ -152,98 +291,89 @@ function createInitialTable() {
 }
 
 /**
- * Mengonversi total jam (decimal) menjadi format Hari dan Jam.
- * (Fungsi ini sama dengan sebelumnya, hanya disertakan untuk kelengkapan)
+ * Membuat dan menampilkan Tampilan Monitoring Tarif.
  */
-function formatOperatingTime(totalHours) {
-    if (totalHours === undefined || totalHours === null || isNaN(totalHours) || totalHours < 0) {
-        return '---';
+function createTarifView() {
+    let optionsHtml = '';
+    for (let id = 1; id <= MAX_SLAVE_ID; id++) {
+        optionsHtml += `<option value="${id}">Mesin ID ${id}</option>`;
     }
-    const totalMinutes = Math.round(parseFloat(totalHours) * 60);
+    
+    // Tampilan ini hanyalah placeholder UI. Logika pengambilan data dari database
+    // untuk menampilkan tarif Harian/Mingguan/Bulanan TIDAK termasuk di sini, 
+    // karena membutuhkan backend (server/API).
+    let html = `
+    <div class="tarif-form">
+        <h3>Filter Data Tarif (Membutuhkan Backend/API)</h3>
+        <p style="color: #94A3B8;">Fitur ini memerlukan server backend/API untuk mengambil data historis dari database.</p>
+        
+        <label for="machineId">Pilih Mesin (ID)</label>
+        <select id="machineId">
+            ${optionsHtml}
+        </select>
 
-    const days = Math.floor(totalMinutes / (24 * 60));
-    const remainingMinutes = totalMinutes % (24 * 60);
-    
-    const hours = Math.floor(remainingMinutes / 60);
-    const minutes = remainingMinutes % 60;
-    
-    let result = '';
-    
-    if (days > 0) {
-        result += `${days} Hari `;
+        <label for="period">Pilih Periode Analisis</label>
+        <select id="period">
+            <option value="daily">Harian</option>
+            <option value="weekly">Mingguan</option>
+            <option value="monthly">Bulanan</option>
+        </select>
+        
+        <label for="startDate">Tanggal Mulai Referensi</label>
+        <input type="date" id="startDate">
+
+        <button onclick="fetchTarifData()">Tampilkan Data</button>
+
+        <div id="tarifResult" style="margin-top: 30px; border-top: 1px solid #3A3A3A; padding-top: 20px;">
+            </div>
+    </div>`;
+
+    document.getElementById('content').innerHTML = html;
+}
+
+/**
+ * Mengganti tampilan antara Realtime dan Tarif.
+ * @param {string} viewName - 'realtime' atau 'tarif'
+ */
+function showView(viewName) {
+    // 1. Update Class Tombol Navigasi
+    document.getElementById('btn-realtime').classList.remove('active');
+    document.getElementById('btn-tarif').classList.remove('active');
+    document.getElementById('btn-' + viewName).classList.add('active');
+
+    // 2. Tampilkan Konten yang sesuai
+    if (viewName === 'realtime') {
+        createRealtimeView();
+    } else if (viewName === 'tarif') {
+        createTarifView();
     }
+}
+
+// FUNGSI SIMULASI untuk Monitoring Tarif (Hanya contoh)
+function fetchTarifData() {
+    const id = document.getElementById('machineId').value;
+    const period = document.getElementById('period').value;
+    const date = document.getElementById('startDate').value;
+
+    const resultDiv = document.getElementById('tarifResult');
     
-    if (hours > 0 || days === 0) {
-        result += `${hours} Jam`;
-        if (minutes > 0) {
-            result += ` ${minutes} Mnt`;
-        }
-    } else if (minutes > 0) {
-        result += `${minutes} Mnt`;
-    }
-    
-    return result.trim() || '0 Jam'; 
+    // Logika ini hanya simulasi, TIDAK MENGAMBIL DATA NYATA
+    resultDiv.innerHTML = `
+        <h4 style="color: #4ADE80;">Data Simulasi Analisis Tarif</h4>
+        <p>Mesin ID: <b>${id}</b></p>
+        <p>Periode: <b>${period.toUpperCase()}</b></p>
+        <p>Tanggal Referensi: <b>${date || 'Belum dipilih'}</b></p>
+        <p style="margin-top: 15px;">**Catatan:** Untuk fungsionalitas penuh, endpoint API diperlukan. Data yang ditampilkan hanyalah simulasi berdasarkan input filter.</p>
+    `;
 }
 
 
-// --- INI ADALAH PERUBAHAN UTAMA: Panggil fungsi inisiasi saat skrip dimuat ---
-createInitialTable();
-// --------------------------------------------------------------------------
-
-
-client.on("connect", () => {
-  conn.innerHTML = "✅ MQTT Connected";
-  client.subscribe("politeknik/meter/data");
+// --- INISIASI APLIKASI ---
+document.addEventListener('DOMContentLoaded', () => {
+    // Tampilkan tampilan Realtime secara default saat pertama kali dimuat
+    showView('realtime'); 
 });
 
-client.on("error", err => {
-  conn.innerHTML = "❌ MQTT Error";
-  console.error("MQTT Connection Error:", err);
-});
-
-client.on("message", (topic, message) => {
-  try {
-    const d = JSON.parse(message.toString());
-    const id = d.id;
-
-    // Cek apakah ID meteran valid dan sudah dibuat
-    if (!devices[id]) {
-        console.warn(`Data diterima untuk ID ${id} yang tidak terdaftar (Harusnya 1-18).`);
-        return; 
-    }
-
-    const row = devices[id];
-    const cells = row.cells;
-    
-    // 1. Update Status (Index 1)
-    cells[1].textContent = d.status.toUpperCase();
-    cells[1].className = d.status === "online" ? "status-online" : "status-offline";
-    
-    // 2. Update Data (Mulai dari Index 2)
-    dataMap.forEach((item, index) => {
-      const cellIndex = index + 2; 
-      const value = d[item.key];
-      
-      let displayValue;
-      
-      if (d.status === "offline") {
-          // Jika status offline, semua data ditampilkan '---'
-          displayValue = '---';
-      } else if (item.key === 'OpH') {
-        // Gunakan fungsi konversi untuk Operating Time
-        displayValue = formatOperatingTime(value);
-      } else {
-        // Nilai V, I, P, E, dll.
-        displayValue = (value === 0 || value) ? value : '---';
-      }
-      
-      cells[cellIndex].textContent = displayValue;
-    });
-
-  } catch (e) {
-    console.error(`JSON Parsing Error for ID ${d.id || 'Unknown'}:`, e);
-  }
-});
 </script>
 
 </body>
