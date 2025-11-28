@@ -58,6 +58,8 @@ tbody tr:hover {
 .cell-id { font-weight: bold; background: #111827; }
 .status-online { color: #10B981; font-weight: bold; } 
 .status-offline { color: #EF4444; font-weight: bold; }
+/* Status Standby/Initial */
+.status-standby { color: #F59E0B; font-weight: bold; } 
 .col-power { background-color: #0F334A; color: #38BDF8; font-weight: 600; }
 .col-energy { color: #4ADE80; font-weight: 600; }
 .col-v, .col-i, .col-pf { font-weight: 500; }
@@ -91,7 +93,6 @@ tbody tr:hover {
 </tr>
 </thead>
 <tbody id="tableBody">
-<tr><td colspan="16" style="padding: 30px; color: #94A3B8;">Awaiting Real-time Data from ESP32...</td></tr>
 </tbody>
 </table>
 
@@ -122,22 +123,49 @@ const dataMap = [
     { key: 'EaP', class: 'col-energy' }, { key: 'ErP', class: 'col-energy' }
 ];
 
+const MAX_SLAVE_ID = 18; // Jumlah total mesin yang dipantau
+
+/**
+ * Fungsi untuk membuat baris tabel awal (Standby) untuk semua 18 mesin.
+ */
+function createInitialTable() {
+    for (let id = 1; id <= MAX_SLAVE_ID; id++) {
+        const row = tableBody.insertRow(); 
+        devices[id] = row;
+        
+        // Sel 1: ID
+        row.insertCell().textContent = id;
+        row.cells[0].className = 'cell-id';
+        
+        // Sel 2: Status Awal
+        const statusCell = row.insertCell();
+        statusCell.textContent = 'STANDBY';
+        statusCell.className = 'status-standby';
+        
+        // Sel 3 s/d 16: Data Awal
+        dataMap.forEach(item => {
+            const cell = row.insertCell();
+            cell.className = item.class;
+            cell.textContent = '---'; 
+        });
+    }
+}
+
 /**
  * Mengonversi total jam (decimal) menjadi format Hari dan Jam.
- * Contoh: 76.5 jam -> "3 Hari 4 Jam 30 Mnt"
- * @param {number} totalHours - Total jam dari data MQTT (OpH).
+ * (Fungsi ini sama dengan sebelumnya, hanya disertakan untuk kelengkapan)
  */
 function formatOperatingTime(totalHours) {
     if (totalHours === undefined || totalHours === null || isNaN(totalHours) || totalHours < 0) {
         return '---';
     }
-    const totalMinutes = Math.round(parseFloat(totalHours) * 60); // Total jam diubah ke menit (untuk akurasi)
+    const totalMinutes = Math.round(parseFloat(totalHours) * 60);
 
-    const days = Math.floor(totalMinutes / (24 * 60)); // Total hari
+    const days = Math.floor(totalMinutes / (24 * 60));
     const remainingMinutes = totalMinutes % (24 * 60);
     
-    const hours = Math.floor(remainingMinutes / 60); // Jam sisa
-    const minutes = remainingMinutes % 60; // Menit sisa
+    const hours = Math.floor(remainingMinutes / 60);
+    const minutes = remainingMinutes % 60;
     
     let result = '';
     
@@ -145,19 +173,22 @@ function formatOperatingTime(totalHours) {
         result += `${days} Hari `;
     }
     
-    // Tampilkan Jam/Menit jika ada sisa waktu atau total waktu < 1 hari
     if (hours > 0 || days === 0) {
         result += `${hours} Jam`;
         if (minutes > 0) {
-            result += ` ${minutes} Mnt`; // Opsi: tampilkan menit jika ada
+            result += ` ${minutes} Mnt`;
         }
     } else if (minutes > 0) {
         result += `${minutes} Mnt`;
     }
     
-    // Jika hasilnya masih kosong, (e.g. 0 jam) tampilkan 0 Jam
     return result.trim() || '0 Jam'; 
 }
+
+
+// --- INI ADALAH PERUBAHAN UTAMA: Panggil fungsi inisiasi saat skrip dimuat ---
+createInitialTable();
+// --------------------------------------------------------------------------
 
 
 client.on("connect", () => {
@@ -175,44 +206,30 @@ client.on("message", (topic, message) => {
     const d = JSON.parse(message.toString());
     const id = d.id;
 
-    // 1. Cek atau Buat Baris Baru untuk ID ini
+    // Cek apakah ID meteran valid dan sudah dibuat
     if (!devices[id]) {
-      const row = tableBody.insertRow(); 
-      devices[id] = row;
-      
-      // Membuat sel awal (ID dan Status)
-      row.insertCell().textContent = id;
-      row.cells[0].className = 'cell-id';
-      row.insertCell().textContent = d.status;
-      
-      // Membuat 14 sel data kosong dengan class
-      dataMap.forEach(item => {
-        const cell = row.insertCell();
-        cell.className = item.class;
-        cell.textContent = '---'; 
-      });
-      
-      // Hapus pesan "Awaiting Data..." setelah baris pertama berhasil dibuat
-      if (tableBody.rows.length > 1 && tableBody.rows[0].cells[0].colSpan === 16) {
-          tableBody.deleteRow(0);
-      }
+        console.warn(`Data diterima untuk ID ${id} yang tidak terdaftar (Harusnya 1-18).`);
+        return; 
     }
 
     const row = devices[id];
     const cells = row.cells;
     
-    // 2. Update Status (Index 1)
+    // 1. Update Status (Index 1)
     cells[1].textContent = d.status.toUpperCase();
     cells[1].className = d.status === "online" ? "status-online" : "status-offline";
     
-    // 3. Update Data (Mulai dari Index 2)
+    // 2. Update Data (Mulai dari Index 2)
     dataMap.forEach((item, index) => {
       const cellIndex = index + 2; 
       const value = d[item.key];
       
       let displayValue;
       
-      if (item.key === 'OpH') {
+      if (d.status === "offline") {
+          // Jika status offline, semua data ditampilkan '---'
+          displayValue = '---';
+      } else if (item.key === 'OpH') {
         // Gunakan fungsi konversi untuk Operating Time
         displayValue = formatOperatingTime(value);
       } else {
