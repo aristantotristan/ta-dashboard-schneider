@@ -61,7 +61,6 @@
   </div>
 
 <script>
-/* CONFIG */
 const SUPABASE_URL = "https://rojhcadtqfynlqzubftx.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs";
 const MQTT_WS = "wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt";
@@ -69,7 +68,6 @@ const MQTT_USER = "vercel_client";
 const MQTT_PASS = "VercelPass123!";
 const MQTT_TOPIC = "politeknik/meter/data";
 
-/* NAV */
 const pageHome = document.getElementById("pageHome");
 const pageRealtime = document.getElementById("pageRealtime");
 const pageTarif = document.getElementById("pageTarif");
@@ -80,7 +78,6 @@ document.getElementById("goRealtime").onclick = ()=>show('realtime');
 document.getElementById("goTarif").onclick = ()=>show('tarif');
 function show(p){ pageHome.classList.add('hidden'); pageRealtime.classList.add('hidden'); pageTarif.classList.add('hidden'); if(p==='home') pageHome.classList.remove('hidden'); if(p==='realtime') pageRealtime.classList.remove('hidden'); if(p==='tarif') {pageTarif.classList.remove('hidden'); loadTarifAndSummary();} }
 
-/* MQTT client */
 const client = mqtt.connect(MQTT_WS, { username: MQTT_USER, password: MQTT_PASS, reconnectPeriod:2000 });
 const connEl = document.getElementById('conn');
 client.on('connect', ()=>{ connEl.textContent = '✅ MQTT Connected'; client.subscribe(MQTT_TOPIC); });
@@ -103,7 +100,6 @@ client.on('message', (topic, msg)=> {
   } catch(e) { console.error(e); }
 });
 
-/* Supabase helpers */
 async function supaFetch(path) {
   const res = await fetch(SUPABASE_URL + path, { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer '+SUPABASE_KEY }});
   if (!res.ok) throw new Error('Supa fail');
@@ -118,7 +114,6 @@ async function supaPatch(path, body) {
   return res.json();
 }
 
-/* Tariff functions */
 document.getElementById('saveTarif').onclick = async ()=>{
   const v = parseFloat(document.getElementById('inputTarif').value);
   if(isNaN(v)){ alert('Masukkan tarif'); return; }
@@ -133,34 +128,3 @@ document.getElementById('saveTarif').onclick = async ()=>{
 async function loadTarifAndSummary() {
   try {
     const t = await supaFetch('/rest/v1/tariff?id=eq.1');
-    const price = (t && t[0]) ? t[0].price_per_kwh : null;
-    if(price!==null) document.getElementById('inputTarif').value = price;
-    const today = new Date(); const start = new Date(today.getFullYear(),today.getMonth(),today.getDate()).toISOString();
-    const rows = await supaFetch(`/rest/v1/energy_history?created_at=gte.${start}`);
-    let totalE = 0;
-    rows.forEach(r=>{ totalE += (r.energy_kwh?parseFloat(r.energy_kwh):0); });
-    const estCost = price ? Math.round(totalE * price) : '-';
-    document.getElementById('summary').innerText = `Total energi hari ini: ${totalE.toFixed(3)} kWh • Est biaya: ${estCost==='-'?'-':'Rp '+estCost.toLocaleString('id-ID')}`;
-    buildChart(rows);
-  } catch(e){ console.error(e); document.getElementById('summary').innerText='Gagal load'; }
-}
-
-/* Chart */
-let chart=null;
-function buildChart(rows){
-  const byHour = Array(24).fill(0);
-  rows.forEach(r=>{
-    const d = new Date(r.created_at);
-    const h = d.getHours();
-    byHour[h] += (r.energy_kwh?parseFloat(r.energy_kwh):0);
-  });
-  const ctx = document.getElementById('chartEnergy').getContext('2d');
-  if(chart) chart.destroy();
-  chart = new Chart(ctx,{ type:'bar', data:{ labels: Array.from({length:24},(_,i)=>i+':00'), datasets:[{ label:'kWh per jam', data: byHour }] }, options:{plugins:{legend:{display:false}}} });
-}
-
-/* init */
-show('home');
-</script>
-</body>
-</html>
