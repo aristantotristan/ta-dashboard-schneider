@@ -1,113 +1,86 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Monitoring 18 Power Meter</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f4f4f4;
-      margin: 0;
-      padding: 20px;
-    }
-    h1 {
-      margin-bottom: 20px;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      background: white;
-    }
-    th, td {
-      border: 1px solid #ccc;
-      padding: 10px;
-      text-align: center;
-    }
-    th {
-      background: #222;
-      color: #fff;
-    }
-    tr:nth-child(even) {
-      background: #f9f9f9;
-    }
-    .offline {
-      color: red;
-      font-weight: bold;
-    }
-  </style>
+<meta charset="UTF-8">
+<title>Energy Monitor</title>
+<style>
+    body { font-family: Arial; padding: 20px; background: #f5f5f5; }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th, td { padding: 10px; border-bottom: 1px solid #ddd; }
+    th { background: #222; color: white; }
+    .value { font-weight: bold; color: #007bff; }
+</style>
 </head>
 <body>
 
-<h1>Monitoring Power Meter</h1>
+<h2>📡 Energy Monitoring — Standby Mode</h2>
 
 <table>
-  <thead>
-    <tr>
-      <th>ID</th>
-      <th>Voltage (V)</th>
-      <th>Current (A)</th>
-      <th>Active Power (kW)</th>
-      <th>Frequency (Hz)</th>
-      <th>Energy In (kWh)</th>
-      <th>Energy Out (kWh)</th>
-      <th>Total Energy (kWh)</th>
-      <th>Last Update</th>
-    </tr>
-  </thead>
+<tr><th>Parameter</th><th>Value</th><th>Unit</th></tr>
 
-  <tbody id="meterTableBody">
-    <!-- 18 Rows auto generated -->
-  </tbody>
+<tr><td>Total Ea</td><td id="total_ea" class="value">...</td><td>kWh</td></tr>
+<tr><td>Total Er</td><td id="total_er" class="value">...</td><td>kVARh</td></tr>
+<tr><td>Partial Ea</td><td id="partial_ea" class="value">...</td><td>kWh</td></tr>
+<tr><td>Partial Er</td><td id="partial_er" class="value">...</td><td>kVARh</td></tr>
+
+<tr><td>Voltage</td><td id="voltage" class="value">...</td><td>Volt</td></tr>
+
+<tr><td>Current I1</td><td id="i1" class="value">...</td><td>Ampere</td></tr>
+<tr><td>Current I2</td><td id="i2" class="value">...</td><td>Ampere</td></tr>
+<tr><td>Current I3</td><td id="i3" class="value">...</td><td>Ampere</td></tr>
+
+<tr><td>Power P</td><td id="p_kw" class="value">...</td><td>kW</td></tr>
+<tr><td>Power Q</td><td id="q_kvar" class="value">...</td><td>kVAR</td></tr>
+<tr><td>Power S</td><td id="s_kva" class="value">...</td><td>kVA</td></tr>
+
+<tr><td>Power Factor</td><td id="pf" class="value">...</td><td>-</td></tr>
+<tr><td>Frequency</td><td id="freq" class="value">...</td><td>Hz</td></tr>
+
+<tr><td>Operating Time</td><td id="op_time" class="value">...</td><td>Days Hrs</td></tr>
+
 </table>
 
 <script>
-// Generate 18 rows standby
-function createTable() {
-  let body = document.getElementById("meterTableBody");
-  for (let id = 1; id <= 18; id++) {
-    let row = `
-      <tr id="row_${id}">
-        <td>${id}</td>
-        <td id="v_${id}">-</td>
-        <td id="i_${id}">-</td>
-        <td id="p_${id}">-</td>
-        <td id="f_${id}">-</td>
-        <td id="ein_${id}">-</td>
-        <td id="eout_${id}">-</td>
-        <td id="et_${id}">-</td>
-        <td id="t_${id}">-</td>
-      </tr>`;
-    body.innerHTML += row;
-  }
+async function loadData() {
+    try {
+        // 🔥 GANTI sumber datanya sesuai punya kamu
+        const res = await fetch("data.json");
+        const d = await res.json();
+
+        document.getElementById("total_ea").innerText = d.total_ea_kwh;
+        document.getElementById("total_er").innerText = d.total_er_kvarh;
+        document.getElementById("partial_ea").innerText = d.partial_ea_kwh;
+        document.getElementById("partial_er").innerText = d.partial_er_kvarh;
+
+        document.getElementById("voltage").innerText = d.voltage_v;
+
+        document.getElementById("i1").innerText = d.current_i1_a;
+        document.getElementById("i2").innerText = d.current_i2_a;
+        document.getElementById("i3").innerText = d.current_i3_a;
+
+        document.getElementById("p_kw").innerText = d.power_p_kw;
+        document.getElementById("q_kvar").innerText = d.power_q_kvar;
+        document.getElementById("s_kva").innerText = d.power_s_kva;
+
+        document.getElementById("pf").innerText = d.pf;
+        document.getElementById("freq").innerText = d.freq_hz;
+
+        // 🔥 Konversi operating time (jam → days + hours)
+        let jam = parseInt(d.op_time_hours);
+        let days = Math.floor(jam / 24);
+        let hours = jam % 24;
+
+        document.getElementById("op_time").innerText =
+            `${days} Days ${hours} Hours`;
+
+    } catch(e) {
+        console.log("Error:", e);
+    }
 }
 
-// Update only the numbers, no reload
-function updateData() {
-  fetch("/data")
-    .then(res => res.json())
-    .then(data => {
-      data.forEach(m => {
-        document.getElementById("v_" + m.id).innerText = m.voltage ?? "-";
-        document.getElementById("i_" + m.id).innerText = m.current ?? "-";
-        document.getElementById("p_" + m.id).innerText = m.power ?? "-";
-        document.getElementById("f_" + m.id).innerText = m.freq ?? "-";
-        document.getElementById("ein_" + m.id).innerText = m.ein ?? "-";
-        document.getElementById("eout_" + m.id).innerText = m.eout ?? "-";
-        document.getElementById("et_" + m.id).innerText = m.etotal ?? "-";
-        document.getElementById("t_" + m.id).innerText = m.time ?? "-";
-
-        // highlight offline meter
-        if (m.status === "offline") {
-          document.getElementById("row_" + m.id).classList.add("offline");
-        } else {
-          document.getElementById("row_" + m.id).classList.remove("offline");
-        }
-      });
-    });
-}
-
-createTable();
-setInterval(updateData, 1000);  // update setiap 1 detik
+// Auto update setiap 2 detik (standby)
+setInterval(loadData, 2000);
+loadData();
 </script>
 
 </body>
