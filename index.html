@@ -1,447 +1,290 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>⚡ Master Power Meter Dashboard (18 SLAVES)</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Monitoring Energi — PT Amarilys</title>
 
+<!-- MQTT.js -->
 <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-/* Global Styling */
-body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: #121212;
-    color: #E0E0E0;
-    padding: 20px;
-}
-h2 {
-    color: #00FFC2;
-    border-bottom: 2px solid #3A3A3A;
-    padding-bottom: 10px;
-    margin-bottom: 5px;
-}
-#conn {
-    margin-bottom: 25px;
-    font-size: 1.1em;
-    font-weight: bold;
-}
-
-/* Navbar Style */
-#nav-buttons {
-    margin-bottom: 20px;
-    display: flex;
-    gap: 15px;
-}
-.nav-btn {
-    padding: 10px 20px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-weight: bold;
-    transition: background-color 0.3s;
-    background-color: #2A2A2A;
-    color: #E0E0E0;
-    border: 1px solid #3A3A3A;
-}
-.nav-btn:hover {
-    background-color: #3A3A3A;
-}
-.nav-btn.active {
-    background-color: #00FFC2;
-    color: #121212;
-    box-shadow: 0 0 10px #00FFC280;
-}
-
-/* Tabel Styling */
-table {
-    border-collapse: collapse;
-    width: 100%;
-    margin-top: 15px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-    border-radius: 8px;
-    overflow: hidden; 
-}
-th, td {
-    border: 1px solid #2A2A2A;
-    padding: 10px 12px;
-    text-align: center;
-    transition: background-color 0.3s;
-}
-thead th {
-    background: #2A2A2A;
-    color: #00FFC2;
-    font-weight: 600;
-    text-transform: uppercase;
-    font-size: 0.9em;
-}
-tbody tr {
-    background: #1E1E1E;
-}
-.cell-id { font-weight: bold; background: #111827; }
-.status-online { color: #10B981; font-weight: bold; } 
-.status-offline { color: #EF4444; font-weight: bold; }
-.status-standby { color: #F59E0B; font-weight: bold; } 
-.col-power { background-color: #0F334A; color: #38BDF8; font-weight: 600; }
-.col-energy { color: #4ADE80; font-weight: 600; }
-.col-v, .col-i, .col-pf { font-weight: 500; }
-
-/* Tarif Form Styling */
-.tarif-form {
-    background: #1E1E1E;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-    max-width: 600px;
-    margin-top: 20px;
-}
-.tarif-form h3 { color: #00FFC2; }
-.tarif-form label {
-    display: block;
-    margin-top: 15px;
-    margin-bottom: 5px;
-    font-weight: bold;
-    color: #00FFC2;
-}
-.tarif-form select, .tarif-form input[type="date"] {
-    width: 100%;
-    padding: 10px;
-    border-radius: 5px;
-    border: 1px solid #3A3A3A;
-    background: #2A2A2A;
-    color: #E0E0E0;
-}
-.tarif-form button {
-    margin-top: 20px;
-    background-color: #38BDF8;
-    color: #121212;
-    padding: 10px 20px;
-    border: none;
-    border-radius: 5px;
-    font-weight: bold;
-    cursor: pointer;
-}
+  body { font-family: Inter, Roboto, Arial; background:#0f172a; color:#e6eef8; margin:0; padding:20px;}
+  .card { background:#0b1220; padding:18px; border-radius:10px; box-shadow:0 6px 18px rgba(2,6,23,0.6); }
+  header { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px;}
+  h1 { margin:0; color:#7ef0c7; }
+  .btn { display:inline-block; padding:10px 14px; border-radius:8px; background:#063b3b; color:#c9fff0; cursor:pointer; margin-right:8px; }
+  .btn.primary { background:#0ea5a0; color:#002; }
+  nav { margin-bottom:14px; }
+  #container { display:grid; grid-template-columns: 1fr; gap:16px; }
+  table { width:100%; border-collapse:collapse; color:#cfe9f1; font-size:13px; }
+  th, td { padding:8px 6px; border-bottom:1px solid rgba(255,255,255,0.04); text-align:center; }
+  thead th { color:#7ef0c7; font-weight:700; }
+  .status-online { color:#10b981; font-weight:700; } .status-offline { color:#ef4444; font-weight:700; }
+  .hidden { display:none; }
+  .form-row { display:flex; gap:8px; align-items:center; margin-bottom:8px; }
+  input[type=number] { padding:8px; border-radius:6px; border:1px solid #21303a; background:#071220; color:#e6eef8; }
 </style>
 </head>
-
 <body>
 
-<h2>⚡ Real-time Power Meter Dashboard (18 Mesin)</h2>
-<p id="conn">Connecting...</p>
+<header>
+  <h1>⚡ Monitoring Energi — PT Amarilys Karisma Gemilang</h1>
+  <div>
+    <button id="btnHome" class="btn">Home</button>
+    <button id="btnRealtime" class="btn">Monitoring Real-Time</button>
+    <button id="btnTarif" class="btn">Monitoring Tarif Mesin</button>
+  </div>
+</header>
 
-<div id="nav-buttons">
-    <button class="nav-btn active" id="btn-realtime" onclick="showView('realtime')">Monitoring Realtime</button>
-    <button class="nav-btn" id="btn-tarif" onclick="showView('tarif')">Monitoring Tarif</button>
-</div>
+<main id="container">
+  <!-- HOME -->
+  <section id="pageHome" class="card">
+    <h2>Selamat datang</h2>
+    <p>Pilih menu:</p>
+    <div style="margin-top:12px;">
+      <button id="goRealtime" class="btn primary">Monitoring Real-Time</button>
+      <button id="goTarif" class="btn">Monitoring Tarif Mesin</button>
+    </div>
+  </section>
 
-<div id="content">
+  <!-- REALTIME -->
+  <section id="pageRealtime" class="card hidden">
+    <h2>Monitoring Real-Time (18 Mesin)</h2>
+    <p id="conn">Connecting to MQTT...</p>
+    <div style="overflow:auto; max-height:60vh;">
+      <table id="rtTable">
+        <thead>
+          <tr>
+            <th>ID</th><th>Status</th><th>V</th><th>I1</th><th>I2</th><th>I3</th><th>P (W)</th><th>Q</th><th>S</th><th>PF</th><th>Hz</th><th>OpH</th><th>EAT</th><th>EAP</th><th>Biaya Hari (Rp)</th>
+          </tr>
+        </thead>
+        <tbody id="rtBody">
+          <tr><td colspan="15" style="padding:30px; color:#94a3b8;">Awaiting data...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- TARIF -->
+  <section id="pageTarif" class="card hidden">
+    <h2>Monitoring Tarif Mesin</h2>
+    <div class="form-row">
+      <label>Tarif per kWh (Rp):</label>
+      <input id="inputTarif" type="number" step="0.01" />
+      <button id="saveTarif" class="btn">Update Tarif</button>
+      <span id="tarifStatus" style="margin-left:12px;color:#9fd8c9"></span>
     </div>
 
+    <div style="margin-top:12px;">
+      <strong>Ringkasan Hari Ini:</strong>
+      <div id="summaryToday" style="margin-top:8px; color:#cfe9f1;">-</div>
+    </div>
+
+    <div style="margin-top:16px;">
+      <canvas id="chartEnergy" width="800" height="300"></canvas>
+    </div>
+  </section>
+</main>
+
 <script>
-// =======================================================
-// SEMUA LOGIKA JAVASCRIPT ADA DI SINI
-// =======================================================
+/* =================== CONFIG =================== 
+   Masukkan nilai Supabase & MQTT mu di sini
+*/
+const SUPABASE_URL = "https://rojhcadtqfynlqzubftx.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs"; // caution
+const MQTT_WS = "wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt";
+const MQTT_USER = "vercel_client";
+const MQTT_PASS = "VercelPass123!";
+const MQTT_TOPIC = "politeknik/meter/data";
+const MESIN_COUNT = 18;
+/* ============================================== */
 
-// --- KONFIGURASI GLOBAL ---
-const MAX_SLAVE_ID = 18; 
-const devices = {}; // Menyimpan referensi baris tabel
-const dataMap = [
-    { key: 'V', class: 'col-v' }, { key: 'I1', class: 'col-i' }, { key: 'I2', class: 'col-i' }, 
-    { key: 'I3', class: 'col-i' }, { key: 'P', class: 'col-power' }, { key: 'Q', class: 'col-power' }, 
-    { key: 'S', class: 'col-power' }, { key: 'PF', class: 'col-pf' }, { key: 'Hz', class: 'col-pf' }, 
-    { key: 'OpH', class: 'col-pf' }, { key: 'EaT', class: 'col-energy' }, { key: 'ErT', class: 'col-energy' }, 
-    { key: 'EaP', class: 'col-energy' }, { key: 'ErP', class: 'col-energy' }
-];
+///// --- UI navigation
+const pageHome = document.getElementById("pageHome");
+const pageRealtime = document.getElementById("pageRealtime");
+const pageTarif = document.getElementById("pageTarif");
 
-// --- KONFIGURASI SUPABASE (HARUS DIGANTI) ---
-const SUPABASE_URL = 'https://[your-project-ref].supabase.co'; 
-const SUPABASE_ANON_KEY = '[your-anon-public-key]'; 
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+document.getElementById("btnHome").onclick = () => showPage("home");
+document.getElementById("btnRealtime").onclick = () => showPage("realtime");
+document.getElementById("btnTarif").onclick = () => showPage("tarif");
+document.getElementById("goRealtime").onclick = () => showPage("realtime");
+document.getElementById("goTarif").onclick = () => showPage("tarif");
 
-
-// --- FUNGSI UTILITY GLOBAL ---
-
-/**
- * Mengonversi total jam (decimal) menjadi format Hari dan Jam.
- */
-function formatOperatingTime(totalHours) {
-    if (totalHours === undefined || totalHours === null || isNaN(totalHours) || totalHours < 0) {
-        return '---';
-    }
-    const totalMinutes = Math.round(parseFloat(totalHours) * 60);
-    const days = Math.floor(totalMinutes / (24 * 60));
-    const remainingMinutes = totalMinutes % (24 * 60);
-    const hours = Math.floor(remainingMinutes / 60);
-    const minutes = remainingMinutes % 60;
-    
-    let result = '';
-    if (days > 0) result += `${days} Hari `;
-    if (hours > 0 || days === 0) {
-        result += `${hours} Jam`;
-        if (minutes > 0) result += ` ${minutes} Mnt`;
-    } else if (minutes > 0) {
-        result += `${minutes} Mnt`;
-    }
-    return result.trim() || '0 Jam'; 
+function showPage(p){
+  pageHome.classList.add("hidden");
+  pageRealtime.classList.add("hidden");
+  pageTarif.classList.add("hidden");
+  if (p === "home") pageHome.classList.remove("hidden");
+  if (p === "realtime") pageRealtime.classList.remove("hidden");
+  if (p === "tarif") { pageTarif.classList.remove("hidden"); loadTarifAndSummary(); }
 }
 
-
-// --- FUNGSI MQTT (REALTIME) ---
-const mqttClient = (() => {
-    const options = {
-        username: "web_dashboard",
-        password: "Tristan12",
-        connectTimeout: 4000,
-        reconnectPeriod: 2000,
-    };
-    let client = null;
-
-    const handleMessage = (topic, message) => {
-        try {
-            const d = JSON.parse(message.toString());
-            const id = d.id;
-
-            if (devices[id]) { 
-                const row = devices[id];
-                const cells = row.cells;
-                
-                // Update Status (Index 1)
-                cells[1].textContent = d.status.toUpperCase();
-                cells[1].className = d.status === "online" ? "status-online" : "status-offline";
-                
-                // Update Data (Mulai dari Index 2)
-                dataMap.forEach((item, index) => {
-                    const cellIndex = index + 2; 
-                    const value = d[item.key];
-                    
-                    let displayValue;
-                    
-                    if (d.status === "offline") {
-                        displayValue = '---'; 
-                    } else if (item.key === 'OpH') {
-                        displayValue = formatOperatingTime(value);
-                    } else {
-                        displayValue = (value === 0 || value) ? value : '---';
-                    }
-                    
-                    cells[cellIndex].textContent = displayValue;
-                });
-            }
-        } catch (e) {
-            console.error(`JSON Parsing Error for ID ${d.id || 'Unknown'}:`, e);
-        }
-    };
-
-    const init = () => {
-        client = mqtt.connect(
-            "wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt",
-            options
-        );
-        client.on("connect", () => {
-            document.getElementById("conn").innerHTML = "✅ MQTT Connected";
-            client.subscribe("politeknik/meter/data");
-        });
-        client.on("error", err => {
-            document.getElementById("conn").innerHTML = "❌ MQTT Error";
-            console.error("MQTT Connection Error:", err);
-        });
-        client.on("message", handleMessage);
-    };
-
-    return { init };
-})();
-
-
-// --- FUNGSI TAMPILAN REALTIME ---
-
-/**
- * Membuat dan menampilkan Tampilan Monitoring Realtime dengan 18 baris STANDBY.
- */
-function createRealtimeView() {
-    let html = `
-    <table>
-        <thead>
-        <tr>
-            <th class="cell-id">ID</th>
-            <th>Status</th>
-            <th class="col-v">V (Volt)</th>
-            <th class="col-i">I1 (A)</th>
-            <th class="col-i">I2 (A)</th>
-            <th class="col-i">I3 (A)</th>
-            <th class="col-power">P (Watt)</th>
-            <th class="col-power">Q (VAR)</th>
-            <th class="col-power">S (kVA)</th>
-            <th class="col-pf">PF</th>
-            <th class="col-pf">Hz</th>
-            <th class="col-pf">OpH (Hari/Jam)</th>
-            <th class="col-energy">Ea Tot (kWh)</th>
-            <th class="col-energy">Er Tot (kVARh)</th>
-            <th class="col-energy">Ea Part (kWh)</th>
-            <th class="col-energy">Er Part (kVARh)</th>
-        </tr>
-        </thead>
-        <tbody id="tableBodyRealtime">
-        </tbody>
-    </table>`;
-
-    document.getElementById('content').innerHTML = html;
-    const tableBody = document.getElementById("tableBodyRealtime");
-
-    // LOGIKA UTAMA STANDBY: Membuat 18 Baris
-    for (let id = 1; id <= MAX_SLAVE_ID; id++) {
-        const row = tableBody.insertRow(); 
-        devices[id] = row; // Simpan referensi ke objek global 'devices'
-        
-        // Sel ID
-        row.insertCell().textContent = id;
-        row.cells[0].className = 'cell-id';
-        
-        // Sel Status (STANDBY)
-        const statusCell = row.insertCell();
-        statusCell.textContent = 'STANDBY';
-        statusCell.className = 'status-standby';
-        
-        // Sel Data (---)
-        dataMap.forEach(item => {
-            const cell = row.insertCell();
-            cell.className = item.class;
-            cell.textContent = '---'; 
-        });
-    }
-}
-
-
-// --- FUNGSI TAMPILAN TARIF & SUPABASE API ---
-
-/**
- * Membuat dan menampilkan Tampilan Monitoring Tarif.
- */
-function createTarifView() {
-    let optionsHtml = '';
-    for (let id = 1; id <= MAX_SLAVE_ID; id++) {
-        optionsHtml += `<option value="${id}">Mesin ID ${id}</option>`;
-    }
-    
-    // Tampilan Form
-    let html = `
-    <div class="tarif-form">
-        <h3>Filter Data Tarif (Historis)</h3>
-        <p style="color: #94A3B8;">Menggunakan Supabase API untuk menampilkan laporan. Pastikan SUPABASE_URL sudah benar.</p>
-        
-        <label for="machineId">Pilih Mesin (ID)</label>
-        <select id="machineId">
-            ${optionsHtml}
-        </select>
-
-        <label for="period">Pilih Periode Analisis</label>
-        <select id="period">
-            <option value="daily">Harian</option>
-            <option value="weekly">Mingguan</option>
-            <option value="monthly">Bulanan</option>
-        </select>
-        
-        <label for="startDate">Tanggal Mulai Referensi</label>
-        <input type="date" id="startDate">
-
-        <button onclick="fetchTarifData()">Tampilkan Data</button>
-
-        <div id="tarifResult" style="margin-top: 30px; border-top: 1px solid #3A3A3A; padding-top: 20px;">
-            </div>
-    </div>`;
-
-    document.getElementById('content').innerHTML = html;
-}
-
-/**
- * Mengambil dan menampilkan data tarif dari Supabase berdasarkan filter.
- */
-async function fetchTarifData() {
-    const id = document.getElementById('machineId').value;
-    const period = document.getElementById('period').value;
-    const date = document.getElementById('startDate').value;
-    const resultDiv = document.getElementById('tarifResult');
-    
-    if (!date) {
-        resultDiv.innerHTML = '<p style="color: #EF4444;">Harap pilih Tanggal Referensi.</p>';
-        return;
-    }
-    
-    resultDiv.innerHTML = '<p style="color: #38BDF8;">Mengambil data dari Supabase...</p>';
-
-    try {
-        let dateFrom, dateTo;
-        // Logika penentuan rentang tanggal
-        const refDate = new Date(date);
-        
-        if (period === 'daily') {
-            dateFrom = new Date(date).toISOString().split('T')[0];
-            dateTo = dateFrom; 
-        } else if (period === 'weekly') {
-            const startOfWeek = new Date(refDate);
-            startOfWeek.setDate(refDate.getDate() - refDate.getDay()); 
-            dateFrom = startOfWeek.toISOString().split('T')[0];
-            const endOfWeek = new Date(startOfWeek);
-            endOfWeek.setDate(startOfWeek.getDate() + 6);
-            dateTo = endOfWeek.toISOString().split('T')[0];
-        } else if (period === 'monthly') {
-            const startOfMonth = new Date(refDate.getFullYear(), refDate.getMonth(), 1);
-            dateFrom = startOfMonth.toISOString().split('T')[0];
-            const endOfMonth = new Date(refDate.getFullYear(), refDate.getMonth() + 1, 0);
-            dateTo = endOfMonth.toISOString().split('T')[0];
-        }
-
-        // --- PANGGILAN API SUPABASE ---
-        const { data, error } = await supabase
-            .from('daily_meter_summary') // NAMA TABEL SUPABASE ANDA
-            .select('*')
-            .eq('meter_id', id)
-            .gte('date_key', dateFrom)
-            .lte('date_key', dateTo)
-            .order('date_key', { ascending: true });
-
-        if (error) throw error;
-
-        // --- TAMPILKAN HASIL ---
-        if (data && data.length > 0) {
-            let totalKwh = data.reduce((sum, item) => sum + parseFloat(item.total_energy_kwh), 0);
-            let totalOpH = data.reduce((sum, item) => sum + parseFloat(item.total_oph_hours), 0);
-            
-            let htmlResult = `
-                <h4 style="color: #4ADE80;">Laporan Tarif Mesin ID ${id}</h4>
-                <p>Periode ${period.toUpperCase()}: ${dateFrom} s/d ${dateTo}</p>
-                <hr style="border-color: #3A3A3A;">
-                <p>Total Energi Konsumsi (${period.toUpperCase()}): <b>${totalKwh.toFixed(2)} kWh</b></p>
-                <p>Total Jam Operasi (${period.toUpperCase()}): <b>${totalOpH.toFixed(1)} Jam</b></p>
-                
-                <h5 style="margin-top: 20px;">Detail Harian:</h5>
-                <ul style="list-style-type: none; padding: 0;">
-                    ${data.map(item => `
-                        <li>🗓️ ${item.date_key}: ${item.total_energy_kwh} kWh / ${item.total_oph_hours} OpH</li>
-                    `).join('')}
-                </ul>
-            `;
-            resultDiv.innerHTML = htmlResult;
-            
-        } else {
-            resultDiv.innerHTML = `<p style="color: #F59E0B;">Tidak ada data historis ditemukan untuk Mesin ID ${id} pada periode tersebut.</p>`;
-        }
-
-    } catch (e) {
-        console.error("Error fetching data from Supabase:", e);
-        resultDiv.innerHTML = `<p style="color: #EF4444;">Gagal mengambil data: ${e.message || 'Cek konfigurasi Supabase.'}</p>`;
-    }
-}
-
-
-// --- INISIASI APLIKASI ---
-document.addEventListener('DOMContentLoaded', () => {
-    // Tampilkan tampilan Realtime secara default saat pertama kali dimuat
-    showView('realtime'); 
-    // Mulai koneksi MQTT
-    mqttClient.init();
+/* ========== MQTT Real-time ========== */
+const client = mqtt.connect(MQTT_WS, {
+  username: MQTT_USER,
+  password: MQTT_PASS,
+  reconnectPeriod: 2000
 });
-</script>
 
+const connEl = document.getElementById("conn");
+const rtBody = document.getElementById("rtBody");
+const devices = {}; // id -> row
+const tarifCache = { value: null }; // current tariff
+
+client.on("connect", () => {
+  connEl.textContent = "✅ MQTT Connected";
+  client.subscribe(MQTT_TOPIC);
+});
+client.on("error", (e) => { connEl.textContent = "❌ MQTT Error"; console.error(e); });
+client.on("message", (topic, msg) => {
+  try {
+    const d = JSON.parse(msg.toString());
+    const id = d.id;
+    if (!devices[id]) {
+      const row = rtBody.insertRow();
+      devices[id] = row;
+      row.insertCell().textContent = id;
+      row.cells[0].className = "cell-id";
+      row.insertCell().textContent = d.status;
+      for (let i=0;i<13;i++){ row.insertCell().textContent = '---'; }
+      // remove placeholder row
+      if (rtBody.rows.length>1 && rtBody.rows[0].cells[0].colSpan === 15) rtBody.deleteRow(0);
+    }
+    const row = devices[d.id];
+    const cells = row.cells;
+    cells[1].textContent = (d.status || '').toUpperCase();
+    cells[1].className = d.status === "online" ? "status-online" : "status-offline';
+    // mapping: V,I1,I2,I3,P,Q,S,PF,Hz,OpH,EaT,EaP, biaya
+    const mapping = ['V','I1','I2','I3','P','Q','S','PF','Hz','OpH','EaT','EaP'];
+    mapping.forEach((k, idx) => {
+      let val = d[k];
+      if (k === 'P') { val = (val===undefined || val===null) ? '---' : val + ' W'; }
+      if (k === 'EaT' || k === 'EaP') { val = (val===undefined || val===null) ? '---' : val + ' kWh'; }
+      cells[idx+2].textContent = (val===0 || val) ? val : '---';
+    });
+    // Biaya hari = EaP * tarif (if tarif loaded)
+    let biayaText = '---';
+    if (tarifCache.value !== null && (d.EaP === 0 || d.EaP)) {
+      const biaya = parseFloat(d.EaP) * parseFloat(tarifCache.value);
+      biayaText = Math.round(biaya);
+    }
+    cells[14].textContent = biayaText === '---' ? '---' : biayaText.toLocaleString('id-ID');
+  } catch (e) { console.error("parse error", e); }
+});
+
+/* ========== SUPABASE helper ========== */
+async function supabaseGetTarif() {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/tariff?id=eq.1`, {
+    headers: {
+      apikey: SUPABASE_KEY,
+      Authorization: `Bearer ${SUPABASE_KEY}`
+    }
+  });
+  if (!res.ok) throw new Error("Failed fetch tarif");
+  const arr = await res.json();
+  if (arr.length) return arr[0].tarif_per_kwh;
+  return null;
+}
+
+async function supabaseUpdateTarif(val) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/tariff?id=eq.1`, {
+    method: 'PATCH',
+    headers: {
+      apikey: SUPABASE_KEY,
+      Authorization: `Bearer ${SUPABASE_KEY}`,
+      'Content-Type':'application/json',
+      Prefer: 'return=representation'
+    },
+    body: JSON.stringify({ tarif_per_kwh: val })
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error('Update failed: ' + txt);
+  }
+  return await res.json();
+}
+
+// Load tarif & summary when opening page Tarif
+document.getElementById("saveTarif").onclick = async () => {
+  const v = parseFloat(document.getElementById("inputTarif").value);
+  if (isNaN(v)) return alert("Masukkan angka tarif");
+  document.getElementById("tarifStatus").textContent = "Saving...";
+  try {
+    await supabaseUpdateTarif(v);
+    document.getElementById("tarifStatus").textContent = "Saved ✅";
+    tarifCache.value = v;
+    setTimeout(()=>document.getElementById("tarifStatus").textContent='', 2000);
+    loadTarifAndSummary();
+  } catch (e) {
+    console.error(e);
+    document.getElementById("tarifStatus").textContent = "Error ❌";
+  }
+};
+
+async function loadTarifAndSummary(){
+  try {
+    const t = await supabaseGetTarif();
+    tarifCache.value = t;
+    document.getElementById("inputTarif").value = t;
+    // fetch today's energy totals (sum EAP for each mesin for today)
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/energy_history?ts=gte.${start}`, {
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+    });
+    if (!res.ok) throw new Error("Failed load history");
+    const rows = await res.json();
+    // aggregate EAP per mesin for today
+    const sumByMesin = {};
+    rows.forEach(r => {
+      const id = r.mesin_id;
+      sumByMesin[id] = (sumByMesin[id] || 0) + (r.eap ? parseFloat(r.eap) : 0);
+    });
+    // total biaya hari ini
+    let totalE = 0;
+    for (let m in sumByMesin) totalE += sumByMesin[m];
+    const totalCost = totalE * parseFloat(t);
+    document.getElementById("summaryToday").textContent =
+      `Total energi hari ini: ${totalE.toFixed(3)} kWh • Est. biaya: Rp ${Math.round(totalCost).toLocaleString('id-ID')}`;
+    // build simple daily chart (sum per hour)
+    buildChart(rows);
+  } catch (e) {
+    console.error(e); document.getElementById("summaryToday").textContent = "Gagal load data.";
+  }
+}
+
+/* Chart - simple histogram (hourly) */
+let chartInstance = null;
+function buildChart(rows) {
+  // group by hour
+  const byHour = {};
+  rows.forEach(r => {
+    const d = new Date(r.ts);
+    const hour = d.getHours();
+    byHour[hour] = (byHour[hour] || 0) + (r.eap ? parseFloat(r.eap) : 0);
+  });
+  const labels = Array.from({length:24}, (_,i) => `${i}:00`);
+  const data = labels.map((_,i) => byHour[i] || 0);
+  const ctx = document.getElementById('chartEnergy').getContext('2d');
+  if (chartInstance) chartInstance.destroy();
+  chartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{ label: 'kWh per Jam (hari ini)', data: data }]
+    },
+    options: { responsive: true, plugins: { legend: { display:false } } }
+  });
+}
+
+/* initialize: show home */
+showPage('home');
+
+/* Try load tarif at start (if page stays in realtime this still caches tarif) */
+supabaseGetTarif().then(t => { tarifCache.value = t; document.getElementById("inputTarif").value = t; }).catch(e=>console.warn(e));
+</script>
 </body>
 </html>
