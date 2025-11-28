@@ -1,254 +1,222 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="id">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Monitoring Energi — PT Amarilys (Mesin 1)</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Dashboard Tarif & History — Mesin 1</title>
 
-  <!-- MQTT.js & Chart.js -->
-  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
     :root { --bg:#071022; --card:#0b1624; --accent:#7ef0c7; --btn:#0ea5a0; color-scheme: dark; }
     html,body{height:100%;margin:0;font-family:Inter,system-ui,Arial;background:var(--bg);color:#e6eef8}
-    .wrap{max-width:1100px;margin:20px auto;padding:18px}
+    .wrap{max-width:1000px;margin:18px auto;padding:18px}
     header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
     h1{margin:0;color:var(--accent);font-size:20px}
     .btn{background:var(--btn);color:#012;border:0;padding:8px 12px;border-radius:8px;cursor:pointer}
-    .nav {display:flex;gap:8px}
     .card{background:var(--card);padding:14px;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,0.4)}
-    table{width:100%;border-collapse:collapse;margin-top:10px}
-    th,td{padding:10px;border-bottom:1px solid rgba(255,255,255,0.03);text-align:center}
-    thead th{color:var(--accent);font-weight:700}
-    .hidden{display:none}
-    .form-inline{display:flex;gap:8px;align-items:center;margin-top:8px}
-    input[type=number]{padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.06);background:#071022;color:#e6eef8}
-    #conn{font-size:13px;margin-top:6px}
     .muted{color:#9aa6b2;font-size:13px}
+    .grid{display:grid;grid-template-columns:1fr 360px;gap:12px}
+    table{width:100%;border-collapse:collapse;margin-top:10px}
+    th,td{padding:8px;border-bottom:1px solid rgba(255,255,255,0.04);text-align:left;font-size:13px}
+    thead th{color:var(--accent);font-weight:700}
+    input[type=number]{padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.06);background:#071022;color:#e6eef8}
     footer{margin-top:18px;color:#8ea3ad;font-size:13px;text-align:center}
+    .small{font-size:13px;color:#aab7bf}
+    .right{text-align:right}
   </style>
 </head>
 <body>
   <div class="wrap">
     <header>
-      <h1>⚡ Monitoring Energi — PT Amarilys (Mesin 1)</h1>
-      <div class="nav">
-        <button id="btnHome" class="btn">Home</button>
-        <button id="btnRealtime" class="btn">Realtime</button>
-        <button id="btnTarif" class="btn">Tarif</button>
-      </div>
+      <h1>⚡ Dashboard Tarif & History — Mesin 1</h1>
+      <div class="small">Supabase: <span id="supaUrl"></span></div>
     </header>
 
-    <!-- HOME -->
-    <section id="pageHome" class="card">
-      <h2 style="margin:0 0 8px 0">Home</h2>
-      <p class="muted">Pilih menu: Monitoring Real-time untuk melihat data langsung dari ESP32 (MQTT). Monitoring Tarif untuk lihat dan ubah tarif kWh yang tersimpan di Supabase.</p>
-      <div style="margin-top:12px;display:flex;gap:8px">
-        <button id="goRealtime" class="btn">Monitoring Real-Time</button>
-        <button id="goTarif" class="btn">Monitoring Tarif Mesin</button>
+    <section class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+        <div>
+          <div class="small">Tarif saat ini (Rp / kWh)</div>
+          <div style="margin-top:6px;display:flex;gap:8px;align-items:center">
+            <input id="inputTarif" type="number" step="0.01" style="width:160px" />
+            <button id="saveTarif" class="btn">Simpan Tarif</button>
+            <span id="tarifMsg" class="muted" style="margin-left:8px"></span>
+          </div>
+        </div>
+        <div class="right">
+          <div class="small">Ringkasan Hari Ini</div>
+          <div id="summary" style="margin-top:6px;font-weight:600">Memuat...</div>
+          <div class="muted" style="margin-top:4px;font-size:13px">Data diambil dari tabel <code>energy_history</code></div>
+        </div>
       </div>
     </section>
 
-    <!-- REALTIME -->
-    <section id="pageRealtime" class="card hidden">
-      <div style="display:flex;justify-content:space-between;align-items:center;">
-        <h2 style="margin:0">Realtime — Mesin 1</h2>
-        <div id="conn">Connecting to MQTT...</div>
+    <div style="height:12px"></div>
+
+    <div class="grid">
+      <div class="card">
+        <h3 style="margin:0 0 8px 0">Grafik Energi (hari ini)</h3>
+        <canvas id="chartEnergy" width="700" height="280" style="background:#06121a;border-radius:8px"></canvas>
+        <div style="margin-top:12px" class="muted">Grafik menunjukkan total kWh per jam (hari ini).</div>
       </div>
 
-      <table aria-label="Realtime table">
-        <thead>
-          <tr>
-            <th>Mesin</th><th>Status</th><th>kWh</th><th>EAP</th><th>Volt</th><th>I1</th><th>I2</th><th>I3</th><th>P (W)</th><th>Q</th><th>PF</th><th>Hz</th><th>OpH</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>1</td>
-            <td id="st">-</td>
-            <td id="kwh">-</td>
-            <td id="eap">-</td>
-            <td id="v">-</td>
-            <td id="i1">-</td>
-            <td id="i2">-</td>
-            <td id="i3">-</td>
-            <td id="p">-</td>
-            <td id="q">-</td>
-            <td id="pf">-</td>
-            <td id="hz">-</td>
-            <td id="oph">-</td>
-          </tr>
-        </tbody>
-      </table>
-      <p class="muted" style="margin-top:10px">*Jika tidak muncul data: cek ESP (WiFi & MQTT), cek topik <code>politeknik/meter/data</code> di MQTTX.</p>
-    </section>
-
-    <!-- TARIF -->
-    <section id="pageTarif" class="card hidden">
-      <h2 style="margin:0 0 8px 0">Tarif Mesin</h2>
-
-      <div class="form-inline">
-        <label for="inputTarif" style="min-width:120px">Tarif (Rp/kWh)</label>
-        <input id="inputTarif" type="number" step="0.01" placeholder="e.g. 1444.70" />
-        <button id="saveTarif" class="btn">Simpan</button>
-        <span id="tarifMsg" class="muted"></span>
+      <div class="card" style="overflow:auto;max-height:420px">
+        <h3 style="margin:0 0 8px 0">History Terbaru</h3>
+        <table id="tblHistory">
+          <thead>
+            <tr><th style="width:100px">Waktu</th><th class="right">kWh</th><th class="right">Power (W)</th><th class="right">Voltage (V)</th></tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="4" class="muted">Memuat...</td></tr>
+          </tbody>
+        </table>
       </div>
+    </div>
 
-      <div style="margin-top:14px">
-        <strong>Ringkasan Hari Ini</strong>
-        <div id="summary" style="margin-top:8px" class="muted">Memuat...</div>
-      </div>
-
-      <canvas id="chartEnergy" width="900" height="300" style="margin-top:14px;background:#06121a;border-radius:8px"></canvas>
-    </section>
-
-    <footer>Project TA — PT Amarilys Karisma Gemilang • Tes: 1 mesin</footer>
+    <footer>Project TA — PT Amarilys Karisma Gemilang</footer>
   </div>
 
 <script>
 /* =========================
-   CONFIG — sesuaikan jika perlu
+   CONFIG — ganti hanya jika perlu
    ========================= */
 const SUPABASE_URL = "https://rojhcadtqfynlqzubftx.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs";
 
-const MQTT_WS = "wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt";
-const MQTT_USER = "vercel_client";
-const MQTT_PASS = "VercelPass123!";
-const MQTT_TOPIC = "politeknik/meter/data";
-
-/* =========================
-   UI Navigation
-   ========================= */
-const pageHome = document.getElementById('pageHome');
-const pageRealtime = document.getElementById('pageRealtime');
-const pageTarif = document.getElementById('pageTarif');
-document.getElementById('btnHome').onclick = ()=>show('home');
-document.getElementById('btnRealtime').onclick = ()=>show('realtime');
-document.getElementById('btnTarif').onclick = ()=>show('tarif');
-document.getElementById('goRealtime').onclick = ()=>show('realtime');
-document.getElementById('goTarif').onclick = ()=>show('tarif');
-
-function show(p){
-  pageHome.classList.add('hidden');
-  pageRealtime.classList.add('hidden');
-  pageTarif.classList.add('hidden');
-  if(p==='home') pageHome.classList.remove('hidden');
-  if(p==='realtime') pageRealtime.classList.remove('hidden');
-  if(p==='tarif'){ pageTarif.classList.remove('hidden'); loadTarifAndSummary(); }
-}
-
-/* =========================
-   MQTT (Realtime)
-   ========================= */
-const clientId = 'web-' + Math.random().toString(16).slice(2,10);
-const client = mqtt.connect(MQTT_WS, { username: MQTT_USER, password: MQTT_PASS, clientId, reconnectPeriod: 2000 });
-const connEl = document.getElementById('conn') || (()=>{ const el=document.createElement('div'); el.id='conn'; document.querySelector('header')?.appendChild(el); return el; })();
-
-client.on('connect', () => {
-  connEl.textContent = '✅ MQTT Connected';
-  client.subscribe(MQTT_TOPIC, err => { if(err) connEl.textContent = '❌ Subscribe failed'; });
-});
-client.on('reconnect', ()=> connEl.textContent = '🔁 Reconnecting...');
-client.on('error', e => { connEl.textContent = '❌ MQTT Error'; console.error('MQTT error', e); });
-client.on('message', (topic, message) => {
-  try {
-    const d = JSON.parse(message.toString());
-    // support both old keys and new keys
-    document.getElementById('st').innerText = d.status || d.state || '-';
-    document.getElementById('kwh').innerText = (d.kwh ?? d.energy_kwh ?? d.EaT ?? '-') + (d.kwh||d.energy_kwh||d.EaT ? ' kWh' : '');
-    document.getElementById('eap').innerText = (d.eap ?? d.EaP ?? '-') + ((d.eap||d.EaP) ? ' kWh' : '');
-    document.getElementById('v').innerText = d.v ?? d.voltage ?? d.V ?? '-';
-    document.getElementById('i1').innerText = d.i1 ?? d.I1 ?? '-';
-    document.getElementById('i2').innerText = d.i2 ?? d.I2 ?? '-';
-    document.getElementById('i3').innerText = d.i3 ?? d.I3 ?? '-';
-    document.getElementById('p').innerText = d.p ?? d.P ?? '-';
-    document.getElementById('q').innerText = d.q ?? d.Q ?? '-';
-    document.getElementById('pf').innerText = d.pf ?? d.PF ?? '-';
-    document.getElementById('hz').innerText = d.hz ?? d.Hz ?? '-';
-    document.getElementById('oph').innerText = d.oph ?? d.OpH ?? '-';
-  } catch(err) {
-    console.warn('Bad MQTT msg', err);
-  }
-});
-
-/* =========================
-   Supabase helpers (REST)
-   ========================= */
-async function supaFetch(path, opts={}) {
-  const res = await fetch(SUPABASE_URL + path, {
-    method: opts.method || 'GET',
-    headers: {
-      apikey: SUPABASE_KEY,
-      Authorization: 'Bearer ' + SUPABASE_KEY,
-      'Content-Type': opts.contentType || 'application/json',
-      ...opts.headers
-    },
-    body: opts.body ? JSON.stringify(opts.body) : undefined
+/* helper fetch for Supabase REST */
+async function supaFetch(path, options = {}) {
+  const url = SUPABASE_URL + path;
+  const headers = {
+    apikey: SUPABASE_KEY,
+    Authorization: 'Bearer ' + SUPABASE_KEY,
+    'Content-Type': options.contentType || 'application/json',
+    ...(options.headers||{})
+  };
+  const res = await fetch(url, {
+    method: options.method || 'GET',
+    headers,
+    body: options.body ? JSON.stringify(options.body) : undefined
   });
   if (!res.ok) {
-    const t = await res.text();
-    throw new Error('Supabase error: ' + res.status + ' - ' + t);
+    const txt = await res.text();
+    throw new Error(`Supabase ${res.status} ${res.statusText} — ${txt}`);
   }
-  return res.json();
+  // for PATCH which might return empty, try parse if possible
+  const txt = await res.text();
+  try { return txt ? JSON.parse(txt) : null; } catch(e) { return txt; }
 }
 
-/* =========================
-   Tarif & Summary
-   ========================= */
-document.getElementById('saveTarif').addEventListener('click', async ()=>{
-  const v = parseFloat(document.getElementById('inputTarif').value);
+/* UI elements */
+document.getElementById('supaUrl').innerText = SUPABASE_URL.replace(/^https?:\/\//,'');
+
+const inputTarif = document.getElementById('inputTarif');
+const saveTarifBtn = document.getElementById('saveTarif');
+const tarifMsg = document.getElementById('tarifMsg');
+const summaryEl = document.getElementById('summary');
+const tblBody = document.querySelector('#tblHistory tbody');
+
+let chartInstance = null;
+
+/* Load tariff on start */
+async function loadTariff() {
+  try {
+    const data = await supaFetch('/rest/v1/tariff?id=eq.1');
+    if (Array.isArray(data) && data[0]) {
+      inputTarif.value = data[0].price_per_kwh;
+    } else {
+      // create default row if not exists
+      await supaFetch('/rest/v1/tariff', { method:'POST', body:{ price_per_kwh: 1444.7 } });
+      inputTarif.value = 1444.7;
+    }
+  } catch(err) {
+    console.error('loadTariff', err);
+    tarifMsg.innerText = 'Gagal load tariff';
+  }
+}
+
+/* Save tariff */
+saveTarifBtn.addEventListener('click', async ()=>{
+  const v = parseFloat(inputTarif.value);
   if (isNaN(v)) return alert('Masukkan tarif (angka)');
   try {
-    await supaFetch('/rest/v1/tariff?id=eq.1', { method:'PATCH', body: { price_per_kwh: v }, contentType:'application/json' });
-    document.getElementById('tarifMsg').innerText = 'Saved ✅';
-    setTimeout(()=>document.getElementById('tarifMsg').innerText='', 2000);
-    loadTarifAndSummary();
-  } catch (e) {
-    console.error(e);
-    alert('Gagal update tariff: ' + e.message);
+    // try update row id=1; if fails, insert with id=1
+    await supaFetch('/rest/v1/tariff?id=eq.1', { method: 'PATCH', body: { price_per_kwh: v } });
+    tarifMsg.innerText = 'Saved ✅';
+    setTimeout(()=> tarifMsg.innerText = '', 1800);
+    await loadSummaryAndChart();
+  } catch (err) {
+    // try insert
+    try {
+      await supaFetch('/rest/v1/tariff', { method: 'POST', body: { price_per_kwh: v } });
+      tarifMsg.innerText = 'Saved ✅';
+      setTimeout(()=> tarifMsg.innerText = '', 1800);
+      await loadSummaryAndChart();
+    } catch(e) {
+      console.error('saveTarif', e);
+      alert('Gagal simpan tarif: ' + e.message);
+    }
   }
 });
 
-async function loadTarifAndSummary() {
+/* Load today's history & build summary + chart */
+async function loadSummaryAndChart() {
   try {
     // get tariff
     const t = await supaFetch('/rest/v1/tariff?id=eq.1');
-    const price = (Array.isArray(t) && t[0]) ? t[0].price_per_kwh : null;
-    if (price !== null) document.getElementById('inputTarif').value = price;
+    const price = (Array.isArray(t) && t[0]) ? parseFloat(t[0].price_per_kwh) : null;
 
-    // load today's history (created_at >= today midnight)
+    // start of today (midnight)
     const now = new Date();
     const start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-    const rows = await supaFetch(`/rest/v1/energy_history?created_at=gte.${encodeURIComponent(start)}&order=created_at.asc`);
-    // sum energy_kwh or fallback to kwh field
+
+    // fetch today's rows (use energy_kwh column)
+    const rows = await supaFetch(`/rest/v1/energy_history?created_at=gte.${encodeURIComponent(start)}&order=created_at.asc&select=created_at,energy_kwh,kwh,power,watt,voltage`);
+    // rows is array
     let totalE = 0;
-    rows.forEach(r => { totalE += parseFloat(r.energy_kwh ?? r.kwh ?? r.EaT ?? 0); });
+    rows.forEach(r => {
+      const e = parseFloat(r.energy_kwh ?? r.kwh ?? 0);
+      if (!isNaN(e)) totalE += e;
+    });
+    const estCost = (price !== null) ? Math.round(totalE * price) : '-';
+    summaryEl.innerText = `Total energi hari ini: ${totalE.toFixed(3)} kWh • Est. biaya: ${estCost === '-' ? '-' : 'Rp ' + estCost.toLocaleString('id-ID')}`;
 
-    const estCost = price ? Math.round(totalE * price) : '-';
-    document.getElementById('summary').innerText = `Total energi hari ini: ${totalE.toFixed(3)} kWh • Est. biaya: ${estCost==='-'?'-':'Rp ' + estCost.toLocaleString('id-ID')}`;
+    // fill history table (latest first)
+    const latest = await supaFetch(`/rest/v1/energy_history?order=created_at.desc&limit=50&select=created_at,energy_kwh,kwh,power,watt,voltage`);
+    tblBody.innerHTML = '';
+    if (Array.isArray(latest) && latest.length) {
+      latest.forEach(r => {
+        const tr = document.createElement('tr');
+        const ts = new Date(r.created_at).toLocaleString();
+        const e = (r.energy_kwh ?? r.kwh ?? 0);
+        const p = (r.power ?? r.watt ?? 0);
+        const v = (r.voltage ?? '-');
+        tr.innerHTML = `<td style="width:160px">${ts}</td><td class="right">${Number(e).toFixed(4)}</td><td class="right">${Number(p).toFixed(2)}</td><td class="right">${v}</td>`;
+        tblBody.appendChild(tr);
+      });
+    } else {
+      tblBody.innerHTML = `<tr><td colspan="4" class="muted">Belum ada data history.</td></tr>`;
+    }
 
-    buildChart(rows);
-  } catch (err) {
-    console.error('loadTarifAndSummary', err);
-    document.getElementById('summary').innerText = 'Gagal load data. Cek Supabase & policy.';
+    // build hourly chart from rows
+    buildChartFromRows(rows);
+  } catch(err) {
+    console.error('loadSummaryAndChart', err);
+    summaryEl.innerText = 'Gagal load data. Cek Supabase & policy.';
+    tblBody.innerHTML = `<tr><td colspan="4" class="muted">Gagal load data: ${err.message}</td></tr>`;
+    if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
   }
 }
 
-/* =========================
-   Chart (hourly kWh)
-   ========================= */
-let chartInstance = null;
-function buildChart(rows) {
-  // rows may contain multiple machine entries; group by hour
+/* Build Chart */
+function buildChartFromRows(rows) {
   const hourly = Array.from({length:24}, () => 0);
   rows.forEach(r => {
-    const ts = r.created_at || r.createdAt || r.ts;
+    const ts = r.created_at || r.createdAt;
     if (!ts) return;
     const d = new Date(ts);
-    const hr = d.getHours();
-    hourly[hr] += parseFloat(r.energy_kwh ?? r.kwh ?? 0);
+    const h = d.getHours();
+    hourly[h] += parseFloat(r.energy_kwh ?? r.kwh ?? 0);
   });
 
   const ctx = document.getElementById('chartEnergy').getContext('2d');
@@ -257,22 +225,24 @@ function buildChart(rows) {
     type: 'bar',
     data: {
       labels: Array.from({length:24}, (_,i) => `${i}:00`),
-      datasets: [{ label: 'kWh per jam', data: hourly }]
+      datasets: [{ label: 'kWh per jam (hari ini)', data: hourly }]
     },
     options: { plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}} }
   });
 }
 
-/* =========================
-   Init
-   ========================= */
-show('home');
+/* Init page */
+(async function init(){
+  try {
+    await loadTariff();
+    await loadSummaryAndChart();
+  } catch(e) {
+    console.warn('init', e);
+  }
+})();
 
-// pre-load tariff if possible
-(supaFetch('/rest/v1/tariff?id=eq.1').then(t => {
-  if (Array.isArray(t) && t[0]) document.getElementById('inputTarif').value = t[0].price_per_kwh;
-}).catch(()=>{}));
-
+/* Optional: refresh summary every 60s */
+setInterval(loadSummaryAndChart, 60000);
 </script>
 </body>
 </html>
