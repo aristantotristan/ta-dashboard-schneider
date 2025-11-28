@@ -145,7 +145,7 @@ tbody tr {
 
 // --- KONFIGURASI GLOBAL ---
 const MAX_SLAVE_ID = 18; 
-const devices = {}; // Menyimpan referensi baris tabel untuk pembaruan realtime
+const devices = {}; // Menyimpan referensi baris tabel
 const dataMap = [
     { key: 'V', class: 'col-v' }, { key: 'I1', class: 'col-i' }, { key: 'I2', class: 'col-i' }, 
     { key: 'I3', class: 'col-i' }, { key: 'P', class: 'col-power' }, { key: 'Q', class: 'col-power' }, 
@@ -327,7 +327,7 @@ function createTarifView() {
     let html = `
     <div class="tarif-form">
         <h3>Filter Data Tarif (Historis)</h3>
-        <p style="color: #94A3B8;">Menggunakan Supabase API untuk menampilkan laporan. Pastikan SUPABASE_URL di main.js sudah benar.</p>
+        <p style="color: #94A3B8;">Menggunakan Supabase API untuk menampilkan laporan. Pastikan SUPABASE_URL sudah benar.</p>
         
         <label for="machineId">Pilih Mesin (ID)</label>
         <select id="machineId">
