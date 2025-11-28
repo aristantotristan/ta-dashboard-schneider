@@ -4,15 +4,13 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Monitoring Energi — PT Amarilys</title>
-
 <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <style>
-  body{font-family:Arial,Helvetica; background:#0b1220; color:#e6eef8; padding:18px;}
+  body{font-family:Arial,Helvetica; background:#071022; color:#e6eef8; padding:18px}
   h1{color:#7ef0c7}
   .btn{padding:10px 12px;border-radius:8px;background:#0ea5a0;color:#001;margin-right:8px;cursor:pointer}
-  .card{background:#071022;padding:12px;border-radius:8px;margin-bottom:12px}
+  .card{background:#0b1624;padding:12px;border-radius:8px;margin-bottom:12px}
   table{width:100%;border-collapse:collapse}
   th,td{padding:8px;border-bottom:1px solid rgba(255,255,255,0.04);text-align:center}
   thead th{color:#7ef0c7}
@@ -41,7 +39,7 @@
       <thead>
         <tr><th>Machine</th><th>Status</th><th>kWh</th><th>EAP</th><th>Volt</th><th>I1</th><th>I2</th><th>I3</th><th>P(W)</th><th>Q</th><th>PF</th><th>Hz</th><th>OpH</th></tr>
       </thead>
-      <tbody id="rtBody">
+      <tbody>
         <tr><td>1</td><td id="st">-</td><td id="kwh">-</td><td id="eap">-</td><td id="v">-</td><td id="i1">-</td><td id="i2">-</td><td id="i3">-</td><td id="p">-</td><td id="q">-</td><td id="pf">-</td><td id="hz">-</td><td id="oph">-</td></tr>
       </tbody>
     </table>
@@ -63,7 +61,7 @@
   </div>
 
 <script>
-/* CONFIG (already set) */
+/* CONFIG */
 const SUPABASE_URL = "https://rojhcadtqfynlqzubftx.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs";
 const MQTT_WS = "wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt";
@@ -137,27 +135,24 @@ async function loadTarifAndSummary() {
     const t = await supaFetch('/rest/v1/tariff?id=eq.1');
     const price = (t && t[0]) ? t[0].price_per_kwh : null;
     if(price!==null) document.getElementById('inputTarif').value = price;
-    // load today's history
     const today = new Date(); const start = new Date(today.getFullYear(),today.getMonth(),today.getDate()).toISOString();
     const rows = await supaFetch(`/rest/v1/energy_history?created_at=gte.${start}`);
-    // sum eap
     let totalE = 0;
-    rows.forEach(r=>{ totalE += (r.eap?parseFloat(r.eap):0); });
+    rows.forEach(r=>{ totalE += (r.energy_kwh?parseFloat(r.energy_kwh):0); });
     const estCost = price ? Math.round(totalE * price) : '-';
     document.getElementById('summary').innerText = `Total energi hari ini: ${totalE.toFixed(3)} kWh • Est biaya: ${estCost==='-'?'-':'Rp '+estCost.toLocaleString('id-ID')}`;
     buildChart(rows);
   } catch(e){ console.error(e); document.getElementById('summary').innerText='Gagal load'; }
 }
 
-/* chart */
+/* Chart */
 let chart=null;
 function buildChart(rows){
-  // aggregate per hour
   const byHour = Array(24).fill(0);
   rows.forEach(r=>{
     const d = new Date(r.created_at);
     const h = d.getHours();
-    byHour[h] += (r.eap?parseFloat(r.eap):0);
+    byHour[h] += (r.energy_kwh?parseFloat(r.energy_kwh):0);
   });
   const ctx = document.getElementById('chartEnergy').getContext('2d');
   if(chart) chart.destroy();
