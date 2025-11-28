@@ -1,1 +1,0 @@
-alert("Realtime JS Loaded!");
