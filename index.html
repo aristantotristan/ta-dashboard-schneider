@@ -1,87 +1,161 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<title>Energy Monitor</title>
-<style>
-    body { font-family: Arial; padding: 20px; background: #f5f5f5; }
-    table { width: 100%; border-collapse: collapse; background: white; }
-    th, td { padding: 10px; border-bottom: 1px solid #ddd; }
-    th { background: #222; color: white; }
-    .value { font-weight: bold; color: #007bff; }
-</style>
+    <title>Monitoring 18 Mesin</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
+        .status-online { background: #c7ffd1; }
+        .status-offline { background: #ffd1d1; }
+    </style>
 </head>
-<body>
 
-<h2>📡 Energy Monitoring — Standby Mode</h2>
+<body>
+<h2>Realtime Monitoring Mesin (18 Unit)</h2>
 
 <table>
-<tr><th>Parameter</th><th>Value</th><th>Unit</th></tr>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Status</th>
 
-<tr><td>Total Ea</td><td id="total_ea" class="value">...</td><td>kWh</td></tr>
-<tr><td>Total Er</td><td id="total_er" class="value">...</td><td>kVARh</td></tr>
-<tr><td>Partial Ea</td><td id="partial_ea" class="value">...</td><td>kWh</td></tr>
-<tr><td>Partial Er</td><td id="partial_er" class="value">...</td><td>kVARh</td></tr>
+            <th>Total Ea (kWh)</th>
+            <th>Total Er (kVARh)</th>
+            <th>Partial Ea (kWh)</th>
+            <th>Partial Er (kVARh)</th>
 
-<tr><td>Voltage</td><td id="voltage" class="value">...</td><td>Volt</td></tr>
+            <th>Voltage (V)</th>
+            <th>Current (A)</th>
 
-<tr><td>Current I1</td><td id="i1" class="value">...</td><td>Ampere</td></tr>
-<tr><td>Current I2</td><td id="i2" class="value">...</td><td>Ampere</td></tr>
-<tr><td>Current I3</td><td id="i3" class="value">...</td><td>Ampere</td></tr>
+            <th>Power P (W)</th>
+            <th>Power Q (VAR)</th>
+            <th>Power S (kVA)</th>
 
-<tr><td>Power P</td><td id="p_kw" class="value">...</td><td>kW</td></tr>
-<tr><td>Power Q</td><td id="q_kvar" class="value">...</td><td>kVAR</td></tr>
-<tr><td>Power S</td><td id="s_kva" class="value">...</td><td>kVA</td></tr>
-
-<tr><td>Power Factor</td><td id="pf" class="value">...</td><td>-</td></tr>
-<tr><td>Frequency</td><td id="freq" class="value">...</td><td>Hz</td></tr>
-
-<tr><td>Operating Time</td><td id="op_time" class="value">...</td><td>Days Hrs</td></tr>
-
+            <th>PF</th>
+            <th>Freq (Hz)</th>
+            <th>OpTime (Days Hrs)</th>
+        </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
 </table>
 
 <script>
-async function loadData() {
-    try {
-        // 🔥 GANTI sumber datanya sesuai punya kamu
-        const res = await fetch("data.json");
-        const d = await res.json();
+/* -----------------------------------------
+   VARIABEL & MAPPING
+------------------------------------------*/
 
-        document.getElementById("total_ea").innerText = d.total_ea_kwh;
-        document.getElementById("total_er").innerText = d.total_er_kvarh;
-        document.getElementById("partial_ea").innerText = d.partial_ea_kwh;
-        document.getElementById("partial_er").innerText = d.partial_er_kvarh;
+const tableBody = document.getElementById("tableBody");
+const devices = {}; // menyimpan baris HTML tiap ID
 
-        document.getElementById("voltage").innerText = d.voltage_v;
+// mapping agar parameter langsung masuk ke cell yg benar
+const dataMap = [
+    { key: "total_ea",    class: "c-total-ea" },
+    { key: "total_er",    class: "c-total-er" },
+    { key: "partial_ea",  class: "c-partial-ea" },
+    { key: "partial_er",  class: "c-partial-er" },
 
-        document.getElementById("i1").innerText = d.current_i1_a;
-        document.getElementById("i2").innerText = d.current_i2_a;
-        document.getElementById("i3").innerText = d.current_i3_a;
+    { key: "voltage",     class: "c-voltage" },
+    { key: "current",     class: "c-current" },
 
-        document.getElementById("p_kw").innerText = d.power_p_kw;
-        document.getElementById("q_kvar").innerText = d.power_q_kvar;
-        document.getElementById("s_kva").innerText = d.power_s_kva;
+    { key: "power_p",     class: "c-power-p" },
+    { key: "power_q",     class: "c-power-q" },
+    { key: "power_s",     class: "c-power-s" },
 
-        document.getElementById("pf").innerText = d.pf;
-        document.getElementById("freq").innerText = d.freq_hz;
+    { key: "pf",          class: "c-pf" },
+    { key: "freq",        class: "c-freq" },
+    { key: "optime",      class: "c-optime" }
+];
 
-        // 🔥 Konversi operating time (jam → days + hours)
-        let jam = parseInt(d.op_time_hours);
-        let days = Math.floor(jam / 24);
-        let hours = jam % 24;
+/* -----------------------------------------
+   🔥 BUILD 18 BARIS STANDBY (AWAL)
+------------------------------------------*/
+function buildStandbyTable() {
 
-        document.getElementById("op_time").innerText =
-            `${days} Days ${hours} Hours`;
+    tableBody.innerHTML = ""; // clear semua
 
-    } catch(e) {
-        console.log("Error:", e);
+    for (let i = 1; i <= 18; i++) {
+
+        const row = tableBody.insertRow();
+        devices[i] = row; // simpan baris sesuai ID
+
+        // Kolom ID
+        const idCell = row.insertCell();
+        idCell.textContent = i;
+
+        // Kolom Status
+        const st = row.insertCell();
+        st.textContent = "offline";
+        st.className = "status-offline";
+
+        // Kolom data lain (isi ---)
+        dataMap.forEach(item => {
+            const c = row.insertCell();
+            c.className = item.class;
+            c.textContent = "---";
+        });
     }
 }
 
-// Auto update setiap 2 detik (standby)
-setInterval(loadData, 2000);
-loadData();
+// Panggil langsung
+buildStandbyTable();
+
+
+/* -----------------------------------------
+   🔥 MQTT SETUP
+------------------------------------------*/
+
+const client = mqtt.connect("wss://broker.emqx.io:8084/mqtt");
+
+client.on("connect", () => {
+    console.log("MQTT Connected");
+    client.subscribe("mesin/#");  // subscribe semua mesin
+});
+
+client.on("message", (topic, message) => {
+    try {
+        const data = JSON.parse(message.toString());
+        updateRow(data);
+    } catch (e) {
+        console.log("Invalid JSON");
+    }
+});
+
+
+/* -----------------------------------------
+   🔥 UPDATE BARIS SAAT DATA MASUK
+------------------------------------------*/
+function updateRow(data) {
+    const id = data.id;
+    if (!devices[id]) return;
+
+    const row = devices[id];
+    const statusCell = row.cells[1];
+
+    // status online
+    statusCell.textContent = "online";
+    statusCell.className = "status-online";
+
+    // update parameter sesuai mapping
+    dataMap.forEach((item, idx) => {
+        const cell = row.cells[idx + 2]; // +2 karena ID + Status
+
+        if (item.key === "optime") {
+            // convert jam → days hrs
+            const jam = data[item.key] || 0;
+            const days = Math.floor(jam / 24);
+            const hrs = jam % 24;
+            cell.textContent = `${days}d ${hrs}h`;
+        } else {
+            cell.textContent = data[item.key] ?? "---";
+        }
+    });
+}
+
 </script>
+
+<!-- MQTT CDN -->
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 
 </body>
 </html>
