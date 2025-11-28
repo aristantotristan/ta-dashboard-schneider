@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Monitoring Tarif Mesin — PT Amarilys</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+  body{font-family:Arial,Helvetica;background:#071022;color:#e6eef8;padding:18px}
+  h1{color:#7ef0c7}
+  .card{background:#0b1624;padding:16px;border-radius:10px;margin-bottom:16px}
+  .btn{padding:10px 14px;border-radius:8px;background:#0ea5a0;color:#001;cursor:pointer}
+  table{width:100%;border-collapse:collapse;margin-top:10px}
+  th,td{padding:8px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.06)}
+  th{color:#7ef0c7}
+</style>
+</head>
+
+<body>
+
+<h1>💡 Monitoring Tarif Mesin — PT Amarilys</h1>
+
+<div class="card">
+  <h2>Atur Tarif (Rp/kWh)</h2>
+  <input id="inputTarif" type="number" step="0.01" style="padding:6px;width:120px" />
+  <button id="btnSaveTarif" class="btn">Simpan</button>
+  <span id="tarifMsg" style="margin-left:10px;color:#9fd8c9"></span>
+</div>
+
+<div class="card">
+  <h2>Ringkasan Hari Ini</h2>
+  <div id="summary">Loading...</div>
+</div>
+
+<div class="card">
+  <h2>Energi per Jam</h2>
+  <canvas id="chartEnergy" width="800" height="260"></canvas>
+</div>
+
+<div class="card">
+  <h2>Log Energi</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th><th>Volt</th><th>kWh</th><th>Biaya</th><th>Waktu</th>
+      </tr>
+    </thead>
+    <tbody id="logTable"></tbody>
+  </table>
+</div>
+
+<script>
+/* ==============================
+   CONFIG SUPABASE
+============================== */
+const SUPABASE_URL = "https://rojhcadtqfynlqzubftx.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs";
+
+async function supa(path, method="GET", body=null){
+  const opt = {
+    method,
+    headers:{
+      apikey: SUPABASE_KEY,
+      Authorization: "Bearer "+SUPABASE_KEY,
+      "Content-Type":"application/json"
+    }
+  };
+  if(body) opt.body = JSON.stringify(body);
+  const res = await fetch(SUPABASE_URL+path, opt);
+  return res.json();
+}
+
+/* ==============================
+   LOAD TARIF
+============================== */
+async function loadTarif(){
+  const r = await supa("/rest/v1/tariff?id=eq.1");
+  if(r && r.length>0){
+    document.getElementById("inputTarif").value = r[0].price_per_kwh;
+  }
+}
+
+/* ==============================
+   SAVE TARIF
+============================== */
+document.getElementById("btnSaveTarif").onclick = async ()=>{
+  const v = parseFloat(document.getElementById("inputTarif").value);
+  if(isNaN(v)){ alert("Isi tarif!"); return; }
+
+  await supa("/rest/v1/tariff?id=eq.1","PATCH",{price_per_kwh:v});
+  document.getElementById("tarifMsg").innerText = "✔ Disimpan";
+  setTimeout(()=> document.getElementById("tarifMsg").innerText="",1500);
+  loadSummary();
+};
+
+/* ==============================
+   LOAD LOG & SUMMARY
+============================== */
+async function loadSummary(){
+  const start = new Date();  
+  start.setHours(0,0,0,0);
+  const iso = start.toISOString();
+
+  const rows = await supa(`/rest/v1/tarif_log?created_at=gte.${iso}`);
+
+  let total = 0;
+  rows.forEach(r => total += parseFloat(r.kwh || 0));
+
+  const tarif = parseFloat(document.getElementById("inputTarif").value || 0);
+  const biaya = total * tarif;
+
+  document.getElementById("summary").innerText =
+    `Energi hari ini: ${total.toFixed(3)} kWh • Est biaya: Rp ${biaya.toFixed(0)}`;
+
+  buildChart(rows);
+  loadTable(rows);
+}
+
+/* ==============================
+   TABEL
+============================== */
+function loadTable(rows){
+  const tbody = document.getElementById("logTable");
+  tbody.innerHTML = "";
+  rows.slice().reverse().forEach(r=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${r.id}</td>
+      <td>${r.volt}</td>
+      <td>${r.kwh}</td>
+      <td>Rp ${parseFloat(r.biaya||0).toFixed(0)}</td>
+      <td>${new Date(r.created_at).toLocaleString()}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+/* ==============================
+   CHART
+============================== */
+let chart=null;
+
+function buildChart(rows){
+  const perHour = Array(24).fill(0);
+  rows.forEach(r=>{
+    const h = new Date(r.created_at).getHours();
+    perHour[h] += parseFloat(r.kwh || 0);
+  });
+
+  const ctx = document.getElementById("chartEnergy").getContext("2d");
+  if(chart) chart.destroy();
+
+  chart = new Chart(ctx,{
+    type:"bar",
+    data:{
+      labels: Array.from({length:24},(_,i)=> i+":00"),
+      datasets:[{
+        label:"kWh",
+        data: perHour
+      }]
+    },
+    options:{ plugins:{ legend:{ display:false } } }
+  });
+}
+
+/* ==============================
+   INIT
+============================== */
+(async ()=>{
+  await loadTarif();
+  await loadSummary();
+  setInterval(loadSummary, 5000); // refresh otomatis
+})();
+</script>
+
+</body>
+</html>
