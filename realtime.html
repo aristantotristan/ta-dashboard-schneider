@@ -1,320 +1,79 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>⚡ Real-time Monitoring — Mesin Selectable</title>
-<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-<style>
-  :root{
-    --bg:#121212; --panel:#1e1e1e; --muted:#94A3B8; --accent:#00FFC2; --ok:#10B981; --err:#EF4444;
-    --glass: rgba(255,255,255,0.03);
-  }
-  *{box-sizing:border-box}
-  body{font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;background:var(--bg);color:#E0E0E0;margin:0;padding:22px;}
-  .top {display:flex;align-items:center;gap:16px;margin-bottom:18px;}
-  .back{background:var(--accent);color:#000;padding:8px 12px;border-radius:8px;text-decoration:none;font-weight:700;}
-  h2{margin:0;color:var(--accent);font-size:20px}
-  #conn{margin-left:auto;font-weight:700;color:var(--muted)}
-  .layout{display:grid;grid-template-columns: 360px 1fr; gap:18px; margin-top:18px;}
-  /* machine list */
-  .machines {background:var(--panel);padding:14px;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,0.6);min-height:420px;}
-  .machines-grid {display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
-  .m-btn{background:var(--glass);border:1px solid rgba(255,255,255,0.02);padding:10px 12px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;}
-  .m-btn:hover{transform:translateY(-2px);transition:all .12s}
-  .m-title{font-weight:700}
-  .status-badge{font-size:12px;padding:4px 8px;border-radius:999px;background:#222;color:var(--muted);font-weight:700}
-  .status-online{background:rgba(16,185,129,0.12);color:var(--ok);border:1px solid rgba(16,185,129,0.12)}
-  .status-offline{background:rgba(239,68,68,0.08);color:var(--err);border:1px solid rgba(239,68,68,0.06)}
-  .mini {font-size:12px;color:var(--muted)}
-  /* detail panel */
-  .panel {background:var(--panel);padding:18px;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,0.6);min-height:420px;}
-  .panel h3{margin:0 0 10px 0;color:var(--accent)}
-  .param-grid{display:grid;grid-template-columns: 1fr 1fr;gap:10px;margin-top:12px;}
-  .param {background:rgba(255,255,255,0.02);border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:6px}
-  .p-name{font-size:13px;color:var(--muted);font-weight:700}
-  .p-val{font-size:18px;font-weight:800;color:#fff}
-  .p-unit{font-size:12px;color:var(--muted)}
-  .wide {grid-column:1/3}
-  .hint{margin-top:12px;font-size:13px;color:var(--muted)}
-  .selected { outline: 2px solid rgba(0,255,194,0.06) !important; box-shadow: 0 8px 26px rgba(0,255,194,0.04); }
-  @media(max-width:920px){ .layout{grid-template-columns:1fr; } .machines-grid{grid-template-columns:repeat(3,1fr);} .param-grid{grid-template-columns:1fr} }
-</style>
+  <meta charset="UTF-8">
+  <title>Realtime Monitoring</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f2f2f2;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-gap: 20px;
+      padding: 10px;
+    }
+
+    .machine-card {
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+      cursor: pointer;
+      border: 1px solid #ddd;
+      transition: 0.2s ease;
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    .machine-card:hover {
+      background: #007bff;
+      color: white;
+      transform: scale(1.03);
+    }
+
+    a {
+      text-decoration: none;
+      color: inherit;
+    }
+  </style>
 </head>
 <body>
 
-<div class="top">
-  <a class="back" href="index.html">⬅ Home</a>
-  <h2>⚡ Real-time Monitoring — Pilih Mesin</h2>
-  <div id="conn">Connecting...</div>
+<h1>Realtime Monitoring Mesin</h1>
+
+<div class="grid">
+
+  <!-- GENERATE 18 MESIN -->
+  <a href="/politeknik/meter/data/m1.html"><div class="machine-card">Mesin 1</div></a>
+  <a href="/politeknik/meter/data/m2.html"><div class="machine-card">Mesin 2</div></a>
+  <a href="/politeknik/meter/data/m3.html"><div class="machine-card">Mesin 3</div></a>
+  <a href="/politeknik/meter/data/m4.html"><div class="machine-card">Mesin 4</div></a>
+  <a href="/politeknik/meter/data/m5.html"><div class="machine-card">Mesin 5</div></a>
+  <a href="/politeknik/meter/data/m6.html"><div class="machine-card">Mesin 6</div></a>
+  <a href="/politeknik/meter/data/m7.html"><div class="machine-card">Mesin 7</div></a>
+  <a href="/politeknik/meter/data/m8.html"><div class="machine-card">Mesin 8</div></a>
+  <a href="/politeknik/meter/data/m9.html"><div class="machine-card">Mesin 9</div></a>
+  <a href="/politeknik/meter/data/m10.html"><div class="machine-card">Mesin 10</div></a>
+  <a href="/politeknik/meter/data/m11.html"><div class="machine-card">Mesin 11</div></a>
+  <a href="/politeknik/meter/data/m12.html"><div class="machine-card">Mesin 12</div></a>
+  <a href="/politeknik/meter/data/m13.html"><div class="machine-card">Mesin 13</div></a>
+  <a href="/politeknik/meter/data/m14.html"><div class="machine-card">Mesin 14</div></a>
+  <a href="/politeknik/meter/data/m15.html"><div class="machine-card">Mesin 15</div></a>
+  <a href="/politeknik/meter/data/m16.html"><div class="machine-card">Mesin 16</div></a>
+  <a href="/politeknik/meter/data/m17.html"><div class="machine-card">Mesin 17</div></a>
+  <a href="/politeknik/meter/data/m18.html"><div class="machine-card">Mesin 18</div></a>
+
 </div>
-
-<div class="layout">
-  <!-- Left: list 18 mesin -->
-  <div class="machines">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <div style="font-weight:800">Machines (18)</div>
-      <div class="mini">Click a machine to view detail</div>
-    </div>
-    <div class="machines-grid" id="machinesGrid" aria-live="polite">
-      <!-- JS will populate 18 buttons here -->
-    </div>
-  </div>
-
-  <!-- Right: detail panel -->
-  <div class="panel" id="detailPanel" aria-live="polite">
-    <h3 id="detailTitle">Pilih Mesin di kiri →</h3>
-    <div id="subtitle" class="mini" style="margin-bottom:8px;color:var(--muted)">Detail parameter akan muncul setelah memilih mesin.</div>
-
-    <!-- Parameter grid: 12 params (plus some extra) -->
-    <div class="param-grid" id="paramGrid">
-      <div class="param wide">
-        <div class="p-name">1. Total Ea</div>
-        <div class="p-val" id="TotalEa">---</div>
-        <div class="p-unit">kWh</div>
-      </div>
-
-      <div class="param wide">
-        <div class="p-name">2. Total Er</div>
-        <div class="p-val" id="TotalEr">---</div>
-        <div class="p-unit">kVARh</div>
-      </div>
-
-      <div class="param">
-        <div class="p-name">3. Partial Ea</div>
-        <div class="p-val" id="PartialEa">---</div>
-        <div class="p-unit">kWh</div>
-      </div>
-
-      <div class="param">
-        <div class="p-name">4. Partial Er</div>
-        <div class="p-val" id="PartialEr">---</div>
-        <div class="p-unit">kVARh</div>
-      </div>
-
-      <div class="param">
-        <div class="p-name">5. Voltage (L-L Avg)</div>
-        <div class="p-val" id="Voltage">---</div>
-        <div class="p-unit">Volt</div>
-      </div>
-
-      <div class="param">
-        <div class="p-name">6. Current (I1 / I2 / I3)</div>
-        <div class="p-val" id="Current">--- / --- / ---</div>
-        <div class="p-unit">Ampere</div>
-      </div>
-
-      <div class="param">
-        <div class="p-name">7. Power P (Total Active)</div>
-        <div class="p-val" id="PowerP">---</div>
-        <div class="p-unit">W (x1000)</div>
-      </div>
-
-      <div class="param">
-        <div class="p-name">8. Power Q (Total Reactive)</div>
-        <div class="p-val" id="PowerQ">---</div>
-        <div class="p-unit">VAR (x1000)</div>
-      </div>
-
-      <div class="param">
-        <div class="p-name">9. Power S (Total Apparent)</div>
-        <div class="p-val" id="PowerS">---</div>
-        <div class="p-unit">kVA</div>
-      </div>
-
-      <div class="param">
-        <div class="p-name">10. Power Factor (PF)</div>
-        <div class="p-val" id="PF">---</div>
-        <div class="p-unit">-</div>
-      </div>
-
-      <div class="param">
-        <div class="p-name">11. Frequency</div>
-        <div class="p-val" id="Hz">---</div>
-        <div class="p-unit">Hz</div>
-      </div>
-
-      <div class="param">
-        <div class="p-name">12. Operation Time</div>
-        <div class="p-val" id="OpTime">---</div>
-        <div class="p-unit">days / hrs</div>
-      </div>
-
-    </div>
-
-    <div class="hint">Tip: nilai live akan berubah otomatis saat data MQTT masuk. Jika data tidak muncul, cek koneksi broker atau payload JSON key.</div>
-  </div>
-</div>
-
-<script>
-/* === MQTT CONFIG === */
-const options = {
-  username: "web_dashboard",
-  password: "Tristan12",
-  connectTimeout: 4000,
-  reconnectPeriod: 2000,
-};
-const client = mqtt.connect("wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt", options);
-
-/* DOM refs */
-const connEl = document.getElementById('conn');
-const machinesGrid = document.getElementById('machinesGrid');
-const detailTitle = document.getElementById('detailTitle');
-const subtitle = document.getElementById('subtitle');
-
-/* State */
-let selectedId = null;
-const devices = {}; // cache latest payload by id (1..18)
-
-/* Create 18 machine buttons */
-for (let i = 1; i <= 18; i++) {
-  const btn = document.createElement('div');
-  btn.className = 'm-btn';
-  btn.id = `m-btn-${i}`;
-  btn.innerHTML = `
-    <div>
-      <div class="m-title">Mesin ${i}</div>
-      <div class="mini" id="m-mini-${i}">ID: ${i}</div>
-    </div>
-    <div>
-      <div id="m-status-${i}" class="status-badge">--</div>
-    </div>`;
-  btn.addEventListener('click', () => selectMachine(i));
-  machinesGrid.appendChild(btn);
-  devices[i] = null;
-}
-
-/* Selection logic */
-function selectMachine(id) {
-  selectedId = id;
-  detailTitle.textContent = `Mesin ${id} — Detail Parameter`;
-  subtitle.textContent = `Realtime data (ID: ${id}) — last update: --`;
-  // highlight selected
-  for (let i = 1; i <= 18; i++) {
-    const el = document.getElementById(`m-btn-${i}`);
-    if (!el) continue;
-    if (i === id) {
-      el.classList.add('selected');
-      el.style.border = '1px solid rgba(0,255,194,0.06)';
-    } else {
-      el.classList.remove('selected');
-      el.style.border = '1px solid rgba(255,255,255,0.02)';
-    }
-  }
-  // render cached payload if exists, otherwise clear detail
-  if (devices[id]) renderDetail(devices[id]);
-  else resetDetailValues();
-}
-
-/* Reset values */
-function resetDetailValues(){
-  document.getElementById('TotalEa').textContent = '---';
-  document.getElementById('TotalEr').textContent = '---';
-  document.getElementById('PartialEa').textContent = '---';
-  document.getElementById('PartialEr').textContent = '---';
-  document.getElementById('Voltage').textContent = '---';
-  document.getElementById('Current').textContent = '--- / --- / ---';
-  document.getElementById('PowerP').textContent = '---';
-  document.getElementById('PowerQ').textContent = '---';
-  document.getElementById('PowerS').textContent = '---';
-  document.getElementById('PF').textContent = '---';
-  document.getElementById('Hz').textContent = '---';
-  document.getElementById('OpTime').textContent = '---';
-}
-
-/* Format OpH */
-function formatOpTime(h){
-  if (h === undefined || h === null || isNaN(h)) return '---';
-  const totalMinutes = Math.round(parseFloat(h) * 60);
-  const days = Math.floor(totalMinutes / (24*60));
-  const rem = totalMinutes % (24*60);
-  const hrs = Math.floor(rem/60);
-  const mins = rem % 60;
-  let out = '';
-  if (days > 0) out += `${days}d `;
-  out += `${hrs}h`;
-  if (mins > 0) out += ` ${mins}m`;
-  return out;
-}
-
-/* Render detail */
-function renderDetail(d){
-  if(!d || typeof d !== 'object') return;
-  document.getElementById('TotalEa').textContent = (d.EaT || d.EaT === 0) ? d.EaT : '---';
-  document.getElementById('TotalEr').textContent = (d.ErT || d.ErT === 0) ? d.ErT : '---';
-  document.getElementById('PartialEa').textContent = (d.EaP || d.EaP === 0) ? d.EaP : '---';
-  document.getElementById('PartialEr').textContent = (d.ErP || d.ErP === 0) ? d.ErP : '---';
-  document.getElementById('Voltage').textContent = (d.V || d.V === 0) ? d.V : '---';
-  const i1 = (d.I1 || d.I1 === 0) ? d.I1 : '---';
-  const i2 = (d.I2 || d.I2 === 0) ? d.I2 : '---';
-  const i3 = (d.I3 || d.I3 === 0) ? d.I3 : '---';
-  document.getElementById('Current').textContent = `${i1} / ${i2} / ${i3}`;
-  document.getElementById('PowerP').textContent = (d.P || d.P === 0) ? d.P : '---';
-  document.getElementById('PowerQ').textContent = (d.Q || d.Q === 0) ? d.Q : '---';
-  document.getElementById('PowerS').textContent = (d.S || d.S === 0) ? d.S : '---';
-  document.getElementById('PF').textContent = (d.PF || d.PF === 0) ? d.PF : '---';
-  document.getElementById('Hz').textContent = (d.Hz || d.Hz === 0) ? d.Hz : '---';
-  document.getElementById('OpTime').textContent = (d.OpH || d.OpH === 0) ? formatOpTime(d.OpH) : '---';
-
-  subtitle.textContent = `Realtime data (ID: ${d.id}) — last update: ${d._t ? new Date(d._t).toLocaleString() : new Date().toLocaleTimeString()}`;
-}
-
-/* MQTT handlers */
-client.on("connect", () => {
-  connEl.textContent = "✅ MQTT Connected";
-  try { client.subscribe("politeknik/meter/data"); } catch(e){ console.warn(e); }
-});
-
-client.on("error", err => {
-  connEl.textContent = "❌ MQTT Error";
-  console.error("MQTT Error", err);
-});
-
-client.on("message", (topic, message) => {
-  try {
-    const d = JSON.parse(message.toString());
-    // attach timestamp
-    d._t = Date.now();
-
-    // normalize id to number
-    const idNum = Number(d.id);
-    if (!Number.isInteger(idNum) || idNum < 1 || idNum > 18) {
-      // ignore (but log for debugging)
-      console.warn("MQTT: unexpected id", d.id);
-      return;
-    }
-
-    // cache latest payload
-    devices[idNum] = d;
-
-    // update machine badge/status
-    const statusEl = document.getElementById(`m-status-${idNum}`);
-    if (statusEl) {
-      const st = (d.status && String(d.status).toLowerCase() === 'online') ? 'ONLINE' : (d.status ? String(d.status).toUpperCase() : 'OFF');
-      statusEl.textContent = st;
-      statusEl.className = (st === 'ONLINE') ? 'status-badge status-online' : 'status-badge status-offline';
-    }
-
-    // update mini info (show P)
-    const miniEl = document.getElementById(`m-mini-${idNum}`);
-    if (miniEl) {
-      const pv = (d.P || d.P === 0) ? `${d.P} W` : 'P: ---';
-      miniEl.textContent = pv;
-    }
-
-    // if user already selected this machine, update detail panel only
-    if (selectedId === idNum) {
-      renderDetail(d);
-    }
-
-  } catch (err) {
-    console.error("MQTT message parse error:", err);
-  }
-});
-
-/* default: select none (or auto-select 1) */
-selectMachine(1); // auto-select Mesin 1 on load (change if you prefer none)
-</script>
 
 </body>
 </html>
