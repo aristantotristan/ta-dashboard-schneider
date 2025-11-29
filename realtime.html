@@ -1,303 +1,135 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>⚡ Real-time Power Meter Dashboard (Detail Selectable)</title>
-<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-<style>
-  :root{
-    --bg:#121212; --panel:#1e1e1e; --muted:#94A3B8; --accent:#00FFC2; --ok:#10B981; --err:#EF4444;
-    --col-power:#0F334A; --col-energy:#4ADE80; --glass: rgba(255,255,255,0.03);
-  }
-  body{font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;background:var(--bg);color:#E0E0E0;margin:0;padding:22px;}
-  .top {display:flex;align-items:center;gap:16px;margin-bottom:18px;}
-  .back{background:var(--accent);color:#000;padding:8px 12px;border-radius:8px;text-decoration:none;font-weight:700;}
-  h2{margin:0;color:var(--accent);font-size:20px}
-  #conn{margin-left:auto;font-weight:700;color:var(--muted)}
-  .layout{display:grid;grid-template-columns: 360px 1fr; gap:18px; margin-top:18px;}
-  /* machine list */
-  .machines {background:var(--panel);padding:14px;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,0.6);}
-  .machines-grid {display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
-  .m-btn{background:var(--glass);border:1px solid rgba(255,255,255,0.04);padding:10px 12px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;}
-  .m-btn:hover{transform:translateY(-2px);transition:all .12s}
-  .m-title{font-weight:700}
-  .status-badge{font-size:12px;padding:4px 8px;border-radius:999px;background:#222;color:var(--muted);font-weight:700}
-  .status-online{background:rgba(16,185,129,0.12);color:var(--ok);border:1px solid rgba(16,185,129,0.12)}
-  .status-offline{background:rgba(239,68,68,0.08);color:var(--err);border:1px solid rgba(239,68,68,0.06)}
-  .mini {font-size:12px;color:var(--muted)}
-  /* detail panel */
-  .panel {background:var(--panel);padding:18px;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,0.6);}
-  .panel h3{margin:0 0 10px 0;color:var(--accent)}
-  .param-grid{display:grid;grid-template-columns: 1fr 1fr;gap:10px;margin-top:12px;}
-  .param {background:rgba(255,255,255,0.02);border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:6px}
-  .p-name{font-size:13px;color:var(--muted);font-weight:700}
-  .p-val{font-size:18px;font-weight:800;color:#fff}
-  .p-unit{font-size:12px;color:var(--muted)}
-  .wide {grid-column:1/3}
-  .hint{margin-top:12px;font-size:13px;color:var(--muted)}
-  @media(max-width:920px){ .layout{grid-template-columns:1fr; } .machines-grid{grid-template-columns:repeat(3,1fr);} .param-grid{grid-template-columns:1fr} }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Realtime Monitoring</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background: #f2f2f2;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    /* GRID MESIN */
+    .machine-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 10px;
+      margin-bottom: 25px;
+    }
+
+    .machine-btn {
+      padding: 12px;
+      background: #0D6EFD;
+      color: white;
+      border: none;
+      text-align: center;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .machine-btn:hover {
+      background: #0A58CA;
+    }
+
+    /* PARAMETER TABLE */
+    table {
+      width: 100%;
+      background: white;
+      border-collapse: collapse;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    th, td {
+      padding: 12px;
+      border-bottom: 1px solid #ddd;
+    }
+
+    th {
+      background: #0D6EFD;
+      color: white;
+      text-align: left;
+    }
+
+    #back-btn {
+      margin-top: 20px;
+      display: inline-block;
+      padding: 10px 18px;
+      background: #555;
+      color: white;
+      border-radius: 6px;
+      text-decoration: none;
+    }
+  </style>
 </head>
+
 <body>
+  <h1>Realtime Monitoring</h1>
 
-<div class="top">
-  <a class="back" href="index.html">⬅ Home</a>
-  <h2>⚡ Real-time Monitoring — Pilih Mesin</h2>
-  <div id="conn">Connecting...</div>
-</div>
-
-<div class="layout">
-  <!-- Left: list 18 mesin -->
-  <div class="machines">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <div style="font-weight:800">Machines (18)</div>
-      <div class="mini">Click a machine to view detail</div>
-    </div>
-    <div class="machines-grid" id="machinesGrid">
-      <!-- JS will populate 18 buttons here -->
-    </div>
+  <!-- GRID 18 MESIN -->
+  <div class="machine-grid">
+    <!-- Generate 18 buttons -->
+    <script>
+      for (let i = 1; i <= 18; i++) {
+        document.write(`<button class="machine-btn" onclick="selectMachine(${i})">Mesin ${i}</button>`);
+      }
+    </script>
   </div>
 
-  <!-- Right: detail panel -->
-  <div class="panel" id="detailPanel">
-    <h3 id="detailTitle">Pilih Mesin di kiri →</h3>
-    <div id="subtitle" class="mini" style="margin-bottom:8px;color:var(--muted)">Detail parameter akan muncul di sini.</div>
+  <!-- AREA DETAIL PARAMETER -->
+  <h2 id="machine-title">Pilih mesin untuk melihat detail parameter.</h2>
 
-    <!-- Parameter grid: 12 params (plus some extra) -->
-    <div class="param-grid" id="paramGrid">
-      <!-- Static param cards (values updated by JS) -->
-      <div class="param wide">
-        <div class="p-name">1. Total Ea</div>
-        <div class="p-val" id="TotalEa">---</div>
-        <div class="p-unit">kWh</div>
-      </div>
+  <table>
+    <tbody id="param-table">
+      <tr><th>Parameter</th><th>Value</th></tr>
 
-      <div class="param wide">
-        <div class="p-name">2. Total Er</div>
-        <div class="p-val" id="TotalEr">---</div>
-        <div class="p-unit">kVARh</div>
-      </div>
+      <tr><td>Total Ea</td><td id="p1">-</td></tr>
+      <tr><td>Total Er</td><td id="p2">-</td></tr>
+      <tr><td>Partial Ea</td><td id="p3">-</td></tr>
+      <tr><td>Partial Er</td><td id="p4">-</td></tr>
+      <tr><td>Voltage (L-L Avg)</td><td id="p5">-</td></tr>
+      <tr><td>Current (I1,I2,I3)</td><td id="p6">-</td></tr>
+      <tr><td>Power (P)</td><td id="p7">-</td></tr>
+      <tr><td>Power (Q)</td><td id="p8">-</td></tr>
+      <tr><td>Power (S)</td><td id="p9">-</td></tr>
+      <tr><td>Power Factor</td><td id="p10">-</td></tr>
+      <tr><td>Frequency</td><td id="p11">-</td></tr>
+      <tr><td>Operational Time</td><td id="p12">-</td></tr>
+    </tbody>
+  </table>
 
-      <div class="param">
-        <div class="p-name">3. Partial Ea</div>
-        <div class="p-val" id="PartialEa">---</div>
-        <div class="p-unit">kWh</div>
-      </div>
+  <br>
+  <a id="back-btn" href="index.html">Back to Home</a>
 
-      <div class="param">
-        <div class="p-name">4. Partial Er</div>
-        <div class="p-val" id="PartialEr">---</div>
-        <div class="p-unit">kVARh</div>
-      </div>
+  <!-- JS: Dummy data -->
+  <script>
+    function selectMachine(id) {
+      document.getElementById("machine-title").innerText = "Realtime Parameters — Mesin " + id;
 
-      <div class="param">
-        <div class="p-name">5. Voltage (L-L Avg)</div>
-        <div class="p-val" id="Voltage">---</div>
-        <div class="p-unit">Volt</div>
-      </div>
+      // Dummy random value generator
+      const rand = (min, max) => (Math.random() * (max - min) + min).toFixed(2);
 
-      <div class="param">
-        <div class="p-name">6. Current (I1 / I2 / I3)</div>
-        <div class="p-val" id="Current">--- / --- / ---</div>
-        <div class="p-unit">Ampere</div>
-      </div>
-
-      <div class="param">
-        <div class="p-name">7. Power P (Total Active)</div>
-        <div class="p-val" id="PowerP">---</div>
-        <div class="p-unit">W (x1000)</div>
-      </div>
-
-      <div class="param">
-        <div class="p-name">8. Power Q (Total Reactive)</div>
-        <div class="p-val" id="PowerQ">---</div>
-        <div class="p-unit">VAR (x1000)</div>
-      </div>
-
-      <div class="param">
-        <div class="p-name">9. Power S (Total Apparent)</div>
-        <div class="p-val" id="PowerS">---</div>
-        <div class="p-unit">kVA</div>
-      </div>
-
-      <div class="param">
-        <div class="p-name">10. Power Factor (PF)</div>
-        <div class="p-val" id="PF">---</div>
-        <div class="p-unit">-</div>
-      </div>
-
-      <div class="param">
-        <div class="p-name">11. Frequency</div>
-        <div class="p-val" id="Hz">---</div>
-        <div class="p-unit">Hz</div>
-      </div>
-
-      <div class="param">
-        <div class="p-name">12. Operation Time</div>
-        <div class="p-val" id="OpTime">---</div>
-        <div class="p-unit">days / hrs</div>
-      </div>
-
-    </div>
-
-    <div class="hint">Tip: nilai live akan berubah otomatis saat data MQTT masuk. Jika data tidak muncul, cek koneksi broker atau payload JSON key.</div>
-  </div>
-</div>
-
-<script>
-/* === MQTT CONFIG (sesuai file lo) === */
-const options = {
-  username: "web_dashboard",
-  password: "Tristan12",
-  connectTimeout: 4000,
-  reconnectPeriod: 2000,
-};
-const client = mqtt.connect("wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt", options);
-
-const connEl = document.getElementById('conn');
-const machinesGrid = document.getElementById('machinesGrid');
-const detailTitle = document.getElementById('detailTitle');
-const subtitle = document.getElementById('subtitle');
-
-let selectedId = null;
-const devices = {}; // store latest payload per id
-
-// Create 18 machine buttons (1..18)
-for (let i=1;i<=18;i++){
-  const btn = document.createElement('div');
-  btn.className = 'm-btn';
-  btn.id = `m-btn-${i}`;
-  btn.innerHTML = `<div><div class="m-title">Mesin ${i}</div><div class="mini">ID: ${i}</div></div><div><div id="m-status-${i}" class="status-badge">--</div></div>`;
-  btn.onclick = ()=> selectMachine(i);
-  machinesGrid.appendChild(btn);
-  // initialize devices placeholder
-  devices[i] = null;
-}
-
-// select machine: update UI & detail panel
-function selectMachine(id){
-  selectedId = id;
-  detailTitle.textContent = `Mesin ${id} — Detail Parameter`;
-  subtitle.textContent = `Realtime data (ID: ${id}) — last update: --`;
-  // highlight selected
-  for(let i=1;i<=18;i++){
-    const el = document.getElementById(`m-btn-${i}`);
-    el.style.boxShadow = (i===id) ? '0 8px 30px rgba(0,255,194,0.06)' : 'none';
-    el.style.border = (i===id) ? '1px solid rgba(0,255,194,0.06)' : '1px solid rgba(255,255,255,0.02)';
-  }
-  // if we have cached data, render immediately
-  if(devices[id]) renderDetail(devices[id]);
-  else resetDetailValues();
-}
-
-// Reset detail values to placeholders
-function resetDetailValues(){
-  document.getElementById('TotalEa').textContent = '---';
-  document.getElementById('TotalEr').textContent = '---';
-  document.getElementById('PartialEa').textContent = '---';
-  document.getElementById('PartialEr').textContent = '---';
-  document.getElementById('Voltage').textContent = '---';
-  document.getElementById('Current').textContent = '--- / --- / ---';
-  document.getElementById('PowerP').textContent = '---';
-  document.getElementById('PowerQ').textContent = '---';
-  document.getElementById('PowerS').textContent = '---';
-  document.getElementById('PF').textContent = '---';
-  document.getElementById('Hz').textContent = '---';
-  document.getElementById('OpTime').textContent = '---';
-}
-
-// Format OpH decimal hours to "X days Y hrs"
-function formatOpTime(h){
-  if(h === undefined || h === null || isNaN(h)) return '---';
-  const totalMinutes = Math.round(parseFloat(h) * 60);
-  const days = Math.floor(totalMinutes / (24*60));
-  const rem = totalMinutes % (24*60);
-  const hrs = Math.floor(rem/60);
-  const mins = rem % 60;
-  let out = '';
-  if(days>0) out += `${days}d `;
-  out += `${hrs}h`;
-  if(mins>0) out += ` ${mins}m`;
-  return out;
-}
-
-// Render detail panel from payload object
-function renderDetail(d){
-  // assume keys: id, V, I1,I2,I3, P,Q,S, PF, Hz, OpH, EaT, ErT, EaP, ErP, status
-  document.getElementById('TotalEa').textContent = (d.EaT || d.EaT === 0) ? d.EaT : '---';
-  document.getElementById('TotalEr').textContent = (d.ErT || d.ErT === 0) ? d.ErT : '---';
-  document.getElementById('PartialEa').textContent = (d.EaP || d.EaP === 0) ? d.EaP : '---';
-  document.getElementById('PartialEr').textContent = (d.ErP || d.ErP === 0) ? d.ErP : '---';
-  document.getElementById('Voltage').textContent = (d.V || d.V === 0) ? d.V : '---';
-  const i1 = (d.I1 || d.I1 === 0) ? d.I1 : '---';
-  const i2 = (d.I2 || d.I2 === 0) ? d.I2 : '---';
-  const i3 = (d.I3 || d.I3 === 0) ? d.I3 : '---';
-  document.getElementById('Current').textContent = `${i1} / ${i2} / ${i3}`;
-  document.getElementById('PowerP').textContent = (d.P || d.P === 0) ? d.P : '---';
-  document.getElementById('PowerQ').textContent = (d.Q || d.Q === 0) ? d.Q : '---';
-  document.getElementById('PowerS').textContent = (d.S || d.S === 0) ? d.S : '---';
-  document.getElementById('PF').textContent = (d.PF || d.PF === 0) ? d.PF : '---';
-  document.getElementById('Hz').textContent = (d.Hz || d.Hz === 0) ? d.Hz : '---';
-  document.getElementById('OpTime').textContent = (d.OpH || d.OpH === 0) ? formatOpTime(d.OpH) : '---';
-  // update subtitle with timestamp if available
-  subtitle.textContent = `Realtime data (ID: ${d.id}) — last update: ${d._t ? new Date(d._t).toLocaleString() : (new Date()).toLocaleTimeString()}`;
-}
-
-// MQTT events
-client.on("connect", () => {
-  connEl.textContent = "✅ MQTT Connected";
-  client.subscribe("politeknik/meter/data");
-});
-
-client.on("error", err => {
-  connEl.textContent = "❌ MQTT Error";
-  console.error("MQTT Error", err);
-});
-
-client.on("message", (topic, message) => {
-  try {
-    const d = JSON.parse(message.toString());
-    // store timestamp for UI (optional)
-    d._t = Date.now();
-
-    // ID must correspond to 1..18 (number or string)
-    const id = Number(d.id);
-    if (!id || id < 1 || id > 18) {
-      // ignore or map as needed
-      console.warn('Received data with unexpected id:', d.id);
-      return;
+      document.getElementById("p1").innerText = rand(100, 500) + " kWh";
+      document.getElementById("p2").innerText = rand(10, 50) + " kVARh";
+      document.getElementById("p3").innerText = rand(5, 20) + " kWh";
+      document.getElementById("p4").innerText = rand(1, 10) + " kVARh";
+      document.getElementById("p5").innerText = rand(380, 420) + " V";
+      document.getElementById("p6").innerText = rand(10, 60) + " A";
+      document.getElementById("p7").innerText = rand(1, 20) + " kW";
+      document.getElementById("p8").innerText = rand(1, 20) + " kVAR";
+      document.getElementById("p9").innerText = rand(1, 20) + " kVA";
+      document.getElementById("p10").innerText = rand(0.7, 1.0);
+      document.getElementById("p11").innerText = rand(49, 51) + " Hz";
+      document.getElementById("p12").innerText = rand(1, 100) + " Days";
     }
-
-    // cache latest payload
-    devices[id] = d;
-
-    // update machine list status badge & mini info
-    const statusEl = document.getElementById(`m-status-${id}`);
-    if (statusEl) {
-      const st = (d.status && d.status.toLowerCase()==='online') ? 'ONLINE' : (d.status||'OFF');
-      statusEl.textContent = st;
-      statusEl.className = (st==='ONLINE') ? 'status-badge status-online' : 'status-badge status-offline';
-    }
-
-    // Optional: show a small mini value (e.g., P) on the machine button
-    const btn = document.getElementById(`m-btn-${id}`);
-    if (btn) {
-      const mini = btn.querySelector('.mini');
-      if (mini) mini.textContent = `P: ${ (d.P || d.P===0) ? d.P : '---' } W`;
-    }
-
-    // If selected, update detail view only (table stays static)
-    if (selectedId === id) renderDetail(d);
-
-  } catch (e) {
-    console.error('JSON parse error', e);
-  }
-});
-
-// initialise: show machine 1 selected by default
-selectMachine(1);
-</script>
+  </script>
 
 </body>
 </html>
