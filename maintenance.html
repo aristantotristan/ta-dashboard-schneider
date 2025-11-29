@@ -1,105 +1,150 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>Maintenance Log</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Maintenance Sistem</title>
 
 <style>
     body {
-        margin: 0;
-        background: #121212;
-        color: #fff;
-        font-family: Arial;
+        font-family: 'Segoe UI', sans-serif;
+        background: #0f0f0f;
+        color: #e5e5e5;
+        padding: 20px;
     }
-    .title {
-        padding: 15px;
+    h1 {
+        color: #00ffc2;
         text-align: center;
-        font-size: 22px;
+        margin-bottom: 25px;
+    }
+    .table-wrap {
+        overflow-x: auto;
+        margin-top: 25px;
+        background: #161616;
+        padding: 18px;
+        border-radius: 12px;
+        border: 1px solid #2d2d2d;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    th, td {
+        padding: 10px 12px;
+        border-bottom: 1px solid #2a2a2a;
+        font-size: 14px;
+    }
+    th {
+        color: #00ffc2;
+        text-align: left;
         background: #1e1e1e;
-        border-bottom: 2px solid #333;
     }
-    #list {
-        padding: 15px;
-    }
-    .item {
-        padding: 12px;
-        background: #1c1c1c;
-        margin-bottom: 10px;
-        border-left: 6px solid;
-        border-radius: 6px;
-    }
-    .offline { border-color: #ff5252; }
-    .online  { border-color: #4caf50; }
-    .time {
-        font-size: 12px;
-        color: #aaa;
-        margin-top: 5px;
+    .status-ok { color: #10b981; font-weight: 700; }
+    .status-err { color: #ef4444; font-weight: 700; }
+    .status-warn { color: #facc15; font-weight: 700; }
+    .card {
+        background: #161616;
+        padding: 12px 18px;
+        border-radius: 10px;
+        margin-bottom: 16px;
+        border: 1px solid #2c2c2c;
     }
 </style>
 
+<!-- Supabase CDN -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-</head>
 
+</head>
 <body>
 
-<div class="title">Maintenance Log</div>
-<div id="list">Loading...</div>
+<h1>Maintenance Sistem — Watchdog Monitor</h1>
+
+<div class="card" id="summaryBox">Loading summary...</div>
+
+<div class="table-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>ID Mesin</th>
+                <th>Status Terakhir</th>
+                <th>Keterangan</th>
+                <th>Update</th>
+            </tr>
+        </thead>
+        <tbody id="maintenanceTable"></tbody>
+    </table>
+</div>
 
 <script>
+/* ----------------- CONFIG SUPABASE ------------------- */
+const SUPABASE_URL = "https://rojhcadtqfynlqzubftx.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs";
 
-// ======================
-// 1️⃣ CONFIG SUPABASE
-// ======================
-const supabase = supabase.createClient(
-    "https://rojhcadtqfynlqzubftx.supabase.co",
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs"
-);
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// ======================
-// 2️⃣ LOAD DATA
-// ======================
-async function loadLogs() {
-    const list = document.getElementById("list");
-    list.innerHTML = "Loading...";
+/* ----------------- LOAD DATA ------------------- */
+async function loadMaintenance(){
+    const table = document.getElementById("maintenanceTable");
+    const summaryBox = document.getElementById("summaryBox");
 
-    const { data, error } = await supabase
-        .from("device_status")
+    table.innerHTML = `<tr><td colspan="4">Loading...</td></tr>`;
+
+    // Ambil data watchdog terbaru per mesin
+    const { data: wd, error } = await db
+        .from("watchdog_log")
         .select("*")
-        .order("id", { ascending: false });
+        .order("timestamp", { ascending:false });
 
-    if (error) {
-        list.innerHTML = "Error loading data.";
+    if(error){
+        table.innerHTML = `<tr><td colspan="4">Error load data</td></tr>`;
         return;
     }
 
-    if (data.length === 0) {
-        list.innerHTML = "Belum ada log.";
-        return;
-    }
+    // Mapping per mesin (ambil log terbaru setiap mesin)
+    const latest = {};
+    wd.forEach(r => {
+        if(!latest[r.device_id]) latest[r.device_id] = r;
+    });
 
-    list.innerHTML = "";
+    // Summary
+    let offline = 0, warning = 0, ok = 0;
+    Object.values(latest).forEach(r=>{
+        if(r.status === "OFFLINE" || r.status === "TIMEOUT") offline++;
+        else if(r.status === "LAMBAT" || r.status === "ABNORMAL") warning++;
+        else ok++;
+    });
 
-    data.forEach(row => {
-        const div = document.createElement("div");
-        div.className = "item " + row.status;
+    summaryBox.innerHTML = `
+        <b>Ringkasan Sistem:</b><br>
+        ✅ Normal: ${ok}<br>
+        ⚠ Warning: ${warning}<br>
+        ❌ Offline: ${offline}
+    `;
 
-        div.innerHTML = `
-            <b>Status: ${row.status.toUpperCase()}</b><br>
-            <span>${row.note || "-"}</span>
-            <div class="time">${new Date(row.created_at).toLocaleString()}</div>
+    // TABEL
+    table.innerHTML = "";
+
+    Object.values(latest).forEach(item=>{
+        const stat = item.status;
+        let cls = "status-ok";
+        if(stat === "OFFLINE" || stat === "TIMEOUT") cls = "status-err";
+        else if(stat === "LAMBAT" || stat === "ABNORMAL") cls = "status-warn";
+
+        table.innerHTML += `
+            <tr>
+                <td>Mesin ${item.device_id}</td>
+                <td class="${cls}">${stat}</td>
+                <td>${item.reason || '-'}</td>
+                <td>${new Date(item.timestamp).toLocaleString()}</td>
+            </tr>
         `;
-
-        list.appendChild(div);
     });
 }
 
-// ======================
-// 3️⃣ AUTO REFRESH 5 DETIK
-// ======================
-loadLogs();
-setInterval(loadLogs, 5000);
-
+/* --------- AUTO REFRESH SETIAP 5 DETIK ---------- */
+loadMaintenance();
+setInterval(loadMaintenance, 5000);
 </script>
+
 </body>
 </html>
