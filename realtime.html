@@ -1,58 +1,303 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>⚡ Real-time Power Meter Dashboard</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>⚡ Real-time Power Meter Dashboard (Detail Selectable)</title>
 <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 <style>
-body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:#121212; color:#E0E0E0; padding:20px; }
-h2 { color:#00FFC2; border-bottom:2px solid #3A3A3A; padding-bottom:10px; margin-bottom:5px; }
-#conn { margin-bottom:25px; font-size:1.1em; font-weight:bold; }
-.back { display:inline-block; margin-bottom:20px; padding:10px 16px; background:#00FFC2; color:black; border-radius:8px; text-decoration:none; font-weight:bold; }
-table { border-collapse:collapse; width:100%; margin-top:15px; box-shadow:0 4px 12px rgba(0,0,0,0.5); border-radius:8px; overflow:hidden; }
-th,td { border:1px solid #2A2A2A; padding:10px 12px; text-align:center; transition:background-color .3s; }
-thead th { background:#2A2A2A; color:#00FFC2; font-weight:600; text-transform:uppercase; font-size:.9em; }
-tbody tr { background:#1E1E1E; }
-tbody tr:hover { background:#334155; }
-.cell-id { font-weight:bold; background:#111827; }
-.status-online { color:#10B981; font-weight:bold; }
-.status-offline { color:#EF4444; font-weight:bold; }
-.col-power { background:#0F334A; color:#38BDF8; font-weight:600; }
-.col-energy { color:#4ADE80; font-weight:600; }
+  :root{
+    --bg:#121212; --panel:#1e1e1e; --muted:#94A3B8; --accent:#00FFC2; --ok:#10B981; --err:#EF4444;
+    --col-power:#0F334A; --col-energy:#4ADE80; --glass: rgba(255,255,255,0.03);
+  }
+  body{font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;background:var(--bg);color:#E0E0E0;margin:0;padding:22px;}
+  .top {display:flex;align-items:center;gap:16px;margin-bottom:18px;}
+  .back{background:var(--accent);color:#000;padding:8px 12px;border-radius:8px;text-decoration:none;font-weight:700;}
+  h2{margin:0;color:var(--accent);font-size:20px}
+  #conn{margin-left:auto;font-weight:700;color:var(--muted)}
+  .layout{display:grid;grid-template-columns: 360px 1fr; gap:18px; margin-top:18px;}
+  /* machine list */
+  .machines {background:var(--panel);padding:14px;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,0.6);}
+  .machines-grid {display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
+  .m-btn{background:var(--glass);border:1px solid rgba(255,255,255,0.04);padding:10px 12px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .m-btn:hover{transform:translateY(-2px);transition:all .12s}
+  .m-title{font-weight:700}
+  .status-badge{font-size:12px;padding:4px 8px;border-radius:999px;background:#222;color:var(--muted);font-weight:700}
+  .status-online{background:rgba(16,185,129,0.12);color:var(--ok);border:1px solid rgba(16,185,129,0.12)}
+  .status-offline{background:rgba(239,68,68,0.08);color:var(--err);border:1px solid rgba(239,68,68,0.06)}
+  .mini {font-size:12px;color:var(--muted)}
+  /* detail panel */
+  .panel {background:var(--panel);padding:18px;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,0.6);}
+  .panel h3{margin:0 0 10px 0;color:var(--accent)}
+  .param-grid{display:grid;grid-template-columns: 1fr 1fr;gap:10px;margin-top:12px;}
+  .param {background:rgba(255,255,255,0.02);border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:6px}
+  .p-name{font-size:13px;color:var(--muted);font-weight:700}
+  .p-val{font-size:18px;font-weight:800;color:#fff}
+  .p-unit{font-size:12px;color:var(--muted)}
+  .wide {grid-column:1/3}
+  .hint{margin-top:12px;font-size:13px;color:var(--muted)}
+  @media(max-width:920px){ .layout{grid-template-columns:1fr; } .machines-grid{grid-template-columns:repeat(3,1fr);} .param-grid{grid-template-columns:1fr} }
 </style>
 </head>
 <body>
-<a href="index.html" class="back">⬅ Back</a>
-<h2>⚡ Real-time Power Meter Dashboard (18 Mesin)</h2>
-<p id="conn">Connecting...</p>
-<table>
-<thead>
-<tr>
-<th class="cell-id">ID</th>
-<th>Status</th>
-<th>V</th><th>I1</th><th>I2</th><th>I3</th>
-<th class="col-power">P</th><th class="col-power">Q</th><th class="col-power">S</th>
-<th>PF</th><th>Hz</th><th>OpH</th>
-<th class="col-energy">Ea Tot</th><th class="col-energy">Er Tot</th>
-<th class="col-energy">Ea Part</th><th class="col-energy">Er Part</th>
-</tr>
-</thead>
-<tbody id="tableBody">
-<tr><td colspan="16" style="padding:30px; color:#94A3B8;">Awaiting Real-time Data...</td></tr>
-</tbody>
-</table>
+
+<div class="top">
+  <a class="back" href="index.html">⬅ Home</a>
+  <h2>⚡ Real-time Monitoring — Pilih Mesin</h2>
+  <div id="conn">Connecting...</div>
+</div>
+
+<div class="layout">
+  <!-- Left: list 18 mesin -->
+  <div class="machines">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="font-weight:800">Machines (18)</div>
+      <div class="mini">Click a machine to view detail</div>
+    </div>
+    <div class="machines-grid" id="machinesGrid">
+      <!-- JS will populate 18 buttons here -->
+    </div>
+  </div>
+
+  <!-- Right: detail panel -->
+  <div class="panel" id="detailPanel">
+    <h3 id="detailTitle">Pilih Mesin di kiri →</h3>
+    <div id="subtitle" class="mini" style="margin-bottom:8px;color:var(--muted)">Detail parameter akan muncul di sini.</div>
+
+    <!-- Parameter grid: 12 params (plus some extra) -->
+    <div class="param-grid" id="paramGrid">
+      <!-- Static param cards (values updated by JS) -->
+      <div class="param wide">
+        <div class="p-name">1. Total Ea</div>
+        <div class="p-val" id="TotalEa">---</div>
+        <div class="p-unit">kWh</div>
+      </div>
+
+      <div class="param wide">
+        <div class="p-name">2. Total Er</div>
+        <div class="p-val" id="TotalEr">---</div>
+        <div class="p-unit">kVARh</div>
+      </div>
+
+      <div class="param">
+        <div class="p-name">3. Partial Ea</div>
+        <div class="p-val" id="PartialEa">---</div>
+        <div class="p-unit">kWh</div>
+      </div>
+
+      <div class="param">
+        <div class="p-name">4. Partial Er</div>
+        <div class="p-val" id="PartialEr">---</div>
+        <div class="p-unit">kVARh</div>
+      </div>
+
+      <div class="param">
+        <div class="p-name">5. Voltage (L-L Avg)</div>
+        <div class="p-val" id="Voltage">---</div>
+        <div class="p-unit">Volt</div>
+      </div>
+
+      <div class="param">
+        <div class="p-name">6. Current (I1 / I2 / I3)</div>
+        <div class="p-val" id="Current">--- / --- / ---</div>
+        <div class="p-unit">Ampere</div>
+      </div>
+
+      <div class="param">
+        <div class="p-name">7. Power P (Total Active)</div>
+        <div class="p-val" id="PowerP">---</div>
+        <div class="p-unit">W (x1000)</div>
+      </div>
+
+      <div class="param">
+        <div class="p-name">8. Power Q (Total Reactive)</div>
+        <div class="p-val" id="PowerQ">---</div>
+        <div class="p-unit">VAR (x1000)</div>
+      </div>
+
+      <div class="param">
+        <div class="p-name">9. Power S (Total Apparent)</div>
+        <div class="p-val" id="PowerS">---</div>
+        <div class="p-unit">kVA</div>
+      </div>
+
+      <div class="param">
+        <div class="p-name">10. Power Factor (PF)</div>
+        <div class="p-val" id="PF">---</div>
+        <div class="p-unit">-</div>
+      </div>
+
+      <div class="param">
+        <div class="p-name">11. Frequency</div>
+        <div class="p-val" id="Hz">---</div>
+        <div class="p-unit">Hz</div>
+      </div>
+
+      <div class="param">
+        <div class="p-name">12. Operation Time</div>
+        <div class="p-val" id="OpTime">---</div>
+        <div class="p-unit">days / hrs</div>
+      </div>
+
+    </div>
+
+    <div class="hint">Tip: nilai live akan berubah otomatis saat data MQTT masuk. Jika data tidak muncul, cek koneksi broker atau payload JSON key.</div>
+  </div>
+</div>
+
 <script>
-const options={username:"web_dashboard",password:"Tristan12",connectTimeout:4000,reconnectPeriod:2000};
-const client=mqtt.connect("wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt",options);
-const tableBody=document.getElementById("tableBody");
-const conn=document.getElementById("conn");
-const devices={};
-const dataMap=[{key:'V'},{key:'I1'},{key:'I2'},{key:'I3'},{key:'P'},{key:'Q'},{key:'S'},{key:'PF'},{key:'Hz'},{key:'OpH'},{key:'EaT'},{key:'ErT'},{key:'EaP'},{key:'ErP'}];
-function formatOperatingTime(h){if(!h&&h!==0)return '---';const m=Math.round(parseFloat(h)*60);const d=Math.floor(m/(24*60));const rm=m%(24*60);const hh=Math.floor(rm/60);const mm=rm%60;let r='';if(d>0)r+=`${d} Hari `;if(hh>0||d===0)r+=`${hh} Jam`;if(mm>0)r+=` ${mm} Mnt`;return r.trim()||'0 Jam';}
-client.on("connect",()=>{conn.innerHTML="✅ MQTT Connected";client.subscribe("politeknik/meter/data");});
-client.on("error",e=>{conn.innerHTML="❌ MQTT Error";});
-client.on("message",(topic,message)=>{try{const d=JSON.parse(message.toString());const id=d.id;if(!devices[id]){const row=tableBody.insertRow();devices[id]=row;row.insertCell().textContent=id;row.cells[0].className='cell-id';row.insertCell().textContent=d.status;dataMap.forEach(()=>{const c=row.insertCell();c.textContent='---';});if(tableBody.rows.length>1&&tableBody.rows[0].cells[0].colSpan===16)tableBody.deleteRow(0);}const row=devices[id];const cells=row.cells;cells[1].textContent=d.status.toUpperCase();cells[1].className=d.status==="online"?"status-online":"status-offline";dataMap.forEach((item,i)=>{const idx=i+2;let val=d[item.key];cells[idx].textContent=item.key==='OpH'?formatOperatingTime(val):(val||val===0?val:'---');});}catch(e){console.error("JSON Error",e);}});
+/* === MQTT CONFIG (sesuai file lo) === */
+const options = {
+  username: "web_dashboard",
+  password: "Tristan12",
+  connectTimeout: 4000,
+  reconnectPeriod: 2000,
+};
+const client = mqtt.connect("wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt", options);
+
+const connEl = document.getElementById('conn');
+const machinesGrid = document.getElementById('machinesGrid');
+const detailTitle = document.getElementById('detailTitle');
+const subtitle = document.getElementById('subtitle');
+
+let selectedId = null;
+const devices = {}; // store latest payload per id
+
+// Create 18 machine buttons (1..18)
+for (let i=1;i<=18;i++){
+  const btn = document.createElement('div');
+  btn.className = 'm-btn';
+  btn.id = `m-btn-${i}`;
+  btn.innerHTML = `<div><div class="m-title">Mesin ${i}</div><div class="mini">ID: ${i}</div></div><div><div id="m-status-${i}" class="status-badge">--</div></div>`;
+  btn.onclick = ()=> selectMachine(i);
+  machinesGrid.appendChild(btn);
+  // initialize devices placeholder
+  devices[i] = null;
+}
+
+// select machine: update UI & detail panel
+function selectMachine(id){
+  selectedId = id;
+  detailTitle.textContent = `Mesin ${id} — Detail Parameter`;
+  subtitle.textContent = `Realtime data (ID: ${id}) — last update: --`;
+  // highlight selected
+  for(let i=1;i<=18;i++){
+    const el = document.getElementById(`m-btn-${i}`);
+    el.style.boxShadow = (i===id) ? '0 8px 30px rgba(0,255,194,0.06)' : 'none';
+    el.style.border = (i===id) ? '1px solid rgba(0,255,194,0.06)' : '1px solid rgba(255,255,255,0.02)';
+  }
+  // if we have cached data, render immediately
+  if(devices[id]) renderDetail(devices[id]);
+  else resetDetailValues();
+}
+
+// Reset detail values to placeholders
+function resetDetailValues(){
+  document.getElementById('TotalEa').textContent = '---';
+  document.getElementById('TotalEr').textContent = '---';
+  document.getElementById('PartialEa').textContent = '---';
+  document.getElementById('PartialEr').textContent = '---';
+  document.getElementById('Voltage').textContent = '---';
+  document.getElementById('Current').textContent = '--- / --- / ---';
+  document.getElementById('PowerP').textContent = '---';
+  document.getElementById('PowerQ').textContent = '---';
+  document.getElementById('PowerS').textContent = '---';
+  document.getElementById('PF').textContent = '---';
+  document.getElementById('Hz').textContent = '---';
+  document.getElementById('OpTime').textContent = '---';
+}
+
+// Format OpH decimal hours to "X days Y hrs"
+function formatOpTime(h){
+  if(h === undefined || h === null || isNaN(h)) return '---';
+  const totalMinutes = Math.round(parseFloat(h) * 60);
+  const days = Math.floor(totalMinutes / (24*60));
+  const rem = totalMinutes % (24*60);
+  const hrs = Math.floor(rem/60);
+  const mins = rem % 60;
+  let out = '';
+  if(days>0) out += `${days}d `;
+  out += `${hrs}h`;
+  if(mins>0) out += ` ${mins}m`;
+  return out;
+}
+
+// Render detail panel from payload object
+function renderDetail(d){
+  // assume keys: id, V, I1,I2,I3, P,Q,S, PF, Hz, OpH, EaT, ErT, EaP, ErP, status
+  document.getElementById('TotalEa').textContent = (d.EaT || d.EaT === 0) ? d.EaT : '---';
+  document.getElementById('TotalEr').textContent = (d.ErT || d.ErT === 0) ? d.ErT : '---';
+  document.getElementById('PartialEa').textContent = (d.EaP || d.EaP === 0) ? d.EaP : '---';
+  document.getElementById('PartialEr').textContent = (d.ErP || d.ErP === 0) ? d.ErP : '---';
+  document.getElementById('Voltage').textContent = (d.V || d.V === 0) ? d.V : '---';
+  const i1 = (d.I1 || d.I1 === 0) ? d.I1 : '---';
+  const i2 = (d.I2 || d.I2 === 0) ? d.I2 : '---';
+  const i3 = (d.I3 || d.I3 === 0) ? d.I3 : '---';
+  document.getElementById('Current').textContent = `${i1} / ${i2} / ${i3}`;
+  document.getElementById('PowerP').textContent = (d.P || d.P === 0) ? d.P : '---';
+  document.getElementById('PowerQ').textContent = (d.Q || d.Q === 0) ? d.Q : '---';
+  document.getElementById('PowerS').textContent = (d.S || d.S === 0) ? d.S : '---';
+  document.getElementById('PF').textContent = (d.PF || d.PF === 0) ? d.PF : '---';
+  document.getElementById('Hz').textContent = (d.Hz || d.Hz === 0) ? d.Hz : '---';
+  document.getElementById('OpTime').textContent = (d.OpH || d.OpH === 0) ? formatOpTime(d.OpH) : '---';
+  // update subtitle with timestamp if available
+  subtitle.textContent = `Realtime data (ID: ${d.id}) — last update: ${d._t ? new Date(d._t).toLocaleString() : (new Date()).toLocaleTimeString()}`;
+}
+
+// MQTT events
+client.on("connect", () => {
+  connEl.textContent = "✅ MQTT Connected";
+  client.subscribe("politeknik/meter/data");
+});
+
+client.on("error", err => {
+  connEl.textContent = "❌ MQTT Error";
+  console.error("MQTT Error", err);
+});
+
+client.on("message", (topic, message) => {
+  try {
+    const d = JSON.parse(message.toString());
+    // store timestamp for UI (optional)
+    d._t = Date.now();
+
+    // ID must correspond to 1..18 (number or string)
+    const id = Number(d.id);
+    if (!id || id < 1 || id > 18) {
+      // ignore or map as needed
+      console.warn('Received data with unexpected id:', d.id);
+      return;
+    }
+
+    // cache latest payload
+    devices[id] = d;
+
+    // update machine list status badge & mini info
+    const statusEl = document.getElementById(`m-status-${id}`);
+    if (statusEl) {
+      const st = (d.status && d.status.toLowerCase()==='online') ? 'ONLINE' : (d.status||'OFF');
+      statusEl.textContent = st;
+      statusEl.className = (st==='ONLINE') ? 'status-badge status-online' : 'status-badge status-offline';
+    }
+
+    // Optional: show a small mini value (e.g., P) on the machine button
+    const btn = document.getElementById(`m-btn-${id}`);
+    if (btn) {
+      const mini = btn.querySelector('.mini');
+      if (mini) mini.textContent = `P: ${ (d.P || d.P===0) ? d.P : '---' } W`;
+    }
+
+    // If selected, update detail view only (table stays static)
+    if (selectedId === id) renderDetail(d);
+
+  } catch (e) {
+    console.error('JSON parse error', e);
+  }
+});
+
+// initialise: show machine 1 selected by default
+selectMachine(1);
 </script>
+
 </body>
 </html>
