@@ -1,193 +1,99 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Realtime Dashboard</title>
-
+    <meta charset="UTF-8">
+    <title>Realtime Meter Dashboard</title>
+    <meta http-equiv="refresh" content="180"> <!-- fallback refresh setiap 3 menit jika freeze -->
     <style>
         body {
-            margin: 0;
             font-family: Arial, sans-serif;
-            background: #121212;
+            background: #0d1117;
             color: #fff;
-        }
-        .title {
             text-align: center;
-            padding: 10px;
-            font-size: 22px;
-            background: #1e1e1e;
-            margin-bottom: 10px;
-            border-bottom: 2px solid #333;
-        }
-        #log {
-            font-size: 12px;
-            white-space: pre;
-            padding: 10px;
-            background: #1b1b1b;
-            height: 120px;
-            overflow-y: scroll;
-            border-top: 1px solid #333;
-        }
-        #cards {
-            display: flex;
-            flex-wrap: wrap;
-            padding: 10px;
-            gap: 10px;
+            padding: 20px;
         }
         .card {
-            width: 180px;
-            background: #1e1e1e;
-            padding: 15px;
-            border-radius: 10px;
-            border: 1px solid #333;
-            box-shadow: 0 0 5px #0006;
-        }
-        .card h3 {
-            margin: 0 0 10px 0;
-            font-size: 16px;
-            color: #03A9F4;
+            background: #161b22;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 10px auto;
+            width: 320px;
+            box-shadow: 0 0 12px #000;
         }
         .value {
-            font-size: 22px;
-            font-weight: bold;
-            color: #fff;
+            font-size: 42px;
+            margin-top: 10px;
         }
-        .mini {
-            font-size: 12px;
-            margin-top: 5px;
-            color: #aaa;
+        .label {
+            font-size: 18px;
+            opacity: .7;
         }
     </style>
 </head>
-
 <body>
-    <div class="title">Realtime Monitoring</div>
 
-    <div id="cards"></div>
-    <div id="log"></div>
+    <h1>Realtime Meter Data</h1>
+    <p>Source: Supabase Watchdog (24/7 backend, no browser required)</p>
 
-<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <div class="card">
+        <div class="label">Tegangan</div>
+        <div id="tegangan" class="value">--</div>
+    </div>
 
-<script>
+    <div class="card">
+        <div class="label">Arus</div>
+        <div id="arus" class="value">--</div>
+    </div>
 
-// =======================================================
-// 1️⃣ WATCHDOG — NONSTOP MONITOR (TIDAK PERLU BROWSER TERBUKA)
-// =======================================================
+    <div class="card">
+        <div class="label">Daya</div>
+        <div id="daya" class="value">--</div>
+    </div>
 
-let lastMessageTime = Date.now();
-let offlineSent = false;
-let onlineSent  = false;
+    <div class="card">
+        <div class="label">Energi</div>
+        <div id="energi" class="value">--</div>
+    </div>
 
-setInterval(() => {
-    const now  = Date.now();
-    const diff = (now - lastMessageTime) / 1000; // detik tanpa data
+    <div class="card">
+        <div class="label">Frekuensi</div>
+        <div id="frekuensi" class="value">--</div>
+    </div>
 
-    // OFFLINE (3 menit tidak ada data)
-    if (diff > 180 && !offlineSent) {
-        offlineSent = true;
-        onlineSent  = false;
+    <script>
+        async function loadData() {
+            try {
+                const response = await fetch(
+                    "https://rojhcadtqfynlqzubftx.supabase.co/functions/v1/watchdog-offline",
+                    { method: "GET" }
+                );
 
-        fetch("https://rojhcadtqfynlqzubftx.supabase.co/functions/v1/watchdog-offline", {
-            method: "POST",
-            headers: {"Content-Type":"application/json"},
-            body: JSON.stringify({
-                status: "offline",
-                note: "Tidak ada data selama 3 menit"
-            })
-        });
+                const data = await response.json();
 
-        appendLog("⚠ OFFLINE dikirim ke Supabase (3 menit tanpa data)");
-    }
+                // --- pastikan backend kirim JSON begini ---
+                // {
+                //   "tegangan": 220,
+                //   "arus": 4.2,
+                //   "daya": 930,
+                //   "energi": 12.3,
+                //   "frekuensi": 50
+                // }
 
-    // ONLINE (data muncul lagi)
-    if (diff < 5 && offlineSent && !onlineSent) {
-        onlineSent = true;
+                document.getElementById("tegangan").innerHTML = data.tegangan + " V";
+                document.getElementById("arus").innerHTML = data.arus + " A";
+                document.getElementById("daya").innerHTML = data.daya + " W";
+                document.getElementById("energi").innerHTML = data.energi + " kWh";
+                document.getElementById("frekuensi").innerHTML = data.frekuensi + " Hz";
+            }
+            catch (e) {
+                console.log("Gagal load:", e);
+            }
+        }
 
-        fetch("https://rojhcadtqfynlqzubftx.supabase.co/functions/v1/watchdog-offline", {
-            method: "POST",
-            headers: {"Content-Type":"application/json"},
-            body: JSON.stringify({
-                status: "online",
-                note: "Data kembali muncul"
-            })
-        });
+        // realtime update tiap 3 detik
+        setInterval(loadData, 3000);
+        loadData();
+    </script>
 
-        appendLog("✅ ONLINE dikirim ke Supabase (data kembali)");
-    }
-
-}, 1000);
-
-// dipanggil saat mqtt menerima data baru
-function onNewData() {
-    lastMessageTime = Date.now();
-}
-
-// =======================================================
-// 2️⃣ MQTT SETUP
-// =======================================================
-
-const client = mqtt.connect("wss://broker.emqx.io:8084/mqtt");
-
-const log = document.getElementById("log");
-function appendLog(msg) {
-    log.textContent += msg + "\n";
-    log.scrollTop = log.scrollHeight;
-}
-
-client.on("connect", () => {
-    appendLog("Connected to MQTT Broker");
-    client.subscribe("tristan/realtime/#");
-});
-
-client.on("reconnect", () => appendLog("Reconnecting..."));
-client.on("error", (err) => appendLog("Error: " + err));
-
-let cache = {};
-
-client.on("message", (topic, buf) => {
-    const payload = buf.toString();
-    const parts   = topic.split("/");
-    const id      = parts[2];
-
-    // tandai ada data baru
-    onNewData();
-
-    // buat kartu jika belum ada
-    if (!document.getElementById("card-" + id)) {
-        createCard(id);
-    }
-
-    // update isi kartu
-    document.getElementById("value-" + id).textContent = payload;
-    document.getElementById("mini-" + id).textContent  = "Terakhir update: now";
-
-    cache[id] = payload;
-});
-
-// =======================================================
-// 3️⃣ BUAT CARD SENSOR
-// =======================================================
-function createCard(id) {
-    const cards = document.getElementById("cards");
-
-    const div = document.createElement("div");
-    div.className = "card";
-    div.id = "card-" + id;
-
-    div.innerHTML = `
-        <h3>Sensor ${id}</h3>
-        <div class="value" id="value-${id}">--</div>
-        <div class="mini"  id="mini-${id}">Waiting...</div>
-    `;
-
-    cards.appendChild(div);
-}
-
-// =======================================================
-// END
-// =======================================================
-
-</script>
 </body>
 </html>
