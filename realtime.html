@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Realtime Monitoring — 18 Mesin (SPA, MQTT single connect)</title>
+<title>Realtime Monitoring — 18 Mesin (Single connect MQTT)</title>
 
 <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 
@@ -21,6 +21,8 @@ h1{margin:0;color:var(--accent);font-size:20px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:14px;margin-top:18px}
 .card{background:var(--panel);padding:18px;border-radius:10px;text-align:center;cursor:pointer;border:1px solid rgba(255,255,255,0.02)}
 .card:hover{transform:translateY(-4px);transition:all .12s}
+.card .title{font-weight:800}
+.card .mini{margin-top:8px;color:var(--muted);font-size:13px}
 
 /* Detail view */
 .detail{display:none;margin-top:18px;background:var(--panel);padding:18px;border-radius:10px}
@@ -38,22 +40,24 @@ h1{margin:0;color:var(--accent);font-size:20px}
   .param-grid{grid-template-columns:1fr}
   .grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr))}
 }
+.small-muted{color:var(--muted);font-size:13px}
+.hidden{display:none}
 </style>
 </head>
 <body>
 
 <div class="header">
   <h1>⚡ Monitoring Energi — PT. Amarilys</h1>
-  <div id="mqttStatus">Connecting MQTT...</div>
+  <div id="mqttStatus">MQTT: connecting...</div>
 </div>
 
-<!-- === LIST VIEW (default) === -->
-<section id="listView">
-  <div style="margin-top:8px;color:var(--muted)">Pilih mesin untuk lihat detail parameter (klik salah satu)</div>
-  <div class="grid" id="machinesGrid" aria-live="polite"></div>
+<!-- LIST VIEW -->
+<section id="listView" aria-live="polite">
+  <div class="small-muted" style="margin-top:8px;">Pilih mesin untuk lihat detail parameter (klik salah satu)</div>
+  <div class="grid" id="machinesGrid"></div>
 </section>
 
-<!-- === DETAIL VIEW (initially hidden) === -->
+<!-- DETAIL VIEW -->
 <section id="detailView" class="detail" aria-live="polite">
   <div class="controls">
     <button class="btn" id="backBtn">⬅ Kembali</button>
@@ -62,7 +66,6 @@ h1{margin:0;color:var(--accent);font-size:20px}
   </div>
 
   <div class="param-grid" id="paramGrid">
-    <!-- Parameter cards (static layout, values updated by JS) -->
     <div class="param">
       <div class="p-name">1. Total Ea</div>
       <div class="p-value" id="TotalEa">---</div>
@@ -135,122 +138,158 @@ h1{margin:0;color:var(--accent);font-size:20px}
       <div class="p-name" style="font-size:12px;color:var(--muted)">days / hrs</div>
     </div>
   </div>
-
 </section>
 
 <script>
-/* -----------------------
-   CONFIG
-   ----------------------- */
+/* ------------- CONFIG ------------- */
+const MQTT_URL = "wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt";
 const MQTT_OPTIONS = {
   username: "web_dashboard",
   password: "Tristan12",
   connectTimeout: 4000,
   reconnectPeriod: 3000
 };
-const MQTT_URL = "wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt";
-const MQTT_TOPIC = "politeknik/meter/data"; // broker publishes single JSON with id field
+const MQTT_WILDCARD = "politeknik/meter/data/#"; // subscribe wildcard
 
-/* -----------------------
-   DOM refs & state
-   ----------------------- */
+/* ------------- DOM & STATE ------------- */
 const mqttStatusEl = document.getElementById('mqttStatus');
 const machinesGrid = document.getElementById('machinesGrid');
 const listView = document.getElementById('listView');
 const detailView = document.getElementById('detailView');
 const detailTitle = document.getElementById('detailTitle');
 const lastUpdateEl = document.getElementById('lastUpdate');
+const backBtn = document.getElementById('backBtn');
 
 let activeId = null;
 const cache = {}; // cache latest payload per id
 
-/* -----------------------
-   Build 18 machine cards
-   ----------------------- */
+/* ------------- Build machine cards ------------- */
 for (let i=1;i<=18;i++){
-  const div = document.createElement('div');
-  div.className = 'card';
-  div.setAttribute('role','button');
-  div.tabIndex = 0;
-  div.innerHTML = `<div style="font-weight:800">Mesin ${i}</div><div style="margin-top:8px;color:var(--muted)" id="mini-${i}">ID:${i} • --</div>`;
-  div.addEventListener('click', ()=> openDetail(i));
-  div.addEventListener('keyup', (e)=> { if(e.key==='Enter') openDetail(i); });
-  machinesGrid.appendChild(div);
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.tabIndex = 0;
+  card.innerHTML = `<div class="title">Mesin ${i}</div><div class="mini" id="mini-${i}">ID:${i} • --</div>`;
+  (function(id){
+    card.addEventListener('click', ()=> openDetail(id));
+    card.addEventListener('keyup', e => { if(e.key==='Enter') openDetail(id); });
+  })(i);
+  machinesGrid.appendChild(card);
 }
 
-/* -----------------------
-   MQTT: single connection
-   ----------------------- */
+/* ------------- MQTT: single connection & wildcard subscribe ------------- */
 const client = mqtt.connect(MQTT_URL, MQTT_OPTIONS);
 
-client.on('connect', ()=> {
+client.on('connect', () => {
   mqttStatusEl.textContent = 'MQTT: connected';
-  client.subscribe(MQTT_TOPIC, {qos:0}, (err)=> {
-    if(err) mqttStatusEl.textContent = 'MQTT: sub error';
+  // subscribe wildcard (handles per-machine topics like politeknik/meter/data/1)
+  client.subscribe(MQTT_WILDCARD, { qos: 0 }, (err) => {
+    if(err) {
+      console.error('subscribe error', err);
+      mqttStatusEl.textContent = 'MQTT: subscribe error';
+    }
   });
 });
 
-client.on('reconnect', ()=> mqttStatusEl.textContent = 'MQTT: reconnecting...');
-client.on('error', (e)=> { console.error('MQTT error', e); mqttStatusEl.textContent = 'MQTT: error'; });
-client.on('offline', ()=> mqttStatusEl.textContent = 'MQTT: offline';);
+client.on('reconnect', () => mqttStatusEl.textContent = 'MQTT: reconnecting...');
+client.on('close', () => mqttStatusEl.textContent = 'MQTT: closed');
+client.on('offline', () => mqttStatusEl.textContent = 'MQTT: offline');
+client.on('error', (e) => { console.error('mqtt error', e); mqttStatusEl.textContent = 'MQTT: error'; });
 
-/* Handle incoming messages once, update cache and if active show */
-client.on('message', (topic, buf)=> {
-  try{
-    const msg = buf.toString();
-    const d = JSON.parse(msg);
-    // expect d.id
-    const id = Number(d.id);
-    if(!Number.isInteger(id)) return;
-    cache[id] = d;
-    // update mini card
-    const mini = document.getElementById('mini-'+id);
-    if(mini){
-      const p = (d.P !== undefined && d.P !== null) ? `${d.P} W` : '--';
-      const st = d.status ? String(d.status).toUpperCase() : '--';
-      mini.textContent = `ID:${id} • ${p} • ${st}`;
+/* Helper: safe JSON parse */
+function safeParse(str){
+  try { return JSON.parse(str); }
+  catch(e){ return null; }
+}
+
+/* ------------- Message handler ------------- */
+client.on('message', (topic, buf) => {
+  // topic example: politeknik/meter/data/5  OR politeknik/meter/data (with id in payload)
+  try {
+    const topicParts = topic.split('/');
+    let id = null;
+    if(topicParts.length >= 4 && topicParts[3] !== undefined){
+      const n = Number(topicParts[3]);
+      if(Number.isInteger(n)) id = n;
     }
-    // if active, render
+
+    const payloadText = buf.toString();
+    const payload = safeParse(payloadText);
+
+    // fallback: if not in topic, maybe payload contains id
+    if(id === null && payload && payload.id !== undefined){
+      const n2 = Number(payload.id);
+      if(Number.isInteger(n2)) id = n2;
+    }
+
+    if(id === null) {
+      // unknown id — ignore
+      //console.warn('MQTT message without id (topic/payload):', topic, payloadText);
+      return;
+    }
+
+    // store timestamp
+    if(payload && typeof payload === 'object') payload._t = Date.now();
+    else {
+      // if payload not JSON, store raw
+      // but we expect JSON so ignore non-JSON
+      return;
+    }
+
+    // cache
+    cache[id] = payload;
+
+    // update mini card text
+    const miniEl = document.getElementById('mini-'+id);
+    if(miniEl){
+      const p = (payload.P !== undefined && payload.P !== null) ? `${payload.P} W` : '--';
+      const st = payload.status ? String(payload.status).toUpperCase() : '--';
+      miniEl.textContent = `ID:${id} • ${p} • ${st}`;
+    }
+
+    // if currently viewing that machine, update detail panel
     if(activeId === id){
-      renderDetail(d);
+      renderDetail(payload);
     }
-  }catch(err){
-    console.warn('parse mqtt msg', err);
+  } catch(err){
+    console.warn('MQTT process error', err);
   }
 });
 
-/* -----------------------
-   Page switch & rendering
-   ----------------------- */
+/* ------------- UI: open detail, render, back ------------- */
 function openDetail(id){
-  activeId = id;
-  // update title & show detail
+  activeId = Number(id);
   detailTitle.textContent = 'Mesin ' + id + ' — Detail Parameter';
   listView.style.display = 'none';
   detailView.style.display = 'block';
 
-  // change URL (no reload) so looks like new page
+  // update url (no reload)
   const newUrl = window.location.pathname + '?id=' + id;
   history.pushState({id:id}, '', newUrl);
 
-  // render from cache if present, else show placeholders
+  // render from cache if exists
   if(cache[id]) renderDetail(cache[id]);
   else resetDetail();
 
-  // (no unsubscribe/subscribe needed because we subscribed to global topic)
+  // focus for accessibility
+  detailView.focus();
 }
+
+backBtn.addEventListener('click', ()=> {
+  goList();
+});
 
 function goList(){
   activeId = null;
   detailView.style.display = 'none';
   listView.style.display = 'block';
-  history.pushState({}, '', window.location.pathname); // clear query
+  history.pushState({}, '', window.location.pathname);
 }
 
-/* render function - writes only values */
+/* Render detail values (only update values) */
 function renderDetail(d){
-  // For readability, format OpH -> days/hrs
-  function fmtOp(h){
+  if(!d || typeof d !== 'object') return;
+  const fmt = (v)=> (v===0||v)?v:'---';
+  const fmtOp = (h)=>{
     if(h===undefined||h===null||isNaN(h)) return '---';
     const mins = Math.round(Number(h)*60);
     const days = Math.floor(mins/(24*60));
@@ -258,12 +297,13 @@ function renderDetail(d){
     const hrs = Math.floor(rem/60);
     const m = rem % 60;
     return (days>0?days+'d ':'') + hrs+'h' + (m>0? ' '+m+'m':'');
-  }
-  // write values to DOM
-  const set = (id, val)=> {
-    const el = document.getElementById(id);
-    if(el) el.textContent = (val===0||val)?val:'---';
   };
+
+  const set = (id, value)=> {
+    const el = document.getElementById(id);
+    if(el) el.textContent = fmt(value);
+  };
+
   set('TotalEa', d.EaT);
   set('TotalEr', d.ErT);
   set('PartialEa', d.EaP);
@@ -278,49 +318,42 @@ function renderDetail(d){
   set('PowerS', d.S);
   set('PF', d.PF);
   set('Hz', d.Hz);
-  set('OpTime', fmtOp(d.OpH));
+  const op = (d.OpH || d.OpH===0) ? fmtOp(d.OpH) : '---';
+  const opEl = document.getElementById('OpTime'); if(opEl) opEl.textContent = op;
   lastUpdateEl.textContent = 'last: ' + (d._t? new Date(d._t).toLocaleString() : new Date().toLocaleTimeString());
 }
 
-/* reset detail values */
+/* Reset detail placeholders */
 function resetDetail(){
   const ids = ['TotalEa','TotalEr','PartialEa','PartialEr','Voltage','Current','PowerP','PowerQ','PowerS','PF','Hz','OpTime'];
-  ids.forEach(id=> {
+  ids.forEach(id => {
     const el = document.getElementById(id);
-    if(el) el.textContent = (id==='Current') ? '--- / --- / ---' : '---';
+    if(!el) return;
+    if(id === 'Current') el.textContent = '--- / --- / ---';
+    else el.textContent = '---';
   });
   lastUpdateEl.textContent = 'last: -';
 }
 
-/* handle back/forward browser */
+/* Handle browser back/forward */
 window.addEventListener('popstate', (e)=> {
-  // if state has id -> open detail, else show list
   const sid = e.state && e.state.id;
   if(sid){
     openDetail(sid);
   } else {
-    // show list
-    listView.style.display = 'block';
-    detailView.style.display = 'none';
-    activeId = null;
+    goList();
   }
 });
 
-/* on load: if URL contains ?id=... open that detail directly */
+/* On load: open detail if ?id=... present */
 (function initFromUrl(){
   const qp = new URLSearchParams(window.location.search);
   const qid = qp.get('id');
   if(qid && Number.isInteger(Number(qid)) && Number(qid)>=1 && Number(qid)<=18){
-    // wait a tick so UI present
     setTimeout(()=> openDetail(Number(qid)), 50);
   }
 })();
 
-/* Back button */
-document.getElementById('backBtn').addEventListener('click', ()=> {
-  // go back to list view and update URL properly
-  goList();
-});
 </script>
 </body>
 </html>
