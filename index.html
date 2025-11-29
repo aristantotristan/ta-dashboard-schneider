@@ -1,52 +1,56 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Monitoring Energi - Home</title>
-  <style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dashboard Menu</title>
+
+<style>
     body {
-      font-family: Arial, sans-serif;
-      background: #f2f2f2;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
+        font-family: 'Segoe UI', sans-serif;
+        background: #0f0f0f;
+        color: #e5e5e5;
+        padding: 40px;
+        text-align: center;
     }
+
     h1 {
-      margin-bottom: 40px;
+        margin-bottom: 30px;
+        color: #00ffc2;
+        font-size: 2rem;
+        letter-spacing: 1px;
     }
-    .btn-container {
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
+
     .btn {
-      padding: 15px 25px;
-      background: #007bff;
-      color: white;
-      text-decoration: none;
-      text-align: center;
-      border-radius: 8px;
-      width: 250px;
-      font-size: 18px;
-      transition: 0.2s;
+        display: block;
+        width: 260px;
+        margin: 14px auto;
+        padding: 15px;
+        background: #1e1e1e;
+        border-radius: 12px;
+        color: #00ffc2;
+        text-decoration: none;
+        font-size: 1.1rem;
+        font-weight: 600;
+        border: 1px solid #00ffc2;
+        transition: 0.25s;
     }
+
     .btn:hover {
-      background: #005fcc;
+        background: #00ffc2;
+        color: #000;
+        transform: translateY(-2px);
+        box-shadow: 0 0 12px rgba(0,255,194,0.4);
     }
-  </style>
+</style>
+
 </head>
 <body>
-  <h1>Monitoring Energi</h1>
 
-  <div class="btn-container">
-    <a href="realtime.html" class="btn">Monitoring Real Time</a>
-    <a href="tarif.html" class="btn">Monitoring Tarif Mesin</a>
-  </div>
+<h1>⚡ Power Meter Dashboard</h1>
+
+<a href="realtime.html" class="btn">Realtime Monitoring</a>
+<a href="tarif.html" class="btn">Tarif & Energy Cost</a>
 
 </body>
 </html>
