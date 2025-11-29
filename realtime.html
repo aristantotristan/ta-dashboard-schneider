@@ -1,99 +1,146 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Realtime Meter Dashboard</title>
-    <meta http-equiv="refresh" content="180"> <!-- fallback refresh setiap 3 menit jika freeze -->
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Realtime Dashboard</title>
+
     <style>
         body {
+            margin: 0;
             font-family: Arial, sans-serif;
-            background: #0d1117;
+            background: #121212;
             color: #fff;
+        }
+        .title {
             text-align: center;
-            padding: 20px;
+            padding: 10px;
+            font-size: 22px;
+            background: #1e1e1e;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #333;
+        }
+        #log {
+            font-size: 12px;
+            white-space: pre;
+            padding: 10px;
+            background: #1b1b1b;
+            height: 120px;
+            overflow-y: scroll;
+            border-top: 1px solid #333;
+        }
+        #cards {
+            display: flex;
+            flex-wrap: wrap;
+            padding: 10px;
+            gap: 10px;
         }
         .card {
-            background: #161b22;
-            border-radius: 12px;
-            padding: 20px;
-            margin: 10px auto;
-            width: 320px;
-            box-shadow: 0 0 12px #000;
+            width: 180px;
+            background: #1e1e1e;
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #333;
+            box-shadow: 0 0 5px #0006;
+        }
+        .card h3 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            color: #03A9F4;
         }
         .value {
-            font-size: 42px;
-            margin-top: 10px;
+            font-size: 22px;
+            font-weight: bold;
+            color: #fff;
         }
-        .label {
-            font-size: 18px;
-            opacity: .7;
+        .mini {
+            font-size: 12px;
+            margin-top: 5px;
+            color: #aaa;
         }
     </style>
 </head>
+
 <body>
+    <div class="title">Realtime Monitoring 18 Mesin</div>
 
-    <h1>Realtime Meter Data</h1>
-    <p>Source: Supabase Watchdog (24/7 backend, no browser required)</p>
+    <div id="cards"></div>
+    <div id="log"></div>
 
-    <div class="card">
-        <div class="label">Tegangan</div>
-        <div id="tegangan" class="value">--</div>
-    </div>
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 
-    <div class="card">
-        <div class="label">Arus</div>
-        <div id="arus" class="value">--</div>
-    </div>
+<script>
 
-    <div class="card">
-        <div class="label">Daya</div>
-        <div id="daya" class="value">--</div>
-    </div>
+// =======================================================
+// 1️⃣ MQTT SETUP (SUBSCRIBE TOPIC KAMU)
+// =======================================================
 
-    <div class="card">
-        <div class="label">Energi</div>
-        <div id="energi" class="value">--</div>
-    </div>
+const client = mqtt.connect("wss://broker.emqx.io:8084/mqtt");
 
-    <div class="card">
-        <div class="label">Frekuensi</div>
-        <div id="frekuensi" class="value">--</div>
-    </div>
+const log = document.getElementById("log");
+function appendLog(msg) {
+    log.textContent += msg + "\n";
+    log.scrollTop = log.scrollHeight;
+}
 
-    <script>
-        async function loadData() {
-            try {
-                const response = await fetch(
-                    "https://rojhcadtqfynlqzubftx.supabase.co/functions/v1/watchdog-offline",
-                    { method: "GET" }
-                );
+client.on("connect", () => {
+    appendLog("Connected to MQTT Broker");
 
-                const data = await response.json();
+    // TOPIC KAMU
+    client.subscribe("politeknik/meter/data");
+});
 
-                // --- pastikan backend kirim JSON begini ---
-                // {
-                //   "tegangan": 220,
-                //   "arus": 4.2,
-                //   "daya": 930,
-                //   "energi": 12.3,
-                //   "frekuensi": 50
-                // }
+client.on("reconnect", () => appendLog("Reconnecting..."));
+client.on("error", (err) => appendLog("Error: " + err));
 
-                document.getElementById("tegangan").innerHTML = data.tegangan + " V";
-                document.getElementById("arus").innerHTML = data.arus + " A";
-                document.getElementById("daya").innerHTML = data.daya + " W";
-                document.getElementById("energi").innerHTML = data.energi + " kWh";
-                document.getElementById("frekuensi").innerHTML = data.frekuensi + " Hz";
-            }
-            catch (e) {
-                console.log("Gagal load:", e);
-            }
-        }
+// =======================================================
+// 2️⃣ AUTO-BUAT 18 CARD
+// =======================================================
 
-        // realtime update tiap 3 detik
-        setInterval(loadData, 3000);
-        loadData();
-    </script>
+for (let i = 1; i <= 18; i++) {
+    createCard(i);
+}
 
+function createCard(id) {
+    const cards = document.getElementById("cards");
+
+    const div = document.createElement("div");
+    div.className = "card";
+    div.id = "card-" + id;
+
+    div.innerHTML = `
+        <h3>Mesin ${id}</h3>
+        <div class="value" id="value-${id}">--</div>
+        <div class="mini"  id="mini-${id}">Waiting...</div>
+    `;
+
+    cards.appendChild(div);
+}
+
+// =======================================================
+// 3️⃣ TERIMA DATA PAYLOAD
+// =======================================================
+
+client.on("message", (topic, buf) => {
+    const payload = buf.toString();
+
+    appendLog("MQTT: " + payload);
+
+    // payload contoh: "5,123.4"
+    // artinya: mesin_id = 5, nilai = 123.4
+
+    const parts = payload.split(",");
+    if (parts.length !== 2) return;
+
+    const mesin = parseInt(parts[0]);
+    const value = parts[1];
+
+    if (mesin >= 1 && mesin <= 18) {
+        document.getElementById("value-" + mesin).textContent = value;
+        document.getElementById("mini-" + mesin).textContent = "Terakhir update: now";
+    }
+});
+
+</script>
 </body>
 </html>
