@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Monitoring Tarif Mesin</title>
+  <style>
+    body { font-family: Arial, sans-serif; background:#f5f5f5; margin:0; padding:20px; }
+    h1 { text-align:center; margin-bottom:25px; }
+    .back { display:inline-block; margin-bottom:20px; padding:10px 18px; background:#007bff; color:white; border-radius:8px; text-decoration:none; }
+    .mesin-container { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px,1fr)); gap:20px; }
+    .card { background:white; padding:20px; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.1); cursor:pointer; text-align:center; }
+    .popup {
+      display:none;
+      position:fixed;
+      top:0; left:0; right:0; bottom:0;
+      background:rgba(0,0,0,0.5);
+      justify-content:center; align-items:center;
+    }
+    .popup-content {
+      background:white;
+      padding:25px;
+      width:90%; max-width:700px;
+      border-radius:10px;
+    }
+    .row { margin:10px 0; }
+    .label { font-weight:bold; }
+    table { width:100%; border-collapse:collapse; margin-top:20px; }
+    table, th, td { border:1px solid #ccc; }
+    th, td { padding:8px; text-align:center; }
+    .close { float:right; cursor:pointer; font-weight:bold; }
+    .btn { padding:8px 15px; background:#007bff; color:white; border-radius:6px; text-decoration:none; cursor:pointer; }
+    .flex { display:flex; justify-content:space-between; align-items:center; }
+  </style>
+</head>
+<body>
+
+<a href="index.html" class="back">⬅ Back to Home</a>
+<h1>Monitoring Tarif Mesin</h1>
+
+<div class="mesin-container">
+  <script>
+    for(let i=1;i<=18;i++){
+      document.write(`<div class='card' onclick='openPopup(${i})'>Mesin ${i}</div>`);
+    }
+  </script>
+</div>
+
+<!-- POPUP DETAIL -->
+<div id="popup" class="popup">
+  <div class="popup-content">
+    <span class="close" onclick="closePopup()">X</span>
+    <h2 id="popup-title">Mesin</h2>
+
+    <div class="flex">
+      <div class="row">
+        <div class="label">Tanggal Awal</div>
+        <input type="date">
+      </div>
+      <div class="row">
+        <div class="label">Tanggal Akhir</div>
+        <input type="date">
+      </div>
+      <div class="row">
+        <button class="btn">Search</button>
+      </div>
+    </div>
+
+    <div class="flex" style="margin-top:15px;">
+      <div>
+        <label><input type="radio" name="tarif"> LWBP</label>
+        <label style="margin-left:15px;"><input type="radio" name="tarif"> WBP</label>
+      </div>
+      <div>
+        <button class="btn">Change Tarif</button>
+      </div>
+    </div>
+
+    <div style="margin-top:10px; font-size:14px; color:#444;">Last changed by: ---</div>
+
+    <table>
+      <tr>
+        <th>Tanggal</th>
+        <th>Jam</th>
+        <th>KWh</th>
+        <th>Tarif</th>
+      </tr>
+      <tr>
+        <td>---</td><td>---</td><td>---</td><td>---</td>
+      </tr>
+      <tr>
+        <td>---</td><td>---</td><td>---</td><td>---</td>
+      </tr>
+      <tr>
+        <td>---</td><td>---</td><td>---</td><td>---</td>
+      </tr>
+    </table>
+
+  </div>
+</div>
+
+<script>
+function openPopup(m){
+  document.getElementById('popup-title').innerText = `Mesin ${m}`;
+  document.getElementById('popup').style.display = 'flex';
+}
+function closePopup(){
+  document.getElementById('popup').style.display = 'none';
+}
+</script>
+
+</body>
+</html>
