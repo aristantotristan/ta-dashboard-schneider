@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Maintenance Log</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+    body {
+        margin: 0;
+        background: #121212;
+        color: #fff;
+        font-family: Arial;
+    }
+    .title {
+        padding: 15px;
+        text-align: center;
+        font-size: 22px;
+        background: #1e1e1e;
+        border-bottom: 2px solid #333;
+    }
+    #list {
+        padding: 15px;
+    }
+    .item {
+        padding: 12px;
+        background: #1c1c1c;
+        margin-bottom: 10px;
+        border-left: 6px solid;
+        border-radius: 6px;
+    }
+    .offline { border-color: #ff5252; }
+    .online  { border-color: #4caf50; }
+    .time {
+        font-size: 12px;
+        color: #aaa;
+        margin-top: 5px;
+    }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body>
+
+<div class="title">Maintenance Log</div>
+<div id="list">Loading...</div>
+
+<script>
+
+// ======================
+// 1️⃣ CONFIG SUPABASE
+// ======================
+const supabase = supabase.createClient(
+    "https://rojhcadtqfynlqzubftx.supabase.co",
+    "YOUR_ANON_PUBLIC_KEY_HERE"
+);
+
+// ======================
+// 2️⃣ LOAD DATA
+// ======================
+async function loadLogs() {
+    const list = document.getElementById("list");
+    list.innerHTML = "Loading...";
+
+    const { data, error } = await supabase
+        .from("device_status")
+        .select("*")
+        .order("id", { ascending: false });
+
+    if (error) {
+        list.innerHTML = "Error loading data.";
+        return;
+    }
+
+    if (data.length === 0) {
+        list.innerHTML = "Belum ada log.";
+        return;
+    }
+
+    list.innerHTML = "";
+
+    data.forEach(row => {
+        const div = document.createElement("div");
+        div.className = "item " + row.status;
+
+        div.innerHTML = `
+            <b>Status: ${row.status.toUpperCase()}</b><br>
+            <span>${row.note || "-"}</span>
+            <div class="time">${new Date(row.created_at).toLocaleString()}</div>
+        `;
+
+        list.appendChild(div);
+    });
+}
+
+// ======================
+// 3️⃣ AUTO REFRESH 5 DETIK
+// ======================
+loadLogs();
+setInterval(loadLogs, 5000);
+
+</script>
+</body>
+</html>
