@@ -1,79 +1,72 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Realtime Monitoring</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f2f2f2;
-      margin: 0;
-      padding: 20px;
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Realtime – Pilih Mesin</title>
 
-    h1 {
-      text-align: center;
-      margin-bottom: 30px;
-    }
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #111;
+    color: white;
+    padding: 20px;
+}
+h2 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #00FFC2;
+}
 
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      grid-gap: 20px;
-      padding: 10px;
-    }
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 15px;
+}
 
-    .machine-card {
-      background: #fff;
-      padding: 20px;
-      border-radius: 10px;
-      text-align: center;
-      cursor: pointer;
-      border: 1px solid #ddd;
-      transition: 0.2s ease;
-      font-size: 18px;
-      font-weight: bold;
-    }
+.machine {
+    padding: 20px;
+    background: #1E1E1E;
+    border-radius: 10px;
+    text-align: center;
+    cursor: pointer;
+    border: 2px solid #00FFC2;
+    transition: 0.25s;
+}
+.machine:hover {
+    background: #00FFC2;
+    color: black;
+}
 
-    .machine-card:hover {
-      background: #007bff;
-      color: white;
-      transform: scale(1.03);
-    }
-
-    a {
-      text-decoration: none;
-      color: inherit;
-    }
-  </style>
+.back {
+    margin-top: 30px;
+    display: inline-block;
+    background: #444;
+    padding: 10px 18px;
+    border-radius: 8px;
+    text-decoration: none;
+    color: white;
+}
+</style>
 </head>
 <body>
 
-<h1>Realtime Monitoring Mesin</h1>
+<h2>⚡ Realtime Monitoring – Pilih Mesin</h2>
 
 <div class="grid">
-
-  <!-- GENERATE 18 MESIN -->
-  <a href="/politeknik/meter/data/m1.html"><div class="machine-card">Mesin 1</div></a>
-  <a href="/politeknik/meter/data/m2.html"><div class="machine-card">Mesin 2</div></a>
-  <a href="/politeknik/meter/data/m3.html"><div class="machine-card">Mesin 3</div></a>
-  <a href="/politeknik/meter/data/m4.html"><div class="machine-card">Mesin 4</div></a>
-  <a href="/politeknik/meter/data/m5.html"><div class="machine-card">Mesin 5</div></a>
-  <a href="/politeknik/meter/data/m6.html"><div class="machine-card">Mesin 6</div></a>
-  <a href="/politeknik/meter/data/m7.html"><div class="machine-card">Mesin 7</div></a>
-  <a href="/politeknik/meter/data/m8.html"><div class="machine-card">Mesin 8</div></a>
-  <a href="/politeknik/meter/data/m9.html"><div class="machine-card">Mesin 9</div></a>
-  <a href="/politeknik/meter/data/m10.html"><div class="machine-card">Mesin 10</div></a>
-  <a href="/politeknik/meter/data/m11.html"><div class="machine-card">Mesin 11</div></a>
-  <a href="/politeknik/meter/data/m12.html"><div class="machine-card">Mesin 12</div></a>
-  <a href="/politeknik/meter/data/m13.html"><div class="machine-card">Mesin 13</div></a>
-  <a href="/politeknik/meter/data/m14.html"><div class="machine-card">Mesin 14</div></a>
-  <a href="/politeknik/meter/data/m15.html"><div class="machine-card">Mesin 15</div></a>
-  <a href="/politeknik/meter/data/m16.html"><div class="machine-card">Mesin 16</div></a>
-  <a href="/politeknik/meter/data/m17.html"><div class="machine-card">Mesin 17</div></a>
-  <a href="/politeknik/meter/data/m18.html"><div class="machine-card">Mesin 18</div></a>
-
+    <!-- Generate 18 tombol mesin -->
+    <!-- Kamu boleh ubah nama mesin sesuai kebutuhan -->
+    <script>
+        for (let i = 1; i <= 18; i++) {
+            document.write(`<div class="machine" onclick="go(${i})">Mesin ${i}</div>`);
+        }
+        function go(id) {
+            window.location.href = "realtime_parameter.html?id=" + id;
+        }
+    </script>
 </div>
+
+<a class="back" href="index.html">⬅ Back to Home</a>
 
 </body>
 </html>
