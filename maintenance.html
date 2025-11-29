@@ -1,149 +1,154 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Maintenance Sistem</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maintenance System</title>
 
 <style>
     body {
         font-family: 'Segoe UI', sans-serif;
         background: #0f0f0f;
         color: #e5e5e5;
-        padding: 20px;
+        padding: 30px;
     }
     h1 {
         color: #00ffc2;
         text-align: center;
         margin-bottom: 25px;
     }
-    .table-wrap {
-        overflow-x: auto;
-        margin-top: 25px;
-        background: #161616;
-        padding: 18px;
+    .section {
+        margin-bottom: 35px;
+        padding: 20px;
+        background: #1b1b1b;
         border-radius: 12px;
-        border: 1px solid #2d2d2d;
+        border: 1px solid #00ffc2;
     }
     table {
         width: 100%;
         border-collapse: collapse;
+        margin-top: 10px;
     }
     th, td {
-        padding: 10px 12px;
-        border-bottom: 1px solid #2a2a2a;
-        font-size: 14px;
+        border-bottom: 1px solid #333;
+        padding: 10px;
+        text-align: left;
     }
     th {
         color: #00ffc2;
-        text-align: left;
-        background: #1e1e1e;
     }
-    .status-ok { color: #10b981; font-weight: 700; }
-    .status-err { color: #ef4444; font-weight: 700; }
-    .status-warn { color: #facc15; font-weight: 700; }
-    .card {
-        background: #161616;
-        padding: 12px 18px;
-        border-radius: 10px;
-        margin-bottom: 16px;
-        border: 1px solid #2c2c2c;
+    .error {
+        color: #ff4f4f;
+        margin-top: 10px;
     }
 </style>
-
-<!-- Supabase CDN -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
 </head>
+
 <body>
 
-<h1>Maintenance Sistem — Watchdog Monitor</h1>
+<h1>Maintenance System</h1>
 
-<div class="card" id="summaryBox">Loading summary...</div>
-
-<div class="table-wrap">
+<div class="section">
+    <h2>Status Mesin (device_last_state)</h2>
+    <div id="lastStateError" class="error"></div>
     <table>
         <thead>
             <tr>
-                <th>ID Mesin</th>
-                <th>Status Terakhir</th>
-                <th>Keterangan</th>
-                <th>Update</th>
+                <th>Machine ID</th>
+                <th>Status</th>
+                <th>Last Update</th>
             </tr>
         </thead>
-        <tbody id="maintenanceTable"></tbody>
+        <tbody id="lastStateTable"></tbody>
     </table>
 </div>
 
+<div class="section">
+    <h2>Watchdog Log</h2>
+    <div id="watchdogError" class="error"></div>
+    <table>
+        <thead>
+            <tr>
+                <th>Machine ID</th>
+                <th>Event</th>
+                <th>Timestamp</th>
+            </tr>
+        </thead>
+        <tbody id="watchdogTable"></tbody>
+    </table>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-/* ----------------- CONFIG SUPABASE ------------------- */
-const SUPABASE_URL = "https://rojhcadtqfynlqzubftx.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs";
+    const SUPABASE_URL = "https://rojhcadtqfynlqzubftx.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs";
 
-const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-/* ----------------- LOAD DATA ------------------- */
-async function loadMaintenance(){
-    const table = document.getElementById("maintenanceTable");
-    const summaryBox = document.getElementById("summaryBox");
+    // LOAD STATUS MESIN
+    async function loadLastState() {
+        const { data, error } = await supabase
+            .from("device_last_state")
+            .select("*");
 
-    table.innerHTML = `<tr><td colspan="4">Loading...</td></tr>`;
+        const table = document.getElementById("lastStateTable");
+        const errorBox = document.getElementById("lastStateError");
 
-    // Ambil data watchdog terbaru per mesin
-    const { data: wd, error } = await db
-        .from("watchdog_log")
-        .select("*")
-        .order("timestamp", { ascending:false });
+        if (error) {
+            errorBox.textContent = "Error: " + error.message;
+            return;
+        }
 
-    if(error){
-        table.innerHTML = `<tr><td colspan="4">Error load data</td></tr>`;
-        return;
+        if (!data || data.length === 0) {
+            errorBox.textContent = "Tidak ada data di tabel device_last_state";
+            return;
+        }
+
+        data.forEach(row => {
+            table.innerHTML += `
+                <tr>
+                    <td>${row.machine_id}</td>
+                    <td>${row.status}</td>
+                    <td>${row.updated_at}</td>
+                </tr>
+            `;
+        });
     }
 
-    // Mapping per mesin (ambil log terbaru setiap mesin)
-    const latest = {};
-    wd.forEach(r => {
-        if(!latest[r.device_id]) latest[r.device_id] = r;
-    });
+    // LOAD WATCHDOG LOG
+    async function loadWatchdog() {
+        const { data, error } = await supabase
+            .from("watchdog_log")
+            .select("*")
+            .order("timestamp", { ascending: false })
+            .limit(100);
 
-    // Summary
-    let offline = 0, warning = 0, ok = 0;
-    Object.values(latest).forEach(r=>{
-        if(r.status === "OFFLINE" || r.status === "TIMEOUT") offline++;
-        else if(r.status === "LAMBAT" || r.status === "ABNORMAL") warning++;
-        else ok++;
-    });
+        const table = document.getElementById("watchdogTable");
+        const errorBox = document.getElementById("watchdogError");
 
-    summaryBox.innerHTML = `
-        <b>Ringkasan Sistem:</b><br>
-        ✅ Normal: ${ok}<br>
-        ⚠ Warning: ${warning}<br>
-        ❌ Offline: ${offline}
-    `;
+        if (error) {
+            errorBox.textContent = "Error: " + error.message;
+            return;
+        }
 
-    // TABEL
-    table.innerHTML = "";
+        if (!data || data.length === 0) {
+            errorBox.textContent = "Tidak ada data di tabel watchdog_log";
+            return;
+        }
 
-    Object.values(latest).forEach(item=>{
-        const stat = item.status;
-        let cls = "status-ok";
-        if(stat === "OFFLINE" || stat === "TIMEOUT") cls = "status-err";
-        else if(stat === "LAMBAT" || stat === "ABNORMAL") cls = "status-warn";
+        data.forEach(row => {
+            table.innerHTML += `
+                <tr>
+                    <td>${row.machine_id}</td>
+                    <td>${row.event}</td>
+                    <td>${row.timestamp}</td>
+                </tr>
+            `;
+        });
+    }
 
-        table.innerHTML += `
-            <tr>
-                <td>Mesin ${item.device_id}</td>
-                <td class="${cls}">${stat}</td>
-                <td>${item.reason || '-'}</td>
-                <td>${new Date(item.timestamp).toLocaleString()}</td>
-            </tr>
-        `;
-    });
-}
-
-/* --------- AUTO REFRESH SETIAP 5 DETIK ---------- */
-loadMaintenance();
-setInterval(loadMaintenance, 5000);
+    loadLastState();
+    loadWatchdog();
 </script>
 
 </body>
