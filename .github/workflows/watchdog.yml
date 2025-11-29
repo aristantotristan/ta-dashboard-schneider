@@ -1,0 +1,25 @@
+name: Run Watchdog
+
+on:
+  schedule:
+    - cron: "*/1 * * * *"   # JALAN SETIAP 1 MENIT
+  workflow_dispatch:        # Bisa di-run manual
+
+jobs:
+  run-watchdog:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install Supabase
+        run: npm install @supabase/supabase-js
+
+      - name: Run Watchdog Script
+        run: node watchdog.js
