@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Monitoring Real Time</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 20px; }
+    h1 { text-align: center; margin-bottom: 30px; }
+    .container { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .param { margin: 8px 0; font-size: 16px; }
+    .back { display: inline-block; margin-bottom: 20px; padding: 10px 18px; background:#007bff; color:white; border-radius:8px; text-decoration:none; }
+  </style>
+</head>
+<body>
+
+<a href="index.html" class="back">⬅ Back to Home</a>
+<h1>Monitoring Real Time</h1>
+
+<div class="container">
+  <!-- Dummy 18 Mesin -->
+  <script>
+    const mesinCount = 18;
+    let html = "";
+    for(let i=1;i<=mesinCount;i++){
+      html += `
+      <div class='card'>
+        <h3>Mesin ${i}</h3>
+        <div class='param'>Total Ea: --- kWh</div>
+        <div class='param'>Total Er: --- kVARh</div>
+        <div class='param'>Partial Ea: --- kWh</div>
+        <div class='param'>Partial Er: --- kVARh</div>
+        <div class='param'>Voltage (LL Avg): --- V</div>
+        <div class='param'>Current (I1 I2 I3): --- A</div>
+        <div class='param'>Active Power (P): --- kW</div>
+        <div class='param'>Reactive Power (Q): --- kVAR</div>
+        <div class='param'>Apparent Power (S): --- kVA</div>
+        <div class='param'>PF: ---</div>
+        <div class='param'>Frequency: --- Hz</div>
+        <div class='param'>Operation Time: --- hrs</div>
+      </div>`;
+    }
+    document.write(html);
+  </script>
+</div>
+
+</body>
+</html>
