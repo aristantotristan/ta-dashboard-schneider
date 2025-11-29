@@ -6,8 +6,8 @@ serve(async (req) => {
   const body = await req.json();
 
   const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    Deno.env.get("https://rojhcadtqfynlqzubftx.supabase.co")!,
+    Deno.env.get("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MjEzNjM1OSwiZXhwIjoyMDc3NzEyMzU5fQ.SGsCPxdlnqMbnEzku4wLOIGoeOhFjBFFWkuPOxbSj34")!
   );
 
   const now = new Date().toISOString();
