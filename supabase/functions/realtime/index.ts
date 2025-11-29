@@ -1,6 +1,5 @@
-// supabase/functions/realtime/index.ts
-import { serve } from "http-server";
-import { createClient } from "@supabase/supabase-js";
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 serve(async () => {
   const supabase = createClient(
@@ -13,5 +12,7 @@ serve(async () => {
     .select("*")
     .order("updated_at", { ascending: false });
 
-  return new Response(JSON.stringify(data), { status: 200 });
+  return new Response(JSON.stringify(data), {
+    headers: { "Content-Type": "application/json" }
+  });
 });
