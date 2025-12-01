@@ -386,7 +386,7 @@ client.on("error", err => {
 client.on("message", (topic, message) => {
   try {
     const d = JSON.parse(message.toString());
-    const id = d.id;
+    const id = Number(d.id); 
     // PENTING: Gunakan EaT sebagai Ea untuk logging
     const ea = Number(d.EaT); 
 
@@ -409,8 +409,9 @@ client.on("message", (topic, message) => {
         devices[id].text.textContent = status.toUpperCase();
         devices[id].text.className = statusClass;
         
-        // 3. JIKA SEDANG DI DETAIL VIEW, UPDATE TABEL DETAIL
-        if (detailView.style.display === 'block' && currentMachineIdSpan.textContent == id) {
+        // 3. LOGIKA KRITIS: JIKA SEDANG DI DETAIL VIEW, UPDATE TABEL DETAIL
+        const currentDetailId = Number(currentMachineIdSpan.textContent);
+        if (detailView.style.display === 'block' && currentDetailId === id) {
             renderDetailTable(id); // Panggil renderDetailTable untuk refresh data
         }
     }
