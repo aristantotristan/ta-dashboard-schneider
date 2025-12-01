@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📊 Analisis Konsumsi WBP & LWBP Harian</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script> 
+
+<style>
+/* Styling Dasar */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #121212; 
+    color: #E0E0E0; 
+    padding: 20px;
+}
+h2, h3 {
+    color: #00FFC2; 
+    margin-bottom: 5px;
+}
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-top: 15px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    border-radius: 8px;
+    overflow: hidden;
+}
+th, td {
+    border: 1px solid #2A2A2A; 
+    padding: 10px 12px;
+    text-align: center;
+}
+thead th {
+    background: #2A2A2A;
+    color: #00FFC2;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.9em;
+}
+</style>
+</head>
+
+<body>
+
+<h2>📊 Hasil Analisis Konsumsi Harian (Pilih Tanggal)</h2>
+
+<div style="margin-bottom: 20px; padding: 15px; background: #2A2A2A; border-radius: 8px;">
+    <label for="analysisDate" style="font-weight: bold; margin-right: 15px;">Pilih Tanggal Analisis:</label>
+    <input type="date" id="analysisDate" style="padding: 8px; border-radius: 4px; border: 1px solid #444; background: #121212; color: white;">
+    <button onclick="renderDailyConsumptionData()" style="padding: 8px 15px; margin-left: 10px; background-color: #00FFC2; color: #121212; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+        Tampilkan Hasil
+    </button>
+</div>
+
+<p id="analysisStatus" style="font-style: italic;">Silakan pilih tanggal dan klik Tampilkan Hasil.</p>
+
+---
+
+<h3 style="color: #38BDF8;">⚡ Konsumsi WBP (17:00 - 22:00)</h3>
+<table id="wbpTable">
+    <thead>
+        <tr>
+            <th>ID Mesin</th>
+            <th>Tanggal</th>
+            <th>Ea Start WBP (kWh)</th>
+            <th>Ea End WBP (kWh)</th>
+            <th style="background: #ef4444; color: white;">Konsumsi WBP (kWh)</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr><td colspan="5" style="text-align: center;">Pilih tanggal untuk melihat data.</td></tr>
+    </tbody>
+</table>
+
+---
+
+<h3 style="color: #4ADE80; margin-top: 30px;">🔋 Konsumsi LWBP (Luar Puncak)</h3>
+<table id="lwbpTable">
+    <thead>
+        <tr>
+            <th>ID Mesin</th>
+            <th>Tanggal</th>
+            <th>Total Konsumsi (kWh)</th>
+            <th>Konsumsi WBP (kWh)</th>
+            <th style="background: #10b981; color: white;">Konsumsi LWBP (kWh)</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr><td colspan="5" style="text-align: center;">Pilih tanggal untuk melihat data.</td></tr>
+    </tbody>
+</table>
+
+<script>
+// =======================================================
+// --- KONFIGURASI SUPABASE ---
+// GANTI DENGAN KREDENSIAL SUPABASE ANDA YANG ASLI
+// =======================================================
+const SUPA_URL  = "https://rojhcadtqfynlqzubftx.supabase.co"; // Ganti URL
+const SUPA_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs"; // Ganti Kunci ANON
+
+let supa = supabase.createClient(SUPA_URL, SUPA_ANON);
+
+// --- DOM ELEMENTS ---
+const wbpTableBody = document.querySelector('#wbpTable tbody');
+const lwbpTableBody = document.querySelector('#lwbpTable tbody');
+const analysisStatus = document.getElementById('analysisStatus');
+const analysisDateInput = document.getElementById('analysisDate');
+
+
+/**
+ * Mengambil data dari VIEW WBP dan LWBP, difilter berdasarkan tanggal yang dipilih.
+ */
+async function renderDailyConsumptionData() {
+    const targetDate = analysisDateInput.value;
+    
+    if (!targetDate) {
+        analysisStatus.textContent = "Silakan pilih tanggal analisis.";
+        return;
+    }
+
+    analysisStatus.textContent = `Sedang mengambil data untuk tanggal ${targetDate}...`;
+    wbpTableBody.innerHTML = '<tr><td colspan="5">Memuat...</td></tr>';
+    lwbpTableBody.innerHTML = '<tr><td colspan="5">Memuat...</td></tr>';
+
+    try {
+        // --- AMBIL DATA WBP (DIFILTER TANGGAL) ---
+        const { data: wbpData, error: wbpError } = await supa
+            .from('wbp_mesin')
+            .select('*')
+            .eq('tanggal', targetDate) // FILTER BERDASARKAN TANGGAL!
+            .order('id_mesin', { ascending: true });
+
+        if (wbpError) throw wbpError;
+        
+        // --- AMBIL DATA LWBP (DIFILTER TANGGAL) ---
+        const { data: lwbpData, error: lwbpError } = await supa
+            .from('lwbp_mesin')
+            .select('*')
+            .eq('tanggal', targetDate) // FILTER BERDASARKAN TANGGAL!
+            .order('id_mesin', { ascending: true });
+
+        if (lwbpError) throw lwbpError;
+
+        // --- CEK DATA ---
+        if (wbpData.length === 0) {
+            analysisStatus.textContent = `Data WBP dan LWBP belum tersedia atau belum lengkap untuk tanggal ${targetDate}.`;
+            wbpTableBody.innerHTML = '<tr><td colspan="5">Tidak ada hasil ditemukan. (Mungkin log T1/T2 hilang)</td></tr>';
+            lwbpTableBody.innerHTML = '<tr><td colspan="5">Tidak ada hasil ditemukan.</td></tr>';
+            return;
+        }
+
+        // --- RENDER TABEL WBP ---
+        wbpTableBody.innerHTML = ''; 
+        wbpData.forEach(row => {
+            const tr = wbpTableBody.insertRow();
+            tr.insertCell().textContent = row.id_mesin;
+            tr.insertCell().textContent = row.tanggal;
+            tr.insertCell().textContent = row.ea_start_wbp ? row.ea_start_wbp.toFixed(2) : '---';
+            tr.insertCell().textContent = row.ea_end_wbp ? row.ea_end_wbp.toFixed(2) : '---';
+            
+            const wbpCell = tr.insertCell();
+            wbpCell.textContent = row.konsumsi_wbp_kwh.toFixed(2);
+            wbpCell.style.fontWeight = 'bold';
+            wbpCell.style.backgroundColor = '#4c0519'; 
+        });
+        
+        // --- RENDER TABEL LWBP ---
+        lwbpTableBody.innerHTML = '';
+        lwbpData.forEach(row => {
+            const tr = lwbpTableBody.insertRow();
+            tr.insertCell().textContent = row.id_mesin;
+            tr.insertCell().textContent = row.tanggal;
+            tr.insertCell().textContent = row.konsumsi_total_harian.toFixed(2);
+            tr.insertCell().textContent = row.konsumsi_wbp_kwh.toFixed(2);
+            
+            const lwbpCell = tr.insertCell();
+            lwbpCell.textContent = row.konsumsi_lwbp_kwh.toFixed(2);
+            lwbpCell.style.fontWeight = 'bold';
+            lwbpCell.style.backgroundColor = '#065f46';
+        });
+
+        analysisStatus.textContent = `Data WBP dan LWBP berhasil diambil untuk ${wbpData.length} mesin pada tanggal ${targetDate}.`;
+        
+    } catch (e) {
+        analysisStatus.textContent = `Gagal memuat data harian: ${e.message}`;
+        console.error("Error fetching daily consumption data:", e);
+    }
+}
+
+// Atur tanggal default ke hari ini saat halaman dimuat
+document.addEventListener('DOMContentLoaded', () => {
+    const today = new Date().toISOString().slice(0, 10);
+    analysisDateInput.value = today;
+});
+
+</script>
+
+</body>
+</html>
