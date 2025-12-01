@@ -1,18 +1,19 @@
 <script>
 // =======================================================
 // --- KONFIGURASI SUPABASE ---
-// GANTI DENGAN KREDENSIAL SUPABASE ANDA YANG ASLI
+// PASTIKAN KREDENSIAL INI BENAR
 // =======================================================
 const SUPA_URL  = "https://rojhcadtqfynlqzubftx.supabase.co"; // Ganti URL
 const SUPA_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs"; // Ganti Kunci ANON
 
+// Error: Uncaught ReferenceError: supabase is not defined
+// Solusi: Pastikan library di head dimuat sebelum ini dijalankan.
 let supa = supabase.createClient(SUPA_URL, SUPA_ANON);
 
 // --- KONFIGURASI NAMA TABEL BARU ---
 // Gunakan tabel final setelah data dikunci di jam 00:05 WIB
-const FINAL_RESULT_TABLE = 'final_daily_result'; 
-// Jika Anda ingin melihat data real-time HARI INI, ganti ke: 'wbp_lwbp_summary'
-// const FINAL_RESULT_TABLE = 'wbp_lwbp_summary'; 
+// Jika data belum dikunci, ganti ke 'final_calculation_base' (VIEW perhitungan)
+const DATA_SOURCE_TABLE = 'final_daily_result'; 
 
 // --- DOM ELEMENTS ---
 const wbpTableBody = document.querySelector('#wbpTable tbody');
@@ -22,7 +23,7 @@ const analysisDateInput = document.getElementById('analysisDate');
 
 
 /**
- * Mengambil data FINAL dari tabel final_daily_result, difilter berdasarkan tanggal.
+ * Mengambil data harian dari tabel final_daily_result/VIEW, difilter berdasarkan tanggal.
  */
 async function renderDailyConsumptionData() {
     const targetDate = analysisDateInput.value;
@@ -33,46 +34,49 @@ async function renderDailyConsumptionData() {
     }
 
     analysisStatus.textContent = `Sedang mengambil data final untuk tanggal ${targetDate}...`;
-    wbpTableBody.innerHTML = '<tr><td colspan="4">Memuat...</td></tr>'; // Ubah colspan
-    lwbpTableBody.innerHTML = '<tr><td colspan="4">Memuat...</td></tr>'; // Ubah colspan
+    wbpTableBody.innerHTML = '<tr><td colspan="5">Memuat...</td></tr>';
+    lwbpTableBody.innerHTML = '<tr><td colspan="5">Memuat...</td></tr>';
 
     try {
-        // --- AMBIL DATA DARI TABEL FINAL RESULT ---
+        // --- AMBIL DATA DARI TABEL/VIEW FINAL ---
         const { data: finalData, error } = await supa
-            .from(FINAL_RESULT_TABLE)
+            .from(DATA_SOURCE_TABLE) // Gunakan tabel final (atau view kalkulasi)
             .select('tanggal, id_mesin, konsumsi_lwbp_kwh, konsumsi_wbp_kwh, konsumsi_total_harian')
-            .eq('tanggal', targetDate) // FILTER BERDASARKAN TANGGAL!
+            .eq('tanggal', targetDate) 
             .order('id_mesin', { ascending: true });
 
         if (error) throw error;
         
         // --- CEK DATA ---
         if (finalData.length === 0) {
-            analysisStatus.textContent = `Data final untuk tanggal ${targetDate} belum tersedia atau belum difinalisasi (jam 00:05 WIB).`;
-            wbpTableBody.innerHTML = '<tr><td colspan="4">Tidak ada hasil final ditemukan.</td></tr>';
-            lwbpTableBody.innerHTML = '<tr><td colspan="4">Tidak ada hasil final ditemukan.</td></tr>';
+            analysisStatus.textContent = `Data final untuk tanggal ${targetDate} belum tersedia.`;
+            wbpTableBody.innerHTML = '<tr><td colspan="5">Tidak ada hasil ditemukan.</td></tr>';
+            lwbpTableBody.innerHTML = '<tr><td colspan="5">Tidak ada hasil ditemukan.</td></tr>';
             return;
         }
 
-        // --- RENDER TABEL WBP dan LWBP (Menggunakan data yang sama) ---
+        // --- RENDER TABEL WBP (HEADER: ID, Tanggal, Ea Start, Ea End, Konsumsi WBP) ---
         wbpTableBody.innerHTML = '';
-        lwbpTableBody.innerHTML = ''; 
-
         finalData.forEach(row => {
-            // Data WBP
             const trWBP = wbpTableBody.insertRow();
             trWBP.insertCell().textContent = row.id_mesin;
             trWBP.insertCell().textContent = row.tanggal;
-            // Kolom Ea Start/End dihapus, diganti dengan Total Konsumsi Harian
-            trWBP.insertCell().textContent = row.konsumsi_total_harian ? row.konsumsi_total_harian.toFixed(2) : '---';
-            trWBP.insertCell().textContent = row.konsumsi_lwbp_kwh ? row.konsumsi_lwbp_kwh.toFixed(2) : '---'; // Tambahan info LWBP
+            
+            // MENGISI KOLOM LAMA DENGAN DATA DUMMY/TOTAL AGAR TIDAK ERROR
+            // Ea Start WBP (kWh) - Kolom 3
+            trWBP.insertCell().textContent = row.konsumsi_total_harian ? row.konsumsi_total_harian.toFixed(2) : '---'; 
+            // Ea End WBP (kWh) - Kolom 4
+            trWBP.insertCell().textContent = row.konsumsi_lwbp_kwh ? row.konsumsi_lwbp_kwh.toFixed(2) : '---'; 
 
-            const wbpCell = trWBP.insertCell();
+            const wbpCell = trWBP.insertCell(); // Kolom 5
             wbpCell.textContent = row.konsumsi_wbp_kwh.toFixed(2);
             wbpCell.style.fontWeight = 'bold';
             wbpCell.style.backgroundColor = '#4c0519';
+        });
 
-            // Data LWBP
+        // --- RENDER TABEL LWBP (HEADER: ID, Tanggal, Total Konsumsi, Konsumsi WBP, Konsumsi LWBP) ---
+        lwbpTableBody.innerHTML = '';
+        finalData.forEach(row => {
             const trLWBP = lwbpTableBody.insertRow();
             trLWBP.insertCell().textContent = row.id_mesin;
             trLWBP.insertCell().textContent = row.tanggal;
@@ -88,7 +92,7 @@ async function renderDailyConsumptionData() {
         analysisStatus.textContent = `Data final berhasil diambil untuk ${finalData.length} mesin pada tanggal ${targetDate}.`;
         
     } catch (e) {
-        analysisStatus.textContent = `Gagal memuat data final: ${e.message}`;
+        analysisStatus.textContent = `Gagal memuat data: ${e.message}`;
         console.error("Error fetching daily consumption data:", e);
     }
 }
