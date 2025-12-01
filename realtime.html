@@ -1,429 +1,117 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Realtime Monitoring — 18 Mesin (Single connect MQTT + Supabase)</title>
+    <meta charset="UTF-8">
+    <title>Realtime Dashboard</title>
+    <style>
+        body { font-family: Arial; background:#f2f2f2; padding:20px; }
+        .card { padding:20px; background:white; border-radius:10px; margin-bottom:20px; }
+        h2 { margin:0 0 10px 0; }
+    </style>
 
-<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-
-<style>
-:root{
-  --bg:#0b0f13; --panel:#111417; --muted:#94A3B8; --accent:#00FFC2; --ok:#10B981; --err:#EF4444;
-}
-*{box-sizing:border-box}
-body{margin:0;font-family:Inter,Segoe UI,Arial; background:var(--bg); color:#e6eef1; padding:20px;}
-.header{display:flex;align-items:center;gap:12px}
-h1{margin:0;color:var(--accent);font-size:20px}
-#mqttStatus{margin-left:auto;color:var(--muted);font-weight:700}
-
-/* List view */
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:14px;margin-top:18px}
-.card{background:var(--panel);padding:18px;border-radius:10px;text-align:center;cursor:pointer;border:1px solid rgba(255,255,255,0.02)}
-.card:hover{transform:translateY(-4px);transition:all .12s}
-.card .title{font-weight:800}
-.card .mini{margin-top:8px;color:var(--muted);font-size:13px}
-
-/* Detail view */
-.detail{display:none;margin-top:18px;background:var(--panel);padding:18px;border-radius:10px}
-.detail h2{margin:0 0 8px 0;color:var(--accent)}
-.controls{display:flex;align-items:center;gap:8px;margin-bottom:12px}
-.btn{background:#222;padding:8px 12px;border-radius:8px;color:#fff;text-decoration:none;border:1px solid rgba(255,255,255,0.03);cursor:pointer}
-.btn.secondary{background:transparent;border:1px solid rgba(255,255,255,0.03)}
-.param-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
-.param{background:#0f1720;padding:12px;border-radius:8px}
-.p-name{color:var(--muted);font-weight:700;font-size:13px}
-.p-value{font-weight:800;font-size:18px;margin-top:6px}
-
-/* responsive */
-@media(max-width:900px){
-  .param-grid{grid-template-columns:1fr}
-  .grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr))}
-}
-.small-muted{color:var(--muted);font-size:13px}
-.hidden{display:none}
-.offline{opacity:0.45}
-</style>
+    <!-- Supabase v2 CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
-<div class="header">
-  <h1> Dashboard Monitoring Energi Realtime</h1>
-  <div id="mqttStatus">MQTT: connecting...</div>
+<div class="card">
+    <h2>Realtime Energi</h2>
+    <p>Voltage: <span id="v">-</span></p>
+    <p>Current: <span id="c">-</span></p>
+    <p>Power: <span id="p">-</span></p>
+    <p>Total kWh: <span id="ea">-</span></p>
+    <p>Δ kWh: <span id="delta">-</span></p>
 </div>
 
-<!-- LIST VIEW -->
-<section id="listView" aria-live="polite">
-  <div class="small-muted" style="margin-top:8px;">Pilih mesin untuk lihat detail parameter </div>
-  <div class="grid" id="machinesGrid"></div>
-</section>
-
-<!-- DETAIL VIEW -->
-<section id="detailView" class="detail" aria-live="polite">
-  <div class="controls">
-    <button class="btn" id="backBtn">⬅ Kembali</button>
-    <div style="margin-left:10px;font-weight:800" id="detailTitle">Mesin —</div>
-    <div style="margin-left:auto;color:var(--muted)" id="lastUpdate">last: -</div>
-  </div>
-
-  <div class="param-grid" id="paramGrid">
-    <div class="param">
-      <div class="p-name">1. Total Ea</div>
-      <div class="p-value" id="TotalEa">---</div>
-      <div class="p-name" style="font-size:12px;color:var(--muted">kWh</div>
-    </div>
-
-    <div class="param">
-      <div class="p-name">2. Total Er</div>
-      <div class="p-value" id="TotalEr">---</div>
-      <div class="p-name" style="font-size:12px;color:var(--muted)">kVARh</div>
-    </div>
-
-    <div class="param">
-      <div class="p-name">3. Partial Ea</div>
-      <div class="p-value" id="PartialEa">---</div>
-      <div class="p-name" style="font-size:12px;color:var(--muted)">kWh</div>
-    </div>
-
-    <div class="param">
-      <div class="p-name">4. Partial Er</div>
-      <div class="p-value" id="PartialEr">---</div>
-      <div class="p-name" style="font-size:12px;color:var(--muted)">kVARh</div>
-    </div>
-
-    <div class="param">
-      <div class="p-name">5. Voltage (L-L Avg)</div>
-      <div class="p-value" id="Voltage">---</div>
-      <div class="p-name" style="font-size:12px;color:var(--muted)">Volt</div>
-    </div>
-
-    <div class="param">
-      <div class="p-name">6. Current (I1 / I2 / I3)</div>
-      <div class="p-value" id="Current">--- / --- / ---</div>
-      <div class="p-name" style="font-size:12px;color:var(--muted)">Ampere</div>
-    </div>
-
-    <div class="param">
-      <div class="p-name">7. Power P (Total Active)</div>
-      <div class="p-value" id="PowerP">---</div>
-      <div class="p-name" style="font-size:12px;color:var(--muted)">W (x1000)</div>
-    </div>
-
-    <div class="param">
-      <div class="p-name">8. Power Q (Total Reactive)</div>
-      <div class="p-value" id="PowerQ">---</div>
-      <div class="p-name" style="font-size:12px;color:var(--muted)">VAR (x1000)</div>
-    </div>
-
-    <div class="param">
-      <div class="p-name">9. Power S (Total Apparent)</div>
-      <div class="p-value" id="PowerS">---</div>
-      <div class="p-name" style="font-size:12px;color:var(--muted)">kVA</div>
-    </div>
-
-    <div class="param">
-      <div class="p-name">10. PF (Power Factor)</div>
-      <div class="p-value" id="PF">---</div>
-      <div class="p-name" style="font-size:12px;color:var(--muted)">-</div>
-    </div>
-
-    <div class="param">
-      <div class="p-name">11. Frequency</div>
-      <div class="p-value" id="Hz">---</div>
-      <div class="p-name" style="font-size:12px;color:var(--muted)">Hz</div>
-    </div>
-
-    <div class="param">
-      <div class="p-name">12. Operation Time</div>
-      <div class="p-value" id="OpTime">---</div>
-      <div class="p-name" style="font-size:12px;color:var(--muted)">days / hrs</div>
-    </div>
-  </div>
-</section>
-
 <script>
-/* ------------- CONFIG ------------- */
-const MQTT_URL = "wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt";
-const MQTT_OPTIONS = {
-  username: "web_dashboard",
-  password: "Tristan12",
-  connectTimeout: 4000,
-  reconnectPeriod: 3000
+/* -----------------------------
+   1. SETUP SUPABASE
+--------------------------------*/
+const SUPABASE_URL = "https://rojhcadtqfynlqzubftx.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs";
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* -----------------------------
+   2. VARIABLES OFFLINE-SAFE
+--------------------------------*/
+let lastEa = null;  // Ea sebelumnya (persist)
+let isFirst = true;
+
+/* -----------------------------
+   3. THINGSBOARD WEBSOCKET
+--------------------------------*/
+const ws = new WebSocket("wss://demo.thingsboard.io/api/ws/plugins/telemetry?token=YOUR_TOKEN");
+
+ws.onopen = () => {
+    ws.send(JSON.stringify({
+        tsSubCmds: [{
+            entityType: "DEVICE",
+            entityId: "YOUR_DEVICE_ID",
+            scope: "LATEST_TELEMETRY",
+            cmdId: 1
+        }],
+        historyCmds: [],
+        attrSubCmds: []
+    }));
 };
-const MQTT_WILDCARD = "politeknik/meter/data/#"; // subscribe wildcard
 
-// Supabase config (dari user)
-const SUPABASE_URL = 'https://rojhcadtqfynlqzubftx.supabase.co';
-const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs';
+ws.onmessage = async (msg) => {
+    const data = JSON.parse(msg.data);
+    if (!data.data) return;
 
-/* ------------- DOM & STATE ------------- */
-const supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON);
-const mqttStatusEl = document.getElementById('mqttStatus');
-const machinesGrid = document.getElementById('machinesGrid');
-const listView = document.getElementById('listView');
-const detailView = document.getElementById('detailView');
-const detailTitle = document.getElementById('detailTitle');
-const lastUpdateEl = document.getElementById('lastUpdate');
-const backBtn = document.getElementById('backBtn');
+    const t = data.data;
 
-let activeId = null;
-const cache = {}; // cache latest payload per id
+    let v = t.voltage?.[0]?.value ?? null;
+    let c = t.current?.[0]?.value ?? null;
+    let p = t.power?.[0]?.value ?? null;
+    let ea = t.energy?.[0]?.value ?? null;
 
-/* ------------- Build machine cards ------------- */
-for (let i=1;i<=18;i++){
-  const card = document.createElement('div');
-  card.className = 'card';
-  card.tabIndex = 0;
-  card.innerHTML = `<div class="title">Mesin ${i}</div><div class="mini" id="mini-${i}">ID:${i} • --</div>`;
-  (function(id){
-    card.addEventListener('click', ()=> openDetail(id));
-    card.addEventListener('keyup', e => { if(e.key==='Enter') openDetail(id); });
-  })(i);
-  machinesGrid.appendChild(card);
-}
+    if (ea == null) return;
 
-/* ------------- MQTT: single connection & wildcard subscribe ------------- */
-const client = mqtt.connect(MQTT_URL, MQTT_OPTIONS);
+    document.getElementById("v").innerText = v;
+    document.getElementById("c").innerText = c;
+    document.getElementById("p").innerText = p;
+    document.getElementById("ea").innerText = ea;
 
-client.on('connect', () => {
-  mqttStatusEl.textContent = 'MQTT: connected';
-  client.subscribe(MQTT_WILDCARD, { qos: 0 }, (err) => {
-    if(err) {
-      console.error('subscribe error', err);
-      mqttStatusEl.textContent = 'MQTT: subscribe error';
-    }
-  });
-});
+    /* -----------------------------
+       4. HITUNG Δ kWh tahan offline
+    --------------------------------*/
+    let delta = 0;
 
-client.on('reconnect', () => mqttStatusEl.textContent = 'MQTT: reconnecting...');
-client.on('close', () => mqttStatusEl.textContent = 'MQTT: closed');
-client.on('offline', () => mqttStatusEl.textContent = 'MQTT: offline');
-client.on('error', (e) => { console.error('mqtt error', e); mqttStatusEl.textContent = 'MQTT: error'; });
-
-/* Helper: safe JSON parse */
-function safeParse(str){
-  try { return JSON.parse(str); }
-  catch(e){ return null; }
-}
-
-/* ------------- Supabase helpers ------------- */
-async function upsertMachineState(mesin_id, last_ea, tsIso){
-  // upsert into machine_state table (mesin_id PK)
-  const { data, error } = await supabase
-    .from('machine_state')
-    .upsert({ mesin_id: mesin_id, last_ea: last_ea, updated_at: tsIso }, { onConflict: 'mesin_id' });
-  if(error) console.warn('upsertMachineState error', error);
-  return data;
-}
-
-async function getMachineState(mesin_id){
-  const { data, error } = await supabase
-    .from('machine_state')
-    .select('last_ea, updated_at')
-    .eq('mesin_id', mesin_id)
-    .maybeSingle();
-  if(error) console.warn('getMachineState error', error);
-  return data;
-}
-
-async function insertRaw(mesin_id, ea_total, payload, tsIso){
-  const { data, error } = await supabase
-    .from('energy_raw')
-    .insert([{ mesin_id, ea_total, payload, timestamp: tsIso }]);
-  if(error) console.warn('insertRaw error', error);
-  return data;
-}
-
-async function insertDelta(table, mesin_id, delta, tsIso){
-  const { data, error } = await supabase
-    .from(table)
-    .insert([{ mesin_id, delta_kwh: delta, timestamp: tsIso }]);
-  if(error) console.warn('insertDelta error', table, error);
-  return data;
-}
-
-/* ------------- Message handler ------------- */
-client.on('message', (topic, buf) => {
-  try {
-    const topicParts = topic.split('/');
-    let id = null;
-    if(topicParts.length >= 4 && topicParts[3] !== undefined){
-      const n = Number(topicParts[3]);
-      if(Number.isInteger(n)) id = n;
-    }
-
-    const payloadText = buf.toString();
-    const payload = safeParse(payloadText);
-
-    if(id === null && payload && payload.id !== undefined){
-      const n2 = Number(payload.id);
-      if(Number.isInteger(n2)) id = n2;
-    }
-
-    if(id === null) return; // ignore
-
-    if(payload && typeof payload === 'object') payload._t = Date.now();
-    else return;
-
-    cache[id] = payload;
-
-    // update mini card text
-    const miniEl = document.getElementById('mini-'+id);
-    if(miniEl){
-      const p = (payload.P !== undefined && payload.P !== null) ? `${payload.P} W` : '--';
-      const st = payload.status ? String(payload.status).toUpperCase() : '--';
-      miniEl.textContent = `ID:${id} • ${p} • ${st}`;
-      miniEl.classList.remove('offline');
-    }
-
-    // update UI detail if open
-    if(activeId === id) renderDetail(payload);
-
-    // send to Supabase (async, don't block UI)
-    handleSupabaseForPayload(id, payload).catch(err => console.warn('supabase handle err', err));
-
-  } catch(err){
-    console.warn('MQTT process error', err);
-  }
-});
-
-/* ------------- Core: handle Supabase logic per message ------------- */
-async function handleSupabaseForPayload(id, payload){
-  // Expect payload.EaT is Total Ea (kWh). If not present, skip.
-  const ea = Number(payload.EaT);
-  if(!ea || isNaN(ea)) return;
-
-  // timestamp in Jakarta
-  const nowJak = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
-  const tsIso = nowJak.toISOString();
-
-  // insert raw
-  insertRaw(id, ea, payload, tsIso);
-
-  // get last state
-  const state = await getMachineState(id);
-  if(!state || !state.last_ea){
-    // first time seeing this machine: create state
-    await upsertMachineState(id, ea, tsIso);
-    return;
-  }
-
-  const lastEa = Number(state.last_ea);
-  let delta = Number((ea - lastEa).toFixed(6));
-
-  if(isNaN(delta)) delta = 0;
-
-  // Handle meter reset or negative delta
-  if(delta <= 0){
-    // meter reset or no change -> update last_ea and skip
-    await upsertMachineState(id, ea, tsIso);
-    return;
-  }
-
-  // Threshold to avoid tiny noise (optional)
-  if(delta < 0.00001){
-    await upsertMachineState(id, ea, tsIso);
-    return;
-  }
-
-  // Determine tariff slot based on Jakarta hour (Option A: assign to reconnect time)
-  const hour = nowJak.getHours();
-  const isT2 = (hour >= 17 && hour < 22);
-  const table = isT2 ? 'energy_t2' : 'energy_t1';
-
-  // insert delta to proper table
-  await insertDelta(table, id, delta, tsIso);
-
-  // update machine state last_ea
-  await upsertMachineState(id, ea, tsIso);
-}
-
-/* ------------- UI: open detail, render, back ------------- */
-function openDetail(id){
-  activeId = Number(id);
-  detailTitle.textContent = 'Mesin ' + id + ' — Detail Parameter';
-  listView.style.display = 'none';
-  detailView.style.display = 'block';
-
-  const newUrl = window.location.pathname + '?id=' + id;
-  history.pushState({id:id}, '', newUrl);
-
-  if(cache[id]) renderDetail(cache[id]);
-  else resetDetail();
-
-  detailView.focus();
-}
-
-backBtn.addEventListener('click', ()=> { goList(); });
-function goList(){ activeId = null; detailView.style.display = 'none'; listView.style.display = 'block'; history.pushState({}, '', window.location.pathname); }
-
-function renderDetail(d){
-  if(!d || typeof d !== 'object') return;
-  const fmt = (v)=> (v===0||v)?v:'---';
-  const fmtOp = (h)=>{
-    if(h===undefined||h===null||isNaN(h)) return '---';
-    const mins = Math.round(Number(h)*60);
-    const days = Math.floor(mins/(24*60));
-    const rem = mins % (24*60);
-    const hrs = Math.floor(rem/60);
-    const m = rem % 60;
-    return (days>0?days+'d ':'') + hrs+'h' + (m>0? ' '+m+'m':'');
-  };
-
-  const set = (id, value)=> { const el = document.getElementById(id); if(el) el.textContent = fmt(value); };
-
-  set('TotalEa', d.EaT);
-  set('TotalEr', d.ErT);
-  set('PartialEa', d.EaP);
-  set('PartialEr', d.ErP);
-  set('Voltage', d.V);
-  const i1 = (d.I1||d.I1===0)?d.I1:'---';
-  const i2 = (d.I2||d.I2===0)?d.I2:'---';
-  const i3 = (d.I3||d.I3===0)?d.I3:'---';
-  const curEl = document.getElementById('Current'); if(curEl) curEl.textContent = `${i1} / ${i2} / ${i3}`;
-  set('PowerP', d.P);
-  set('PowerQ', d.Q);
-  set('PowerS', d.S);
-  set('PF', d.PF);
-  set('Hz', d.Hz);
-  const op = (d.OpH || d.OpH===0) ? fmtOp(d.OpH) : '---';
-  const opEl = document.getElementById('OpTime'); if(opEl) opEl.textContent = op;
-  lastUpdateEl.textContent = 'last: ' + (d._t? new Date(d._t).toLocaleString() : new Date().toLocaleTimeString());
-}
-
-function resetDetail(){
-  const ids = ['TotalEa','TotalEr','PartialEa','PartialEr','Voltage','Current','PowerP','PowerQ','PowerS','PF','Hz','OpTime'];
-  ids.forEach(id => { const el = document.getElementById(id); if(!el) return; if(id === 'Current') el.textContent = '--- / --- / ---'; else el.textContent = '---'; });
-  lastUpdateEl.textContent = 'last: -';
-}
-
-/* ------------- OFFLINE detection per-machine ------------- */
-setInterval(() => {
-  const now = Date.now();
-  for (let id = 1; id <= 18; id++) {
-    const latest = cache[id];
-    const miniEl = document.getElementById('mini-' + id);
-    if (!latest) {
-      if(miniEl) miniEl.textContent = `ID:${id} • --`;
-      continue;
-    }
-
-    if (now - latest._t > 15000) {
-      if (miniEl) { miniEl.textContent = `ID:${id} • OFFLINE`; miniEl.classList.add('offline'); }
-      cache[id].status = 'OFFLINE';
-      if(activeId === id){ document.getElementById('PowerP').textContent = 'OFFLINE'; lastUpdateEl.textContent = 'last: OFFLINE'; }
+    if (isFirst) {
+        lastEa = ea;
+        isFirst = false;
     } else {
-      if(miniEl) miniEl.classList.remove('offline');
+        if (ea >= lastEa) {
+            delta = ea - lastEa;   // normal
+        } else {
+            delta = ea;            // modul reset / ESP reboot
+        }
+        lastEa = ea;
     }
-  }
-}, 3000);
 
-/* Handle browser back/forward */
-window.addEventListener('popstate', (e)=> { const sid = e.state && e.state.id; if(sid){ openDetail(sid); } else { goList(); } });
+    document.getElementById("delta").innerText = delta.toFixed(3);
 
-/* On load: open detail if ?id=... present */
-(function initFromUrl(){ const qp = new URLSearchParams(window.location.search); const qid = qp.get('id'); if(qid && Number.isInteger(Number(qid)) && Number(qid)>=1 && Number(qid)<=18){ setTimeout(()=> openDetail(Number(qid)), 50); } })();
+    /* -----------------------------
+       5. INSERT KE TABEL T1 (raw)
+    --------------------------------*/
+    await supabase.from("T1").insert({
+        voltage: v,
+        current: c,
+        power: p,
+        ea_total: ea,
+        delta_kwh: delta
+    });
+
+    /* -----------------------------
+       6. INSERT KE TABEL T2 (rekap)
+    --------------------------------*/
+    await supabase.from("T2").insert({
+        tanggal: new Date().toISOString(),
+        energi: delta
+    });
+};
 
 </script>
 </body>
