@@ -3,13 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>⚡ Master Power Meter Dashboard (18 SLAVES)</title>
+<title>⚡ Master Power Meter Dashboard (18 Mesin)</title>
 
 <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script> 
 
 <style>
-/* ... (STYLE CSS ANDA TETAP SAMA) ... */
 /* Global Styling */
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -100,23 +99,24 @@ tbody tr:hover {
 <script>
 // =======================================================
 // --- KONFIGURASI SUPABASE ---
+// GANTI DENGAN KREDENSIAL SUPABASE ANDA YANG ASLI
 // =======================================================
 const SUPA_URL  = "https://rojhcadtqfynlqzubftx.supabase.co"; 
 const SUPA_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs"; 
 const TABLE_NAME = "ea_18mesin";
-const EA_THRESHOLD = 0.01; 
+const EA_THRESHOLD = 0.01; // Log normal jika perubahan EA >= 0.01 kWh
 
 let supa = supabase.createClient(SUPA_URL, SUPA_ANON);
 
 // =======================================================
-// --- VARIABEL GLOBAL UNTUK LOGIKA URUTAN ---
+// --- VARIABEL GLOBAL UNTUK LOGIKA URUTAN & BUFFER ---
 // =======================================================
 const MACHINE_IDS = Array.from({length: 18}, (_, i) => i + 1); // [1, 2, 3, ..., 18]
-const dataBuffer = {}; // { 1: {ea: 123, log_type: 'REALTIME', ...}, 2: {...} }
+const dataBuffer = {}; // Menyimpan data terbaru dari MQTT
 let isSending = false; // Flag untuk mencegah pengiriman berbarengan
 
 // =======================================================
-// --- FUNGSI LOGGING & LOCALSTORAGE ---
+// --- FUNGSI LOGGING & LOCALSTORAGE (Memori Harian) ---
 // =======================================================
 
 /** Menyimpan log energi ke tabel ea_18mesin di Supabase. */
@@ -152,14 +152,19 @@ function saveLastEa(id, val) {
     localStorage.setItem("lastEa_" + id, val);
 }
 
+/** Menyimpan waktu log terakhir ke Supabase (untuk forced log) */
+function saveLastSupaLogTime(id, time) {
+    localStorage.setItem("lastSupaLogTime_" + id, time);
+}
+
 
 // =======================================================
-// --- LOGIKA PENGIRIMAN BERURUTAN (1 - 18) ---
+// --- LOGIKA PENGIRIMAN BERURUTAN & PAKSA LOG (5 MENIT) ---
 // =======================================================
 
 /**
  * Iterasi melalui ID mesin (1 s/d 18) dan mengirim data ke Supabase
- * hanya jika data tersebut baru dan memenuhi kriteria logging.
+ * dengan jaminan log wajib setiap 5 menit.
  */
 async function sendBufferedDataSequentially() {
     if (isSending) return;
@@ -172,6 +177,11 @@ async function sendBufferedDataSequentially() {
             const ea = entry.ea;
             const now = new Date();
             const currentHour = now.getHours();
+            
+            // Cek Waktu Log Terakhir: Jika lebih dari 5 menit (300.000 ms), paksa log.
+            const lastLogTime = localStorage.getItem("lastSupaLogTime_" + id);
+            const fiveMinutes = 5 * 60 * 1000; 
+            const forceLog = !lastLogTime || (now.getTime() - Number(lastLogTime)) > fiveMinutes; 
 
             let logEntry = {
                 id_mesin: id,
@@ -185,19 +195,24 @@ async function sendBufferedDataSequentially() {
                 logEntry.log_type = 'T1_WBP_START';
                 await insertEnergyLog(logEntry);
                 setTransitionFlag(id, 'T1_WBP_START');
-                console.log(`[LOG WBP - Urut] Mesin ${id}: T1 WBP (17:00) dicatat.`);
+                saveLastSupaLogTime(id, now.getTime());
+                console.log(`[LOG WBP] Mesin ${id}: T1 WBP (17:00) dicatat.`);
             } else if (currentHour === 22 && getTransitionFlag(id, 'T2_WBP_END') === null) {
                 logEntry.log_type = 'T2_WBP_END';
                 await insertEnergyLog(logEntry);
                 setTransitionFlag(id, 'T2_WBP_END');
-                console.log(`[LOG WBP - Urut] Mesin ${id}: T2 WBP (22:00) dicatat.`);
+                saveLastSupaLogTime(id, now.getTime());
+                console.log(`[LOG WBP] Mesin ${id}: T2 WBP (22:00) dicatat.`);
             } 
-            // 2. Logika Normal (Jika T1/T2 tidak dipicu)
+            // 2. Logika Normal ATAU PAKSA LOG
             else {
                 const lastEa = loadLastEa(id);
-                if (lastEa === undefined || Math.abs(ea - lastEa) >= EA_THRESHOLD) {
+                
+                // Log jika: 1) Ada perubahan besar (>= 0.01) ATAU 2) Sudah waktunya untuk paksa log (setiap 5 menit)
+                if (lastEa === undefined || Math.abs(ea - lastEa) >= EA_THRESHOLD || forceLog) {
                     await insertEnergyLog(logEntry);
                     saveLastEa(id, ea);
+                    saveLastSupaLogTime(id, now.getTime());
                 }
             }
 
@@ -210,7 +225,6 @@ async function sendBufferedDataSequentially() {
 }
 
 // Panggil fungsi pengiriman berurutan setiap 5 detik
-// Interval 5 detik seharusnya cukup untuk memproses data dari 18 mesin yang masuk setiap 1-2 detik.
 setInterval(sendBufferedDataSequentially, 5000); 
 
 
@@ -242,9 +256,7 @@ const dataMap = [
 ];
 
 function formatOperatingTime(totalHours) {
-    if (totalHours === undefined || totalHours === null || isNaN(totalHours) || totalHours < 0) {
-        return '---';
-    }
+    if (totalHours === undefined || totalHours === null || isNaN(totalHours) || totalHours < 0) return '---';
     const totalMinutes = Math.round(parseFloat(totalHours) * 60); 
     const days = Math.floor(totalMinutes / (24 * 60)); 
     const remainingMinutes = totalMinutes % (24 * 60);
@@ -282,11 +294,10 @@ client.on("message", (topic, message) => {
     const id = d.id;
     const ea = Number(d.EaT);
 
-    // 1. SIMPAN DATA KE BUFFER (TIDAK LANGSUNG POST KE SUPABASE)
+    // 1. SIMPAN DATA KE BUFFER
     if (ea !== null && !isNaN(ea)) {
         dataBuffer[id] = {
             ea: ea,
-            // Simpan data lain yang mungkin perlu (seperti status, dll.)
         };
     }
     
