@@ -16,131 +16,177 @@ body {
     color: #E0E0E0; 
     padding: 0;
     margin: 0;
-    /* Background Gambar Profesional */
-    background-image: url('https://images.unsplash.com/photo-1542385108611-667dc9df9c40?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w0NTIyMzZ8MHwxfHNlYXJjaHwxfHxtYXN0ZXIlMjBwb3dlciUyMGRhc2hib2FyZCUyMGJhY2tncm91bmR8ZW58MHx8fHwxNzAzNTI2MzY1fDA&ixlib=rb-4.0.3&q=80&w=1920');
+    /* Background Gambar Profesional (Tema: Global Network/Energy Grid) */
+    background-image: url('https://images.unsplash.com/photo-1542385108611-667dc9df9c40?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w0NTIyMzZ8MHwxfHNlYXJjaHwxfHxtYXN0ZXIlMjBlbmVyZ3klMjBncmlkJTIwZGFzaGJvYXJkJTIwYmFja2dyb3VuZHxlbnwwfHx8fDE3MDM1MjYzNjV8MA&ixlib=rb-4.0.3&q=80&w=1920');
     background-size: cover;
     background-position: center;
     background-attachment: fixed;
+    min-height: 100vh;
 }
 .container {
-    padding: 20px;
-    background-color: rgba(15, 15, 15, 0.85); /* Overlay gelap agar teks terbaca */
+    padding: 20px 40px; /* Padding lebih besar */
+    background-color: rgba(15, 15, 15, 0.9); /* Overlay gelap agar teks terbaca */
     min-height: 100vh;
 }
 h2 {
     color: #00FFC2; 
+    text-shadow: 0 0 5px rgba(0, 255, 194, 0.5); /* Efek neon ringan */
     border-bottom: 2px solid #3A3A3A;
-    padding-bottom: 10px;
-    margin-bottom: 20px;
+    padding-bottom: 15px;
+    margin-bottom: 10px;
 }
 #conn {
-    margin-bottom: 25px;
+    margin-bottom: 30px;
     font-size: 1.1em;
     font-weight: bold;
     color: #38BDF8;
+    animation: pulse 1.5s infinite;
 }
 
 /* --- SUMMARY VIEW (CARD GRID) --- */
 #summaryView {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); /* 3-4 Kartu per baris */
-    gap: 20px;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); 
+    gap: 25px;
     padding: 10px 0;
 }
 .machine-card {
     background: #1E1E1E;
     border-radius: 12px;
-    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.6);
-    padding: 20px;
-    transition: transform 0.3s, box-shadow 0.3s;
-    border-left: 5px solid #00FFC2; /* Garis hijau */
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.7);
+    padding: 25px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-left 0.3s ease;
+    border-left: 5px solid #3A3A3A; /* Garis default abu-abu */
 }
 .machine-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.8);
+    transform: translateY(-8px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.9);
 }
 .card-id {
-    font-size: 1.8em;
-    font-weight: bold;
+    font-size: 2em;
+    font-weight: 700;
     color: #38BDF8;
-    margin-bottom: 10px;
+    margin-bottom: 15px;
+    letter-spacing: 1px;
+}
+.status-wrapper {
+    display: flex;
+    align-items: center;
+    font-size: 1.2em;
 }
 .status-indicator {
     display: inline-block;
-    width: 12px;
-    height: 12px;
+    width: 15px;
+    height: 15px;
     border-radius: 50%;
-    margin-right: 8px;
+    margin-right: 10px;
 }
 .status-online {
     background-color: #10B981; /* Hijau */
-    box-shadow: 0 0 8px #10B981;
+    box-shadow: 0 0 10px #10B981;
     color: #10B981;
 }
 .status-offline {
     background-color: #EF4444; /* Merah */
-    box-shadow: 0 0 8px #EF4444;
+    box-shadow: 0 0 10px #EF4444;
     color: #EF4444;
 }
 .detail-button {
-    margin-top: 15px;
-    padding: 10px 15px;
+    margin-top: 20px;
+    padding: 12px 20px;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
     background-color: #00FFC2;
     color: #121212;
     font-weight: bold;
     cursor: pointer;
-    transition: background-color 0.3s;
+    transition: background-color 0.3s, transform 0.2s;
+    text-transform: uppercase;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 .detail-button:hover {
     background-color: #00E6B9;
+    transform: scale(1.05);
 }
+
+/* Kustomisasi Kartu Saat Online */
+.card-online {
+    border-left: 5px solid #10B981 !important;
+}
+/* Kustomisasi Kartu Saat Offline */
+.card-offline {
+    border-left: 5px solid #EF4444 !important;
+}
+
 
 /* --- DETAIL VIEW (TABLE) --- */
 #detailView {
     background: #1E1E1E;
-    padding: 20px;
+    padding: 30px;
     border-radius: 12px;
-    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.6);
-    margin-top: 30px;
-    display: none; /* Default tersembunyi */
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.7);
+    margin-top: 40px;
+    display: none; 
 }
 #detailHeader {
-    font-size: 1.5em;
-    color: #38BDF8;
-    margin-bottom: 20px;
-    font-weight: 600;
+    font-size: 1.8em;
+    color: #00FFC2;
+    margin-bottom: 25px;
+    font-weight: 700;
+    border-bottom: 1px solid #3A3A3A;
+    padding-bottom: 10px;
 }
 table {
     border-collapse: collapse;
     width: 100%;
 }
 th, td {
-    border: 1px solid #2A2A2A; 
-    padding: 10px 12px;
-    text-align: left; /* Teks kiri untuk parameter/nilai */
+    border: none; /* Hilangkan border antar sel */
+    padding: 12px 15px;
+    text-align: left;
 }
 thead th {
     background: #2A2A2A;
-    color: #00FFC2;
+    color: #38BDF8;
     text-transform: uppercase;
+    font-weight: 600;
+    font-size: 0.9em;
+}
+tbody tr:nth-child(even) {
+    background: #181818;
+}
+tbody tr:hover {
+    background: #333333;
 }
 tbody td:nth-child(2) {
     font-weight: bold;
     color: #E0E0E0;
     text-align: right;
-    background: #2A2A2A;
+    font-size: 1.1em;
 }
+
 .back-button {
-    margin-top: 20px;
-    padding: 10px 20px;
+    margin-top: 30px;
+    padding: 12px 25px;
     background-color: #EF4444;
     color: white;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
     cursor: pointer;
+    transition: background-color 0.3s, transform 0.2s;
 }
+.back-button:hover {
+    background-color: #D63030;
+    transform: scale(1.05);
+}
+
+/* Keyframes for animation */
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
 </style>
 </head>
 
@@ -174,7 +220,7 @@ tbody td:nth-child(2) {
 // --- FUNGSI UTAMA & KONFIGURASI ---
 // =======================================================
 
-// --- KONFIGURASI SUPABASE ---
+// --- KONFIGURASI SUPABASE (GANTI DENGAN KREDENSIAL ASLI ANDA) ---
 const SUPA_URL  = "https://rojhcadtqfynlqzubftx.supabase.co"; 
 const SUPA_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs"; 
 const TABLE_NAME = "ea_18mesin";
@@ -191,7 +237,7 @@ const conn = document.getElementById("conn");
 
 // --- VARIABEL GLOBAL ---
 const MACHINE_IDS = Array.from({length: 18}, (_, i) => i + 1); 
-const dataBuffer = {}; // Menyimpan data terbaru dari MQTT
+const dataBuffer = {}; // Menyimpan data terbaru LENGKAP dari MQTT
 const devices = {}; // Menyimpan elemen DOM kartu mesin
 
 let isSending = false; 
@@ -214,7 +260,8 @@ function showDetail(id) {
     summaryView.style.display = 'none';
     detailView.style.display = 'block';
     currentMachineIdSpan.textContent = id;
-    renderDetailTable(id);
+    // Panggil render saat tombol diklik
+    renderDetailTable(id); 
 }
 
 function showSummary() {
@@ -233,9 +280,9 @@ function createMachineCard(id) {
     card.id = `card-${id}`;
     card.innerHTML = `
         <div class="card-id">Mesin ID: ${id}</div>
-        <div style="font-size: 1.1em; margin-bottom: 10px;">
+        <div class="status-wrapper">
             <span id="statusIndicator-${id}" class="status-indicator status-offline"></span>
-            <span id="statusText-${id}">OFFLINE</span>
+            <span id="statusText-${id}" class="status-offline">OFFLINE</span>
         </div>
         <button class="detail-button" onclick="showDetail(${id})">Lihat Detail Parameter</button>
     `;
@@ -247,8 +294,10 @@ function createMachineCard(id) {
     };
 }
 
+/** Fungsionalitas: Mengisi tabel detail dengan data terbaru dari dataBuffer */
 function renderDetailTable(id) {
-    const data = dataBuffer[id] || {};
+    // Ambil data dari buffer berdasarkan ID mesin yang diklik
+    const data = dataBuffer[id] || {}; 
     detailTableBody.innerHTML = '';
 
     dataMap.forEach(item => {
@@ -260,12 +309,13 @@ function renderDetailTable(id) {
 
         // Nilai Real-time
         const tdValue = tr.insertCell();
-        let value = data[item.key] !== undefined ? data[item.key] : '---';
+        // Ambil nilai menggunakan key dari mapping
+        let value = data[item.key] !== undefined ? data[item.key] : '---'; 
 
         // Format OpH
         if (item.key === 'OpH') {
             value = formatOperatingTime(value);
-        } else if (typeof value === 'number') {
+        } else if (typeof value === 'number' && value !== '---') {
              // Pembulatan data numerik
             value = value.toFixed(3);
         }
@@ -342,7 +392,7 @@ client.on("message", (topic, message) => {
 
     // 1. SIMPAN DATA LENGKAP KE BUFFER
     if (id && ea !== null && !isNaN(ea)) {
-        dataBuffer[id] = { ...d, ea: ea };
+        dataBuffer[id] = { ...d, ea: ea }; 
     }
     
     // 2. UPDATE SUMMARY CARD VIEW
@@ -350,14 +400,18 @@ client.on("message", (topic, message) => {
         const status = d.status ? d.status.toLowerCase() : 'offline';
         const statusClass = status === 'online' ? 'status-online' : 'status-offline';
         
-        // Update Indicator
+        // Update Card Class (untuk border kiri)
+        devices[id].card.classList.remove('card-online', 'card-offline');
+        devices[id].card.classList.add(`card-${status}`);
+
+        // Update Indicator & Text
         devices[id].indicator.className = `status-indicator ${statusClass}`;
         devices[id].text.textContent = status.toUpperCase();
         devices[id].text.className = statusClass;
         
-        // Jika sedang di Detail View untuk mesin ini, update tabel
+        // 3. JIKA SEDANG DI DETAIL VIEW, UPDATE TABEL DETAIL
         if (detailView.style.display === 'block' && currentMachineIdSpan.textContent == id) {
-            renderDetailTable(id);
+            renderDetailTable(id); // Panggil renderDetailTable untuk refresh data
         }
     }
 
@@ -368,13 +422,10 @@ client.on("message", (topic, message) => {
 
 
 // =======================================================
-// --- LOGIKA PENGIRIMAN BERURUTAN & PAKSA LOG (TETAP SAMA) ---
+// --- LOGIKA PENGIRIMAN BERURUTAN & PAKSA LOG (TIDAK BERUBAH) ---
 // =======================================================
 
-// *** BAGIAN INI TIDAK BERUBAH DARI KODE ASLI ANDA ***
-// *** HANYA FUNGSI BANTU UTAMA YANG DIPINDAH KE ATAS ***
-
-// --- FUNGSI BANTU LOGGING --- (Disalin dari kode Anda sebelumnya)
+// --- FUNGSI BANTU LOGGING --- 
 function getTransitionFlag(id, key) {
     const today = new Date().toISOString().slice(0, 10);
     return localStorage.getItem(`${key}_${id}_${today}`);
