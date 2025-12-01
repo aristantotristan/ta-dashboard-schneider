@@ -8,7 +8,7 @@
 <!-- MQTT client (original) -->
 <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 
-<!-- Supabase UMD (safe to load after mqtt script) -->
+<!-- Supabase UMD (safe) -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 
 <style>
@@ -213,6 +213,11 @@ function saveLastEa(id, val) {
   } catch(e){}
 }
 
+/* ------------- ROUND-ROBIN CONFIG ------------- */
+/* Supabase insert only when id equals nextId (1..18) */
+let nextId = 1;
+const MAX_ID = 18;
+
 /* ------------- Build machine cards ------------- */
 for (let i=1;i<=18;i++){
   const card = document.createElement('div');
@@ -314,36 +319,23 @@ client.on('message', (topic, buf) => {
     // update UI detail if open
     if(activeId === id) renderDetail(payload);
 
-    /* ==== SUPABASE: handle Ea sending (mode C) ==== */
+    /* ==== SUPABASE: handle Ea sending (mode C + round-robin 1→18) ==== */
     // Ea field expected in payload: EaT (Total Ea, kWh)
     try {
       const rawEa = payload.EaT;
       const ea = (rawEa !== undefined && rawEa !== null) ? Number(rawEa) : NaN;
       if (!isNaN(ea)) {
-        // load lastEa from memory/localStorage
-        const lastStored = loadLastEa(id); // may be undefined
-        if (lastStored === undefined) {
-          // first time seeing this machine locally: insert initial row and store
-          saveLastEa(id, ea);
-          // insert initial snapshot to energy_log
-          const entry = {
-            id_mesin: id,
-            v: payload.V !== undefined ? Number(payload.V) : null,
-            i: (payload.I1!==undefined && payload.I2!==undefined && payload.I3!==undefined) ? 
-                 (Number(payload.I1)+Number(payload.I2)+Number(payload.I3)) : null,
-            p: payload.P !== undefined ? Number(payload.P) : null,
-            pf: payload.PF !== undefined ? Number(payload.PF) : null,
-            ea: ea,
-            f: payload.Hz !== undefined ? Number(payload.Hz) : null,
-            t: new Date().toISOString()
-          };
-          // fire-and-forget insert
-          insertEnergyLog(entry);
+
+        // ROUND-ROBIN FILTER: only allow insert if this id matches nextId
+        if (id !== nextId) {
+          // not this turn yet — skip insertion (but UI still updated)
+          console.log(`Skip insert for id ${id} (expecting ${nextId})`);
         } else {
-          const delta = ea - lastStored;
-          // if delta >= threshold (or <= -threshold, handle possible meter rollover/reset)
-          if (Math.abs(delta) >= EA_THRESHOLD) {
-            // prepare entry
+          // it's this id's turn → proceed to insert if delta >= threshold
+          // prepare lastEa handling
+          const lastStored = loadLastEa(id); // may be undefined
+          if (lastStored === undefined) {
+            // first time seen locally: insert snapshot and set lastEa
             const entry = {
               id_mesin: id,
               v: payload.V !== undefined ? Number(payload.V) : null,
@@ -356,15 +348,35 @@ client.on('message', (topic, buf) => {
               t: new Date().toISOString()
             };
             insertEnergyLog(entry);
-            // update stored lastEa
             saveLastEa(id, ea);
           } else {
-            // no significant change — do nothing
+            const delta = ea - lastStored;
+            if (Math.abs(delta) >= EA_THRESHOLD) {
+              const entry = {
+                id_mesin: id,
+                v: payload.V !== undefined ? Number(payload.V) : null,
+                i: (payload.I1!==undefined && payload.I2!==undefined && payload.I3!==undefined) ? 
+                     (Number(payload.I1)+Number(payload.I2)+Number(payload.I3)) : null,
+                p: payload.P !== undefined ? Number(payload.P) : null,
+                pf: payload.PF !== undefined ? Number(payload.PF) : null,
+                ea: ea,
+                f: payload.Hz !== undefined ? Number(payload.Hz) : null,
+                t: new Date().toISOString()
+              };
+              insertEnergyLog(entry);
+              saveLastEa(id, ea);
+            } else {
+              // delta too small -> skip
+            }
           }
+
+          // advance round-robin pointer only when we processed the expected machine
+          nextId++;
+          if (nextId > MAX_ID) nextId = 1;
         }
       }
     } catch (eSup) {
-      console.warn('Ea handling error', eSup);
+      console.warn('Ea handling error (round-robin)', eSup);
     }
 
   } catch(err){
@@ -440,7 +452,6 @@ function renderDetail(d){
   lastUpdateEl.textContent = 'last: ' + (d._t? new Date(d._t).toLocaleString() : new Date().toLocaleTimeString());
 }
 
-/* Reset detail placeholders */
 function resetDetail(){
   const ids = ['TotalEa','TotalEr','PartialEa','PartialEr','Voltage','Current','PowerP','PowerQ','PowerS','PF','Hz','OpTime'];
   ids.forEach(id => {
