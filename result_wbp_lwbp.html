@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>📊 Analisis Konsumsi WBP & LWBP Harian</title>
+<title>📊 Analisis Konsumsi Harian (Ringkasan)</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script> 
 
@@ -40,21 +40,16 @@ thead th {
     font-size: 0.9em;
 }
 
-/* Styling Baris Konsumsi Utama */
-.wbp-cell {
-    background: #4c0519; /* Merah Maroon untuk WBP */
-    font-weight: bold;
-}
-.lwbp-cell {
-    background: #065f46; /* Hijau Tua untuk LWBP */
-    font-weight: bold;
-}
+/* Styling Kolom */
+.wbp-cell { background: #4c0519; font-weight: bold; }
+.lwbp-cell { background: #065f46; font-weight: bold; }
+.total-cell { background: #004d40; color: white; font-weight: bold; }
 </style>
 </head>
 
 <body>
 
-<h2>📊 Hasil Analisis Konsumsi Harian (Pilih Tanggal)</h2>
+<h2>📊 Ringkasan Konsumsi Harian Mesin</h2>
 
 <div style="margin-bottom: 20px; padding: 15px; background: #2A2A2A; border-radius: 8px;">
     <label for="analysisDate" style="font-weight: bold; margin-right: 15px;">Pilih Tanggal Analisis:</label>
@@ -68,32 +63,15 @@ thead th {
 
 ---
 
-<h3 style="color: #38BDF8;">⚡ Konsumsi WBP (17:00 - 22:00)</h3>
-<table id="wbpTable">
+<h3>Tabel Ringkasan Konsumsi (kWh)</h3>
+<table id="summaryTable">
     <thead>
         <tr>
-            <th>ID Mesin</th>
-            <th>Tanggal</th>
-            <th>Ea Start WBP (kWh)</th>
-            <th>Ea End WBP (kWh)</th>
-            <th style="background: #ef4444; color: white;">Konsumsi WBP (kWh)</th>
-        </tr>
-    </thead>
-    <tbody>
-        </tbody>
-</table>
-
----
-
-<h3 style="color: #4ADE80; margin-top: 30px;">🔋 Konsumsi LWBP (Luar Puncak)</h3>
-<table id="lwbpTable">
-    <thead>
-        <tr>
-            <th>ID Mesin</th>
-            <th>Tanggal</th>
-            <th>Total Konsumsi (kWh)</th>
-            <th>Konsumsi WBP (kWh)</th>
-            <th style="background: #10b981; color: white;">Konsumsi LWBP (kWh)</th>
+            <th style="width: 10%;">ID Mesin</th>
+            <th style="width: 15%;">Tanggal</th>
+            <th class="lwbp-cell">LWBP (Luar Puncak)</th>
+            <th class="wbp-cell">WBP (Puncak)</th>
+            <th class="total-cell">TOTAL Harian</th>
         </tr>
     </thead>
     <tbody>
@@ -104,21 +82,20 @@ thead th {
 // =======================================================
 // --- KONFIGURASI SUPABASE ---
 // =======================================================
-const SUPA_URL  = "https://rojhcadtqfynlqzubftx.supabase.co"; 
-const SUPA_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs"; 
+const SUPA_URL  = "https://rojhcadtqfynlqzubftx.supabase.co"; 
+const SUPA_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs"; 
 
 let supa = supabase.createClient(SUPA_URL, SUPA_ANON);
 
 // Menggunakan VIEW kalkulasi yang sudah pasti terisi
-const DATA_SOURCE_TABLE = 'final_calculation_base'; 
+const DATA_SOURCE_TABLE = 'final_calculation_base'; 
 
-// --- DOM ELEMENTS ---
-const wbpTableBody = document.querySelector('#wbpTable tbody');
-const lwbpTableBody = document.querySelector('#lwbpTable tbody');
+// --- DOM ELEMENTS BARU ---
+const summaryTableBody = document.querySelector('#summaryTable tbody');
 const analysisStatus = document.getElementById('analysisStatus');
 const analysisDateInput = document.getElementById('analysisDate');
 
-// Data mesin (1-13) yang akan selalu ditampilkan sebagai default
+// Data mesin (1-13)
 const ALL_MESIN_IDS = Array.from({length: 13}, (_, i) => i + 1);
 
 
@@ -126,8 +103,7 @@ const ALL_MESIN_IDS = Array.from({length: 13}, (_, i) => i + 1);
  * Menampilkan data default 0.00 untuk semua mesin, sebagai kerangka tampilan (standby).
  */
 function renderDefaultTables(targetDate = '---') {
-    wbpTableBody.innerHTML = '';
-    lwbpTableBody.innerHTML = '';
+    summaryTableBody.innerHTML = '';
     
     ALL_MESIN_IDS.forEach(id => {
         const defaultData = {
@@ -138,29 +114,24 @@ function renderDefaultTables(targetDate = '---') {
             konsumsi_wbp_kwh: 0.00
         };
 
-        // RENDER TABEL WBP 
-        const trWBP = wbpTableBody.insertRow();
-        trWBP.insertCell().textContent = defaultData.id_mesin;
-        trWBP.insertCell().textContent = defaultData.tanggal;
-        // Kolom 3 (Ea Start WBP) diisi Total Harian
-        trWBP.insertCell().textContent = defaultData.konsumsi_total_harian.toFixed(2); 
-        // Kolom 4 (Ea End WBP) diisi Konsumsi LWBP
-        trWBP.insertCell().textContent = defaultData.konsumsi_lwbp_kwh.toFixed(2); 
+        const tr = summaryTableBody.insertRow();
+        tr.insertCell().textContent = defaultData.id_mesin;
+        tr.insertCell().textContent = defaultData.tanggal;
 
-        const wbpCell = trWBP.insertCell();
-        wbpCell.textContent = defaultData.konsumsi_wbp_kwh.toFixed(2);
-        wbpCell.className = 'wbp-cell'; // Menggunakan class styling
-        
-        // RENDER TABEL LWBP
-        const trLWBP = lwbpTableBody.insertRow();
-        trLWBP.insertCell().textContent = defaultData.id_mesin;
-        trLWBP.insertCell().textContent = defaultData.tanggal;
-        trLWBP.insertCell().textContent = defaultData.konsumsi_total_harian.toFixed(2);
-        trLWBP.insertCell().textContent = defaultData.konsumsi_wbp_kwh.toFixed(2);
-        
-        const lwbpCell = trLWBP.insertCell();
+        // LWBP
+        const lwbpCell = tr.insertCell();
         lwbpCell.textContent = defaultData.konsumsi_lwbp_kwh.toFixed(2);
-        lwbpCell.className = 'lwbp-cell'; // Menggunakan class styling
+        lwbpCell.className = 'lwbp-cell';
+
+        // WBP
+        const wbpCell = tr.insertCell();
+        wbpCell.textContent = defaultData.konsumsi_wbp_kwh.toFixed(2);
+        wbpCell.className = 'wbp-cell';
+
+        // TOTAL
+        const totalCell = tr.insertCell();
+        totalCell.textContent = defaultData.konsumsi_total_harian.toFixed(2);
+        totalCell.className = 'total-cell';
     });
 }
 
@@ -173,48 +144,43 @@ async function renderDailyConsumptionData() {
     
     if (!targetDate) {
         analysisStatus.textContent = "Silakan pilih tanggal analisis.";
-        renderDefaultTables(); 
+        renderDefaultTables(); 
         return;
     }
     
-    // Tampilkan tabel default untuk tanggal yang dipilih saat mulai loading
+    // Tampilkan tabel default untuk tanggal yang dipilih
     renderDefaultTables(targetDate);
     analysisStatus.textContent = `Sedang mengambil data untuk tanggal ${targetDate}...`;
 
     try {
         const { data: finalData, error } = await supa
-            .from(DATA_SOURCE_TABLE) 
+            .from(DATA_SOURCE_TABLE) 
             .select('tanggal, id_mesin, konsumsi_lwbp_kwh, konsumsi_wbp_kwh, konsumsi_total_harian')
-            .eq('tanggal', targetDate) 
+            .eq('tanggal', targetDate) 
             .order('id_mesin', { ascending: true });
 
         if (error) throw error;
         
-        // Cek data, jika kosong, tetap tampilkan default
         if (finalData.length === 0) {
             analysisStatus.textContent = `Data konsumsi untuk tanggal ${targetDate} belum tersedia.`;
             return;
         }
 
-        // Mapping data hasil Supabase berdasarkan ID mesin
         const dataMap = new Map(finalData.map(item => [item.id_mesin, item]));
 
         ALL_MESIN_IDS.forEach((id, index) => {
             const row = dataMap.get(id);
-            const wbpRow = wbpTableBody.children[index]; 
-            const lwbpRow = lwbpTableBody.children[index];
+            const tableRow = summaryTableBody.children[index]; 
 
-            // Hanya update jika data untuk ID mesin tersebut ditemukan
             if (row) {
-                // Update Kolom WBP
-                wbpRow.cells[2].textContent = row.konsumsi_total_harian.toFixed(2); 
-                wbpRow.cells[3].textContent = row.konsumsi_lwbp_kwh.toFixed(2); 
-                wbpRow.cells[4].textContent = row.konsumsi_wbp_kwh.toFixed(2); 
+                // Update Kolom LWBP (Index 2)
+                tableRow.cells[2].textContent = row.konsumsi_lwbp_kwh.toFixed(2); 
                 
-                // Update Kolom LWBP
-                lwbpRow.cells[2].textContent = row.konsumsi_total_harian.toFixed(2);
-                lwbpRow.cells[3].textContent = row.konsumsi_wbp_kwh.toFixed(2);
-                lwbpRow.cells[4].textContent = row.konsumsi_lwbp_kwh.toFixed(2);
+                // Update Kolom WBP (Index 3)
+                tableRow.cells[3].textContent = row.konsumsi_wbp_kwh.toFixed(2); 
+                
+                // Update Kolom TOTAL (Index 4)
+                tableRow.cells[4].textContent = row.konsumsi_total_harian.toFixed(2);
             }
         });
 
