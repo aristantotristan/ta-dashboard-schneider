@@ -1,294 +1,220 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Realtime Monitoring — 18 Mesin (Fixed Version)</title>
-
-<!-- MQTT -->
-<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-
-<!-- Supabase -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-
-<style>
-:root{
-  --bg:#0b0f13; --panel:#111417; --muted:#94A3B8; --accent:#00FFC2;
-}
-body{margin:0;font-family:Inter,Arial;background:var(--bg);color:#e6eef1;padding:20px;}
-.header{display:flex;align-items:center;gap:12px}
-h1{margin:0;font-size:20px;color:var(--accent)}
-#mqttStatus{margin-left:auto;color:var(--muted);font-weight:700}
-
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));
-      gap:14px;margin-top:18px}
-.card{background:var(--panel);padding:18px;border-radius:10px;text-align:center;
-      cursor:pointer;border:1px solid rgba(255,255,255,.03)}
-.card:hover{transform:translateY(-4px);transition:.15s}
-.card .title{font-weight:800}
-.card .mini{margin-top:8px;color:var(--muted);font-size:13px}
-
-.detail{display:none;margin-top:18px;background:var(--panel);padding:18px;border-radius:10px}
-.detail h2{margin:0 0 8px 0;color:var(--accent)}
-.controls{display:flex;align-items:center;gap:8px;margin-bottom:12px}
-.btn{background:#222;padding:8px 12px;border-radius:8px;color:#fff;border:1px solid rgba(255,255,255,.05);cursor:pointer}
-.small-muted{color:var(--muted);font-size:13px;margin-top:8px}
-
-.param-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
-.param{background:#0f1720;padding:12px;border-radius:8px}
-.p-name{color:var(--muted);font-weight:700;font-size:13px}
-.p-value{font-weight:800;font-size:18px;margin-top:6px}
-
-@media(max-width:900px){
-  .param-grid{grid-template-columns:1fr}
-  .grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr))}
-}
-</style>
-</head>
-<body>
-
-<div class="header">
-  <h1>Dashboard Monitoring Energi Realtime</h1>
-  <div id="mqttStatus">MQTT: connecting...</div>
-</div>
-
-<section id="listView">
-  <div class="small-muted">Pilih mesin untuk melihat detail</div>
-  <div class="grid" id="machinesGrid"></div>
-</section>
-
-<section id="detailView" class="detail">
-  <div class="controls">
-    <button class="btn" id="backBtn">⬅ Kembali</button>
-    <div style="margin-left:10px;font-weight:800" id="detailTitle">Mesin —</div>
-    <div style="margin-left:auto;color:var(--muted)" id="lastUpdate">last: -</div>
-  </div>
-
-  <div class="param-grid" id="paramGrid">
-    <div class="param"><div class="p-name">Total Ea</div><div class="p-value" id="TotalEa">---</div><div class="p-name">kWh</div></div>
-    <div class="param"><div class="p-name">Total Er</div><div class="p-value" id="TotalEr">---</div><div class="p-name">kVARh</div></div>
-    <div class="param"><div class="p-name">Partial Ea</div><div class="p-value" id="PartialEa">---</div><div class="p-name">kWh</div></div>
-    <div class="param"><div class="p-name">Partial Er</div><div class="p-value" id="PartialEr">---</div><div class="p-name">kVARh</div></div>
-    <div class="param"><div class="p-name">Voltage (L-L)</div><div class="p-value" id="Voltage">---</div><div class="p-name">Volt</div></div>
-    <div class="param"><div class="p-name">Current (I1/I2/I3)</div><div class="p-value" id="Current">---</div><div class="p-name">Ampere</div></div>
-    <div class="param"><div class="p-name">Power P</div><div class="p-value" id="PowerP">---</div><div class="p-name">W</div></div>
-    <div class="param"><div class="p-name">Power Q</div><div class="p-value" id="PowerQ">---</div><div class="p-name">VAR</div></div>
-    <div class="param"><div class="p-name">Power S</div><div class="p-value" id="PowerS">---</div><div class="p-name">kVA</div></div>
-    <div class="param"><div class="p-name">PF</div><div class="p-value" id="PF">---</div><div class="p-name">-</div></div>
-    <div class="param"><div class="p-name">Frequency</div><div class="p-value" id="Hz">---</div><div class="p-name">Hz</div></div>
-    <div class="param"><div class="p-name">Operation Time</div><div class="p-value" id="OpTime">---</div><div class="p-name">days / hrs</div></div>
-  </div>
-</section>
-
 <script>
-/* =====================
-        CONFIG
-===================== */
+// =======================================================
+// --- KONFIGURASI SUPABASE ---
+// =======================================================
 
-const MQTT_URL = "wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt";
-const MQTT_OPTIONS = {
-  username: "web_dashboard",
-  password: "Tristan12",
-  connectTimeout: 4000,
-  reconnectPeriod: 3000
-};
-const TOPIC = "politeknik/meter/data/#";
-
-// Supabase
-const SUPA_URL  = "https://rojhcadtqfynlqzubftx.supabase.co";
-const SUPA_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs";
+// GANTI DENGAN KREDENSIAL SUPABASE ANDA
+const SUPA_URL  = "https://rojhcadtqfynlqzubftx.supabase.co"; 
+const SUPA_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs"; 
+const TABLE_NAME = "ea_18mesin";
+const EA_THRESHOLD = 0.01; // Ambang batas perubahan kWh untuk logging normal
 
 let supa = supabase.createClient(SUPA_URL, SUPA_ANON);
 
-/* =====================
-        DOM
-===================== */
-const mqttStatusEl = document.getElementById("mqttStatus");
-const machinesGrid = document.getElementById("machinesGrid");
-const listView     = document.getElementById("listView");
-const detailView   = document.getElementById("detailView");
-const detailTitle  = document.getElementById("detailTitle");
-const lastUpdateEl = document.getElementById("lastUpdate");
+// =======================================================
+// --- FUNGSI LOGGING & LOCALSTORAGE (Memori Harian) ---
+// =======================================================
 
-/* =====================
-        STATE
-===================== */
-let activeId = null;
-const cache = {};
-const EA_THRESHOLD = 0.01;
-
-/* =====================
-    LOCALSTORAGE
-===================== */
-
-function loadLastEa(id){
-  const s = localStorage.getItem("lastEa_"+id);
-  if(!s) return undefined;
-  const n = Number(s);
-  return isNaN(n) ? undefined : n;
+/**
+ * Menyimpan log energi ke tabel ea_18mesin di Supabase.
+ * @param {object} entry - { id_mesin, ea, t, log_type }
+ */
+async function insertEnergyLog(entry) {
+    try {
+        const { error } = await supa.from(TABLE_NAME).insert([entry]);
+        if (error) throw error;
+    } catch (e) {
+        console.error("Gagal menyimpan log ke Supabase:", e);
+    }
 }
 
-function saveLastEa(id, val){
-  localStorage.setItem("lastEa_"+id, val);
+/** Mendapatkan status flag transisi (misal: 'WBP_START_LOGGED_2025-12-01') */
+function getTransitionFlag(id, key) {
+    const today = new Date().toISOString().slice(0, 10);
+    return localStorage.getItem(`${key}_${id}_${today}`);
 }
 
-/* =====================
-    BUILD 18 CARDS
-===================== */
-
-for(let i=1;i<=18;i++){
-  const c = document.createElement("div");
-  c.className = "card";
-  c.innerHTML = `<div class="title">Mesin ${i}</div><div class="mini" id="mini-${i}">ID:${i} • --</div>`;
-  c.onclick = ()=> openDetail(i);
-  machinesGrid.appendChild(c);
+/** Menetapkan flag transisi setelah log T1/T2 berhasil disimpan */
+function setTransitionFlag(id, key) {
+    const today = new Date().toISOString().slice(0, 10);
+    localStorage.setItem(`${key}_${id}_${today}`, 'true');
 }
 
-/* =====================
-        MQTT
-===================== */
-
-const client = mqtt.connect(MQTT_URL, MQTT_OPTIONS);
-
-client.on("connect", ()=>{
-  mqttStatusEl.textContent = "MQTT: connected";
-  client.subscribe(TOPIC);
-});
-
-client.on("reconnect", ()=> mqttStatusEl.textContent="MQTT: reconnecting...");
-client.on("close",     ()=> mqttStatusEl.textContent="MQTT: closed");
-client.on("offline",   ()=> mqttStatusEl.textContent="MQTT: offline");
-
-// Safe JSON
-function safeParse(t){
-  try{return JSON.parse(t);}catch{return null;}
+/** Mendapatkan nilai Ea terakhir (untuk EA_THRESHOLD) */
+function loadLastEa(id) {
+    const s = localStorage.getItem("lastEa_" + id);
+    return s ? Number(s) : undefined;
 }
 
-/* =====================
-      INSERT SUPA
-===================== */
-
-async function insertEnergyLog(entry){
-  await supa.from("energy_log").insert([entry]);
+/** Menyimpan nilai Ea terakhir */
+function saveLastEa(id, val) {
+    localStorage.setItem("lastEa_" + id, val);
 }
 
-/* =====================
-      ON MESSAGE
-===================== */
-client.on("message", (topic, buf)=>{
-  
-  const txt = buf.toString();
-  const data = safeParse(txt);
-  if(!data) return;
-
-  // Ambil ID
-  let id = Number(topic.split("/")[3]);
-  if(!id) id = Number(data.id);
-  if(!id) return;
-
-  data._t = Date.now();
-  cache[id] = data;
-
-  // Update mini card
-  const mini = document.getElementById("mini-" + id);
-  if(mini){
-    const P = data.P ?? "--";
-    const st= data.status ?? "--";
-    mini.textContent = `ID:${id} • ${P}W • ${st}`;
-  }
-
-  // Update detail jika aktif
-  if(activeId === id) renderDetail(data);
-
-  // ============================
-  //  FIX: INSERT SEMUA MESIN
-  // ============================
-
-  const ea = Number(data.EaT);
-  if(!isNaN(ea)){
-     const last = loadLastEa(id);
-     if(last === undefined || Math.abs(ea - last) >= EA_THRESHOLD){
-
-        const entry = {
-          id_mesin:id,
-          v:data.V ?? null,
-          i:data.I1 && data.I2 && data.I3
-            ? (Number(data.I1)+Number(data.I2)+Number(data.I3))
-            : null,
-          p:data.P ?? null,
-          pf:data.PF ?? null,
-          ea:ea,
-          f:data.Hz ?? null,
-          t:new Date().toISOString()
-        };
-
-        insertEnergyLog(entry);
-        saveLastEa(id, ea);
-     }
-  }
-
-});
-
-/* =====================
-      DETAIL VIEW
-===================== */
-
-function openDetail(id){
-  activeId = id;
-  detailTitle.textContent = "Mesin " + id + " — Detail Parameter";
-  listView.style.display = "none";
-  detailView.style.display = "block";
-
-  if(cache[id]) renderDetail(cache[id]);
-  else resetDetail();
-}
-
-document.getElementById("backBtn").onclick = ()=>{
-  activeId = null;
-  detailView.style.display = "none";
-  listView.style.display = "block";
+// =======================================================
+// --- KONFIGURASI MQTT WEB CLIENT ---
+// =======================================================
+const options = {
+  username: "web_dashboard",
+  password: "Tristan12",
+  connectTimeout: 4000,
+  reconnectPeriod: 2000,
 };
 
-function resetDetail(){
-  [
-    "TotalEa","TotalEr","PartialEa","PartialEr",
-    "Voltage","Current","PowerP","PowerQ",
-    "PowerS","PF","Hz","OpTime"
-  ].forEach(x=>{
-    document.getElementById(x).textContent="---";
-  });
+const client = mqtt.connect(
+  "wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt",
+  options
+);
+
+const tableBody = document.getElementById("tableBody");
+const conn = document.getElementById("conn");
+const devices = {}; // Menyimpan referensi baris tabel berdasarkan ID meter
+
+// Definisikan urutan KEY JSON dan CLASS CSS
+const dataMap = [
+    { key: 'V', class: 'col-v' }, { key: 'I1', class: 'col-i' }, { key: 'I2', class: 'col-i' }, 
+    { key: 'I3', class: 'col-i' }, { key: 'P', class: 'col-power' }, { key: 'Q', class: 'col-power' }, 
+    { key: 'S', class: 'col-power' }, { key: 'PF', class: 'col-pf' }, { key: 'Hz', class: 'col-pf' }, 
+    { key: 'OpH', class: 'col-pf' }, { key: 'EaT', class: 'col-energy' }, { key: 'ErT', class: 'col-energy' }, 
+    { key: 'EaP', class: 'col-energy' }, { key: 'ErP', class: 'col-energy' }
+];
+
+/**
+ * Mengonversi total jam (decimal) menjadi format Hari dan Jam.
+ * (Fungsi ini tetap sama)
+ */
+function formatOperatingTime(totalHours) {
+    if (totalHours === undefined || totalHours === null || isNaN(totalHours) || totalHours < 0) {
+        return '---';
+    }
+    const totalMinutes = Math.round(parseFloat(totalHours) * 60); 
+
+    const days = Math.floor(totalMinutes / (24 * 60)); 
+    const remainingMinutes = totalMinutes % (24 * 60);
+    
+    const hours = Math.floor(remainingMinutes / 60); 
+    const minutes = remainingMinutes % 60; 
+    
+    let result = '';
+    
+    if (days > 0) {
+        result += `${days} Hari `;
+    }
+    
+    if (hours > 0 || days === 0) {
+        result += `${hours} Jam`;
+        if (minutes > 0) {
+            result += ` ${minutes} Mnt`;
+        }
+    } else if (minutes > 0) {
+        result += `${minutes} Mnt`;
+    }
+    
+    return result.trim() || '0 Jam'; 
 }
 
-function renderDetail(d){
-  const set = (id,val)=> document.getElementById(id).textContent = (val ?? "---");
 
-  set("TotalEa", d.EaT);
-  set("TotalEr", d.ErT);
-  set("PartialEa", d.EaP);
-  set("PartialEr", d.ErP);
-  set("Voltage", d.V);
+client.on("connect", () => {
+  conn.innerHTML = "✅ MQTT Connected";
+  client.subscribe("politeknik/meter/data/#"); // Subscribing ke semua mesin
+});
 
-  document.getElementById("Current").textContent =
-    `${d.I1 ?? "---"} / ${d.I2 ?? "---"} / ${d.I3 ?? "---"}`;
+client.on("error", err => {
+  conn.innerHTML = "❌ MQTT Error";
+  console.error("MQTT Connection Error:", err);
+});
 
-  set("PowerP",d.P);
-  set("PowerQ",d.Q);
-  set("PowerS",d.S);
-  set("PF",d.PF);
-  set("Hz",d.Hz);
+// =======================================================
+// --- LOGIKA UTAMA ON MESSAGE (UPDATE DASHBOARD & LOGGING) ---
+// =======================================================
+client.on("message", (topic, message) => {
+  try {
+    const d = JSON.parse(message.toString());
+    const id = d.id;
+    const now = new Date();
+    const currentHour = now.getHours(); // Jam 0 s/d 23
 
-  set("OpTime", formatOp(d.OpTime));
-  lastUpdateEl.textContent = "last: " + new Date().toLocaleTimeString();
-}
+    // 1. Cek atau Buat Baris Baru (Logika Dashboard)
+    if (!devices[id]) {
+      const row = tableBody.insertRow(); 
+      devices[id] = row;
+      // ... (Logika membuat sel tabel) ...
+        row.insertCell().textContent = id;
+        row.cells[0].className = 'cell-id';
+        row.insertCell().textContent = d.status;
+        dataMap.forEach(item => {
+          const cell = row.insertCell();
+          cell.className = item.class;
+          cell.textContent = '---'; 
+        });
+      
+        if (tableBody.rows.length > 1 && tableBody.rows[0].cells[0].colSpan === 16) {
+            tableBody.deleteRow(0);
+        }
+    }
 
-function formatOp(h){
-  if(!h) return "---";
-  const mins = Math.round(h*60);
-  const days = Math.floor(mins/(24*60));
-  const hrs  = Math.floor((mins%(24*60))/60);
-  return `${days}d ${hrs}h`;
-}
+    const row = devices[id];
+    const cells = row.cells;
+    
+    // 2. Update Status dan Data (Logika Dashboard)
+    cells[1].textContent = d.status ? d.status.toUpperCase() : '---';
+    cells[1].className = d.status === "online" ? "status-online" : "status-offline";
+    
+    dataMap.forEach((item, index) => {
+      const cellIndex = index + 2; 
+      const value = d[item.key];
+      let displayValue = (value === 0 || value) ? value : '---';
+      
+      if (item.key === 'OpH') {
+        displayValue = formatOperatingTime(value);
+      }
+      cells[cellIndex].textContent = displayValue;
+    });
 
+
+    // =======================================================
+    // 3. LOGIKA SUPABASE: Logging EA (T1, T2, dan Normal)
+    // =======================================================
+    const ea = Number(d.EaT);
+    if (isNaN(ea) || ea === null || ea === undefined) return; 
+
+    const entry = {
+        id_mesin: id,
+        ea: ea,
+        t: now.toISOString(),
+        log_type: 'REALTIME' 
+    };
+
+    // --- A. Logika Normal (Jika ada perubahan signifikan) ---
+    const lastEa = loadLastEa(id);
+    if (lastEa === undefined || Math.abs(ea - lastEa) >= EA_THRESHOLD) {
+        insertEnergyLog(entry);
+        saveLastEa(id, ea);
+    }
+
+    // --- B. Logika Transisi WBP/LWBP (Mencatat T1 dan T2) ---
+    
+    // 🚨 T1 WBP (Jam 17:xx)
+    // WBP Dimulai (Akhir LWBP)
+    if (currentHour === 17 && getTransitionFlag(id, 'T1_WBP_START') === null) {
+        entry.log_type = 'T1_WBP_START'; 
+        insertEnergyLog(entry);
+        setTransitionFlag(id, 'T1_WBP_START');
+        console.log(`[LOG WBP] Mesin ${id}: T1 WBP (17:00) dicatat.`);
+    }
+    
+    // 🚨 T2 WBP (Jam 22:xx)
+    // WBP Berakhir (Awal LWBP Hari Berikutnya)
+    if (currentHour === 22 && getTransitionFlag(id, 'T2_WBP_END') === null) {
+        entry.log_type = 'T2_WBP_END'; 
+        insertEnergyLog(entry);
+        setTransitionFlag(id, 'T2_WBP_END');
+        console.log(`[LOG WBP] Mesin ${id}: T2 WBP (22:00) dicatat.`);
+    }
+
+
+  } catch (e) {
+    console.error(`JSON Parsing Error/Proses Data Gagal:`, e);
+  }
+});
 </script>
-</body>
-</html>
