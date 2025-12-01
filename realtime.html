@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Realtime Monitoring — 18 Mesin (Single MQTT)</title>
+<title>Realtime Monitoring — 18 Mesin (Fixed Version)</title>
 
-<!-- MQTT client -->
+<!-- MQTT -->
 <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 
-<!-- Supabase UMD -->
+<!-- Supabase -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 
 <style>
@@ -80,9 +80,11 @@ h1{margin:0;font-size:20px;color:var(--accent)}
   </div>
 </section>
 
-
 <script>
-// ===== CONFIG =====
+/* =====================
+        CONFIG
+===================== */
+
 const MQTT_URL = "wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt";
 const MQTT_OPTIONS = {
   username: "web_dashboard",
@@ -90,15 +92,17 @@ const MQTT_OPTIONS = {
   connectTimeout: 4000,
   reconnectPeriod: 3000
 };
-const MQTT_WILDCARD = "politeknik/meter/data/#";
+const TOPIC = "politeknik/meter/data/#";
 
 // Supabase
-const SUPABASE_URL   = "https://rojhcadtqfynlqzubftx.supabase.co";
-const SUPABASE_ANON  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs";
+const SUPA_URL  = "https://rojhcadtqfynlqzubftx.supabase.co";
+const SUPA_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs";
 
-let supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+let supa = supabase.createClient(SUPA_URL, SUPA_ANON);
 
-// ===== DOM =====
+/* =====================
+        DOM
+===================== */
 const mqttStatusEl = document.getElementById("mqttStatus");
 const machinesGrid = document.getElementById("machinesGrid");
 const listView     = document.getElementById("listView");
@@ -106,27 +110,32 @@ const detailView   = document.getElementById("detailView");
 const detailTitle  = document.getElementById("detailTitle");
 const lastUpdateEl = document.getElementById("lastUpdate");
 
-// ===== STATE =====
+/* =====================
+        STATE
+===================== */
 let activeId = null;
 const cache = {};
-const lastEaMap = {};
 const EA_THRESHOLD = 0.01;
 
-// localStorage helpers
+/* =====================
+    LOCALSTORAGE
+===================== */
+
 function loadLastEa(id){
   const s = localStorage.getItem("lastEa_"+id);
-  if(s){ const n = Number(s); if(!isNaN(n)) return n; }
-  return undefined;
-}
-function saveLastEa(id,val){
-  localStorage.setItem("lastEa_"+id,val);
+  if(!s) return undefined;
+  const n = Number(s);
+  return isNaN(n) ? undefined : n;
 }
 
-// Round-robin
-let nextId = 1;
-const MAX_ID = 18;
+function saveLastEa(id, val){
+  localStorage.setItem("lastEa_"+id, val);
+}
 
-// ===== Build Cards =====
+/* =====================
+    BUILD 18 CARDS
+===================== */
+
 for(let i=1;i<=18;i++){
   const c = document.createElement("div");
   c.className = "card";
@@ -135,35 +144,44 @@ for(let i=1;i<=18;i++){
   machinesGrid.appendChild(c);
 }
 
-// ===== MQTT =====
+/* =====================
+        MQTT
+===================== */
+
 const client = mqtt.connect(MQTT_URL, MQTT_OPTIONS);
 
-client.on("connect",()=>{
-  mqttStatusEl.textContent="MQTT: connected";
-  client.subscribe(MQTT_WILDCARD);
+client.on("connect", ()=>{
+  mqttStatusEl.textContent = "MQTT: connected";
+  client.subscribe(TOPIC);
 });
 
-client.on("reconnect",()=>mqttStatusEl.textContent="MQTT: reconnecting...");
-client.on("close",()=>mqttStatusEl.textContent="MQTT: closed");
-client.on("offline",()=>mqttStatusEl.textContent="MQTT: offline");
+client.on("reconnect", ()=> mqttStatusEl.textContent="MQTT: reconnecting...");
+client.on("close",     ()=> mqttStatusEl.textContent="MQTT: closed");
+client.on("offline",   ()=> mqttStatusEl.textContent="MQTT: offline");
 
-// JSON safe parse
+// Safe JSON
 function safeParse(t){
   try{return JSON.parse(t);}catch{return null;}
 }
 
-// Supabase insert
+/* =====================
+      INSERT SUPA
+===================== */
+
 async function insertEnergyLog(entry){
   await supa.from("energy_log").insert([entry]);
 }
 
-// ===== MQTT MESSAGE =====
-client.on("message",(topic,buf)=>{
+/* =====================
+      ON MESSAGE
+===================== */
+client.on("message", (topic, buf)=>{
+  
   const txt = buf.toString();
   const data = safeParse(txt);
   if(!data) return;
 
-  // extract ID
+  // Ambil ID
   let id = Number(topic.split("/")[3]);
   if(!id) id = Number(data.id);
   if(!id) return;
@@ -171,65 +189,74 @@ client.on("message",(topic,buf)=>{
   data._t = Date.now();
   cache[id] = data;
 
-  // update mini
-  const mini = document.getElementById("mini-"+id);
+  // Update mini card
+  const mini = document.getElementById("mini-" + id);
   if(mini){
     const P = data.P ?? "--";
-    const st = data.status ?? "--";
+    const st= data.status ?? "--";
     mini.textContent = `ID:${id} • ${P}W • ${st}`;
   }
 
-  // update detail view
+  // Update detail jika aktif
   if(activeId === id) renderDetail(data);
 
-  // ===== ROUND ROBIN SUPABASE =====
+  // ============================
+  //  FIX: INSERT SEMUA MESIN
+  // ============================
+
   const ea = Number(data.EaT);
   if(!isNaN(ea)){
-    if(id === nextId){
-      const last = loadLastEa(id);
+     const last = loadLastEa(id);
+     if(last === undefined || Math.abs(ea - last) >= EA_THRESHOLD){
 
-      if(last === undefined || Math.abs(ea-last) >= EA_THRESHOLD){
         const entry = {
           id_mesin:id,
-          v: data.V ?? null,
-          i: data.I1 && data.I2 && data.I3 ? Number(data.I1)+Number(data.I2)+Number(data.I3) : null,
-          p: data.P ?? null,
+          v:data.V ?? null,
+          i:data.I1 && data.I2 && data.I3
+            ? (Number(data.I1)+Number(data.I2)+Number(data.I3))
+            : null,
+          p:data.P ?? null,
           pf:data.PF ?? null,
-          ea: ea,
-          f: data.Hz ?? null,
-          t: new Date().toISOString()
+          ea:ea,
+          f:data.Hz ?? null,
+          t:new Date().toISOString()
         };
-        insertEnergyLog(entry);
-        saveLastEa(id,ea);
-      }
 
-      nextId++;
-      if(nextId > MAX_ID) nextId = 1;
-    }
+        insertEnergyLog(entry);
+        saveLastEa(id, ea);
+     }
   }
+
 });
 
-// ===== Detail View =====
+/* =====================
+      DETAIL VIEW
+===================== */
+
 function openDetail(id){
   activeId = id;
-  detailTitle.textContent = "Mesin "+id+" — Detail Parameter";
-  listView.style.display="none";
-  detailView.style.display="block";
+  detailTitle.textContent = "Mesin " + id + " — Detail Parameter";
+  listView.style.display = "none";
+  detailView.style.display = "block";
 
   if(cache[id]) renderDetail(cache[id]);
   else resetDetail();
 }
 
 document.getElementById("backBtn").onclick = ()=>{
-  activeId=null;
-  detailView.style.display="none";
-  listView.style.display="block";
+  activeId = null;
+  detailView.style.display = "none";
+  listView.style.display = "block";
 };
 
 function resetDetail(){
-  ["TotalEa","TotalEr","PartialEa","PartialEr","Voltage","Current",
-   "PowerP","PowerQ","PowerS","PF","Hz","OpTime"]
-   .forEach(id=>document.getElementById(id).textContent="---");
+  [
+    "TotalEa","TotalEr","PartialEa","PartialEr",
+    "Voltage","Current","PowerP","PowerQ",
+    "PowerS","PF","Hz","OpTime"
+  ].forEach(x=>{
+    document.getElementById(x).textContent="---";
+  });
 }
 
 function renderDetail(d){
@@ -237,9 +264,9 @@ function renderDetail(d){
 
   set("TotalEa", d.EaT);
   set("TotalEr", d.ErT);
-  set("PartialEa",d.EaP);
-  set("PartialEr",d.ErP);
-  set("Voltage",  d.V);
+  set("PartialEa", d.EaP);
+  set("PartialEr", d.ErP);
+  set("Voltage", d.V);
 
   document.getElementById("Current").textContent =
     `${d.I1 ?? "---"} / ${d.I2 ?? "---"} / ${d.I3 ?? "---"}`;
@@ -247,20 +274,18 @@ function renderDetail(d){
   set("PowerP",d.P);
   set("PowerQ",d.Q);
   set("PowerS",d.S);
-  set("PF",   d.PF);
-  set("Hz",   d.Hz);
+  set("PF",d.PF);
+  set("Hz",d.Hz);
 
   set("OpTime", formatOp(d.OpTime));
-
   lastUpdateEl.textContent = "last: " + new Date().toLocaleTimeString();
 }
 
-// Format operation time (jam → hari/jam)
 function formatOp(h){
   if(!h) return "---";
   const mins = Math.round(h*60);
   const days = Math.floor(mins/(24*60));
-  const hrs = Math.floor((mins%(24*60))/60);
+  const hrs  = Math.floor((mins%(24*60))/60);
   return `${days}d ${hrs}h`;
 }
 
