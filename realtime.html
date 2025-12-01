@@ -1,12 +1,12 @@
-
 <!DOCTYPE html>
 <html lang="id">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Realtime Monitoring — 18 Mesin (Single connect MQTT)</title>
+<title>Realtime Monitoring — 18 Mesin (Single connect MQTT + Supabase)</title>
 
 <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 
 <style>
 :root{
@@ -43,6 +43,7 @@ h1{margin:0;color:var(--accent);font-size:20px}
 }
 .small-muted{color:var(--muted);font-size:13px}
 .hidden{display:none}
+.offline{opacity:0.45}
 </style>
 </head>
 <body>
@@ -70,7 +71,7 @@ h1{margin:0;color:var(--accent);font-size:20px}
     <div class="param">
       <div class="p-name">1. Total Ea</div>
       <div class="p-value" id="TotalEa">---</div>
-      <div class="p-name" style="font-size:12px;color:var(--muted)">kWh</div>
+      <div class="p-name" style="font-size:12px;color:var(--muted">kWh</div>
     </div>
 
     <div class="param">
@@ -152,7 +153,12 @@ const MQTT_OPTIONS = {
 };
 const MQTT_WILDCARD = "politeknik/meter/data/#"; // subscribe wildcard
 
+// Supabase config (dari user)
+const SUPABASE_URL = 'https://rojhcadtqfynlqzubftx.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs';
+
 /* ------------- DOM & STATE ------------- */
+const supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON);
 const mqttStatusEl = document.getElementById('mqttStatus');
 const machinesGrid = document.getElementById('machinesGrid');
 const listView = document.getElementById('listView');
@@ -182,7 +188,6 @@ const client = mqtt.connect(MQTT_URL, MQTT_OPTIONS);
 
 client.on('connect', () => {
   mqttStatusEl.textContent = 'MQTT: connected';
-  // subscribe wildcard (handles per-machine topics like politeknik/meter/data/1)
   client.subscribe(MQTT_WILDCARD, { qos: 0 }, (err) => {
     if(err) {
       console.error('subscribe error', err);
@@ -202,9 +207,44 @@ function safeParse(str){
   catch(e){ return null; }
 }
 
+/* ------------- Supabase helpers ------------- */
+async function upsertMachineState(mesin_id, last_ea, tsIso){
+  // upsert into machine_state table (mesin_id PK)
+  const { data, error } = await supabase
+    .from('machine_state')
+    .upsert({ mesin_id: mesin_id, last_ea: last_ea, updated_at: tsIso }, { onConflict: 'mesin_id' });
+  if(error) console.warn('upsertMachineState error', error);
+  return data;
+}
+
+async function getMachineState(mesin_id){
+  const { data, error } = await supabase
+    .from('machine_state')
+    .select('last_ea, updated_at')
+    .eq('mesin_id', mesin_id)
+    .maybeSingle();
+  if(error) console.warn('getMachineState error', error);
+  return data;
+}
+
+async function insertRaw(mesin_id, ea_total, payload, tsIso){
+  const { data, error } = await supabase
+    .from('energy_raw')
+    .insert([{ mesin_id, ea_total, payload, timestamp: tsIso }]);
+  if(error) console.warn('insertRaw error', error);
+  return data;
+}
+
+async function insertDelta(table, mesin_id, delta, tsIso){
+  const { data, error } = await supabase
+    .from(table)
+    .insert([{ mesin_id, delta_kwh: delta, timestamp: tsIso }]);
+  if(error) console.warn('insertDelta error', table, error);
+  return data;
+}
+
 /* ------------- Message handler ------------- */
 client.on('message', (topic, buf) => {
-  // topic example: politeknik/meter/data/5  OR politeknik/meter/data (with id in payload)
   try {
     const topicParts = topic.split('/');
     let id = null;
@@ -216,27 +256,16 @@ client.on('message', (topic, buf) => {
     const payloadText = buf.toString();
     const payload = safeParse(payloadText);
 
-    // fallback: if not in topic, maybe payload contains id
     if(id === null && payload && payload.id !== undefined){
       const n2 = Number(payload.id);
       if(Number.isInteger(n2)) id = n2;
     }
 
-    if(id === null) {
-      // unknown id — ignore
-      //console.warn('MQTT message without id (topic/payload):', topic, payloadText);
-      return;
-    }
+    if(id === null) return; // ignore
 
-    // store timestamp
     if(payload && typeof payload === 'object') payload._t = Date.now();
-    else {
-      // if payload not JSON, store raw
-      // but we expect JSON so ignore non-JSON
-      return;
-    }
+    else return;
 
-    // cache
     cache[id] = payload;
 
     // update mini card text
@@ -245,16 +274,70 @@ client.on('message', (topic, buf) => {
       const p = (payload.P !== undefined && payload.P !== null) ? `${payload.P} W` : '--';
       const st = payload.status ? String(payload.status).toUpperCase() : '--';
       miniEl.textContent = `ID:${id} • ${p} • ${st}`;
+      miniEl.classList.remove('offline');
     }
 
-    // if currently viewing that machine, update detail panel
-    if(activeId === id){
-      renderDetail(payload);
-    }
+    // update UI detail if open
+    if(activeId === id) renderDetail(payload);
+
+    // send to Supabase (async, don't block UI)
+    handleSupabaseForPayload(id, payload).catch(err => console.warn('supabase handle err', err));
+
   } catch(err){
     console.warn('MQTT process error', err);
   }
 });
+
+/* ------------- Core: handle Supabase logic per message ------------- */
+async function handleSupabaseForPayload(id, payload){
+  // Expect payload.EaT is Total Ea (kWh). If not present, skip.
+  const ea = Number(payload.EaT);
+  if(!ea || isNaN(ea)) return;
+
+  // timestamp in Jakarta
+  const nowJak = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+  const tsIso = nowJak.toISOString();
+
+  // insert raw
+  insertRaw(id, ea, payload, tsIso);
+
+  // get last state
+  const state = await getMachineState(id);
+  if(!state || !state.last_ea){
+    // first time seeing this machine: create state
+    await upsertMachineState(id, ea, tsIso);
+    return;
+  }
+
+  const lastEa = Number(state.last_ea);
+  let delta = Number((ea - lastEa).toFixed(6));
+
+  if(isNaN(delta)) delta = 0;
+
+  // Handle meter reset or negative delta
+  if(delta <= 0){
+    // meter reset or no change -> update last_ea and skip
+    await upsertMachineState(id, ea, tsIso);
+    return;
+  }
+
+  // Threshold to avoid tiny noise (optional)
+  if(delta < 0.00001){
+    await upsertMachineState(id, ea, tsIso);
+    return;
+  }
+
+  // Determine tariff slot based on Jakarta hour (Option A: assign to reconnect time)
+  const hour = nowJak.getHours();
+  const isT2 = (hour >= 17 && hour < 22);
+  const table = isT2 ? 'energy_t2' : 'energy_t1';
+
+  // insert delta to proper table
+  await insertDelta(table, id, delta, tsIso);
+
+  // update machine state last_ea
+  await upsertMachineState(id, ea, tsIso);
+}
 
 /* ------------- UI: open detail, render, back ------------- */
 function openDetail(id){
@@ -263,30 +346,18 @@ function openDetail(id){
   listView.style.display = 'none';
   detailView.style.display = 'block';
 
-  // update url (no reload)
   const newUrl = window.location.pathname + '?id=' + id;
   history.pushState({id:id}, '', newUrl);
 
-  // render from cache if exists
   if(cache[id]) renderDetail(cache[id]);
   else resetDetail();
 
-  // focus for accessibility
   detailView.focus();
 }
 
-backBtn.addEventListener('click', ()=> {
-  goList();
-});
+backBtn.addEventListener('click', ()=> { goList(); });
+function goList(){ activeId = null; detailView.style.display = 'none'; listView.style.display = 'block'; history.pushState({}, '', window.location.pathname); }
 
-function goList(){
-  activeId = null;
-  detailView.style.display = 'none';
-  listView.style.display = 'block';
-  history.pushState({}, '', window.location.pathname);
-}
-
-/* Render detail values (only update values) */
 function renderDetail(d){
   if(!d || typeof d !== 'object') return;
   const fmt = (v)=> (v===0||v)?v:'---';
@@ -300,10 +371,7 @@ function renderDetail(d){
     return (days>0?days+'d ':'') + hrs+'h' + (m>0? ' '+m+'m':'');
   };
 
-  const set = (id, value)=> {
-    const el = document.getElementById(id);
-    if(el) el.textContent = fmt(value);
-  };
+  const set = (id, value)=> { const el = document.getElementById(id); if(el) el.textContent = fmt(value); };
 
   set('TotalEa', d.EaT);
   set('TotalEr', d.ErT);
@@ -324,36 +392,38 @@ function renderDetail(d){
   lastUpdateEl.textContent = 'last: ' + (d._t? new Date(d._t).toLocaleString() : new Date().toLocaleTimeString());
 }
 
-/* Reset detail placeholders */
 function resetDetail(){
   const ids = ['TotalEa','TotalEr','PartialEa','PartialEr','Voltage','Current','PowerP','PowerQ','PowerS','PF','Hz','OpTime'];
-  ids.forEach(id => {
-    const el = document.getElementById(id);
-    if(!el) return;
-    if(id === 'Current') el.textContent = '--- / --- / ---';
-    else el.textContent = '---';
-  });
+  ids.forEach(id => { const el = document.getElementById(id); if(!el) return; if(id === 'Current') el.textContent = '--- / --- / ---'; else el.textContent = '---'; });
   lastUpdateEl.textContent = 'last: -';
 }
 
-/* Handle browser back/forward */
-window.addEventListener('popstate', (e)=> {
-  const sid = e.state && e.state.id;
-  if(sid){
-    openDetail(sid);
-  } else {
-    goList();
+/* ------------- OFFLINE detection per-machine ------------- */
+setInterval(() => {
+  const now = Date.now();
+  for (let id = 1; id <= 18; id++) {
+    const latest = cache[id];
+    const miniEl = document.getElementById('mini-' + id);
+    if (!latest) {
+      if(miniEl) miniEl.textContent = `ID:${id} • --`;
+      continue;
+    }
+
+    if (now - latest._t > 15000) {
+      if (miniEl) { miniEl.textContent = `ID:${id} • OFFLINE`; miniEl.classList.add('offline'); }
+      cache[id].status = 'OFFLINE';
+      if(activeId === id){ document.getElementById('PowerP').textContent = 'OFFLINE'; lastUpdateEl.textContent = 'last: OFFLINE'; }
+    } else {
+      if(miniEl) miniEl.classList.remove('offline');
+    }
   }
-});
+}, 3000);
+
+/* Handle browser back/forward */
+window.addEventListener('popstate', (e)=> { const sid = e.state && e.state.id; if(sid){ openDetail(sid); } else { goList(); } });
 
 /* On load: open detail if ?id=... present */
-(function initFromUrl(){
-  const qp = new URLSearchParams(window.location.search);
-  const qid = qp.get('id');
-  if(qid && Number.isInteger(Number(qid)) && Number(qid)>=1 && Number(qid)<=18){
-    setTimeout(()=> openDetail(Number(qid)), 50);
-  }
-})();
+(function initFromUrl(){ const qp = new URLSearchParams(window.location.search); const qid = qp.get('id'); if(qid && Number.isInteger(Number(qid)) && Number(qid)>=1 && Number(qid)<=18){ setTimeout(()=> openDetail(Number(qid)), 50); } })();
 
 </script>
 </body>
