@@ -16,7 +16,7 @@ body {
     color: #E0E0E0; 
     padding: 0;
     margin: 0;
-    /* Background Gambar Profesional (Tema: Global Network/Energy Grid) */
+    /* Background Tema Profesional (Energy Grid) */
     background-image: url('https://images.unsplash.com/photo-1542385108611-667dc9df9c40?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w0NTIyMzZ8MHwxfHNlYXJjaHwxfHxtYXN0ZXIlMjBlbmVyZ3klMjBncmlkJTIwZGFzaGJvYXJkJTIwYmFja2dyb3VuZHxlbnwwfHx8fDE3MDM1MjYzNjV8MA&ixlib=rb-4.0.3&q=80&w=1920');
     background-size: cover;
     background-position: center;
@@ -24,13 +24,13 @@ body {
     min-height: 100vh;
 }
 .container {
-    padding: 20px 40px; /* Padding lebih besar */
-    background-color: rgba(15, 15, 15, 0.9); /* Overlay gelap agar teks terbaca */
+    padding: 20px 40px; 
+    background-color: rgba(15, 15, 15, 0.9); /* Overlay gelap */
     min-height: 100vh;
 }
 h2 {
     color: #00FFC2; 
-    text-shadow: 0 0 5px rgba(0, 255, 194, 0.5); /* Efek neon ringan */
+    text-shadow: 0 0 5px rgba(0, 255, 194, 0.5);
     border-bottom: 2px solid #3A3A3A;
     padding-bottom: 15px;
     margin-bottom: 10px;
@@ -56,7 +56,7 @@ h2 {
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.7);
     padding: 25px;
     transition: transform 0.3s ease, box-shadow 0.3s ease, border-left 0.3s ease;
-    border-left: 5px solid #3A3A3A; /* Garis default abu-abu */
+    border-left: 5px solid #3A3A3A; 
 }
 .machine-card:hover {
     transform: translateY(-8px);
@@ -82,12 +82,12 @@ h2 {
     margin-right: 10px;
 }
 .status-online {
-    background-color: #10B981; /* Hijau */
+    background-color: #10B981; 
     box-shadow: 0 0 10px #10B981;
     color: #10B981;
 }
 .status-offline {
-    background-color: #EF4444; /* Merah */
+    background-color: #EF4444; 
     box-shadow: 0 0 10px #EF4444;
     color: #EF4444;
 }
@@ -109,11 +109,9 @@ h2 {
     transform: scale(1.05);
 }
 
-/* Kustomisasi Kartu Saat Online */
 .card-online {
     border-left: 5px solid #10B981 !important;
 }
-/* Kustomisasi Kartu Saat Offline */
 .card-offline {
     border-left: 5px solid #EF4444 !important;
 }
@@ -141,7 +139,7 @@ table {
     width: 100%;
 }
 th, td {
-    border: none; /* Hilangkan border antar sel */
+    border: none; 
     padding: 12px 15px;
     text-align: left;
 }
@@ -217,12 +215,12 @@ tbody td:nth-child(2) {
 
 </div> <script>
 // =======================================================
-// --- FUNGSI UTAMA & KONFIGURASI ---
+// --- FUNGIONALITAS UTAMA & KONFIGURASI ---
 // =======================================================
 
 // --- KONFIGURASI SUPABASE (GANTI DENGAN KREDENSIAL ASLI ANDA) ---
 const SUPA_URL  = "https://rojhcadtqfynlqzubftx.supabase.co"; 
-const SUPA_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs"; 
+const SUPA_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJojhcadtqfynlqzubftxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs"; 
 const TABLE_NAME = "ea_18mesin";
 const EA_THRESHOLD = 0.01; 
 
@@ -237,7 +235,7 @@ const conn = document.getElementById("conn");
 
 // --- VARIABEL GLOBAL ---
 const MACHINE_IDS = Array.from({length: 18}, (_, i) => i + 1); 
-const dataBuffer = {}; // Menyimpan data terbaru LENGKAP dari MQTT
+const dataBuffer = {}; // Menyimpan data terbaru LENGKAP dari MQTT (Buffer dipertahankan!)
 const devices = {}; // Menyimpan elemen DOM kartu mesin
 
 let isSending = false; 
@@ -260,7 +258,6 @@ function showDetail(id) {
     summaryView.style.display = 'none';
     detailView.style.display = 'block';
     currentMachineIdSpan.textContent = id;
-    // Panggil render saat tombol diklik
     renderDetailTable(id); 
 }
 
@@ -409,10 +406,10 @@ client.on("message", (topic, message) => {
         devices[id].text.textContent = status.toUpperCase();
         devices[id].text.className = statusClass;
         
-        // 3. LOGIKA KRITIS: JIKA SEDANG DI DETAIL VIEW, UPDATE TABEL DETAIL
+        // 3. JIKA SEDANG DI DETAIL VIEW, UPDATE TABEL DETAIL (Real-time update)
         const currentDetailId = Number(currentMachineIdSpan.textContent);
         if (detailView.style.display === 'block' && currentDetailId === id) {
-            renderDetailTable(id); // Panggil renderDetailTable untuk refresh data
+            renderDetailTable(id); 
         }
     }
 
@@ -423,7 +420,7 @@ client.on("message", (topic, message) => {
 
 
 // =======================================================
-// --- LOGIKA PENGIRIMAN BERURUTAN & PAKSA LOG (TIDAK BERUBAH) ---
+// --- LOGIKA PENGIRIMAN BERURUTAN & PAKSA LOG ---
 // =======================================================
 
 // --- FUNGSI BANTU LOGGING --- 
@@ -449,7 +446,6 @@ async function insertEnergyLog(entry) {
     try {
         const { error } = await supa.from(TABLE_NAME).insert([entry]);
         if (error) throw error;
-        // Jika berhasil, log di console (opsional)
     } catch (e) {
         console.error("Gagal menyimpan log ke Supabase. Cek RLS/Kredensial:", e);
     }
@@ -461,7 +457,7 @@ async function sendBufferedDataSequentially() {
     if (isSending) return;
     isSending = true;
 
-    const T1_HOUR = 17; 
+    const T1_HOUR = 17; // Batas Waktu Indonesia Barat (WIB)
     const T2_HOUR = 22; 
 
     for (const id of MACHINE_IDS) {
@@ -518,9 +514,8 @@ async function sendBufferedDataSequentially() {
                     saveLastSupaLogTime(id, now.getTime());
                 }
             }
-
-            // Hapus data dari buffer setelah berhasil diproses
-            delete dataBuffer[id];
+            
+            // *** PENTING: dataBuffer dipertahankan agar display detail stabil. ***
         }
     }
 
