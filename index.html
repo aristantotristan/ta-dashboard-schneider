@@ -6,42 +6,58 @@
 <title>Dashboard Menu</title>
 
 <style>
-    body {
-        font-family: 'Segoe UI', sans-serif;
-        background: #0f0f0f;
-        color: #e5e5e5;
-        padding: 40px;
-        text-align: center;
-    }
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: #0f0f0f; /* Background utama gelap */
+        color: #e5e5e5;
+        padding: 40px;
+        text-align: center;
+        /* Menggunakan Flexbox untuk menengahkan konten secara vertikal */
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh; /* Memastikan body mengisi seluruh viewport */
+        margin: 0;
+    }
 
-    h1 {
-        margin-bottom: 30px;
-        color: #00ffc2;
-        font-size: 2rem;
-        letter-spacing: 1px;
-    }
+    h1 {
+        margin-bottom: 40px; /* Jarak lebih besar setelah judul */
+        color: #00ffc2; /* Warna aksen utama */
+        font-size: 2.5rem; /* Ukuran font lebih besar */
+        letter-spacing: 1.5px;
+        font-weight: 800;
+        text-shadow: 0 0 10px rgba(0, 255, 194, 0.3); /* Efek cahaya neon */
+    }
 
-    .btn {
-        display: block;
-        width: 260px;
-        margin: 14px auto;
-        padding: 15px;
-        background: #1e1e1e;
-        border-radius: 12px;
-        color: #00ffc2;
-        text-decoration: none;
-        font-size: 1.1rem;
-        font-weight: 600;
-        border: 1px solid #00ffc2;
-        transition: 0.25s;
-    }
+    .btn-container {
+        display: flex;
+        flex-direction: column;
+        gap: 15px; /* Jarak antar tombol */
+    }
 
-    .btn:hover {
-        background: #00ffc2;
-        color: #000;
-        transform: translateY(-2px);
-        box-shadow: 0 0 12px rgba(0,255,194,0.4);
-    }
+    .btn {
+        display: block;
+        width: 300px; /* Ukuran tombol lebih lebar */
+        padding: 18px 25px; /* Padding lebih besar */
+        background: #1e1e1e;
+        border-radius: 15px; /* Sudut lebih melengkung */
+        color: #00ffc2;
+        text-decoration: none;
+        font-size: 1.2rem;
+        font-weight: 700;
+        border: 2px solid #00ffc2; /* Border lebih tebal */
+        transition: 0.3s ease-in-out;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .btn:hover {
+        background: #00ffc2;
+        color: #0f0f0f; /* Teks jadi gelap saat hover */
+        transform: scale(1.05); /* Sedikit membesar saat hover */
+        box-shadow: 0 0 20px rgba(0, 255, 194, 0.6), 0 5px 15px rgba(0, 0, 0, 0.3);
+    }
 </style>
 
 </head>
@@ -49,8 +65,10 @@
 
 <h1>⚡ Power Meter Dashboard</h1>
 
-<a href="realtime.html" class="btn">Monitoring Realtime</a>
-<a href="result_wbp_lwbp.html" class="btn">Monitoring Result (WBP/LWBP)</a>
+<div class="btn-container">
+    <a href="realtime.html" class="btn">Monitoring Realtime</a>
+    <a href="result_wbp_lwbp.html" class="btn">Monitoring Result (WBP/LWBP)</a>
+</div>
 
 </body>
 </html>
