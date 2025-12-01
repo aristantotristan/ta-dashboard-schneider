@@ -39,6 +39,16 @@ thead th {
     text-transform: uppercase;
     font-size: 0.9em;
 }
+
+/* Styling Baris Konsumsi Utama */
+.wbp-cell {
+    background: #4c0519; /* Merah Maroon untuk WBP */
+    font-weight: bold;
+}
+.lwbp-cell {
+    background: #065f46; /* Hijau Tua untuk LWBP */
+    font-weight: bold;
+}
 </style>
 </head>
 
@@ -54,7 +64,7 @@ thead th {
     </button>
 </div>
 
-<p id="analysisStatus" style="font-style: italic;">Silakan pilih tanggal dan klik Tampilkan Hasil.</p>
+<p id="analysisStatus" style="font-style: italic;">Tabel siap. Silakan pilih tanggal dan klik Tampilkan Hasil.</p>
 
 ---
 
@@ -97,10 +107,9 @@ thead th {
 const SUPA_URL  = "https://rojhcadtqfynlqzubftx.supabase.co"; 
 const SUPA_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs"; 
 
-// Sekarang 'supabase' sudah pasti didefinisikan!
 let supa = supabase.createClient(SUPA_URL, SUPA_ANON);
 
-// Gunakan VIEW yang isinya sudah kita pastikan ADA
+// Menggunakan VIEW kalkulasi yang sudah pasti terisi
 const DATA_SOURCE_TABLE = 'final_calculation_base'; 
 
 // --- DOM ELEMENTS ---
@@ -114,7 +123,7 @@ const ALL_MESIN_IDS = Array.from({length: 13}, (_, i) => i + 1);
 
 
 /**
- * Menampilkan data default 0.00 untuk semua mesin.
+ * Menampilkan data default 0.00 untuk semua mesin, sebagai kerangka tampilan (standby).
  */
 function renderDefaultTables(targetDate = '---') {
     wbpTableBody.innerHTML = '';
@@ -133,15 +142,14 @@ function renderDefaultTables(targetDate = '---') {
         const trWBP = wbpTableBody.insertRow();
         trWBP.insertCell().textContent = defaultData.id_mesin;
         trWBP.insertCell().textContent = defaultData.tanggal;
-        // Kolom Ea Start WBP (diisi Total Harian - Kolom 3)
+        // Kolom 3 (Ea Start WBP) diisi Total Harian
         trWBP.insertCell().textContent = defaultData.konsumsi_total_harian.toFixed(2); 
-        // Kolom Ea End WBP (diisi Konsumsi LWBP - Kolom 4)
+        // Kolom 4 (Ea End WBP) diisi Konsumsi LWBP
         trWBP.insertCell().textContent = defaultData.konsumsi_lwbp_kwh.toFixed(2); 
 
         const wbpCell = trWBP.insertCell();
         wbpCell.textContent = defaultData.konsumsi_wbp_kwh.toFixed(2);
-        wbpCell.style.fontWeight = 'bold';
-        wbpCell.style.backgroundColor = '#4c0519';
+        wbpCell.className = 'wbp-cell'; // Menggunakan class styling
         
         // RENDER TABEL LWBP
         const trLWBP = lwbpTableBody.insertRow();
@@ -152,14 +160,13 @@ function renderDefaultTables(targetDate = '---') {
         
         const lwbpCell = trLWBP.insertCell();
         lwbpCell.textContent = defaultData.konsumsi_lwbp_kwh.toFixed(2);
-        lwbpCell.style.fontWeight = 'bold';
-        lwbpCell.style.backgroundColor = '#065f46';
+        lwbpCell.className = 'lwbp-cell'; // Menggunakan class styling
     });
 }
 
 
 /**
- * Mengambil data harian dari Supabase dan menggantikan default.
+ * Mengambil data harian dari Supabase dan menggantikan nilai default.
  */
 async function renderDailyConsumptionData() {
     const targetDate = analysisDateInput.value;
@@ -189,9 +196,7 @@ async function renderDailyConsumptionData() {
             return;
         }
 
-        // Jika data ada, render ulang tabel dengan data Supabase
-        // Note: Kita tidak perlu renderDefaultTables lagi, karena kita akan UPDATE data yang sudah ada.
-        
+        // Mapping data hasil Supabase berdasarkan ID mesin
         const dataMap = new Map(finalData.map(item => [item.id_mesin, item]));
 
         ALL_MESIN_IDS.forEach((id, index) => {
@@ -199,6 +204,7 @@ async function renderDailyConsumptionData() {
             const wbpRow = wbpTableBody.children[index]; 
             const lwbpRow = lwbpTableBody.children[index];
 
+            // Hanya update jika data untuk ID mesin tersebut ditemukan
             if (row) {
                 // Update Kolom WBP
                 wbpRow.cells[2].textContent = row.konsumsi_total_harian.toFixed(2); 
