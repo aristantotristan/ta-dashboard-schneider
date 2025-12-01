@@ -62,12 +62,8 @@
     </div>
 
     <h3>Ubah Tarif</h3>
-    <div class="flex-center" style="gap: 15px; padding:10px 0;">
-      <div class="flex-center" style="gap:10px;">
-        <label><input type="radio" name="tarif" value="LWBP" checked> LWBP</label>
-        <label><input type="radio" name="tarif" value="WBP"> WBP</label>
-      </div>
-
+    <div class="flex-center" style="gap: 15px; padding:10px 0; justify-content: flex-start;">
+      
       <div class="flex-center" style="gap:10px;">
         <input type="number" id="newTariffValue" placeholder="Nilai Tarif (Rp/kWh)" style="padding: 8px; width: 150px;" step="0.01" required>
         <input type="date" id="effectiveStartDate" style="padding: 8px;" required>
@@ -186,7 +182,7 @@ async function fetchCurrentTariff() {
 async function handleChangeTariff() {
     const tariffValue = document.getElementById('newTariffValue').value;
     const effectiveDate = document.getElementById('effectiveStartDate').value;
-    const tariffType = document.querySelector('input[name="tarif"]:checked').value; 
+    // Logika LWBP/WBP dihapus
     const changedBy = prompt("Masukkan nama/ID Anda untuk log perubahan:") || 'Anonymous'; // Audit trail
 
     if (!tariffValue || !effectiveDate) {
@@ -206,7 +202,6 @@ async function handleChangeTariff() {
                 tariff_value: tariffValue, 
                 changed_by: changedBy, 
                 effective_start_date: effectiveDate,
-                // tariff_type: tariffType // Uncomment jika Anda menambahkan kolom tariff_type
             }
         ]);
 
