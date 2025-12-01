@@ -1,13 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚡ Master Power Meter Dashboard (18 SLAVES)</title>
+
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script> 
+
+<style>
+/* Global Styling */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #121212; /* Deep Dark Background */
+    color: #E0E0E0; /* Soft White Text */
+    padding: 20px;
+}
+h2 {
+    color: #00FFC2; /* Neon Green/Cyan for title */
+    border-bottom: 2px solid #3A3A3A;
+    padding-bottom: 10px;
+    margin-bottom: 5px;
+}
+#conn {
+    margin-bottom: 25px;
+    font-size: 1.1em;
+    font-weight: bold;
+}
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-top: 15px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    border-radius: 8px;
+    overflow: hidden; 
+}
+th, td {
+    border: 1px solid #2A2A2A; /* Border antar sel */
+    padding: 10px 12px;
+    text-align: center;
+    transition: background-color 0.3s;
+}
+thead th {
+    background: #2A2A2A;
+    color: #00FFC2;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.9em;
+}
+tbody tr {
+    background: #1E1E1E;
+}
+tbody tr:hover {
+    background-color: #334155; 
+}
+
+/* Data Group Styling */
+.cell-id { font-weight: bold; background: #111827; }
+.status-online { color: #10B981; font-weight: bold; } 
+.status-offline { color: #EF4444; font-weight: bold; }
+.col-power { background-color: #0F334A; color: #38BDF8; font-weight: 600; }
+.col-energy { color: #4ADE80; font-weight: 600; }
+.col-v, .col-i, .col-pf { font-weight: 500; }
+</style>
+</head>
+
+<body>
+
+<h2>⚡ Real-time Power Meter Dashboard (18 Mesin)</h2>
+<p id="conn">Connecting...</p>
+
+<table>
+<thead>
+<tr>
+  <th class="cell-id">ID</th>
+  <th>Status</th>
+  <th class="col-v">V (Volt)</th>
+  <th class="col-i">I1 (A)</th>
+  <th class="col-i">I2 (A)</th>
+  <th class="col-i">I3 (A)</th>
+  <th class="col-power">P (Watt)</th>
+  <th class="col-power">Q (VAR)</th>
+  <th class="col-power">S (kVA)</th>
+  <th class="col-pf">PF</th>
+  <th class="col-pf">Hz</th>
+  <th class="col-pf">OpH (Hari/Jam)</th>
+  <th class="col-energy">Ea Tot (kWh)</th>
+  <th class="col-energy">Er Tot (kVARh)</th>
+  <th class="col-energy">Ea Part (kWh)</th>
+  <th class="col-energy">Er Part (kVARh)</th>
+</tr>
+</thead>
+<tbody id="tableBody">
+<tr><td colspan="16" style="padding: 30px; color: #94A3B8;">Awaiting Real-time Data from ESP32...</td></tr>
+</tbody>
+</table>
+
 <script>
 // =======================================================
 // --- KONFIGURASI SUPABASE ---
+// HARAP GANTI URL DAN KUNCI ANON DENGAN DATA ASLI ANDA
 // =======================================================
-
-// GANTI DENGAN KREDENSIAL SUPABASE ANDA
 const SUPA_URL  = "https://rojhcadtqfynlqzubftx.supabase.co"; 
 const SUPA_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs"; 
 const TABLE_NAME = "ea_18mesin";
-const EA_THRESHOLD = 0.01; // Ambang batas perubahan kWh untuk logging normal
+const EA_THRESHOLD = 0.01; // Log normal jika perubahan EA >= 0.01 kWh
 
 let supa = supabase.createClient(SUPA_URL, SUPA_ANON);
 
@@ -15,26 +112,24 @@ let supa = supabase.createClient(SUPA_URL, SUPA_ANON);
 // --- FUNGSI LOGGING & LOCALSTORAGE (Memori Harian) ---
 // =======================================================
 
-/**
- * Menyimpan log energi ke tabel ea_18mesin di Supabase.
- * @param {object} entry - { id_mesin, ea, t, log_type }
- */
+/** Menyimpan log energi ke tabel ea_18mesin di Supabase. */
 async function insertEnergyLog(entry) {
     try {
         const { error } = await supa.from(TABLE_NAME).insert([entry]);
         if (error) throw error;
+        // console.log(`[Supabase Log] Mesin ${entry.id_mesin} (${entry.log_type}) berhasil.`);
     } catch (e) {
-        console.error("Gagal menyimpan log ke Supabase:", e);
+        console.error("Gagal menyimpan log ke Supabase. Cek RLS/Kredensial:", e);
     }
 }
 
-/** Mendapatkan status flag transisi (misal: 'WBP_START_LOGGED_2025-12-01') */
+/** Mendapatkan status flag transisi dari localStorage (Memori Harian) */
 function getTransitionFlag(id, key) {
     const today = new Date().toISOString().slice(0, 10);
     return localStorage.getItem(`${key}_${id}_${today}`);
 }
 
-/** Menetapkan flag transisi setelah log T1/T2 berhasil disimpan */
+/** Menetapkan flag transisi ke localStorage */
 function setTransitionFlag(id, key) {
     const today = new Date().toISOString().slice(0, 10);
     localStorage.setItem(`${key}_${id}_${today}`, 'true');
@@ -68,7 +163,7 @@ const client = mqtt.connect(
 
 const tableBody = document.getElementById("tableBody");
 const conn = document.getElementById("conn");
-const devices = {}; // Menyimpan referensi baris tabel berdasarkan ID meter
+const devices = {}; 
 
 // Definisikan urutan KEY JSON dan CLASS CSS
 const dataMap = [
@@ -79,10 +174,7 @@ const dataMap = [
     { key: 'EaP', class: 'col-energy' }, { key: 'ErP', class: 'col-energy' }
 ];
 
-/**
- * Mengonversi total jam (decimal) menjadi format Hari dan Jam.
- * (Fungsi ini tetap sama)
- */
+/** Mengonversi total jam (decimal) menjadi format Hari dan Jam. */
 function formatOperatingTime(totalHours) {
     if (totalHours === undefined || totalHours === null || isNaN(totalHours) || totalHours < 0) {
         return '---';
@@ -116,7 +208,7 @@ function formatOperatingTime(totalHours) {
 
 client.on("connect", () => {
   conn.innerHTML = "✅ MQTT Connected";
-  client.subscribe("politeknik/meter/data/#"); // Subscribing ke semua mesin
+  client.subscribe("politeknik/meter/data");
 });
 
 client.on("error", err => {
@@ -134,11 +226,11 @@ client.on("message", (topic, message) => {
     const now = new Date();
     const currentHour = now.getHours(); // Jam 0 s/d 23
 
-    // 1. Cek atau Buat Baris Baru (Logika Dashboard)
+    // 1. Logika Dashboard: Cek atau Buat Baris Baru
     if (!devices[id]) {
       const row = tableBody.insertRow(); 
       devices[id] = row;
-      // ... (Logika membuat sel tabel) ...
+        // Membuat sel tabel
         row.insertCell().textContent = id;
         row.cells[0].className = 'cell-id';
         row.insertCell().textContent = d.status;
@@ -156,7 +248,7 @@ client.on("message", (topic, message) => {
     const row = devices[id];
     const cells = row.cells;
     
-    // 2. Update Status dan Data (Logika Dashboard)
+    // 2. Logika Dashboard: Update Status dan Data
     cells[1].textContent = d.status ? d.status.toUpperCase() : '---';
     cells[1].className = d.status === "online" ? "status-online" : "status-offline";
     
@@ -195,7 +287,7 @@ client.on("message", (topic, message) => {
     // --- B. Logika Transisi WBP/LWBP (Mencatat T1 dan T2) ---
     
     // 🚨 T1 WBP (Jam 17:xx)
-    // WBP Dimulai (Akhir LWBP)
+    // WBP Dimulai (Akhir LWBP: 17:00)
     if (currentHour === 17 && getTransitionFlag(id, 'T1_WBP_START') === null) {
         entry.log_type = 'T1_WBP_START'; 
         insertEnergyLog(entry);
@@ -204,7 +296,7 @@ client.on("message", (topic, message) => {
     }
     
     // 🚨 T2 WBP (Jam 22:xx)
-    // WBP Berakhir (Awal LWBP Hari Berikutnya)
+    // WBP Berakhir (Awal LWBP: 22:00)
     if (currentHour === 22 && getTransitionFlag(id, 'T2_WBP_END') === null) {
         entry.log_type = 'T2_WBP_END'; 
         insertEnergyLog(entry);
@@ -218,3 +310,6 @@ client.on("message", (topic, message) => {
   }
 });
 </script>
+
+</body>
+</html>
