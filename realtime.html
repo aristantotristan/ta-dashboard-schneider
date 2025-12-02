@@ -8,93 +8,150 @@
 <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 
 <style>
-  /* --- Styling (rapi & minimal) --- */
-  :root {
-    --bg: #121212;
-    --card: #1E1E1E;
-    --muted: #94A3B8;
-    --accent: #00FFC2;
-    --online: #10B981;
-    --offline: #EF4444;
-    --tariff: #FACC15;
-  }
-  body {
-    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-    background: var(--bg);
-    color: #E0E0E0;
-    padding: 20px;
-    margin: 0;
-  }
-  h2 { color: var(--accent); margin: 0 0 12px 0; }
-  #conn { margin-bottom: 14px; font-weight: 600; color: #94A3B8; }
+/* --- Styling (rapi & minimal) --- */
+:root {
+  --bg: #121212;
+  --card: #1E1E1E;
+  --muted: #94A3B8;
+  --accent: #00FFC2;
+  --online: #10B981;
+  --offline: #EF4444;
+  --tariff: #FACC15;
+}
+body {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background: var(--bg);
+  color: #E0E0E0;
+  padding: 20px;
+  margin: 0;
+}
+h2 { color: var(--accent); margin: 0 0 12px 0; }
+#conn { margin-bottom: 14px; font-weight: 600; color: #94A3B8; }
 
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.6);
-    border-radius: 8px;
-    overflow: hidden;
-  }
-  thead th {
-    background: #2A2A2A;
-    color: var(--accent);
-    text-transform: uppercase;
-    font-size: 0.8rem;
-    padding: 10px 8px;
-    border-bottom: 1px solid #151515;
-  }
-  th, td {
-    padding: 8px 10px;
-    border-bottom: 1px solid rgba(255,255,255,0.02);
-    text-align: center;
-    font-size: 0.86rem;
-  }
-  tbody tr { background: var(--card); }
-  tbody tr:hover { background: #2b2b2b; }
-  .cell-id { font-weight:700; background:#111827; }
-  .status-online { color: var(--online); font-weight:700; }
-  .status-offline { color: var(--offline); font-weight:700; }
-  .col-power { background: #0F334A; color: #38BDF8; font-weight:600; }
-  .col-energy { color: #4ADE80; font-weight:600; }
-  .col-tariff { color: var(--tariff); font-weight:700; }
-  .muted { color: var(--muted); }
-  @media (max-width:1000px) {
-    table { font-size: 0.78rem; }
-  }
+/* ------------------------------------- */
+/* --- NEW CARD STYLES FOR MAIN VIEW --- */
+/* ------------------------------------- */
+#main-view {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  justify-content: center; /* Center the cards */
+}
+.machine-card {
+  background: var(--card);
+  border-radius: 8px;
+  padding: 15px;
+  width: 180px; /* Lebar kartu */
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  position: relative;
+  overflow: hidden;
+}
+.machine-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 16px rgba(0,0,0,0.6);
+}
+.card-id {
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: #38BDF8;
+  margin: 0;
+  text-align: center;
+  line-height: 1;
+}
+.card-label {
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: var(--muted);
+  text-align: center;
+  margin-bottom: 10px;
+}
+.status-indicator {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--bg);
+  box-shadow: 0 0 4px rgba(0,0,0,0.8);
+}
+.status-online { background-color: var(--online); }
+.status-offline { background-color: var(--offline); }
+
+/* -------------------------------------- */
+/* --- DETAIL VIEW STYLES (MODIFIED TABLE) --- */
+/* -------------------------------------- */
+#detail-view {
+  display: none; /* Hidden by default */
+  padding-top: 20px;
+}
+#detail-view h3 {
+  color: var(--accent);
+  margin-top: 0;
+}
+#back-button {
+  background: #333;
+  color: #fff;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-bottom: 15px;
+}
+#back-button:hover {
+  background: #555;
+}
+
+/* Reusing and modifying table styles for detail view */
+#detail-table {
+  width: 100%;
+  border-collapse: collapse;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+  border-radius: 8px;
+  overflow: hidden;
+}
+#detail-table th, #detail-table td {
+  padding: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.02);
+  text-align: left;
+  font-size: 0.9rem;
+}
+#detail-table thead th {
+  background: #2A2A2A;
+  color: var(--accent);
+  text-transform: uppercase;
+}
+#detail-table tbody tr { background: var(--card); }
+#detail-table .param-name { font-weight: 600; width: 30%; }
+#detail-table .param-value { color: #fff; font-weight: 400; }
+
+.col-power { color: #38BDF8; }
+.col-energy { color: #4ADE80; }
+.col-tariff { color: var(--tariff); }
+
+@media (max-width: 600px) {
+  .machine-card { width: 45%; }
+}
 </style>
 </head>
 <body>
 
-<h2>⚡ Real-time Power Meter Dashboard (18 Mesin)</h2>
+<h2>⚡ Real-time Power Meter Dashboard</h2>
 <p id="conn" class="muted">Connecting...</p>
 
-<table aria-label="Power Meter Table">
-  <thead>
-    <tr>
-      <th>ID</th>
-      <th>Status</th>
-      <th>V</th>
-      <th>I1</th>
-      <th>I2</th>
-      <th>I3</th>
-      <th>P (W)</th>
-      <th>Q (VAR)</th>
-      <th>S (kVA)</th>
-      <th>PF</th>
-      <th>Hz</th>
-      <th>OpH</th>
-      <th>Ea Tot</th>
-      <th>Er Tot</th>
-      <th>Ea Part</th>
-      <th>Er Part</th>
-      <th class="col-tariff">T1 (kWh)</th>
-      <th class="col-tariff">T2 (kWh)</th>
-    </tr>
-  </thead>
-  <tbody id="tableBody">
-    <!-- Rows will be pre-populated by JS on load -->
-  </tbody>
-</table>
+<div id="main-view">
+  </div>
+
+<div id="detail-view">
+  <button id="back-button">← Kembali ke Daftar Mesin</button>
+  <h3 id="detail-title">Detail Parameter Mesin ID: --</h3>
+  <table id="detail-table" aria-label="Power Meter Detail Table">
+    <tbody id="detailBody">
+      </tbody>
+  </table>
+</div>
 
 <script>
 /* ================= CONFIG ================= */
@@ -108,7 +165,7 @@ const MQTT_URL = "wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884
 const MQTT_TOPIC = "politeknik/meter/data";
 const TOTAL_DEVICES = 18;
 
-/* ================= HELPERS ================= */
+/* ================= HELPERS (TIDAK BERUBAH) ================= */
 function formatOpH(hours) {
   if (hours === null || hours === undefined || isNaN(hours) || hours < 0) return '---';
   const totalMinutes = Math.round(parseFloat(hours) * 60);
@@ -133,40 +190,116 @@ function fmt(val, key) {
   if (['EaT','ErT','EaP','ErP','T1','T2'].includes(key)) return n.toFixed(2);
   return n.toString();
 }
+// Tambahkan fungsi untuk mendapatkan kelas CSS yang sesuai
+function getStyleClass(key) {
+  if (key === 'T1' || key === 'T2') return 'col-tariff';
+  if (['EaT','ErT','EaP','ErP'].includes(key)) return 'col-energy';
+  if (['P','Q','S'].includes(key)) return 'col-power';
+  return '';
+}
+// Tambahkan label yang lebih mudah dibaca untuk Detail View
+const dataLabels = {
+  'V': 'Tegangan (V)', 'I1': 'Arus Fasa 1 (A)', 'I2': 'Arus Fasa 2 (A)', 'I3': 'Arus Fasa 3 (A)',
+  'P': 'Daya Aktif (W)', 'Q': 'Daya Reaktif (VAR)', 'S': 'Daya Semu (kVA)', 'PF': 'Faktor Daya',
+  'Hz': 'Frekuensi (Hz)', 'OpH': 'Jam Operasi',
+  'EaT': 'Energi Aktif Total (kWh)', 'ErT': 'Energi Reaktif Total (kVARh)',
+  'EaP': 'Energi Aktif Parsial (kWh)', 'ErP': 'Energi Reaktif Parsial (kVARh)',
+  'T1': 'Tarif 1 (kWh)', 'T2': 'Tarif 2 (kWh)'
+};
 
-/* ================= TABLE SETUP ================= */
-const tableBody = document.getElementById('tableBody');
+/* ================= VIEW ELEMENTS ================= */
+const mainView = document.getElementById('main-view');
+const detailView = document.getElementById('detail-view');
+const detailBody = document.getElementById('detailBody');
+const detailTitle = document.getElementById('detail-title');
+const backButton = document.getElementById('back-button');
 const conn = document.getElementById('conn');
 
+/* ================= DATA STORAGE & SETUP ================= */
 // dataMap order must match table columns after ID & Status
 const dataMap = [
   'V','I1','I2','I3','P','Q','S','PF','Hz','OpH',
   'EaT','ErT','EaP','ErP','T1','T2'
 ];
 
-// Pre-create 18 rows (ID 1..18) with default OFFLINE status and placeholders
-const devices = {}; // store row references
-function createInitialRows() {
-  tableBody.innerHTML = ''; // clear
+// devices: stores references to card DOM elements and the latest data
+const devices = {};
+let currentViewedId = null;
+
+// The latest data received for all devices
+const deviceData = {};
+for (let id = 1; id <= TOTAL_DEVICES; id++) {
+    deviceData[id] = {}; // Store raw data for each device
+}
+
+// Function to switch views
+function showMainView() {
+    mainView.style.display = 'flex';
+    detailView.style.display = 'none';
+    currentViewedId = null;
+}
+function showDetailView(id) {
+    mainView.style.display = 'none';
+    detailView.style.display = 'block';
+    currentViewedId = id;
+    detailTitle.textContent = `Detail Parameter Mesin ID: ${id}`;
+    updateDetailView(id);
+}
+
+// Pre-create 18 cards
+function createInitialCards() {
+  mainView.innerHTML = '';
   for (let id=1; id<=TOTAL_DEVICES; id++) {
-    const tr = tableBody.insertRow();
-    // ID cell
-    const tdId = tr.insertCell(); tdId.className = 'cell-id'; tdId.textContent = id;
-    // Status cell
-    const tdStatus = tr.insertCell(); tdStatus.textContent = 'OFFLINE'; tdStatus.className = 'status-offline';
-    // Data cells
-    dataMap.forEach(key => {
-      const td = tr.insertCell();
-      // style tariff cells
-      if (key === 'T1' || key === 'T2') td.className = 'col-tariff';
-      else if (['EaT','ErT','EaP','ErP'].includes(key)) td.className = 'col-energy';
-      else if (['P','Q','S'].includes(key)) td.className = 'col-power';
-      td.textContent = '---';
-    });
-    devices[id] = tr;
+    const card = document.createElement('div');
+    card.className = 'machine-card';
+    card.setAttribute('data-id', id);
+    card.innerHTML = `
+      <div class="status-indicator status-offline" id="status-ind-${id}"></div>
+      <p class="card-label">MESIN</p>
+      <p class="card-id">${id}</p>
+    `;
+    card.onclick = () => showDetailView(id); // Set click handler
+    mainView.appendChild(card);
+    devices[id] = {
+        card: card,
+        indicator: document.getElementById(`status-ind-${id}`)
+    };
   }
 }
-createInitialRows();
+createInitialCards();
+
+// Function to update the detail table (when in detail view)
+function updateDetailView(id) {
+    if (currentViewedId !== id) return; // Only update if currently viewed
+
+    detailBody.innerHTML = ''; // Clear existing rows
+    const data = deviceData[id];
+
+    // Create a row for Status first
+    const statusRow = detailBody.insertRow();
+    statusRow.innerHTML = `<td class="param-name">Status</td><td class="param-value ${data.status === 'online' ? 'status-online' : 'status-offline'}">${data.status ? data.status.toUpperCase() : '---'}</td>`;
+
+    // Then, create rows for all other parameters
+    dataMap.forEach(key => {
+        const tr = detailBody.insertRow();
+        const raw = data[key];
+        let displayValue;
+        
+        if (key === 'OpH') {
+            displayValue = (raw === 0 || raw) ? formatOpH(raw) : '---';
+        } else {
+            displayValue = (raw === 0 || raw) ? fmt(raw, key) : '---';
+        }
+
+        tr.innerHTML = `<td class="param-name">${dataLabels[key]}</td><td class="param-value ${getStyleClass(key)}">${displayValue}</td>`;
+    });
+}
+
+// Initial view: show main cards
+showMainView();
+
+// Back button handler
+backButton.onclick = showMainView;
 
 /* ================= MQTT ================= */
 const client = mqtt.connect(MQTT_URL, MQTT_OPTIONS);
@@ -174,7 +307,6 @@ const client = mqtt.connect(MQTT_URL, MQTT_OPTIONS);
 client.on('connect', () => {
   conn.textContent = '✅ MQTT Connected';
   client.subscribe(MQTT_TOPIC);
-  // When connecting/reconnecting, it's ok — rows already present
 });
 
 client.on('reconnect', () => {
@@ -190,44 +322,31 @@ client.on('message', (topic, message) => {
   try {
     const d = JSON.parse(message.toString());
     const id = Number(d.id);
+
     if (!id || id < 1 || id > TOTAL_DEVICES) {
       console.warn('Invalid ID in payload', d);
       return;
     }
 
-    // ensure row exists (should already)
-    if (!devices[id]) {
-      // fallback: create a row if somehow missing
-      createInitialRows();
+    // 1. SIMPAN SEMUA DATA BARU
+    // Store raw data (excluding 'id') for later use in detail view
+    deviceData[id] = d; 
+    
+    // 2. UPDATE STATUS DI KARTU
+    if (devices[id]) {
+      const status = (d.status && d.status.toLowerCase() === 'online') ? 'online' : 'offline';
+      devices[id].indicator.className = `status-indicator status-${status}`;
     }
-    const row = devices[id];
-    // status
-    const status = (d.status && d.status.toLowerCase() === 'online') ? 'online' : 'offline';
-    row.cells[1].textContent = status.toUpperCase();
-    row.cells[1].className = status === 'online' ? 'status-online' : 'status-offline';
 
-    // update data cells according to dataMap order
-    dataMap.forEach((key, idx) => {
-      const cell = row.cells[2 + idx];
-      let raw = d[key];
-
-      if (key === 'OpH') {
-        cell.textContent = (raw === 0 || raw) ? formatOpH(raw) : '---';
-      } else {
-        cell.textContent = (raw === 0 || raw) ? fmt(raw, key) : '---';
-      }
-    });
-
+    // 3. UPDATE TAMPILAN DETAIL JIKA MESIN INI SEDANG DILIHAT
+    if (currentViewedId === id) {
+        updateDetailView(id);
+    }
+    
   } catch (e) {
     console.error('Payload parse error:', e, message.toString());
   }
 });
-
-/* Optional: demo fallback to mark as offline if no message received for a long time.
-   This requires the ESP32 to send periodic heartbeats or publish offline explicitly.
-   We keep it passive here (ESP must send offline status).
-*/
-
 </script>
 </body>
 </html>
