@@ -42,11 +42,17 @@ h2 { color: var(--accent); margin: 0 0 12px 0; }
   border-radius: 8px;
   padding: 15px;
   width: 180px; /* Lebar kartu */
+  height: 100px; /* Tinggi kartu agar seragam */
   cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s;
   box-shadow: 0 4px 12px rgba(0,0,0,0.4);
   position: relative;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  align-items: center;
+  text-align: center;
 }
 .machine-card:hover {
   transform: translateY(-3px);
@@ -57,15 +63,15 @@ h2 { color: var(--accent); margin: 0 0 12px 0; }
   font-weight: 800;
   color: #38BDF8;
   margin: 0;
-  text-align: center;
   line-height: 1;
 }
 .card-label {
-  font-size: 0.9rem;
-  font-weight: 400;
+  font-size: 0.85rem;
+  font-weight: 500;
   color: var(--muted);
   text-align: center;
-  margin-bottom: 10px;
+  margin: 0;
+  line-height: 1.2;
 }
 .status-indicator {
   position: absolute;
@@ -124,7 +130,7 @@ h2 { color: var(--accent); margin: 0 0 12px 0; }
   text-transform: uppercase;
 }
 #detail-table tbody tr { background: var(--card); }
-#detail-table .param-name { font-weight: 600; width: 30%; }
+#detail-table .param-name { font-weight: 600; width: 35%; }
 #detail-table .param-value { color: #fff; font-weight: 400; }
 
 .col-power { color: #38BDF8; }
@@ -165,6 +171,28 @@ const MQTT_URL = "wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884
 const MQTT_TOPIC = "politeknik/meter/data";
 const TOTAL_DEVICES = 18;
 
+/* ================= MACHINE TAGS ================= */
+const MACHINE_TAGS = {
+  1: 'UNKNOW',
+  2: 'UNKNOW',
+  3: 'POMPA MC 12',
+  4: 'MC 9',
+  5: 'UNKNOW',
+  6: 'MC 40',
+  7: 'MC 39',
+  8: 'MC 6',
+  9: 'HEATER MC 5',
+  10: 'POMPA MC 5',
+  11: 'UNKNOW',
+  12: 'MC 34',
+  13: 'MC 35',
+  14: 'UNKNOW',
+  15: 'UNKNOW',
+  16: 'MC 38',
+  17: 'MC 36',
+  18: 'MC 37'
+};
+
 /* ================= HELPERS (TIDAK BERUBAH) ================= */
 function formatOpH(hours) {
   if (hours === null || hours === undefined || isNaN(hours) || hours < 0) return '---';
@@ -190,14 +218,14 @@ function fmt(val, key) {
   if (['EaT','ErT','EaP','ErP','T1','T2'].includes(key)) return n.toFixed(2);
   return n.toString();
 }
-// Tambahkan fungsi untuk mendapatkan kelas CSS yang sesuai
+// Fungsi untuk mendapatkan kelas CSS yang sesuai untuk nilai parameter
 function getStyleClass(key) {
   if (key === 'T1' || key === 'T2') return 'col-tariff';
   if (['EaT','ErT','EaP','ErP'].includes(key)) return 'col-energy';
   if (['P','Q','S'].includes(key)) return 'col-power';
   return '';
 }
-// Tambahkan label yang lebih mudah dibaca untuk Detail View
+// Label yang mudah dibaca untuk Detail View
 const dataLabels = {
   'V': 'Tegangan (V)', 'I1': 'Arus Fasa 1 (A)', 'I2': 'Arus Fasa 2 (A)', 'I3': 'Arus Fasa 3 (A)',
   'P': 'Daya Aktif (W)', 'Q': 'Daya Reaktif (VAR)', 'S': 'Daya Semu (kVA)', 'PF': 'Faktor Daya',
@@ -216,14 +244,12 @@ const backButton = document.getElementById('back-button');
 const conn = document.getElementById('conn');
 
 /* ================= DATA STORAGE & SETUP ================= */
-// dataMap order must match table columns after ID & Status
 const dataMap = [
   'V','I1','I2','I3','P','Q','S','PF','Hz','OpH',
   'EaT','ErT','EaP','ErP','T1','T2'
 ];
 
-// devices: stores references to card DOM elements and the latest data
-const devices = {};
+const devices = {}; // stores references to card DOM elements
 let currentViewedId = null;
 
 // The latest data received for all devices
@@ -242,7 +268,7 @@ function showDetailView(id) {
     mainView.style.display = 'none';
     detailView.style.display = 'block';
     currentViewedId = id;
-    detailTitle.textContent = `Detail Parameter Mesin ID: ${id}`;
+    detailTitle.textContent = `Detail Parameter Mesin ID: ${id} - ${MACHINE_TAGS[id] || 'NAMA MESIN'}`;
     updateDetailView(id);
 }
 
@@ -250,12 +276,13 @@ function showDetailView(id) {
 function createInitialCards() {
   mainView.innerHTML = '';
   for (let id=1; id<=TOTAL_DEVICES; id++) {
+    const tagName = MACHINE_TAGS[id] || 'Mesin Tidak Dikenal';
     const card = document.createElement('div');
     card.className = 'machine-card';
     card.setAttribute('data-id', id);
     card.innerHTML = `
       <div class="status-indicator status-offline" id="status-ind-${id}"></div>
-      <p class="card-label">MESIN</p>
+      <p class="card-label">${tagName}</p> 
       <p class="card-id">${id}</p>
     `;
     card.onclick = () => showDetailView(id); // Set click handler
@@ -270,7 +297,7 @@ createInitialCards();
 
 // Function to update the detail table (when in detail view)
 function updateDetailView(id) {
-    if (currentViewedId !== id) return; // Only update if currently viewed
+    if (currentViewedId !== id) return; 
 
     detailBody.innerHTML = ''; // Clear existing rows
     const data = deviceData[id];
@@ -329,7 +356,6 @@ client.on('message', (topic, message) => {
     }
 
     // 1. SIMPAN SEMUA DATA BARU
-    // Store raw data (excluding 'id') for later use in detail view
     deviceData[id] = d; 
     
     // 2. UPDATE STATUS DI KARTU
