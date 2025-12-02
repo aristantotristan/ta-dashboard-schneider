@@ -3,71 +3,142 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Dashboard Menu</title>
+<title>Power Meter Dashboard</title>
 
 <style>
+    /* ====== THEME COLORS ====== */
+    :root {
+        --accent: #00ffc2;
+        --bg: #0c0c0c;
+        --card: rgba(30, 30, 30, 0.55);
+        --glass: rgba(255, 255, 255, 0.08);
+    }
+
+    /* ====== GLOBAL ====== */
     body {
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        background: #0f0f0f; /* Background utama gelap */
-        color: #e5e5e5;
-        padding: 40px;
-        text-align: center;
-        /* Menggunakan Flexbox untuk menengahkan konten secara vertikal */
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        min-height: 100vh; /* Memastikan body mengisi seluruh viewport */
         margin: 0;
+        padding: 0;
+        height: 100vh;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: radial-gradient(circle at 20% 20%, #1a1a1a, #000);
+        background-size: cover;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color: #e5e5e5;
+        overflow: hidden;
+        position: relative;
     }
 
+    /* ====== ANIMATED GLOW ORBS ====== */
+    .orb {
+        position: absolute;
+        width: 450px;
+        height: 450px;
+        background: var(--accent);
+        filter: blur(140px);
+        opacity: 0.25;
+        border-radius: 50%;
+        animation: float 12s infinite alternate ease-in-out;
+    }
+    .orb:nth-child(1) { top: -80px; left: -60px; animation-duration: 14s; }
+    .orb:nth-child(2) { bottom: -100px; right: -80px; animation-duration: 16s; background: #008cff; }
+
+    @keyframes float {
+        0% { transform: translateY(0px) translateX(0px); }
+        100% { transform: translateY(60px) translateX(60px); }
+    }
+
+    /* ====== CONTENT WRAPPER ====== */
+    .container {
+        text-align: center;
+        padding: 60px 80px;
+        border-radius: 25px;
+        background: var(--glass);
+        backdrop-filter: blur(18px);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        box-shadow: 0 0 30px rgba(0, 0, 0, 0.6);
+        position: relative;
+        z-index: 10;
+        animation: fadeIn 1s ease;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to   { opacity: 1; transform: translateY(0px); }
+    }
+
+    /* ====== TITLE ====== */
     h1 {
-        margin-bottom: 40px; /* Jarak lebih besar setelah judul */
-        color: #00ffc2; /* Warna aksen utama */
-        font-size: 2.5rem; /* Ukuran font lebih besar */
-        letter-spacing: 1.5px;
+        margin-bottom: 40px;
+        color: var(--accent);
+        font-size: 2.7rem;
         font-weight: 800;
-        text-shadow: 0 0 10px rgba(0, 255, 194, 0.3); /* Efek cahaya neon */
+        letter-spacing: 2px;
+        text-shadow: 0 0 16px rgba(0,255,194,0.4);
     }
 
+    /* ====== BUTTONS ====== */
     .btn-container {
         display: flex;
         flex-direction: column;
-        gap: 15px; /* Jarak antar tombol */
+        gap: 18px;
+        margin-top: 20px;
     }
 
     .btn {
-        display: block;
-        width: 300px; /* Ukuran tombol lebih lebar */
-        padding: 18px 25px; /* Padding lebih besar */
-        background: #1e1e1e;
-        border-radius: 15px; /* Sudut lebih melengkung */
-        color: #00ffc2;
+        width: 320px;
+        padding: 18px 25px;
+        border-radius: 16px;
+        background: var(--card);
+        color: var(--accent);
         text-decoration: none;
         font-size: 1.2rem;
         font-weight: 700;
-        border: 2px solid #00ffc2; /* Border lebih tebal */
-        transition: 0.3s ease-in-out;
+        border: 2px solid var(--accent);
+        transition: 0.25s ease-in-out;
         text-transform: uppercase;
         letter-spacing: 1px;
+        backdrop-filter: blur(8px);
+        box-shadow: 0 0 12px rgba(0,255,194,0.15);
     }
 
     .btn:hover {
-        background: #00ffc2;
-        color: #0f0f0f; /* Teks jadi gelap saat hover */
-        transform: scale(1.05); /* Sedikit membesar saat hover */
-        box-shadow: 0 0 20px rgba(0, 255, 194, 0.6), 0 5px 15px rgba(0, 0, 0, 0.3);
+        background: var(--accent);
+        color: #000;
+        transform: scale(1.06);
+        box-shadow: 0 0 25px rgba(0, 255, 194, 0.75);
+    }
+
+    @media (max-width: 600px) {
+        .container {
+            padding: 40px;
+            width: 90%;
+        }
+        h1 {
+            font-size: 2.1rem;
+        }
+        .btn {
+            width: 100%;
+        }
     }
 </style>
-
 </head>
+
 <body>
 
-<h1>⚡ Power Meter Dashboard</h1>
+<!-- Glow Orbs Background -->
+<div class="orb"></div>
+<div class="orb"></div>
 
-<div class="btn-container">
-    <a href="realtime.html" class="btn">Monitoring Realtime</a>
-    <a href="result_wbp_lwbp.html" class="btn">Monitoring Result (WBP/LWBP)</a>
+<!-- Main Card -->
+<div class="container">
+    <h1>⚡ Power Meter Dashboard</h1>
+
+    <div class="btn-container">
+        <a href="realtime.html" class="btn">Monitoring Realtime</a>
+        <a href="result_wbp_lwbp.html" class="btn">Monitoring Result (WBP/LWBP)</a>
+    </div>
 </div>
 
 </body>
