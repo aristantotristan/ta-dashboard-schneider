@@ -6,7 +6,7 @@
   <title>Master Power Meter • 18 Slaves</title>
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <style>
-    :root{--bg:#0a0e17;--card:#111827;--border:#1f2937;--accent:#00e5bd;--text:#e0e0e0;--muted:#94a3b8;--online:#00d4aa;--offline:#ef4444}
+    :root{--bg:#0a0e17;--card:#111827;--border:#1f2937;--accent:#00e5bd;--text:#e2e8f0;--muted:#94a3b8;--online:#00d4aa;--offline:#ef4444}
     *{margin:0;padding:0;box-sizing:border-box}
     body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;min-height:100vh}
     header{text-align:center;padding:3rem 1rem 2rem}
@@ -40,8 +40,6 @@
     .col-energy{color:#86efac}
     .col-power{color:#60a5fa}
     .col-tariff{color:#fbbf24}
-    .col-default{color:#94a3b8}
-    @media(max-width:768px){h1{font-size:2.4rem}#main-view{padding:0 1rem}}
   </style>
 </head>
 <body>
@@ -71,29 +69,38 @@
   const TOTAL_DEVICES=18;
   const MACHINE_TAGS={1:'UNKNOW',2:'UNKNOW',3:'POMPA MC 12',4:'MC 9',5:'UNKNOW',6:'MC 40',7:'MC 39',8:'MC 6',9:'HEATER MC 5',10:'POMPA MC 5',11:'UNKNOW',12:'MC 34',13:'MC 35',14:'UNKNOW',15:'UNKNOW',16:'MC 38',17:'MC 36',18:'MC 37'};
 
-  const order=['EaT','ErT','EaP','ErP','V','I1','P','Q','S','PF','T1','Hz','OpH'];
-  const labels={
+  // URUTAN 100% SESUAI LIST TERAKHIR KAMU
+  const order = ['EaT','ErT','EaP','ErP','V','I1','I2','I3','P','Q','S','PF','T1','T2','Hz','OpH'];
+  const labels = {
     'EaT':'1. Total Ea','ErT':'2. Total Er','EaP':'3. Partial Ea','ErP':'4. Partial Er',
-    'V':'5. Voltage','I1':'6. Current','P':'7. Total Active(P)','Q':'8. Total Reactive (Q)',
-    'S':'9. Total Apparent (S)','PF':'10. PF','T1':'11. Tarif T1','T2':'    T2','Hz':'12. Freq','OpH':'13. Op Time'
+    'V':'5. Voltage','I1':'6. Current I1','I2':'7. Current I2','I3':'8. Current I3',
+    'P':'9. Total Active(P)','Q':'10. Total Reactive (Q)','S':'11. Total Apparent (S)',
+    'PF':'12. PF','T1':'13. Tarif T1','T2':'14. Tarif T2','Hz':'15. Freq','OpH':'16. Op Time'
+  };
+  const units = {
+    'EaT':'kWh','ErT':'kVARh','EaP':'kWh','ErP':'kVARh','V':'V','I1':'A','I2':'A','I3':'A',
+    'P':'Watt','Q':'VAR','S':'kVA','PF':'','T1':'kWh','T2':'kWh','Hz':'Hz'
   };
 
   function formatOpH(h){
     if(!h||h<0)return'---';
-    const totalMin=Math.round(h*60);
-    const days=Math.floor(totalMin/1440);
-    const hrs=Math.floor((totalMin%1440)/60);
-    if(days===0 && hrs===0)return'0 hrs';
-    return (days>0?days+' days':'') + (days>0&&hrs>0?', ':'') + (hrs>0?hrs+' hrs':'');
+    const totalMin = Math.round(h*60);
+    const days = Math.floor(totalMin/1440);
+    const hrs = Math.floor((totalMin%1440)/60);
+    return (days>0?days+' days':'') + (days&&hrs?', ':'') + (hrs>0?hrs+' hrs':'') || '0 hrs';
   }
 
   function fmt(v,k){
     if(v===null||v===undefined||isNaN(v))return'---';
     const n=+v;
-    return k==='V'?n.toFixed(1):['I1','I2','I3'].includes(k)?n.toFixed(3):k==='P'?Math.round(n).toLocaleString():k==='Q'?Math.round(n).toLocaleString():k==='S'?n.toFixed(2):k==='PF'?n.toFixed(3):k==='Hz'?n.toFixed(1):n.toFixed(2);
+    return k==='V'?n.toFixed(1):k.startsWith('I')?n.toFixed(3):k==='P'?Math.round(n).toLocaleString():
+           k==='Q'?Math.round(n).toLocaleString():k==='S'?n.toFixed(2):k==='PF'?n.toFixed(3):
+           k==='Hz'?n.toFixed(1):n.toFixed(2);
   }
 
-  const mainView=document.getElementById('main-view'),modalOverlay=document.getElementById('modal-overlay'),detailBody=document.getElementById('detailBody'),modalTitle=document.getElementById('modal-title'),closeModal=document.getElementById('close-modal'),conn=document.getElementById('conn');
+  const mainView=document.getElementById('main-view'),modalOverlay=document.getElementById('modal-overlay'),
+        detailBody=document.getElementById('detailBody'),modalTitle=document.getElementById('modal-title'),
+        closeModal=document.getElementById('close-modal'),conn=document.getElementById('conn');
   const devices={},deviceData={};for(let i=1;i<=18;i++)deviceData[i]={};
 
   function createCards(){
@@ -101,7 +108,8 @@
     for(let id=1;id<=18;id++){
       const card=document.createElement('div');card.className='machine-card';
       const tag=MACHINE_TAGS[id]||'UNKNOW';
-      card.innerHTML=`<div class="status-indicator status-offline" id="status-ind-${id}"></div><div class="card-label">${tag}</div><div class="sid-label">SID ${id}</div>`;
+      card.innerHTML=`<div class="status-indicator status-offline" id="status-ind-${id}"></div>
+                      <div class="card-label">${tag}</div><div class="sid-label">SID ${id}</div>`;
       card.onclick=()=>showDetailModal(id);
       mainView.appendChild(card);
       devices[id]={indicator:document.getElementById(`status-ind-${id}`)};
@@ -115,44 +123,29 @@
 
     // Status
     const trS=document.createElement('tr');
-    trS.innerHTML=`<td class="param-name">Status Koneksi</td><td class="param-value ${d.status==='online'?'status-online':'status-offline'}">${d.status?d.status.toUpperCase():'OFFLINE'}</td>`;
+    trS.innerHTML=`<td class="param-name">Status Koneksi</td>
+                   <td class="param-value ${d.status==='online'?'status-online':'status-offline'}">
+                     ${d.status?d.status.toUpperCase():'OFFLINE'}
+                   </td>`;
     detailBody.appendChild(trS);
 
-    // Semua parameter sesuai urutan & format foto
+    // Parameter sesuai urutan terakhir kamu
     order.forEach(key=>{
-      if(key==='I2'||key==='I3')return;
-      if(key==='T2'){
-        const tr=document.createElement('tr');
-        const t2=d.T2!==undefined?(+d.T2).toFixed(2):'---';
-        tr.innerHTML=`<td class="param-name">    T2</td><td class="param-value col-tariff">${t2}</td>`;
-        detailBody.appendChild(tr);
-        return;
-      }
-
       const tr=document.createElement('tr');
-      let val='---';
+      let val = '---';
+      let unit = units[key]||'';
 
-      if(d[key]!==undefined&&d[key]!==null){
-        if(key==='OpH'){
-          val=formatOpH(d[key]);
-        }
-        else if(key==='I1'){
-          const i1=fmt(d.I1,'I1'),i2=fmt(d.I2,'I2'),i3=fmt(d.I3,'I3');
-          val=`I1 = ${i1} I2 = ${i2} I3 = ${i3}`;
-        }
-        else if(key==='T1'){
-          val=(+d.T1).toFixed(2);
-        }
-        else{
-          val=fmt(d[key],key);
-        }
+      if(d[key]!==undefined && d[key]!==null){
+        if(key==='OpH') val = formatOpH(d[key]);
+        else val = fmt(d[key],key);
       }
 
-      const colorClass = (key==='EaT'||key==='ErT'||key==='EaP'||key==='ErP')?'col-energy':
-                        (key==='P'||key==='Q'||key==='S')?'col-power':
-                        (key==='T1'||key==='T2')?'col-tariff':'col-default';
+      const color = (['EaT','ErT','EaP','ErP'].includes(key))?'col-energy':
+                    (['P','Q','S'].includes(key))?'col-power':
+                    (['T1','T2'].includes(key))?'col-tariff':'';
 
-      tr.innerHTML=`<td class="param-name">${labels[key]}</td><td class="param-value ${colorClass}">${val}</td>`;
+      tr.innerHTML=`<td class="param-name">${labels[key]}</td>
+                    <td class="param-value ${color}">${val} ${unit?'<small style="opacity:0.7">'+unit+'</small>':''}</td>`;
       detailBody.appendChild(tr);
     });
 
