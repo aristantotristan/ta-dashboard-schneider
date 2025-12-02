@@ -11,188 +11,188 @@
 <style>
 /* Global Styling & Background */
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: #0f0f0f;
-    color: #E0E0E0;
-    padding: 0;
-    margin: 0;
-    /* Background Tema Profesional (Energy Grid) */
-    background-image: url('https://images.unsplash.com/photo-1542385108611-667dc9df9c40?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w0NTIyMzZ8MHwxfHxtYXN0ZXIlMjBlbmVyZ3klMjBncmlkJTIwZGFzaGJvYXJkJTIwYmFja2dyb3VuZHxlbnwwfHx8fDE3MDM1MjYzNjV8MA&ixlib=rb-4.0.3&q=80&w=1920');
-    background-size: cover;
-    background-position: center;
-    background-attachment: fixed;
-    min-height: 100vh;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #0f0f0f;
+    color: #E0E0E0;
+    padding: 0;
+    margin: 0;
+    /* Background Tema Profesional (Energy Grid) */
+    background-image: url('https://images.unsplash.com/photo-1542385108611-667dc9df9c40?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w0NTIyMzZ8MHwxfHxtYXN0ZXIlMjBlbmVyZ3klMjBncmlkJTIwZGFzaGJvYXJkJTIwYmFja2dyb3VuZHxlbnwwfHx8fDE3MDM1MjYzNjV8MA&ixlib=rb-4.0.3&q=80&w=1920');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    min-height: 100vh;
 }
 .container {
-    padding: 20px 40px;
-    background-color: rgba(15, 15, 15, 0.9); /* Overlay gelap */
-    min-height: 100vh;
+    padding: 20px 40px;
+    background-color: rgba(15, 15, 15, 0.9); /* Overlay gelap */
+    min-height: 100vh;
 }
 h2 {
-    color: #00FFC2;
-    text-shadow: 0 0 5px rgba(0, 255, 194, 0.5);
-    border-bottom: 2px solid #3A3A3A;
-    padding-bottom: 15px;
-    margin-bottom: 10px;
+    color: #00FFC2;
+    text-shadow: 0 0 5px rgba(0, 255, 194, 0.5);
+    border-bottom: 2px solid #3A3A3A;
+    padding-bottom: 15px;
+    margin-bottom: 10px;
 }
 #conn {
-    margin-bottom: 30px;
-    font-size: 1.1em;
-    font-weight: bold;
-    color: #38BDF8;
-    animation: pulse 1.5s infinite;
+    margin-bottom: 30px;
+    font-size: 1.1em;
+    font-weight: bold;
+    color: #38BDF8;
+    animation: pulse 1.5s infinite;
 }
 
 /* --- SUMMARY VIEW (CARD GRID) --- */
 #summaryView {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 25px;
-    padding: 10px 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 25px;
+    padding: 10px 0;
 }
 .machine-card {
-    background: #1E1E1E;
-    border-radius: 12px;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.7);
-    padding: 25px;
-    transition: transform 0.3s ease, box-shadow 0.3s ease, border-left 0.3s ease;
-    border-left: 5px solid #3A3A3A;
+    background: #1E1E1E;
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.7);
+    padding: 25px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-left 0.3s ease;
+    border-left: 5px solid #3A3A3A;
 }
 .machine-card:hover {
-    transform: translateY(-8px);
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.9);
+    transform: translateY(-8px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.9);
 }
 .card-name { /* Warna default: Biru */
-    font-size: 1.5em;
-    font-weight: 700;
-    color: #38BDF8;
-    margin-bottom: 5px;
-    letter-spacing: 1px;
+    font-size: 1.5em;
+    font-weight: 700;
+    color: #38BDF8;
+    margin-bottom: 5px;
+    letter-spacing: 1px;
 }
 /* CLASS BARU untuk teks UNKNOW */
 .card-name.unknow-red {
-    color: #FF4444; /* Warna merah yang jelas */
-    text-shadow: 0 0 5px rgba(255, 68, 68, 0.4); /* Efek glow tipis */
+    color: #FF4444; /* Warna merah yang jelas */
+    text-shadow: 0 0 5px rgba(255, 68, 68, 0.4); /* Efek glow tipis */
 }
 .card-id-text {
-    font-size: 0.9em;
-    color: #B0B0B0;
-    margin-bottom: 15px;
+    font-size: 0.9em;
+    color: #B0B0B0;
+    margin-bottom: 15px;
 }
 .status-wrapper {
-    display: flex;
-    align-items: center;
-    font-size: 1.2em;
+    display: flex;
+    align-items: center;
+    font-size: 1.2em;
 }
 .status-indicator {
-    display: inline-block;
-    width: 15px;
-    height: 15px;
-    border-radius: 50%;
-    margin-right: 10px;
+    display: inline-block;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    margin-right: 10px;
 }
 .status-online {
-    background-color: #10B981;
-    box-shadow: 0 0 10px #10B981;
-    color: #10B981;
+    background-color: #10B981;
+    box-shadow: 0 0 10px #10B981;
+    color: #10B981;
 }
 .status-offline {
-    background-color: #EF4444;
-    box-shadow: 0 0 10px #EF4444;
-    color: #EF4444;
+    background-color: #EF4444;
+    box-shadow: 0 0 10px #EF4444;
+    color: #EF4444;
 }
 .detail-button {
-    margin-top: 20px;
-    padding: 12px 20px;
-    border: none;
-    border-radius: 8px;
-    background-color: #00FFC2;
-    color: #121212;
-    font-weight: bold;
-    cursor: pointer;
-    transition: background-color 0.3s, transform 0.2s;
-    text-transform: uppercase;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    margin-top: 20px;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    background-color: #00FFC2;
+    color: #121212;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.2s;
+    text-transform: uppercase;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 .detail-button:hover {
-    background-color: #00E6B9;
-    transform: scale(1.05);
+    background-color: #00E6B9;
+    transform: scale(1.05);
 }
 
 .card-online {
-    border-left: 5px solid #10B981 !important;
+    border-left: 5px solid #10B981 !important;
 }
 .card-offline {
-    border-left: 5px solid #EF4444 !important;
+    border-left: 5px solid #EF4444 !important;
 }
 
 
 /* --- DETAIL VIEW (TABLE) --- */
 #detailView {
-    background: #1E1E1E;
-    padding: 30px;
-    border-radius: 12px;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.7);
-    margin-top: 40px;
-    display: none;
+    background: #1E1E1E;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.7);
+    margin-top: 40px;
+    display: none;
 }
 #detailHeader {
-    font-size: 1.8em;
-    color: #00FFC2;
-    margin-bottom: 25px;
-    font-weight: 700;
-    border-bottom: 1px solid #3A3A3A;
-    padding-bottom: 10px;
+    font-size: 1.8em;
+    color: #00FFC2;
+    margin-bottom: 25px;
+    font-weight: 700;
+    border-bottom: 1px solid #3A3A3A;
+    padding-bottom: 10px;
 }
 table {
-    border-collapse: collapse;
-    width: 100%;
+    border-collapse: collapse;
+    width: 100%;
 }
 th, td {
-    border: none;
-    padding: 12px 15px;
-    text-align: left;
+    border: none;
+    padding: 12px 15px;
+    text-align: left;
 }
 thead th {
-    background: #2A2A2A;
-    color: #38BDF8;
-    text-transform: uppercase;
-    font-weight: 600;
-    font-size: 0.9em;
+    background: #2A2A2A;
+    color: #38BDF8;
+    text-transform: uppercase;
+    font-weight: 600;
+    font-size: 0.9em;
 }
 tbody tr:nth-child(even) {
-    background: #181818;
+    background: #181818;
 }
 tbody tr:hover {
-    background: #333333;
+    background: #333333;
 }
 tbody td:nth-child(2) {
-    font-weight: bold;
-    color: #E0E0E0;
-    text-align: right;
-    font-size: 1.1em;
+    font-weight: bold;
+    color: #E0E0E0;
+    text-align: right;
+    font-size: 1.1em;
 }
 
 .back-button {
-    margin-top: 30px;
-    padding: 12px 25px;
-    background-color: #EF4444;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: background-color 0.3s, transform 0.2s;
+    margin-top: 30px;
+    padding: 12px 25px;
+    background-color: #EF4444;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.2s;
 }
 .back-button:hover {
-    background-color: #D63030;
-    transform: scale(1.05);
+    background-color: #D63030;
+    transform: scale(1.05);
 }
 
 /* Keyframes for animation */
 @keyframes pulse {
-    0% { opacity: 1; }
-    50% { opacity: 0.7; }
-    100% { opacity: 1; }
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
 }
 
 </style>
@@ -201,27 +201,27 @@ tbody td:nth-child(2) {
 <body>
 
 <div class="container">
-    <h2>Real-time Power Meter Dashboard (18 Mesin)</h2>
-    <p id="conn">Connecting...</p>
+    <h2>Real-time Power Meter Dashboard (18 Mesin)</h2>
+    <p id="conn">Connecting...</p>
 
-    <div id="summaryView">
-        <p style="grid-column: 1 / -1; text-align: center; color: #94A3B8;">Initializing 18 Machine Cards...</p>
-    </div>
+    <div id="summaryView">
+        <p style="grid-column: 1 / -1; text-align: center; color: #94A3B8;">Initializing 18 Machine Cards...</p>
+    </div>
 
-    <div id="detailView">
-        <div id="detailHeader">Detail Parameter Mesin: <span id="currentMachineName">---</span></div>
-        <table>
-            <thead>
-                <tr>
-                    <th style="width: 50%;">Parameter</th>
-                    <th style="width: 50%;">Nilai Real-time</th>
-                </tr>
-            </thead>
-            <tbody id="detailTableBody">
-                </tbody>
-        </table>
-        <button class="back-button" onclick="showSummary()">⬅️ Kembali ke Ringkasan</button>
-    </div>
+    <div id="detailView">
+        <div id="detailHeader">Detail Parameter Mesin: <span id="currentMachineName">---</span></div>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 50%;">Parameter</th>
+                    <th style="width: 50%;">Nilai Real-time</th>
+                </tr>
+            </thead>
+            <tbody id="detailTableBody">
+                </tbody>
+        </table>
+        <button class="back-button" onclick="showSummary()">⬅️ Kembali ke Ringkasan</button>
+    </div>
 
 </div> <script>
 // =======================================================
@@ -252,33 +252,33 @@ let isSending = false;
 
 // --- MAPPING NAMA MESIN BARU ---
 const MACHINE_NAMES = {
-    1: 'UNKNOW',
-    2: 'UNKNOW',
-    3: 'POMPA MC 12',
-    4: 'MC 9',
-    5: 'UNKNOW',
-    6: 'MC 40',
-    7: 'MC 39',
-    8: 'MC 6',
-    9: 'HEATER MC 5',
-    10: 'POMPA MC 5',
-    11: 'UNKNOW',
-    12: 'MC 34',
-    13: 'MC 35',
-    14: 'UNKNOW',
-    15: 'UNKNOW',
-    16: 'MC 38',
-    17: 'MC 36',
-    18: 'MC 37',
+    1: 'UNKNOW',
+    2: 'UNKNOW',
+    3: 'POMPA MC 12',
+    4: 'MC 9',
+    5: 'UNKNOW',
+    6: 'MC 40',
+    7: 'MC 39',
+    8: 'MC 6',
+    9: 'HEATER MC 5',
+    10: 'POMPA MC 5',
+    11: 'UNKNOW',
+    12: 'MC 34',
+    13: 'MC 35',
+    14: 'UNKNOW',
+    15: 'UNKNOW',
+    16: 'MC 38',
+    17: 'MC 36',
+    18: 'MC 37',
 };
 
 // --- MAPPING PARAMETER UNTUK DETAIL TABLE ---
 const dataMap = [
-    { key: 'V', label: 'Tegangan (V)' }, { key: 'I1', label: 'Arus Fasa 1 (A)' }, { key: 'I2', label: 'Arus Fasa 2 (A)' },
-    { key: 'I3', label: 'Arus Fasa 3 (A)' }, { key: 'P', label: 'Daya Aktif (Watt)' }, { key: 'Q', label: 'Daya Reaktif (VAR)' },
-    { key: 'S', label: 'Daya Semu (kVA)' }, { key: 'PF', label: 'Faktor Daya (PF)' }, { key: 'Hz', label: 'Frekuensi (Hz)' },
-    { key: 'OpH', label: 'Jam Operasi (OpH)' }, { key: 'EaT', label: 'Energi Aktif Total (kWh)' }, { key: 'ErT', label: 'Energi Reaktif Total (kVARh)' },
-    { key: 'EaP', label: 'Energi Aktif Parsial (kWh)' }, { key: 'ErP', label: 'Energi Reaktif Parsial (kVARh)' }
+    { key: 'V', label: 'Tegangan (V)' }, { key: 'I1', label: 'Arus Fasa 1 (A)' }, { key: 'I2', label: 'Arus Fasa 2 (A)' },
+    { key: 'I3', label: 'Arus Fasa 3 (A)' }, { key: 'P', label: 'Daya Aktif (Watt)' }, { key: 'Q', label: 'Daya Reaktif (VAR)' },
+    { key: 'S', label: 'Daya Semu (kVA)' }, { key: 'PF', label: 'Faktor Daya (PF)' }, { key: 'Hz', label: 'Frekuensi (Hz)' },
+    { key: 'OpH', label: 'Jam Operasi (OpH)' }, { key: 'EaT', label: 'Energi Aktif Total (kWh)' }, { key: 'ErT', label: 'Energi Reaktif Total (kVARh)' },
+    { key: 'EaP', label: 'Energi Aktif Parsial (kWh)' }, { key: 'ErP', label: 'Energi Reaktif Parsial (kVARh)' }
 ];
 
 
@@ -287,16 +287,16 @@ const dataMap = [
 // =======================================================
 
 function showDetail(id) {
-    summaryView.style.display = 'none';
-    detailView.style.display = 'block';
-    // Gunakan nama mesin, bukan ID
-    currentMachineNameSpan.textContent = MACHINE_NAMES[id] + ` (ID: ${id})`;
-    renderDetailTable(id);
+    summaryView.style.display = 'none';
+    detailView.style.display = 'block';
+    // Gunakan nama mesin, bukan ID
+    currentMachineNameSpan.textContent = MACHINE_NAMES[id] + ` (ID: ${id})`;
+    renderDetailTable(id);
 }
 
 function showSummary() {
-    detailView.style.display = 'none';
-    summaryView.style.display = 'grid';
+    detailView.style.display = 'none';
+    summaryView.style.display = 'grid';
 }
 
 
@@ -305,79 +305,79 @@ function showSummary() {
 // =======================================================
 
 function createMachineCard(id) {
-    const card = document.createElement('div');
-    const machineName = MACHINE_NAMES[id] || `Mesin ID ${id}`; // Ambil nama mesin
-    
-    // Tentukan class CSS tambahan untuk teks 'UNKNOW'
-    const nameClass = machineName === 'UNKNOW' ? 'card-name unknow-red' : 'card-name';
+    const card = document.createElement('div');
+    const machineName = MACHINE_NAMES[id] || `Mesin ID ${id}`; // Ambil nama mesin
+    
+    // Tentukan class CSS tambahan untuk teks 'UNKNOW'
+    const nameClass = machineName === 'UNKNOW' ? 'card-name unknow-red' : 'card-name';
 
-    card.className = 'machine-card';
-    card.id = `card-${id}`;
-    card.innerHTML = `
-        <div class="${nameClass}">${machineName}</div>
-        <div class="card-id-text">ID: ${id}</div>
-        <div class="status-wrapper">
-            <span id="statusIndicator-${id}" class="status-indicator status-offline"></span>
-            <span id="statusText-${id}" class="status-offline">OFFLINE</span>
-        </div>
-        <button class="detail-button" onclick="showDetail(${id})">Lihat Detail Parameter</button>
-    `;
-    summaryView.appendChild(card);
-    devices[id] = {
-        card: card,
-        indicator: document.getElementById(`statusIndicator-${id}`),
-        text: document.getElementById(`statusText-${id}`),
-    };
+    card.className = 'machine-card';
+    card.id = `card-${id}`;
+    card.innerHTML = `
+        <div class="${nameClass}">${machineName}</div>
+        <div class="card-id-text">ID: ${id}</div>
+        <div class="status-wrapper">
+            <span id="statusIndicator-${id}" class="status-indicator status-offline"></span>
+            <span id="statusText-${id}" class="status-offline">OFFLINE</span>
+        </div>
+        <button class="detail-button" onclick="showDetail(${id})">Lihat Detail Parameter</button>
+    `;
+    summaryView.appendChild(card);
+    devices[id] = {
+        card: card,
+        indicator: document.getElementById(`statusIndicator-${id}`),
+        text: document.getElementById(`statusText-${id}`),
+    };
 }
 
 /** Fungsionalitas: Mengisi tabel detail dengan data terbaru dari dataBuffer */
 function renderDetailTable(id) {
-    // Ambil data dari buffer berdasarkan ID mesin yang diklik
-    const data = dataBuffer[id] || {};
-    detailTableBody.innerHTML = '';
+    // Ambil data dari buffer berdasarkan ID mesin yang diklik
+    const data = dataBuffer[id] || {};
+    detailTableBody.innerHTML = '';
 
-    dataMap.forEach(item => {
-        const tr = detailTableBody.insertRow();
+    dataMap.forEach(item => {
+        const tr = detailTableBody.insertRow();
 
-        // Parameter (Label)
-        const tdLabel = tr.insertCell();
-        tdLabel.textContent = item.label;
+        // Parameter (Label)
+        const tdLabel = tr.insertCell();
+        tdLabel.textContent = item.label;
 
-        // Nilai Real-time
-        const tdValue = tr.insertCell();
-        // Ambil nilai menggunakan key dari mapping
-        let value = data[item.key] !== undefined ? data[item.key] : '---';
+        // Nilai Real-time
+        const tdValue = tr.insertCell();
+        // Ambil nilai menggunakan key dari mapping
+        let value = data[item.key] !== undefined ? data[item.key] : '---';
 
-        // Format OpH
-        if (item.key === 'OpH') {
-            value = formatOperatingTime(value);
-        } else if (typeof value === 'number' && value !== '---') {
-             // Pembulatan data numerik
-            value = value.toFixed(3);
-        }
+        // Format OpH
+        if (item.key === 'OpH') {
+            value = formatOperatingTime(value);
+        } else if (typeof value === 'number' && value !== '---') {
+             // Pembulatan data numerik
+            value = value.toFixed(3);
+        }
 
-        tdValue.textContent = value;
-    });
+        tdValue.textContent = value;
+    });
 }
 
 function formatOperatingTime(totalHours) {
-    if (totalHours === undefined || totalHours === null || isNaN(totalHours) || totalHours < 0) return '---';
-    const totalMinutes = Math.round(parseFloat(totalHours) * 60);
-    const days = Math.floor(totalMinutes / (24 * 60));
-    const remainingMinutes = totalMinutes % (24 * 60);
-    const hours = Math.floor(remainingMinutes / 60);
-    const minutes = remainingMinutes % 60;
+    if (totalHours === undefined || totalHours === null || isNaN(totalHours) || totalHours < 0) return '---';
+    const totalMinutes = Math.round(parseFloat(totalHours) * 60);
+    const days = Math.floor(totalMinutes / (24 * 60));
+    const remainingMinutes = totalMinutes % (24 * 60);
+    const hours = Math.floor(remainingMinutes / 60);
+    const minutes = remainingMinutes % 60;
 
-    let result = '';
+    let result = '';
 
-    if (days > 0) result += `${days} Hari `;
-    if (hours > 0 || days === 0) {
-        result += `${hours} Jam`;
-        if (minutes > 0) result += ` ${minutes} Mnt`;
-    } else if (minutes > 0) {
-        result += `${minutes} Mnt`;
-    }
-    return result.trim() || '0 Jam';
+    if (days > 0) result += `${days} Hari `;
+    if (hours > 0 || days === 0) {
+        result += `${hours} Jam`;
+        if (minutes > 0) result += ` ${minutes} Mnt`;
+    } else if (minutes > 0) {
+        result += `${minutes} Mnt`;
+    }
+    return result.trim() || '0 Jam';
 }
 
 // =======================================================
@@ -385,9 +385,9 @@ function formatOperatingTime(totalHours) {
 // =======================================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Inisialisasi semua kartu mesin di Summary View
-    summaryView.innerHTML = ''; // Hapus pesan inisialisasi
-    MACHINE_IDS.forEach(id => createMachineCard(id));
+    // 1. Inisialisasi semua kartu mesin di Summary View
+    summaryView.innerHTML = ''; // Hapus pesan inisialisasi
+    MACHINE_IDS.forEach(id => createMachineCard(id));
 });
 
 
@@ -397,67 +397,67 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // --- KONFIGURASI MQTT WEB CLIENT ---
 const options = {
-    username: "web_dashboard",
-    password: "Tristan12",
-    connectTimeout: 4000,
-    reconnectPeriod: 2000,
+    username: "web_dashboard",
+    password: "Tristan12",
+    connectTimeout: 4000,
+    reconnectPeriod: 2000,
 };
 
 const client = mqtt.connect(
-    "wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt",
-    options
+    "wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt",
+    options
 );
 
 client.on("connect", () => {
-    conn.innerHTML = "✅ MQTT Connected";
-    client.subscribe("politeknik/meter/data");
+    conn.innerHTML = "✅ MQTT Connected";
+    client.subscribe("politeknik/meter/data");
 });
 
 client.on("error", err => {
-    conn.innerHTML = "❌ MQTT Error";
-    console.error("MQTT Connection Error:", err);
+    conn.innerHTML = "❌ MQTT Error";
+    console.error("MQTT Connection Error:", err);
 });
 
 
 client.on("message", (topic, message) => {
-    try {
-        const d = JSON.parse(message.toString());
-        const id = Number(d.id);
-        // PENTING: Gunakan EaT sebagai Ea untuk logging
-        const ea = Number(d.EaT);
+    try {
+        const d = JSON.parse(message.toString());
+        const id = Number(d.id);
+        // PENTING: Gunakan EaT sebagai Ea untuk logging
+        const ea = Number(d.EaT);
 
-        // 1. SIMPAN DATA LENGKAP KE BUFFER
-        if (id && ea !== null && !isNaN(ea)) {
-            dataBuffer[id] = { ...d, ea: ea };
-        }
+        // 1. SIMPAN DATA LENGKAP KE BUFFER
+        if (id && ea !== null && !isNaN(ea)) {
+            dataBuffer[id] = { ...d, ea: ea };
+        }
 
-        // 2. UPDATE SUMMARY CARD VIEW
-        if (devices[id]) {
-            const status = d.status ? d.status.toLowerCase() : 'offline';
-            const statusClass = status === 'online' ? 'status-online' : 'status-offline';
+        // 2. UPDATE SUMMARY CARD VIEW
+        if (devices[id]) {
+            const status = d.status ? d.status.toLowerCase() : 'offline';
+            const statusClass = status === 'online' ? 'status-online' : 'status-offline';
 
-            // Update Card Class (untuk border kiri)
-            devices[id].card.classList.remove('card-online', 'card-offline');
-            devices[id].card.classList.add(`card-${status}`);
+            // Update Card Class (untuk border kiri)
+            devices[id].card.classList.remove('card-online', 'card-offline');
+            devices[id].card.classList.add(`card-${status}`);
 
-            // Update Indicator & Text
-            devices[id].indicator.className = `status-indicator ${statusClass}`;
-            devices[id].text.textContent = status.toUpperCase();
-            devices[id].text.className = statusClass;
+            // Update Indicator & Text
+            devices[id].indicator.className = `status-indicator ${statusClass}`;
+            devices[id].text.textContent = status.toUpperCase();
+            devices[id].text.className = statusClass;
 
-            // 3. JIKA SEDANG DI DETAIL VIEW, UPDATE TABEL DETAIL (Real-time update)
-            const currentDetailText = currentMachineNameSpan.textContent;
-            const currentDetailIdMatch = currentDetailText.match(/ID: (\d+)/);
-            const currentDetailId = currentDetailIdMatch ? Number(currentDetailIdMatch[1]) : null;
-            
-            if (detailView.style.display === 'block' && currentDetailId === id) {
-                renderDetailTable(id);
-            }
-        }
+            // 3. JIKA SEDANG DI DETAIL VIEW, UPDATE TABEL DETAIL (Real-time update)
+            const currentDetailText = currentMachineNameSpan.textContent;
+            const currentDetailIdMatch = currentDetailText.match(/ID: (\d+)/);
+            const currentDetailId = currentDetailIdMatch ? Number(currentDetailIdMatch[1]) : null;
+            
+            if (detailView.style.display === 'block' && currentDetailId === id) {
+                renderDetailTable(id);
+            }
+        }
 
-    } catch (e) {
-        console.error(`JSON Parsing Error/Proses Data Gagal:`, e);
-    }
+    } catch (e) {
+        console.error(`JSON Parsing Error/Proses Data Gagal:`, e);
+    }
 });
 
 
@@ -467,101 +467,101 @@ client.on("message", (topic, message) => {
 
 // --- FUNGSI BANTU LOGGING ---
 function getTransitionFlag(id, key) {
-    const today = new Date().toISOString().slice(0, 10);
-    return localStorage.getItem(`${key}_${id}_${today}`);
+    const today = new Date().toISOString().slice(0, 10);
+    return localStorage.getItem(`${key}_${id}_${today}`);
 }
 function setTransitionFlag(id, key) {
-    const today = new Date().toISOString().slice(0, 10);
-    localStorage.setItem(`${key}_${id}_${today}`, 'true');
+    const today = new Date().toISOString().slice(0, 10);
+    localStorage.setItem(`${key}_${id}_${today}`, 'true');
 }
 function loadLastEa(id) {
-    const s = localStorage.getItem("lastEa_" + id);
-    return s ? Number(s) : undefined;
+    const s = localStorage.getItem("lastEa_" + id);
+    return s ? Number(s) : undefined;
 }
 function saveLastEa(id, val) {
-    localStorage.setItem("lastEa_" + id, val);
+    localStorage.setItem("lastEa_" + id, val);
 }
 function saveLastSupaLogTime(id, time) {
-    localStorage.setItem("lastSupaLogTime_" + id, time);
+    localStorage.setItem("lastSupaLogTime_" + id, time);
 }
 async function insertEnergyLog(entry) {
-    try {
-        const { error } = await supa.from(TABLE_NAME).insert([entry]);
-        if (error) throw error;
-    } catch (e) {
-        console.error("Gagal menyimpan log ke Supabase. Cek RLS/Kredensial:", e);
-    }
+    try {
+        const { error } = await supa.from(TABLE_NAME).insert([entry]);
+        if (error) throw error;
+    } catch (e) {
+        console.error("Gagal menyimpan log ke Supabase. Cek RLS/Kredensial:", e);
+    }
 }
 // ----------------------------------------------------------------
 
 /** Fungsionalitas: Iterasi melalui ID mesin (1 s/d 18) dan mengirim data ke Supabase */
 async function sendBufferedDataSequentially() {
-    if (isSending) return;
-    isSending = true;
+    if (isSending) return;
+    isSending = true;
 
-    const T1_HOUR = 17; // Batas Waktu Indonesia Barat (WIB)
-    const T2_HOUR = 22;
+    const T1_HOUR = 17; // Batas Waktu Indonesia Barat (WIB)
+    const T2_HOUR = 22;
 
-    for (const id of MACHINE_IDS) {
-        // Cek apakah data mesin ini ada di buffer
-        if (dataBuffer[id] && dataBuffer[id].ea !== undefined) {
-            const entry = dataBuffer[id];
-            const ea = entry.ea;
-            const now = new Date();
-            const currentHour = now.getHours();
+    for (const id of MACHINE_IDS) {
+        // Cek apakah data mesin ini ada di buffer
+        if (dataBuffer[id] && dataBuffer[id].ea !== undefined) {
+            const entry = dataBuffer[id];
+            const ea = entry.ea;
+            const now = new Date();
+            const currentHour = now.getHours();
 
-            // Cek Log Wajib 5 Menit
-            const lastLogTime = localStorage.getItem("lastSupaLogTime_" + id);
-            const fiveMinutes = 5 * 60 * 1000;
-            const forceLog = !lastLogTime || (now.getTime() - Number(lastLogTime)) > fiveMinutes;
+            // Cek Log Wajib 5 Menit
+            const lastLogTime = localStorage.getItem("lastSupaLogTime_" + id);
+            const fiveMinutes = 5 * 60 * 1000;
+            const forceLog = !lastLogTime || (now.getTime() - Number(lastLogTime)) > fiveMinutes;
 
-            let logEntry = {
-                id_mesin: id,
-                ea: ea,
-                t: now.toISOString(),
-                log_type: 'REALTIME',
-            };
+            let logEntry = {
+                id_mesin: id,
+                ea: ea,
+                t: now.toISOString(),
+                log_type: 'REALTIME',
+            };
 
-            // --- 1. Logika T1/T2 (Prioritas Tertinggi) ---
-            let isTransitionLog = false;
+            // --- 1. Logika T1/T2 (Prioritas Tertinggi) ---
+            let isTransitionLog = false;
 
-            // LOGIKA T1 (17:00 WBP Start)
-            if (currentHour === T1_HOUR && getTransitionFlag(id, 'T1_WBP_START') === null) {
-                logEntry.log_type = 'T1_WBP_START';
-                await insertEnergyLog(logEntry);
-                setTransitionFlag(id, 'T1_WBP_START');
-                saveLastSupaLogTime(id, now.getTime());
-                isTransitionLog = true;
-                console.log(`[LOG WBP] Mesin ${id}: T1 WBP (17:00) dicatat.`);
-            }
+            // LOGIKA T1 (17:00 WBP Start)
+            if (currentHour === T1_HOUR && getTransitionFlag(id, 'T1_WBP_START') === null) {
+                logEntry.log_type = 'T1_WBP_START';
+                await insertEnergyLog(logEntry);
+                setTransitionFlag(id, 'T1_WBP_START');
+                saveLastSupaLogTime(id, now.getTime());
+                isTransitionLog = true;
+                console.log(`[LOG WBP] Mesin ${id}: T1 WBP (17:00) dicatat.`);
+            }
 
-            // LOGIKA T2 (22:00 WBP End)
-            else if (currentHour === T2_HOUR && getTransitionFlag(id, 'T2_WBP_END') === null && getTransitionFlag(id, 'T1_WBP_START') === 'true') {
-                logEntry.log_type = 'T2_WBP_END';
-                await insertEnergyLog(logEntry);
-                setTransitionFlag(id, 'T2_WBP_END');
-                saveLastSupaLogTime(id, now.getTime());
-                isTransitionLog = true;
-                console.log(`[LOG WBP] Mesin ${id}: T2 WBP (22:00) dicatat.`);
-            }
+            // LOGIKA T2 (22:00 WBP End)
+            else if (currentHour === T2_HOUR && getTransitionFlag(id, 'T2_WBP_END') === null && getTransitionFlag(id, 'T1_WBP_START') === 'true') {
+                logEntry.log_type = 'T2_WBP_END';
+                await insertEnergyLog(logEntry);
+                setTransitionFlag(id, 'T2_WBP_END');
+                saveLastSupaLogTime(id, now.getTime());
+                isTransitionLog = true;
+                console.log(`[LOG WBP] Mesin ${id}: T2 WBP (22:00) dicatat.`);
+            }
 
-            // --- 2. Logika Normal ATAU PAKSA LOG ---
-            if (!isTransitionLog) {
-                const lastEa = loadLastEa(id);
+            // --- 2. Logika Normal ATAU PAKSA LOG ---
+            if (!isTransitionLog) {
+                const lastEa = loadLastEa(id);
 
-                // Log jika: 1) Ada perubahan besar (>= 0.01) ATAU 2) Sudah waktunya untuk paksa log (setiap 5 menit)
-                if (lastEa === undefined || Math.abs(ea - lastEa) >= EA_THRESHOLD || forceLog) {
-                    await insertEnergyLog(logEntry);
-                    saveLastEa(id, ea);
-                    saveLastSupaLogTime(id, now.getTime());
-                }
-            }
+                // Log jika: 1) Ada perubahan besar (>= 0.01) ATAU 2) Sudah waktunya untuk paksa log (setiap 5 menit)
+                if (lastEa === undefined || Math.abs(ea - lastEa) >= EA_THRESHOLD || forceLog) {
+                    await insertEnergyLog(logEntry);
+                    saveLastEa(id, ea);
+                    saveLastSupaLogTime(id, now.getTime());
+                }
+            }
 
-            // *** PENTING: dataBuffer dipertahankan agar display detail stabil. ***
-        }
-    }
+            // *** PENTING: dataBuffer dipertahankan agar display detail stabil. ***
+        }
+    }
 
-    isSending = false;
+    isSending = false;
 }
 
 // Panggil fungsi pengiriman berurutan setiap 5 detik (5000ms)
