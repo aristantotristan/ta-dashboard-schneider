@@ -1,241 +1,68 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>⚡ Master Power Meter Dashboard (18 SLAVES) - Mobile Friendly</title>
-
-<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-
-<style>
-/* -------------------------------------
-   Theme & Responsive UI (Mobile-first)
-   ------------------------------------- */
-:root{
-  --bg:#0f0f11; --card:#1a1a1a; --muted:#9aa7b2; --accent:#00ffc2;
-  --online:#10b981; --offline:#ef4444; --tariff:#facc15;
-}
-html,body{height:100%;}
-body{
-  margin:0; padding:16px; background:linear-gradient(180deg,#0b0b0b 0%, #0f0f11 100%);
-  font-family:Inter, 'Segoe UI', system-ui, -apple-system, Roboto, 'Helvetica Neue', Arial;
-  color:#e6eef1; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
-}
-/* Header */
-.header{
-  display:flex; align-items:center; gap:12px; justify-content:space-between;
-  max-width:1100px; margin:0 auto 12px auto; padding:6px 0;
-}
-.h-left{display:flex; flex-direction:column;}
-h2{margin:0; color:var(--accent); font-size:clamp(1rem,4vw,1.4rem);}
-#conn{font-size:0.85rem;color:var(--muted); margin-top:6px}
-
-/* Grid container */
-.container{max-width:1100px; margin:0 auto;}
-#main-view{
-  display:grid; grid-template-columns:repeat(2, 1fr); gap:10px;
-}
-
-/* Card */
-.machine-card{
-  background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.12));
-  border:1px solid rgba(255,255,255,0.03); border-radius:12px; padding:12px 10px; height:92px;
-  display:flex; flex-direction:column; justify-content:center; align-items:flex-start; gap:6px; position:relative;
-  box-shadow:0 6px 18px rgba(0,0,0,0.6);
-}
-.card-top{display:flex; align-items:center; width:100%; justify-content:space-between}
-.card-title{font-weight:700; font-size:0.98rem; color:#bfefff; margin:0}
-.sid{font-size:0.78rem; color:var(--muted)}
-.card-bottom{display:flex; gap:8px; align-items:center}
-.small-badge{font-size:0.72rem; color:var(--muted); background:rgba(255,255,255,0.02); padding:6px 8px; border-radius:999px}
-
-/* status indicator (small pulse) */
-.status-indicator{
-  position:absolute; top:10px; right:10px; width:12px; height:12px; border-radius:50%; border:2px solid var(--bg);
-}
-.status-online{ background:var(--online); box-shadow:0 0 8px rgba(16,185,129,0.24); }
-.status-offline{ background:var(--offline); box-shadow:0 0 8px rgba(239,68,68,0.18); }
-
-/* Tooltip on long press (mobile) via title attribute not styled here */
-
-/* Modal overlay */
-#modal-overlay{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(2,6,23,0.7); backdrop-filter:blur(8px); z-index:1000; padding:18px; }
-#modal{ width:100%; max-width:680px; background:var(--card); border-radius:12px; padding:18px; box-shadow:0 10px 30px rgba(0,0,0,0.6); color:#eaf6f5; max-height:88vh; overflow:auto }
-#modal h3{ margin:0 0 8px 0; color:var(--accent); font-size:1.1rem }
-#close-modal{ position:absolute; right:14px; top:10px; background:transparent; border:0; color:var(--muted); font-size:20px; cursor:pointer }
-
-/* Detail table */
-#detail-table{ width:100%; border-collapse:collapse; margin-top:10px }
-#detail-table th,#detail-table td{ padding:10px 8px; text-align:left; border-bottom:1px solid rgba(255,255,255,0.03); font-size:0.95rem }
-#detail-table thead th{ color:var(--accent); font-weight:700; font-size:0.85rem }
-.param-name{ font-weight:600; width:45% }
-.param-value{ color:#e9fbf7 }
-.col-power{ color:#7dd3fc }
-.col-energy{ color:#86efac }
-.col-tariff{ color:var(--tariff) }
-
-/* Responsive tweaks */
-@media(min-width:720px){ #main-view{ grid-template-columns:repeat(3,1fr); } }
-@media(min-width:980px){ #main-view{ grid-template-columns:repeat(6,1fr); } }
-@media(max-width:420px){ .machine-card{ height:86px; padding:10px } }
-
-/* subtle hover for desktop */
-.machine-card:hover{ transform:translateY(-6px); transition:transform 180ms; }
-
-/* small helper */
-.center-note{ text-align:center; color:var(--muted); font-size:0.9rem; margin-top:8px }
-</style>
-</head>
-<body>
-
-<div class="header container">
-  <div class="h-left">
-    <h2>Power Meter Dashboard</h2>
-    <div id="conn">Connecting...</div>
-  </div>
-  <div class="h-right">
-    <!-- reserved for top-right controls if needed -->
-  </div>
-</div>
-
-<div class="container">
-  <div id="main-view" aria-live="polite"></div>
-  <div class="center-note">Tap kartu untuk lihat detail • SID = sensor id</div>
-</div>
-
-<!-- Modal -->
-<div id="modal-overlay" role="dialog" aria-modal="true">
-  <div id="modal">
-    <button id="close-modal" aria-label="Tutup detail">&times;</button>
-    <h3 id="modal-title">Detail</h3>
-    <table id="detail-table" aria-label="Detail Parameter">
-      <thead><tr><th>Parameter</th><th>Nilai</th></tr></thead>
-      <tbody id="detailBody"></tbody>
-    </table>
-  </div>
-</div>
-
-<script>
-/* ========== CONFIG (tidak diubah) ========== */
-const MQTT_OPTIONS = { username: "web_dashboard", password: "Tristan12", connectTimeout: 4000, reconnectPeriod: 2000 };
-const MQTT_URL = "wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt";
-const MQTT_TOPIC = "politeknik/meter/data";
-const TOTAL_DEVICES = 18;
-
-/* ========== MACHINE TAGS ========== */
-const MACHINE_TAGS = { 1:'UNKNOW',2:'UNKNOW',3:'POMPA MC 12',4:'MC 9',5:'UNKNOW',6:'MC 40',7:'MC 39',8:'MC 6',9:'HEATER MC 5',10:'POMPA MC 5',11:'UNKNOW',12:'MC 34',13:'MC 35',14:'UNKNOW',15:'UNKNOW',16:'MC 38',17:'MC 36',18:'MC 37' };
-
-/* ========== HELPERS ========== */
-function formatOpH(hours){ if(hours===null||hours===undefined||isNaN(hours)||hours<0) return '---'; const totalMinutes=Math.round(parseFloat(hours)*60); const days=Math.floor(totalMinutes/(24*60)); const rem=totalMinutes%(24*60); const hrs=Math.floor(rem/60); const mins=rem%60; if(days>0) return `${days} Hari ${hrs} Jam`; if(hrs>0) return `${hrs} Jam${mins>0? ' '+mins+' Mnt':''}`; if(mins>0) return `${mins} Mnt`; return '0 Jam'; }
-function fmt(val,key){ if(val===null||val===undefined||isNaN(val)) return '---'; const n=Number(val); if(['V'].includes(key)) return n.toFixed(1); if(['I1','I2','I3'].includes(key)) return n.toFixed(3); if(['P','Q'].includes(key)) return Math.round(n).toString(); if(['S'].includes(key)) return n.toFixed(2); if(['PF'].includes(key)) return n.toFixed(3); if(['Hz'].includes(key)) return n.toFixed(1); if(['EaT','ErT','EaP','ErP','T1','T2'].includes(key)) return n.toFixed(2); return n.toString(); }
-function getStyleClass(key){ if(key==='T1'||key==='T2') return 'col-tariff'; if(['EaT','ErT','EaP','ErP'].includes(key)) return 'col-energy'; if(['P','Q','S'].includes(key)) return 'col-power'; return ''; }
-const dataLabels={ 'V':'Tegangan (V)','I1':'Arus Fasa 1 (A)','I2':'Arus Fasa 2 (A)','I3':'Arus Fasa 3 (A)','P':'Daya Aktif (W)','Q':'Daya Reaktif (VAR)','S':'Daya Semu (kVA)','PF':'Faktor Daya','Hz':'Frekuensi (Hz)','OpH':'Jam Operasi','EaT':'Energi Aktif Total (kWh)','ErT':'Energi Reaktif Total (kVARh)','EaP':'Energi Aktif Parsial (kWh)','ErP':'Energi Reaktif Parsial (kVARh)','T1':'Tarif 1 (kWh)','T2':'Tarif 2 (kWh)'};
-
-/* ========== DOM refs & storage ========== */
-const mainView = document.getElementById('main-view');
-const conn = document.getElementById('conn');
-const modalOverlay = document.getElementById('modal-overlay');
-const modalTitle = document.getElementById('modal-title');
-const detailBody = document.getElementById('detailBody');
-const closeModalBtn = document.getElementById('close-modal');
-
-const dataMap = ['V','I1','I2','I3','P','Q','S','PF','Hz','OpH','EaT','ErT','EaP','ErP','T1','T2'];
-const devices = {}; // store card refs
-const deviceData = {};
-for(let i=1;i<=TOTAL_DEVICES;i++) deviceData[i] = {};
-
-/* ========== create cards (mobile-friendly compact) ========== */
-function createCards(){ mainView.innerHTML=''; for(let id=1;id<=TOTAL_DEVICES;id++){ const tag=MACHINE_TAGS[id]||'Mesin Tidak Dikenal'; const card=document.createElement('div'); card.className='machine-card'; card.dataset.id=id; card.title = `Mesin ${id} = ${tag}`; card.innerHTML = `\n  <div class="card-top">\n    <div style="display:flex;flex-direction:column">\n      <p class="card-title">${tag}</p>\n      <span class="sid">SID ${id}</span>\n    </div>\n    <div class="small-badge">#${id}</div>\n  </div>\n  `; card.onclick = ()=> showDetailModal(id); mainView.appendChild(card); // create small status indicator
-    const ind = document.createElement('div'); ind.className='status-indicator status-offline'; ind.id = `status-ind-${id}`; card.appendChild(ind);
-    devices[id] = { card, indicator: ind };
-  }}
-createCards();
-
-/* ========== modal functions ========== */
-function showDetailModal(id){ const d = deviceData[id]||{}; modalTitle.textContent = `Detail SID ${id} — ${MACHINE_TAGS[id]||'NAMA MESIN'}`; detailBody.innerHTML=''; // status
-  const trStatus = document.createElement('tr'); trStatus.innerHTML = `<td class="param-name">Status</td><td class="param-value ${d.status==='online'?'status-online':'status-offline'}">${d.status?d.status.toUpperCase():'---'}</td>`; detailBody.appendChild(trStatus);
-  dataMap.forEach(key=>{ const tr=document.createElement('tr'); const raw=d[key]; let v; if(key==='OpH'){ v=(raw===0||raw)?formatOpH(raw):'---'; } else { v=(raw===0||raw)?fmt(raw,key):'---'; } tr.innerHTML = `<td class="param-name">${dataLabels[key]}</td><td class="param-value ${getStyleClass(key)}">${v}</td>`; detailBody.appendChild(tr); }); modalOverlay.style.display='flex'; document.body.style.overflow='hidden'; }
-function closeDetailModal(){ modalOverlay.style.display='none'; document.body.style.overflow=''; }
-closeModalBtn.addEventListener('click', closeDetailModal); modalOverlay.addEventListener('click', e=>{ if(e.target===modalOverlay) closeDetailModal(); }); window.addEventListener('keydown', e=>{ if(e.key==='Escape' && modalOverlay.style.display==='flex') closeDetailModal(); });
-
-/* ========== MQTT (same logic) ========== */
-const client = mqtt.connect(MQTT_URL, MQTT_OPTIONS);
-client.on('connect', ()=>{ conn.textContent='✅ MQTT Connected'; client.subscribe(MQTT_TOPIC); });
-client.on('reconnect', ()=>{ conn.textContent='🔄 MQTT Reconnecting...'; });
-client.on('error', err=>{ conn.textContent='❌ MQTT Error'; console.error('MQTT Error:',err); });
-client.on('message', (topic,message)=>{ try{ const d = JSON.parse(message.toString()); const id = Number(d.id); if(!id||id<1||id>TOTAL_DEVICES){ console.warn('Invalid ID',d); return; } deviceData[id] = d; // update status indicator
-    if(devices[id]){ const status = (d.status && d.status.toLowerCase()==='online') ? 'online' : 'offline'; devices[id].indicator.className = `status-indicator status-${status}`; }
-  }catch(e){ console.error('Payload parse error:', e, message.toString()); } });
-
-</script>
-</body>
-
-
-<!-- INDEX PAGE START -->
-<!DOCTYPE html>
-<html lang="en">
-<head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Dashboard Menu</title>
+<title>Monitoring Energi</title>
+
 <style>
-    :root { --accent:#00ffc2; --bg:#0a0a0a; --glass:rgba(255,255,255,0.06);}    
     body {
-        margin:0; padding:0; height:100vh;
-        display:flex; justify-content:center; align-items:center;
-        background:linear-gradient(140deg,#000,#0f0f0f,#111);
-        font-family:'Segoe UI',sans-serif; color:#e5e5e5;
-        overflow:hidden;
-    }
-    .orb { position:absolute; width:420px; height:420px; border-radius:50%; filter:blur(140px); opacity:0.25; animation:float 12s infinite alternate ease-in-out; }
-    .orb:nth-child(1){top:-80px; left:-70px; background:var(--accent);} 
-    .orb:nth-child(2){bottom:-100px; right:-70px; background:#009dff;} 
-    @keyframes float { 0%{transform:translate(0,0);} 100%{transform:translate(60px,50px);} }
-
-    .wrap{
-        text-align:center; padding:50px 60px; 
-        background:var(--glass); backdrop-filter:blur(18px);
-        border-radius:25px; border:1px solid rgba(255,255,255,0.1);
-        width:90%; max-width:420px; z-index:10;
-        animation:fade .8s ease;
-    }
-    @keyframes fade{from{opacity:0; transform:translateY(25px);} to{opacity:1; transform:translateY(0);}}
-
-    h1 { font-size:2.3rem; color:var(--accent); margin-bottom:32px; letter-spacing:1.2px; text-shadow:0 0 14px rgba(0,255,194,0.5);}    
-
-    .btn-container{ display:flex; flex-direction:column; gap:16px; }
-    .btn{
-        display:block; text-decoration:none; padding:16px 22px;
-        background:rgba(20,20,20,0.5); border-radius:14px;
-        font-size:1.15rem; font-weight:700; letter-spacing:.5px;
-        color:var(--accent); text-transform:uppercase;
-        border:2px solid var(--accent);
-        transition:.25s ease; backdrop-filter:blur(6px);
-    }
-    .btn:hover{
-        background:var(--accent); color:#000; transform:scale(1.06);
-        box-shadow:0 0 25px rgba(0,255,194,.7);
+        margin: 0;
+        padding: 0;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        background: #0f0f0f;
+        font-family: "Segoe UI", sans-serif;
+        color: #00ffc2;
     }
 
-    @media(max-width:480px){
-        .wrap{padding:40px 30px;} 
-        h1{font-size:1.9rem;} 
+    h1 {
+        font-size: 2.5rem;
+        margin-bottom: 40px;
+        letter-spacing: 1px;
+        font-weight: 800;
+        text-shadow: 0 0 12px rgba(0,255,200,.7);
+    }
+
+    .menu-btn {
+        width: 320px;
+        padding: 15px 20px;
+        text-align: center;
+        margin-bottom: 18px;
+        border-radius: 10px;
+        border: 2px solid #00ffc2;
+        color: #00ffc2;
+        background: transparent;
+        text-decoration: none;
+        font-weight: 700;
+        letter-spacing: 1px;
+        transition: .25s;
+        display: block;
+    }
+
+    .menu-btn:hover {
+        background: #00ffc2;
+        color: #000;
+        transform: scale(1.05);
+        box-shadow: 0 0 18px rgba(0,255,200,.7);
+    }
+
+    @media (max-width: 480px) {
+        h1 { font-size: 2rem; }
+        .menu-btn { width: 90%; }
     }
 </style>
 </head>
+
 <body>
-<div class="orb"></div>
-<div class="orb"></div>
 
-<div class="wrap">
-    <h1>Monitoring Energi</h1>
-    <div class="btn-container">
-        <a class="btn" href="realtime.html">Monitoring Realtime</a>
-        <a class="btn" href="result_wbp_lwbp.html">Monitoring Result (WBP / LWBP)</a>
-    </div>
-</div>
+<h1>Monitoring Energi</h1>
+
+<a href="realtime.html" class="menu-btn">MONITORING REALTIME</a>
+<a href="result_wbp_lwbp.html" class="menu-btn">MONITORING RESULT (WBP / LWBP)</a>
+
 </body>
-</html>
-<!-- INDEX PAGE END -->
-
 </html>
