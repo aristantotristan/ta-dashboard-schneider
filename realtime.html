@@ -17,7 +17,7 @@ body {
     padding: 0;
     margin: 0;
     /* Background Tema Profesional (Energy Grid) */
-    background-image: url('https://images.unsplash.com/photo-1542385108611-667dc9df9c40?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w0NTIyMzZ8MHwxfHxtYXN0ZXIlMjBlbmVyZ3klMjBncmlkJTIwZGFzaGJvYXJkJTIwYmFja2dyb3VuZHxlbnwwfHx8fDE3MDM1MjYzNjV8MA&ixlib=rb-4.0.3&q=80&w=1920');
+    background-image: url('https://images.unsplash.com/photo-1542385108611-667dc9df9c40?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w0NTIyMzZ8MHwxfHxtYXN0ZXIlMjBlbmVyZ3klMjBncmlkJTIwZGFzaGJvYXJkJTIwYmFja2dyb3VuZHR8ZW58MHx8fHwxNzA2NjI0NzAwfDA&ixlib=rb-4.0.3&q=80&w=1920');
     background-size: cover;
     background-position: center;
     background-attachment: fixed;
@@ -223,14 +223,15 @@ tbody td:nth-child(2) {
         <button class="back-button" onclick="showSummary()">⬅️ Kembali ke Ringkasan</button>
     </div>
 
-</div> <script>
+</div> 
+<script>
 // =======================================================
 // --- FUNGIONALITAS UTAMA & KONFIGURASI ---
 // =======================================================
 
 // --- KONFIGURASI SUPABASE (GANTI DENGAN KREDENSIAL ASLI ANDA) ---
-const SUPA_URL = "https://rojhcadtqfynlqzubftx.supabase.co";
-const SUPA_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJojhcadtqfynlqzubftxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs";
+const SUPA_URL = "https://rojhcadtqfynlqzubftx.supabase.co"; // GANTI INI
+const SUPA_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJojhcadtqfynlqzubftxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs"; // GANTI INI
 const TABLE_NAME = "ea_18mesin";
 const EA_THRESHOLD = 0.01;
 
@@ -245,31 +246,16 @@ const conn = document.getElementById("conn");
 
 // --- VARIABEL GLOBAL ---
 const MACHINE_IDS = Array.from({length: 18}, (_, i) => i + 1);
-const dataBuffer = {}; // Menyimpan data terbaru LENGKAP dari MQTT (Buffer dipertahankan!)
-const devices = {}; // Menyimpan elemen DOM kartu mesin
-
+const dataBuffer = {}; 
+const devices = {}; 
 let isSending = false;
 
 // --- MAPPING NAMA MESIN BARU ---
 const MACHINE_NAMES = {
-    1: 'UNKNOW',
-    2: 'UNKNOW',
-    3: 'POMPA MC 12',
-    4: 'MC 9',
-    5: 'UNKNOW',
-    6: 'MC 40',
-    7: 'MC 39',
-    8: 'MC 6',
-    9: 'HEATER MC 5',
-    10: 'POMPA MC 5',
-    11: 'UNKNOW',
-    12: 'MC 34',
-    13: 'MC 35',
-    14: 'UNKNOW',
-    15: 'UNKNOW',
-    16: 'MC 38',
-    17: 'MC 36',
-    18: 'MC 37',
+    1: 'UNKNOW', 2: 'UNKNOW', 3: 'POMPA MC 12', 4: 'MC 9', 5: 'UNKNOW', 6: 'MC 40', 
+    7: 'MC 39', 8: 'MC 6', 9: 'HEATER MC 5', 10: 'POMPA MC 5', 11: 'UNKNOW', 
+    12: 'MC 34', 13: 'MC 35', 14: 'UNKNOW', 15: 'UNKNOW', 16: 'MC 38', 
+    17: 'MC 36', 18: 'MC 37',
 };
 
 // --- MAPPING PARAMETER UNTUK DETAIL TABLE ---
@@ -283,13 +269,12 @@ const dataMap = [
 
 
 // =======================================================
-// --- FUNGSI NAVIGASI TAMPILAN ---
+// --- FUNGSI NAVIGASI TAMPILAN (Tidak Diubah) ---
 // =======================================================
 
 function showDetail(id) {
     summaryView.style.display = 'none';
     detailView.style.display = 'block';
-    // Gunakan nama mesin, bukan ID
     currentMachineNameSpan.textContent = MACHINE_NAMES[id] + ` (ID: ${id})`;
     renderDetailTable(id);
 }
@@ -301,14 +286,12 @@ function showSummary() {
 
 
 // =======================================================
-// --- FUNGSI TEMPLATE DAN RENDER ---
+// --- FUNGSI TEMPLATE DAN RENDER (Tidak Diubah) ---
 // =======================================================
 
 function createMachineCard(id) {
     const card = document.createElement('div');
-    const machineName = MACHINE_NAMES[id] || `Mesin ID ${id}`; // Ambil nama mesin
-    
-    // Tentukan class CSS tambahan untuk teks 'UNKNOW'
+    const machineName = MACHINE_NAMES[id] || `Mesin ID ${id}`; 
     const nameClass = machineName === 'UNKNOW' ? 'card-name unknow-red' : 'card-name';
 
     card.className = 'machine-card';
@@ -330,29 +313,21 @@ function createMachineCard(id) {
     };
 }
 
-/** Fungsionalitas: Mengisi tabel detail dengan data terbaru dari dataBuffer */
 function renderDetailTable(id) {
-    // Ambil data dari buffer berdasarkan ID mesin yang diklik
     const data = dataBuffer[id] || {};
     detailTableBody.innerHTML = '';
 
     dataMap.forEach(item => {
         const tr = detailTableBody.insertRow();
-
-        // Parameter (Label)
         const tdLabel = tr.insertCell();
         tdLabel.textContent = item.label;
-
-        // Nilai Real-time
         const tdValue = tr.insertCell();
-        // Ambil nilai menggunakan key dari mapping
+
         let value = data[item.key] !== undefined ? data[item.key] : '---';
 
-        // Format OpH
         if (item.key === 'OpH') {
             value = formatOperatingTime(value);
         } else if (typeof value === 'number' && value !== '---') {
-             // Pembulatan data numerik
             value = value.toFixed(3);
         }
 
@@ -386,7 +361,7 @@ function formatOperatingTime(totalHours) {
 
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Inisialisasi semua kartu mesin di Summary View
-    summaryView.innerHTML = ''; // Hapus pesan inisialisasi
+    summaryView.innerHTML = ''; 
     MACHINE_IDS.forEach(id => createMachineCard(id));
 });
 
@@ -404,7 +379,7 @@ const options = {
 };
 
 const client = mqtt.connect(
-    "wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt",
+    "wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt", // GANTI INI
     options
 );
 
@@ -423,7 +398,8 @@ client.on("message", (topic, message) => {
     try {
         const d = JSON.parse(message.toString());
         const id = Number(d.id);
-        // PENTING: Gunakan EaT sebagai Ea untuk logging
+        
+        // PENTING: Gunakan EaT sebagai Ea untuk buffer (sesuai data yang datang)
         const ea = Number(d.EaT);
 
         // 1. SIMPAN DATA LENGKAP KE BUFFER
@@ -431,21 +407,19 @@ client.on("message", (topic, message) => {
             dataBuffer[id] = { ...d, ea: ea };
         }
 
-        // 2. UPDATE SUMMARY CARD VIEW
+        // 2. UPDATE SUMMARY CARD VIEW (Logika Visual)
         if (devices[id]) {
             const status = d.status ? d.status.toLowerCase() : 'offline';
             const statusClass = status === 'online' ? 'status-online' : 'status-offline';
 
-            // Update Card Class (untuk border kiri)
             devices[id].card.classList.remove('card-online', 'card-offline');
             devices[id].card.classList.add(`card-${status}`);
 
-            // Update Indicator & Text
             devices[id].indicator.className = `status-indicator ${statusClass}`;
             devices[id].text.textContent = status.toUpperCase();
             devices[id].text.className = statusClass;
 
-            // 3. JIKA SEDANG DI DETAIL VIEW, UPDATE TABEL DETAIL (Real-time update)
+            // 3. JIKA SEDANG DI DETAIL VIEW, UPDATE TABEL DETAIL
             const currentDetailText = currentMachineNameSpan.textContent;
             const currentDetailIdMatch = currentDetailText.match(/ID: (\d+)/);
             const currentDetailId = currentDetailIdMatch ? Number(currentDetailIdMatch[1]) : null;
@@ -462,18 +436,10 @@ client.on("message", (topic, message) => {
 
 
 // =======================================================
-// --- LOGIKA PENGIRIMAN BERURUTAN & PAKSA LOG ---
+// --- LOGIKA PENGIRIMAN BERURUTAN & PAKSA LOG KE SUPABASE ---
 // =======================================================
 
-// --- FUNGSI BANTU LOGGING ---
-function getTransitionFlag(id, key) {
-    const today = new Date().toISOString().slice(0, 10);
-    return localStorage.getItem(`${key}_${id}_${today}`);
-}
-function setTransitionFlag(id, key) {
-    const today = new Date().toISOString().slice(0, 10);
-    localStorage.setItem(`${key}_${id}_${today}`, 'true');
-}
+// --- FUNGSI BANTU LOGGING (DIMODIFIKASI untuk Supabase) ---
 function loadLastEa(id) {
     const s = localStorage.getItem("lastEa_" + id);
     return s ? Number(s) : undefined;
@@ -484,80 +450,63 @@ function saveLastEa(id, val) {
 function saveLastSupaLogTime(id, time) {
     localStorage.setItem("lastSupaLogTime_" + id, time);
 }
+
+/** Fungsionalitas: Memasukkan log energi ke Supabase */
 async function insertEnergyLog(entry) {
     try {
-        const { error } = await supa.from(TABLE_NAME).insert([entry]);
+        const { id_mesin, ea } = entry;
+        const now = new Date();
+        
+        // Objek yang dikirim ke Supabase harus match dengan skema: t, id_mesin, EaT
+        const supaEntry = {
+            t: now.toISOString(), 
+            id_mesin: id_mesin,
+            // PENTING: Menggunakan key "EaT" agar sesuai dengan nama kolom di PostgreSQL
+            "EaT": ea
+        };
+
+        const { error } = await supa.from(TABLE_NAME).insert([supaEntry]);
         if (error) throw error;
+        
+        // Setelah sukses, simpan waktu log terakhir
+        saveLastSupaLogTime(id_mesin, now.getTime());
+        
     } catch (e) {
-        console.error("Gagal menyimpan log ke Supabase. Cek RLS/Kredensial:", e);
+        console.error("Gagal menyimpan log ke Supabase. Cek RLS/Kredensial atau skema tabel:", e);
     }
 }
-// ----------------------------------------------------------------
+
 
 /** Fungsionalitas: Iterasi melalui ID mesin (1 s/d 18) dan mengirim data ke Supabase */
 async function sendBufferedDataSequentially() {
     if (isSending) return;
     isSending = true;
 
-    const T1_HOUR = 17; // Batas Waktu Indonesia Barat (WIB)
-    const T2_HOUR = 22;
-
     for (const id of MACHINE_IDS) {
         // Cek apakah data mesin ini ada di buffer
         if (dataBuffer[id] && dataBuffer[id].ea !== undefined) {
             const entry = dataBuffer[id];
-            const ea = entry.ea;
+            const ea = entry.ea; // Nilai EaT Kumulatif
             const now = new Date();
-            const currentHour = now.getHours();
 
-            // Cek Log Wajib 5 Menit
+            // --- Logika Cek Log Wajib 5 Menit ---
             const lastLogTime = localStorage.getItem("lastSupaLogTime_" + id);
             const fiveMinutes = 5 * 60 * 1000;
             const forceLog = !lastLogTime || (now.getTime() - Number(lastLogTime)) > fiveMinutes;
 
-            let logEntry = {
-                id_mesin: id,
-                ea: ea,
-                t: now.toISOString(),
-                log_type: 'REALTIME',
-            };
+            const lastEa = loadLastEa(id); 
 
-            // --- 1. Logika T1/T2 (Prioritas Tertinggi) ---
-            let isTransitionLog = false;
-
-            // LOGIKA T1 (17:00 WBP Start)
-            if (currentHour === T1_HOUR && getTransitionFlag(id, 'T1_WBP_START') === null) {
-                logEntry.log_type = 'T1_WBP_START';
-                await insertEnergyLog(logEntry);
-                setTransitionFlag(id, 'T1_WBP_START');
-                saveLastSupaLogTime(id, now.getTime());
-                isTransitionLog = true;
-                console.log(`[LOG WBP] Mesin ${id}: T1 WBP (17:00) dicatat.`);
+            // Log jika: 1) Ada perubahan besar (>= 0.01) ATAU 2) Sudah waktunya untuk paksa log (setiap 5 menit)
+            if (lastEa === undefined || Math.abs(ea - lastEa) >= EA_THRESHOLD || forceLog) {
+                
+                await insertEnergyLog({
+                    id_mesin: id,
+                    ea: ea, 
+                });
+                
+                // Simpan nilai Ea Kumulatif terakhir yang berhasil dikirim
+                saveLastEa(id, ea);
             }
-
-            // LOGIKA T2 (22:00 WBP End)
-            else if (currentHour === T2_HOUR && getTransitionFlag(id, 'T2_WBP_END') === null && getTransitionFlag(id, 'T1_WBP_START') === 'true') {
-                logEntry.log_type = 'T2_WBP_END';
-                await insertEnergyLog(logEntry);
-                setTransitionFlag(id, 'T2_WBP_END');
-                saveLastSupaLogTime(id, now.getTime());
-                isTransitionLog = true;
-                console.log(`[LOG WBP] Mesin ${id}: T2 WBP (22:00) dicatat.`);
-            }
-
-            // --- 2. Logika Normal ATAU PAKSA LOG ---
-            if (!isTransitionLog) {
-                const lastEa = loadLastEa(id);
-
-                // Log jika: 1) Ada perubahan besar (>= 0.01) ATAU 2) Sudah waktunya untuk paksa log (setiap 5 menit)
-                if (lastEa === undefined || Math.abs(ea - lastEa) >= EA_THRESHOLD || forceLog) {
-                    await insertEnergyLog(logEntry);
-                    saveLastEa(id, ea);
-                    saveLastSupaLogTime(id, now.getTime());
-                }
-            }
-
-            // *** PENTING: dataBuffer dipertahankan agar display detail stabil. ***
         }
     }
 
