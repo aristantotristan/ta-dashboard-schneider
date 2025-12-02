@@ -26,191 +26,82 @@
       min-height: 100vh;
       line-height: 1.6;
       background-image: 
-        radial-gradient(circle at 20% 80%, rgba(0, 229, 189, 0.08) 0%, transparent 50%),
-        radial-gradient(circle at 80% 20%, rgba(0, 229, 189, 0.05) 0%, transparent 50%);
+        radial-gradient(circle at 20% 80%, rgba(0,229,189,0.08) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(0,229,189,0.05) 0%, transparent 50%);
     }
 
-    /* Subtle animated grid */
     .grid-bg {
-      position: fixed;
-      inset: 0;
+      position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: 0.4;
       background-image: 
         linear-gradient(rgba(0,229,189,0.03) 1px, transparent 1px),
         linear-gradient(90deg, rgba(0,229,189,0.03) 1px, transparent 1px);
       background-size: 80px 80px;
-      pointer-events: none;
-      z-index: -1;
-      opacity: 0.4;
     }
 
-    header {
-      text-align: center;
-      padding: 3rem 1rem 2rem;
-    }
-    h1 {
-      font-size: 2.8rem;
-      font-weight: 600;
-      color: var(--accent);
-      letter-spacing: -0.5px;
-      margin-bottom: 0.5rem;
-      text-shadow: 0 0 20px rgba(0,229,189,0.3);
-    }
-    .subtitle {
-      font-size: 0.95rem;
-      color: var(--muted);
-      letter-spacing: 3px;
-      text-transform: uppercase;
-      font-weight: 500;
-    }
+    header { text-align: center; padding: 3rem 1rem 2rem; }
+    h1 { font-size: 2.8rem; font-weight: 600; color: var(--accent); letter-spacing: -0.5px; margin-bottom: 0.5rem; text-shadow: 0 0 20px rgba(0,229,189,0.3); }
+    .subtitle { font-size: 0.95rem; color: var(--muted); letter-spacing: 3px; text-transform: uppercase; font-weight: 500; }
 
     #conn {
-      text-align: center;
-      padding: 0.7rem 1.5rem;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.9rem;
-      color: var(--accent);
-      background: rgba(0,229,189,0.08);
-      border: 1px solid rgba(0,229,189,0.2);
-      border-radius: 8px;
-      max-width: 420px;
-      margin: 0 auto 3rem;
-      backdrop-filter: blur(4px);
+      text-align: center; padding: 0.7rem 1.5rem; font-family: 'JetBrains Mono', monospace; font-size: 0.9rem;
+      color: var(--accent); background: rgba(0,229,189,0.08); border: 1px solid rgba(0,229,189,0.2);
+      border-radius: 8px; max-width: 420px; margin: 0 auto 3rem; backdrop-filter: blur(4px);
     }
 
     #main-view {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 1.6rem;
-      padding: 0 2rem;
-      max-width: 1800px;
-      margin: 0 auto;
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.6rem; padding: 0 2rem; max-width: 1800px; margin: 0 auto;
     }
 
     .machine-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 1.8rem 1.4rem;
-      cursor: pointer;
+      background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+      padding: 1.8rem 1.4rem; cursor: pointer; position: relative; overflow: hidden;
       transition: all 0.35s ease;
-      position: relative;
-      overflow: hidden;
     }
-    .machine-card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0; height: 1px;
-      background: linear-gradient(90deg, transparent, var(--accent), transparent);
-      opacity: 0;
-      transition: opacity 0.4s;
-    }
-    .machine-card:hover {
-      transform: translateY(-6px);
-      border-color: rgba(0,229,189,0.4);
-      box-shadow: 0 12px 32px rgba(0,0,0,0.3), 0 0 20px rgba(0,229,189,0.12);
-    }
+    .machine-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent); opacity: 0; transition: opacity 0.4s; }
+    .machine-card:hover { transform: translateY(-6px); border-color: rgba(0,229,189,0.4);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.3), 0 0 20px rgba(0,229,189,0.12); }
     .machine-card:hover::before { opacity: 1; }
 
-    .card-label {
-      font-size: 1.25rem;
-      font-weight: 600;
-      color: var(--text);
-      margin-bottom: 0.4rem;
-    }
-    .sid-label {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.85rem;
-      color: var(--muted);
-      letter-spacing: 1px;
-    }
+    .card-label { font-size: 1.25rem; font-weight: 600; color: var(--text); margin-bottom: 0.4rem; }
+    .sid-label { font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; color: var(--muted); letter-spacing: 1px; }
 
     .status-indicator {
-      position: absolute;
-      top: 16px;
-      right: 16px;
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      background: var(--offline);
-      box-shadow: 0 0 12px var(--offline);
+      position: absolute; top: 16px; right: 16px; width: 12px; height: 12px;
+      border-radius: 50%; background: var(--offline); box-shadow: 0 0 12px var(--offline);
       transition: all 0.4s ease;
     }
-    .status-online {
-      background: var(--online);
-      box-shadow: 0 0 16px var(--online);
-      animation: ping 2s infinite;
-    }
-    @keyframes ping {
-      0%, 100% { transform: scale(1); opacity: 1; }
-      50% { transform: scale(1.4); opacity: 0.7; }
-    }
+    .status-online { background: var(--online); box-shadow: 0 0 16px var(--online); animation: ping 2s infinite; }
+    @keyframes ping { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.4); opacity: 0.7; } }
 
-    /* Modal — Clean & Elegant */
-    #modal-overlay {
-      position: fixed; inset: 0;
-      background: rgba(13,17,23,0.95);
-      backdrop-filter: blur(12px);
-      display: none; align-items: center; justify-content: center;
-      z-index: 9999; padding: 1rem;
-    }
-    #modal {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      width: 100%; max-width: 640px; max-height: 90vh;
-      overflow: hidden;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-    }
-    #modal h3 {
-      font-size: 1.5rem;
-      font-weight: 600;
-      color: var(--accent);
-      padding: 1.5rem 2rem;
-      margin: 0;
-      border-bottom: 1px solid var(--border);
-      background: rgba(0,229,189,0.04);
-    }
-    #close-modal {
-      position: absolute; top: 1rem; right: 1.5rem;
-      background: none; border: none; font-size: 1.8rem;
-      color: var(--muted); cursor: pointer;
-      transition: 0.3s;
-    }
+    /* Modal */
+    #modal-overlay { position: fixed; inset: 0; background: rgba(13,17,23,0.95); backdrop-filter: blur(12px);
+      display: none; align-items: center; justify-content: center; z-index: 9999; padding: 1rem; }
+    #modal { background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+      width: 100%; max-width: 640px; max-height: 90vh; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+    #modal h3 { font-size: 1.5rem; font-weight: 600; color: var(--accent); padding: 1.5rem 2rem; margin: 0;
+      border-bottom: 1px solid var(--border); background: rgba(0,229,189,0.04); }
+    #close-modal { position: absolute; top: 1rem; right: 1.5rem; background: none; border: none; font-size: 1.8rem;
+      color: var(--muted); cursor: pointer; transition: 0.3s; }
     #close-modal:hover { color: var(--accent); transform: scale(1.2); }
 
-    #detail-table {
-      width: 100%; border-collapse: collapse; font-size: 0.95rem;
-    }
-    #detail-table th {
-      background: rgba(0,229,189,0.06);
-      color: var(--accent);
-      padding: 1rem;
-      text-align: left;
-      font-weight: 500;
-      text-transform: uppercase;
-      font-size: 0.8rem;
-      letter-spacing: 1px;
-    }
-    #detail-table td {
-      padding: 0.9rem 1rem;
-      border-bottom: 1px solid var(--border);
-    }
-    #detail-table tbody tr:hover {
-      background: rgba(0,229,189,0.04);
-    }
-    .param-name { color: var(--muted); width: 45%; }
+    #detail-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+    #detail-table th { background: rgba(0,229,189,0.06); color: var(--accent); padding: 1rem; text-align: left;
+      font-weight: 500; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px; }
+    #detail-table td { padding: 0.9rem 1rem; border-bottom: 1px solid var(--border); }
+    #detail-table tbody tr:hover { background: rgba(0,229,189,0.04); }
+    .param-name { color: var(--muted); width: 48%; }
     .param-value { text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 500; }
-    .col-power { color: #58a6ff; }
-    .col-energy { color: #3fb950; }
+    .col-energy { color: #7ee787; }     /* Ea & Er */
+    .col-power { color: #58a6ff; }      /* P, Q, S */
+    .col-voltage { color: #ffa657; }
     .col-tariff { color: #d29922; }
+    .col-pf { color: #ff7b72; }
+    .status-online { color: var(--online); font-weight: 600; }
 
-    @media (max-width: 768px) {
-      h1 { font-size: 2.3rem; }
-      #main-view { padding: 0 1rem; gap: 1.3rem; }
-    }
-    @media (max-width: 480px) {
-      #main-view { grid-template-columns: 1fr 1fr; }
-    }
+    @media (max-width: 768px) { h1 { font-size: 2.3rem; } #main-view { padding: 0 1rem; gap: 1.3rem; } }
+    @media (max-width: 480px) { #main-view { grid-template-columns: 1fr 1fr; } }
   </style>
 </head>
 <body>
@@ -237,18 +128,33 @@
   </div>
 
   <script>
-    // SEMUA SCRIPT FUNGSI KAMU — 100% SAMA, CUMA LEBIH RAPI
     const MQTT_OPTIONS = { username: "web_dashboard", password: "Tristan12", connectTimeout: 4000, reconnectPeriod: 2000 };
     const MQTT_URL = "wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt";
     const MQTT_TOPIC = "politeknik/meter/data";
     const TOTAL_DEVICES = 18;
     const MACHINE_TAGS = {1:'UNKNOW',2:'UNKNOW',3:'POMPA MC 12',4:'MC 9',5:'UNKNOW',6:'MC 40',7:'MC 39',8:'MC 6',9:'HEATER MC 5',10:'POMPA MC 5',11:'UNKNOW',12:'MC 34',13:'MC 35',14:'UNKNOW',15:'UNKNOW',16:'MC 38',17:'MC 36',18:'MC 37'};
 
-    function formatOpH(h){if(!h||h<0)return'---';let m=Math.round(h*60),d=Math.floor(m/1440),r=m%1440,H=Math.floor(r/60),M=r%60;return d?`${d} Hari ${H} Jam`:H?`${H} Jam${M?` ${M} Mnt`:''}`:M?`${M} Mnt`:'0 Jam';}
-    function fmt(v,k){if(v===null||v===undefined||isNaN(v))return'---';let n=+v;return ['V'].includes(k)?n.toFixed(1):['I1','I2','I3'].includes(k)?n.toFixed(3):['P','Q'].includes(k)?Math.round(n).toString():['S'].includes(k)?n.toFixed(2):['PF'].includes(k)?n.toFixed(3):['Hz'].includes(k)?n.toFixed(1):['EaT','ErT','EaP','ErP','T1','T2'].includes(k)?n.toFixed(2):n.toString();}
-    function getStyleClass(k){return k==='T1'||k==='T2'?'col-tariff':['EaT','ErT','EaP','ErP'].includes(k)?'col-energy':['P','Q','S'].includes(k)?'col-power':'';}
-    const dataLabels={'V':'Tegangan (V)','I1':'Arus Fasa 1 (A)','I2':'Arus Fasa 2 (A)','I3':'Arus Fasa 3 (A)','P':'Daya Aktif (W)','Q':'Daya Reaktif (VAR)','S':'Daya Semu (kVA)','PF':'Faktor Daya','Hz':'Frekuensi (Hz)','OpH':'Jam Operasi','EaT':'Energi Aktif Total (kWh)','ErT':'Energi Reaktif Total (kVARh)','EaP':'Energi Aktif Parsial (kWh)','ErP':'Energi Reaktif Parsial (kVARh)','T1':'Tarif Lwbp (kWh)','T2':'Tarif Wbp (kWh)'};
-    const dataMap=['V','I1','I2','I3','P','Q','S','PF','Hz','OpH','EaT','ErT','EaP','ErP','T1','T2'];
+    // URUTAN EXACT SESUAI PERMINTAANMU
+    const dataMap = ['EaT','ErT','EaP','ErP','V','I1','P','Q','S','PF','T1','Hz','OpH'];
+    const dataLabels = {
+      'EaT': 'Total Ea (kWh)',
+      'ErT': 'Total Er (kVARh)',
+      'EaP': 'Partial Ea (kWh)',
+      'ErP': 'Partial Er (kVARh)',
+      'V':   'Voltage (L-L Avg), Volt',
+      'I1':  'Current (I1, I2, I3), Ampere',
+      'P':   'Power (P) - Total Active, Watt',
+      'Q':   'Power (Q) - Total Reactive, VAR',
+      'S':   'Power (S) - Total Apparent, kVA',
+      'PF':  'PF (Total Power Factor), -',
+      'T1':  'Tarif T1 (LWBP) & T2 (WBP), kWh',
+      'Hz':  'Frequency, Hz',
+      'OpH': 'Op Time (Load Time)'
+    };
+
+    function formatOpH(h){if(!h||h<0)return'---';let m=Math.round(h*60),d=Math.floor(m/1440),r=m%1440,H=Math.floor(r/60),M=r%60;return d?`${d} Hari ${H} Jam${M?` ${M} Mnt`:''}`:H?`${H} Jam${M?` ${M} Mnt`:''}`:M?`${M} Mnt`:'0 Jam';}
+    function fmt(v,k){if(v===null||v===undefined||isNaN(v))return'---';let n=+v;return k==='V'?n.toFixed(1):['I1','I2','I3'].includes(k)?n.toFixed(3):k==='P'?Math.round(n).toLocaleString():k==='Q'?Math.round(n).toLocaleString():k==='S'?n.toFixed(2):k==='PF'?n.toFixed(3):k==='Hz'?n.toFixed(1):['EaT','ErT','EaP','ErP','T1','T2'].includes(k)?n.toFixed(2):n.toString();}
+    function getStyleClass(k){return ['EaT','ErT','EaP','ErP'].includes(k)?'col-energy':['P','Q','S'].includes(k)?'col-power':k==='V'?'col-voltage':k==='PF'?'col-pf':['T1','T2'].includes(k)?'col-tariff':'';}
 
     const mainView=document.getElementById('main-view'),modalOverlay=document.getElementById('modal-overlay'),detailBody=document.getElementById('detailBody'),modalTitle=document.getElementById('modal-title'),closeModal=document.getElementById('close-modal'),conn=document.getElementById('conn');
     const devices={},deviceData={};for(let i=1;i<=18;i++)deviceData[i]={};
@@ -269,14 +175,39 @@
       const d=deviceData[id];
       modalTitle.textContent=`Detail SID ${id} — ${MACHINE_TAGS[id]||'UNKNOW'}`;
       detailBody.innerHTML='';
+
+      // Status
       const trStatus=document.createElement('tr');
-      trStatus.innerHTML=`<td class="param-name">Status</td><td class="param-value ${d.status==='online'?'status-online':''}">${d.status?d.status.toUpperCase():'---'}</td>`;
+      trStatus.innerHTML=`<td class="param-name">Status Koneksi</td><td class="param-value ${d.status==='online'?'status-online':''}">${d.status?d.status.toUpperCase():'OFFLINE'}</td>`;
       detailBody.appendChild(trStatus);
-      dataMap.forEach(k=>{const tr=document.createElement('tr'),val=(d[k]===0||d[k])?(k==='OpH'?formatOpH(d[k]):fmt(d[k],k)):'---';
-        tr.innerHTML=`<td class="param-name">${dataLabels[k]}</td><td class="param-value ${getStyleClass(k)}">${val}</td>`;
+
+      // Parameter sesuai urutan
+      dataMap.forEach(key=>{
+        if(key==='I2'||key==='I3'||key==='T2') return; // akan digabung
+
+        const tr=document.createElement('tr');
+        let val='---';
+
+        if(d[key]!==undefined && d[key]!==null){
+          if(key==='OpH') val=formatOpH(d[key]);
+          else if(key==='I1'){
+            const i1=fmt(d.I1,'I1'), i2=fmt(d.I2,'I2'), i3=fmt(d.I3,'I3');
+            val=`${i1} | ${i2} | ${i3}`;
+          }
+          else if(key==='T1'){
+            const t1=d.T1!==undefined?(+d.T1).toFixed(2):'---';
+            const t2=d.T2!==undefined?(+d.T2).toFixed(2):'---';
+            val=`LWBP: ${t1}  WBP: ${t2}`;
+          }
+          else val=fmt(d[key],key);
+        }
+
+        tr.innerHTML=`<td class="param-name">${dataLabels[key]}</td><td class="param-value ${getStyleClass(key)}">${val}</td>`;
         detailBody.appendChild(tr);
       });
-      modalOverlay.style.display='flex';document.body.style.overflow='hidden';
+
+      modalOverlay.style.display='flex';
+      document.body.style.overflow='hidden';
     }
 
     function closeDetailModal(){modalOverlay.style.display='none';document.body.style.overflow='';}
@@ -292,12 +223,12 @@
     client.on('error',()=>{conn.textContent='Connection Failed';});
     client.on('message',(t,m)=>{
       try{
-        const d=JSON.parse(m.toString());
-        const id=Number(d.id);
+        const payload=JSON.parse(m.toString());
+        const id=Number(payload.id);
         if(id<1||id>18)return;
-        deviceData[id]=d;
+        deviceData[id]=payload;
         if(devices[id]){
-          const status=d.status&&d.status.toLowerCase()==='online'?'online':'offline';
+          const status=payload.status&&payload.status.toLowerCase()==='online'?'online':'offline';
           devices[id].indicator.className=`status-indicator status-${status}`;
         }
       }catch(e){console.error(e);}
