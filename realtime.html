@@ -39,17 +39,17 @@ h2{margin:0; color:var(--accent); font-size:clamp(1rem,4vw,1.4rem);}
   display:grid; grid-template-columns:repeat(2, 1fr); gap:10px;
 }
 
-/* Card */
+/* Card - DITINGKATKAN */
 .machine-card{
   /* Efek Glassmorphism halus */
   background:rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(4px);
   border:1px solid rgba(255,255,255,0.06);
-  border-radius:12px; padding:12px 10px; height:100px; /* Sedikit lebih tinggi */
+  border-radius:12px; padding:12px 10px; height:100px;
   display:flex; flex-direction:column; justify-content:space-between; align-items:flex-start;
   position:relative; overflow:hidden;
   box-shadow:0 6px 18px rgba(0,0,0,0.6);
-  cursor:pointer; /* Indikasi interaksi */
+  cursor:pointer;
 }
 .card-top{display:flex; align-items:flex-start; width:100%; justify-content:space-between}
 .card-title{font-weight:700; font-size:1.05rem; color:#bfefff; margin:0; line-height:1.2;}
@@ -61,13 +61,13 @@ h2{margin:0; color:var(--accent); font-size:clamp(1rem,4vw,1.4rem);}
   font-weight:600;
 }
 
-/* New: Status Badge (replacing small pulse) */
+/* Status Badge BARU */
 .status-badge {
   font-size: 0.75rem;
   font-weight: 700;
   padding: 4px 8px;
   border-radius: 999px;
-  align-self: flex-end; /* Posisikan di kanan bawah */
+  align-self: flex-end;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -76,29 +76,27 @@ h2{margin:0; color:var(--accent); font-size:clamp(1rem,4vw,1.4rem);}
 }
 
 .status-online {
-  background: rgba(16, 185, 129, 0.15); /* Hijau transparan */
+  background: rgba(16, 185, 129, 0.15);
   color: var(--online);
 }
 
 .status-offline {
-  background: rgba(239, 68, 68, 0.15); /* Merah transparan */
+  background: rgba(239, 68, 68, 0.15);
   color: var(--offline);
 }
 .badge-icon { font-size: 0.8em; }
 
-/* Tooltip on long press (mobile) via title attribute not styled here */
-
 /* Modal overlay */
 #modal-overlay{
   position:fixed; inset:0; display:none; align-items:center; justify-content:center;
-  background:rgba(2,6,23,0.85); /* Lebih gelap */
+  background:rgba(2,6,23,0.85);
   backdrop-filter:blur(10px); z-index:1000; padding:18px;
 }
 #modal{
-  width:100%; max-width:780px; /* Lebih lebar */
+  width:100%; max-width:780px;
   background:var(--card); border-radius:12px;
   box-shadow:0 12px 40px rgba(0,0,0,0.8);
-  color:#eaf6f5; max-height:92vh; overflow:hidden; /* Konten di dalam yang scroll */
+  color:#eaf6f5; max-height:92vh; overflow:hidden;
   display: flex; flex-direction: column;
 }
 #modal-header {
@@ -217,7 +215,7 @@ const TOTAL_DEVICES = 18;
 /* ========== MACHINE TAGS ========== */
 const MACHINE_TAGS = { 1:'UNKNOW',2:'UNKNOW',3:'POMPA MC 12',4:'MC 9',5:'UNKNOW',6:'MC 40',7:'MC 39',8:'MC 6',9:'HEATER MC 5',10:'POMPA MC 5',11:'UNKNOW',12:'MC 34',13:'MC 35',14:'UNKNOW',15:'UNKNOW',16:'MC 38',17:'MC 36',18:'MC 37' };
 
-/* ========== HELPERS ========== */
+/* ========== HELPERS (TIDAK DIUBAH FUNGSINYA) ========== */
 function formatOpH(hours){ if(hours===null||hours===undefined||isNaN(hours)||hours<0) return '---'; const totalMinutes=Math.round(parseFloat(hours)*60); const days=Math.floor(totalMinutes/(24*60)); const rem=totalMinutes%(24*60); const hrs=Math.floor(rem/60); const mins=rem%60; if(days>0) return `${days} Hari ${hrs} Jam`; if(hrs>0) return `${hrs} Jam${mins>0? ' '+mins+' Mnt':''}`; if(mins>0) return `${mins} Mnt`; return '0 Jam'; }
 function fmt(val,key){ if(val===null||val===undefined||isNaN(val)) return '---'; const n=Number(val); if(['V'].includes(key)) return n.toFixed(1); if(['I1','I2','I3'].includes(key)) return n.toFixed(3); if(['P','Q'].includes(key)) return Math.round(n).toString(); if(['S'].includes(key)) return n.toFixed(2); if(['PF'].includes(key)) return n.toFixed(3); if(['Hz'].includes(key)) return n.toFixed(1); if(['EaT','ErT','EaP','ErP','T1','T2'].includes(key)) return n.toFixed(2); return n.toString(); }
 function getStyleClass(key){ if(key==='T1'||key==='T2') return 'col-tariff'; if(['EaT','ErT','EaP','ErP'].includes(key)) return 'col-energy'; if(['P','Q','S'].includes(key)) return 'col-power'; return ''; }
@@ -236,7 +234,7 @@ const devices = {}; // store card refs
 const deviceData = {};
 for(let i=1;i<=TOTAL_DEVICES;i++) deviceData[i] = {};
 
-/* ========== create cards (mobile-friendly compact) ========== */
+/* ========== create cards (Perbaikan Template) ========== */
 function createCards(){
   mainView.innerHTML='';
   for(let id=1;id<=TOTAL_DEVICES;id++){
@@ -247,6 +245,7 @@ function createCards(){
     card.title = `Mesin ${id} = ${tag}`;
     card.onclick = ()=> showDetailModal(id);
 
+    // Template Kartu Baru (dengan Badge Status)
     card.innerHTML = `
       <div class="card-top">
         <div style="display:flex;flex-direction:column">
@@ -255,30 +254,30 @@ function createCards(){
         </div>
         <div class="small-badge">#${id}</div>
       </div>
-      <div id="status-badge-${id}" class="status-badge status-offline">
+            <div id="status-badge-${id}" class="status-badge status-offline">
         <i class="badge-icon fas fa-times-circle"></i> OFFLINE
       </div>
     `;
     mainView.appendChild(card);
 
-    // Store reference to the new status badge
+    // Store reference to the new status badge element
     devices[id] = { card, indicator: document.getElementById(`status-badge-${id}`) };
   }
 }
 createCards();
 
-/* ========== modal functions ========== */
+/* ========== modal functions (TIDAK DIUBAH FUNGSINYA) ========== */
 function showDetailModal(id){
   const d = deviceData[id]||{};
   const machineTag = MACHINE_TAGS[id]||'NAMA MESIN';
   const currentStatus = (d.status && d.status.toLowerCase()==='online') ? 'online' : 'offline';
 
-  // Update modal title
+  // Update modal title dengan ikon
   modalTitle.innerHTML = `<i class="fas fa-chart-line"></i> Detail SID ${id} — ${machineTag}`;
 
   detailBody.innerHTML='';
 
-  // 1. Status Row (Lebih Profesional)
+  // 1. Status Row
   const trStatus = document.createElement('tr');
   const icon = (currentStatus === 'online') ? '<i class="fas fa-circle-check"></i>' : '<i class="fas fa-circle-xmark"></i>';
   trStatus.innerHTML = `<td class="param-name">Status Sensor</td><td class="param-value col-status-modal ${currentStatus}">${icon} ${currentStatus.toUpperCase()}</td>`;
@@ -304,7 +303,7 @@ function showDetailModal(id){
 function closeDetailModal(){ modalOverlay.style.display='none'; document.body.style.overflow=''; }
 closeModalBtn.addEventListener('click', closeDetailModal); modalOverlay.addEventListener('click', e=>{ if(e.target===modalOverlay) closeDetailModal(); }); window.addEventListener('keydown', e=>{ if(e.key==='Escape' && modalOverlay.style.display==='flex') closeDetailModal(); });
 
-/* ========== MQTT (same logic, updated conn indicator) ========== */
+/* ========== MQTT (Perbaikan Update Indikator) ========== */
 const client = mqtt.connect(MQTT_URL, MQTT_OPTIONS);
 
 client.on('connect', ()=>{
@@ -328,12 +327,12 @@ client.on('message', (topic,message)=>{
     if(!id||id<1||id>TOTAL_DEVICES){ console.warn('Invalid ID',d); return; }
     deviceData[id] = d;
 
-    // update status badge
+    // Perbaikan update status badge (indicator adalah elemen badge baru)
     if(devices[id] && devices[id].indicator){
       const status = (d.status && d.status.toLowerCase()==='online') ? 'online' : 'offline';
       const indicator = devices[id].indicator;
 
-      // Update class for styling
+      // Update class
       indicator.className = `status-badge status-${status}`;
 
       // Update content (text and icon)
