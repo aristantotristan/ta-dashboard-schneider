@@ -3,192 +3,155 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>INDONESIA GRID 2050</title>
+<title>CYBER GRID 3D - POWER METER</title>
 <script src="https://cdn.jsdelivr.net/npm/three@0.168.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.168.0/examples/js/controls/OrbitControls.js"></script>
 <style>
-    body { margin:0; overflow:hidden; background:#000; font-family: 'Orbitron', sans-serif; }
-    #overlay {
+    body { margin:0; overflow:hidden; background:#000; font-family:'Orbitron',sans-serif; }
+    canvas { display:block; }
+    #ui {
         position: absolute;
         top: 0; left: 0; width: 100%; height: 100%;
         pointer-events: none;
         z-index: 10;
-        padding: 30px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 40px;
         box-sizing: border-box;
-        color: #00ffff;
     }
     h1 {
-        font-size: clamp(2.5rem, 8vw, 6rem);
+        font-size: clamp(3rem, 10vw, 8rem);
         font-weight: 900;
-        background: linear-gradient(90deg, #00ff9d, #00ffff, #ff00ff);
+        text-align: center;
+        background: linear-gradient(90deg, #00ff9d, #00ffff, #ff00ff, #00ff9d);
         -webkit-background-clip: text;
         background-clip: text;
         -webkit-text-fill-color: transparent;
-        text-shadow: 0 0 40px #00ff9d;
-        letter-spacing: 8px;
-        text-align: center;
-        margin-top: 15vh;
+        text-shadow: 0 0 60px #00ff9d;
+        letter-spacing: 10px;
+        animation: titleGlow 4s infinite alternate;
+    }
+    @keyframes titleGlow { 
+        0% { text-shadow: 0 0 40px #00ff9d; }
+        100% { text-shadow: 0 0 100px #00ff9d, 0 0 150px #00ffff; }
+    }
+    .btn-container {
+        display: flex;
+        flex-direction: column;
+        gap: 25px;
+        align-items: center;
+        pointer-events: all;
     }
     .btn {
-        position: absolute;
-        bottom: 15vh;
-        left: 50%;
-        transform: translateX(-50%);
-        padding: 20px 60px;
+        padding: 20px 80px;
         background: rgba(0,255,157,0.15);
         border: 2px solid #00ff9d;
-        border-radius: 20px;
+        border-radius: 15px;
         color: #00ff9d;
-        font-size: 1.6rem;
+        font-size: 1.8rem;
         font-weight: bold;
-        letter-spacing: 4px;
+        letter-spacing: 6px;
         text-decoration: none;
-        backdrop-filter: blur(12px);
-        box-shadow: 0 0 50px rgba(0,255,157,0.6);
-        transition: 0.4s;
-        pointer-events: all;
+        backdrop-filter: blur(15px);
+        box-shadow: 0 0 40px rgba(0,255,157,0.5);
+        transition: all 0.4s;
     }
     .btn:hover {
         background: #00ff9d;
         color: #000;
-        transform: translateX(-50%) translateY(-10px) scale(1.1);
-        box-shadow: 0 0 100px #00ff9d;
+        transform: translateY(-12px) scale(1.1);
+        box-shadow: 0 0 100px #00ff9d, 0 0 150px #00ffff;
     }
 </style>
 </head>
 <body>
 
-<div id="overlay">
-    <h1>INDONESIA GRID</h1>
-    <a href="realtime.html" class="btn">REALTIME MONITORING</a>
-    <a href="result_wbp_lwbp.html" class="btn" style="bottom:8vh;">WBP / LWBP RESULT</a>
+<div id="ui">
+    <h1>CYBER GRID</h1>
+    <div class="btn-container">
+        <a href="realtime.html" class="btn">REALTIME</a>
+        <a href="result_wbp_lwbp.html" class="btn">WBP / LWBP</a>
+    </div>
 </div>
 
 <script>
-// === THREE.JS 3D MAGIC ===
-let scene = new THREE.Scene();
-let camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 1000);
-let renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
+// === CYBER GRID 3D MURNII ===
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x000000, 0.0008);
+
+const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 1000);
+camera.position.set(0, 15, 40);
+
+const renderer = new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(innerWidth, innerHeight);
 renderer.setPixelRatio(devicePixelRatio);
 document.body.appendChild(renderer.domElement);
 
-let controls = new THREE.OrbitControls(camera, renderer.domElement);
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
-controls.dampingFactor = 0.05;
-controls.rotateSpeed = 0.5;
-controls.enableZoom = false;
+controls.dampingFactor = 0.07;
+controls.autoRotate = true;
+controls.autoRotateSpeed = 0.5;
 
-camera.position.set(0, 8, 20);
+// GRID TAK TERHINGGA
+const gridSize = 200;
+const gridDiv = 60;
+const grid = new THREE.GridHelper(gridSize, gridDiv, 0x00ff9d, 0x00ff9d);
+grid.material.opacity = 0.4;
+grid.material.transparent = true;
+scene.add(grid);
 
-// BUMI INDONESIA 3D
-const earthGeo = new THREE.SphereGeometry(10, 64, 64);
-const earthMat = new THREE.MeshPhongMaterial({
-    color: 0x001122,
-    emissive: 0x002200,
-    emissiveIntensity: 0.8,
-    shininess: 10,
-    transparent: true,
-    opacity: 0.9
-});
-const earth = new THREE.Mesh(earthGeo, earthMat);
-scene.add(earth);
-
-// Glow atmosfer
-const atmosphere = new THREE.Mesh(
-    new THREE.SphereGeometry(10.8, 64, 64),
-    new THREE.MeshBasicMaterial({
-        color: 0x00ff9d,
-        transparent: true,
-        opacity: 0.15,
-        side: THREE.BackSide
-    })
-);
-scene.add(atmosphere);
-
-// Cahaya neon
-const light1 = new THREE.PointLight(0x00ff9d, 3, 100);
-light1.position.set(20, 10, 20);
-scene.add(light1);
-const light2 = new THREE.PointLight(0x00ffff, 2, 100);
-light2.position.set(-20, -10, 15);
-scene.add(light2);
-
-// JARINGAN LISTRIK 3D HIDUP
-const lines = [];
-const cities = [
-    {name:"Jakarta", pos:[-2, -0.5, 9.8]},
-    {name:"Surabaya", pos:[2.5, -1, 9.7]},
-    {name:"Medan", pos:[-5, 4, 8.5]},
-    {name:"Makassar", pos:[6, 2, 8.8]},
-    {name:"Balikpapan", pos:[4, 6, 8.2]},
-    {name:"Papua", pos:[5, 10, 7]}
-];
-
-cities.forEach(c => {
-    // Titik pembangkit
-    const dot = new THREE.Mesh(
-        new THREE.SphereGeometry(0.15, 16, 16),
-        new THREE.MeshBasicMaterial({color:0x00ffff})
+// GARIS VERTIKAL (kedalaman)
+for(let i = -gridSize/2; i <= gridSize/2; i += gridSize/gridDiv) {
+    const line = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(i, 0, -gridSize/2),
+            new THREE.Vector3(i, 0, gridSize/2)
+        ]),
+        new THREE.LineBasicMaterial({color:0x00ffff, transparent:true, opacity:0.3})
     );
-    dot.position.set(c.pos[0], c.pos[1], c.pos[2]);
-    scene.add(dot);
-
-    // Hubungkan ke pusat (Jakarta)
-    const lineGeo = new THREE.BufferGeometry().setFromPoints([
-        new THREE.Vector3(0,0,10),
-        new THREE.Vector3(c.pos[0], c.pos[1], c.pos[2])
-    ]);
-    const lineMat = new THREE.LineBasicMaterial({
-        color: 0x00ff9d,
-        transparent: true,
-        opacity: 0.8
-    });
-    const line = new THREE.Line(lineGeo, lineMat);
     scene.add(line);
-    lines.push(line);
-});
+}
 
-// Partikel listrik mengalir di sepanjang kabel
-let particles = [];
-function createFlowParticle() {
-    const p = new THREE.Mesh(
-        new THREE.SphereGeometry(0.08, 8, 8),
-        new THREE.MeshBasicMaterial({color:0x00ffff})
+// PARTIKEL ALIRAN LISTRIK
+const particles = [];
+const particleCount = 800;
+const geometry = new THREE.SphereGeometry(0.15, 8, 8);
+const material = new THREE.MeshBasicMaterial({color:0x00ffff});
+
+for(let i=0; i<particleCount; i++) {
+    const p = new THREE.Mesh(geometry, material);
+    p.position.set(
+        (Math.random()-0.5)*gridSize,
+        Math.random()*30,
+        (Math.random()-0.5)*gridSize
     );
-    p.life = 0;
-    p.speed = 0.02 + Math.random()*0.03;
+    p.velocity = new THREE.Vector3(
+        (Math.random()-0.5)*0.3,
+        -Math.random()*2 - 1,
+        (Math.random()-0.5)*0.3
+    );
     scene.add(p);
     particles.push(p);
 }
 
-// Tambah 150 partikel mengalir
-for(let i=0; i<150; i++) setTimeout(createFlowParticle, i*30);
-
-let time = 0;
 function animate() {
     requestAnimationFrame(animate);
-    time += 0.01;
-
-    earth.rotation.y += 0.001;
-    atmosphere.rotation.y += 0.0005;
-
-    // Aliran listrik di kabel
-    lines.forEach((line, i) => {
-        line.material.opacity = 0.6 + 0.4*Math.sin(time*3 + i);
+    
+    // Gerakin partikel + respawn kalau jatuh
+    particles.forEach(p => {
+        p.position.add(p.velocity);
+        if(p.position.y < -20) {
+            p.position.y = 30;
+            p.position.x = (Math.random()-0.5)*gridSize;
+            p.position.z = (Math.random()-0.5)*gridSize;
+        }
     });
 
-    // Gerakkan partikel mengalir
-    particles.forEach((p, idx) => {
-        p.life += p.speed;
-        if(p.life > 1) p.life = 0;
-        const line = lines[idx % lines.length];
-        const pos = line.geometry.attributes.position;
-        const v1 = new THREE.Vector3(pos.array[0], pos.array[1], pos.array[2]);
-        const v2 = new THREE.Vector3(pos.array[3], pos.array[4], pos.array[5]);
-        p.position.lerpVectors(v1, v2, p.life);
-        p.scale.setScalar(1 + Math.sin(time*20)*0.5);
-    });
+    // Efek glow grid
+    const time = Date.now() * 0.001;
+    grid.material.opacity = 0.4 + 0.3 * Math.sin(time*3);
 
     controls.update();
     renderer.render(scene, camera);
@@ -201,5 +164,6 @@ window.addEventListener('resize', () => {
     renderer.setSize(innerWidth, innerHeight);
 });
 </script>
+
 </body>
 </html>
