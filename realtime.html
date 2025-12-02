@@ -6,81 +6,168 @@
 <title>⚡ Master Power Meter Dashboard (18 SLAVES) - Mobile Friendly</title>
 
 <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
 <style>
 /* -------------------------------------
-   Theme & Responsive UI (Mobile-first)
-   ------------------------------------- */
+   Theme & Responsive UI (Mobile-first)
+   ------------------------------------- */
 :root{
-  --bg:#0f0f11; --card:#1a1a1a; --muted:#9aa7b2; --accent:#00ffc2;
-  --online:#10b981; --offline:#ef4444; --tariff:#facc15;
+  --bg:#0f0f11; --card:#1a1a1a; --muted:#9aa7b2; --accent:#00ffc2;
+  --online:#10b981; --offline:#ef4444; --tariff:#facc15;
+  --power-color: #7dd3fc; /* Biru muda */
+  --energy-color: #86efac; /* Hijau muda */
 }
 html,body{height:100%;}
 body{
-  margin:0; padding:16px; background:linear-gradient(180deg,#0b0b0b 0%, #0f0f11 100%);
-  font-family:Inter, 'Segoe UI', system-ui, -apple-system, Roboto, 'Helvetica Neue', Arial;
-  color:#e6eef1; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+  margin:0; padding:16px; background:linear-gradient(180deg,#0b0b0b 0%, #0f0f11 100%);
+  font-family:Inter, 'Segoe UI', system-ui, -apple-system, Roboto, 'Helvetica Neue', Arial;
+  color:#e6eef1; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
 }
 /* Header */
 .header{
-  display:flex; align-items:center; gap:12px; justify-content:space-between;
-  max-width:1100px; margin:0 auto 12px auto; padding:6px 0;
+  display:flex; align-items:center; gap:12px; justify-content:space-between;
+  max-width:1100px; margin:0 auto 12px auto; padding:6px 0;
 }
 .h-left{display:flex; flex-direction:column;}
 h2{margin:0; color:var(--accent); font-size:clamp(1rem,4vw,1.4rem);}
-#conn{font-size:0.85rem;color:var(--muted); margin-top:6px}
+#conn{font-size:0.85rem;color:var(--muted); margin-top:6px; display:flex; align-items:center; gap:6px;}
 
 /* Grid container */
 .container{max-width:1100px; margin:0 auto;}
 #main-view{
-  display:grid; grid-template-columns:repeat(2, 1fr); gap:10px;
+  display:grid; grid-template-columns:repeat(2, 1fr); gap:10px;
 }
 
 /* Card */
 .machine-card{
-  background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.12));
-  border:1px solid rgba(255,255,255,0.03); border-radius:12px; padding:12px 10px; height:92px;
-  display:flex; flex-direction:column; justify-content:center; align-items:flex-start; gap:6px; position:relative;
-  box-shadow:0 6px 18px rgba(0,0,0,0.6);
+  /* Efek Glassmorphism halus */
+  background:rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(4px);
+  border:1px solid rgba(255,255,255,0.06);
+  border-radius:12px; padding:12px 10px; height:100px; /* Sedikit lebih tinggi */
+  display:flex; flex-direction:column; justify-content:space-between; align-items:flex-start;
+  position:relative; overflow:hidden;
+  box-shadow:0 6px 18px rgba(0,0,0,0.6);
+  cursor:pointer; /* Indikasi interaksi */
 }
-.card-top{display:flex; align-items:center; width:100%; justify-content:space-between}
-.card-title{font-weight:700; font-size:0.98rem; color:#bfefff; margin:0}
-.sid{font-size:0.78rem; color:var(--muted)}
-.card-bottom{display:flex; gap:8px; align-items:center}
-.small-badge{font-size:0.72rem; color:var(--muted); background:rgba(255,255,255,0.02); padding:6px 8px; border-radius:999px}
+.card-top{display:flex; align-items:flex-start; width:100%; justify-content:space-between}
+.card-title{font-weight:700; font-size:1.05rem; color:#bfefff; margin:0; line-height:1.2;}
+.sid{font-size:0.75rem; color:var(--muted); margin-top:4px; font-weight:500;}
+.small-badge{
+  font-size:0.72rem; color:var(--muted);
+  background:rgba(255,255,255,0.02);
+  padding:6px 8px; border-radius:6px;
+  font-weight:600;
+}
 
-/* status indicator (small pulse) */
-.status-indicator{
-  position:absolute; top:10px; right:10px; width:12px; height:12px; border-radius:50%; border:2px solid var(--bg);
+/* New: Status Badge (replacing small pulse) */
+.status-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 999px;
+  align-self: flex-end; /* Posisikan di kanan bawah */
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
 }
-.status-online{ background:var(--online); box-shadow:0 0 8px rgba(16,185,129,0.24); }
-.status-offline{ background:var(--offline); box-shadow:0 0 8px rgba(239,68,68,0.18); }
+
+.status-online {
+  background: rgba(16, 185, 129, 0.15); /* Hijau transparan */
+  color: var(--online);
+}
+
+.status-offline {
+  background: rgba(239, 68, 68, 0.15); /* Merah transparan */
+  color: var(--offline);
+}
+.badge-icon { font-size: 0.8em; }
 
 /* Tooltip on long press (mobile) via title attribute not styled here */
 
 /* Modal overlay */
-#modal-overlay{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(2,6,23,0.7); backdrop-filter:blur(8px); z-index:1000; padding:18px; }
-#modal{ width:100%; max-width:680px; background:var(--card); border-radius:12px; padding:18px; box-shadow:0 10px 30px rgba(0,0,0,0.6); color:#eaf6f5; max-height:88vh; overflow:auto }
-#modal h3{ margin:0 0 8px 0; color:var(--accent); font-size:1.1rem }
-#close-modal{ position:absolute; right:14px; top:10px; background:transparent; border:0; color:var(--muted); font-size:20px; cursor:pointer }
+#modal-overlay{
+  position:fixed; inset:0; display:none; align-items:center; justify-content:center;
+  background:rgba(2,6,23,0.85); /* Lebih gelap */
+  backdrop-filter:blur(10px); z-index:1000; padding:18px;
+}
+#modal{
+  width:100%; max-width:780px; /* Lebih lebar */
+  background:var(--card); border-radius:12px;
+  box-shadow:0 12px 40px rgba(0,0,0,0.8);
+  color:#eaf6f5; max-height:92vh; overflow:hidden; /* Konten di dalam yang scroll */
+  display: flex; flex-direction: column;
+}
+#modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  position: relative;
+}
+#modal h3{ margin:0; color:var(--accent); font-size:1.4rem; display:flex; align-items:center; gap:10px;}
+#close-modal{
+  position:absolute; right:16px; top:14px; background:transparent; border:0;
+  color:var(--muted); font-size:24px; cursor:pointer; opacity:0.7; transition:opacity 150ms;
+}
+#close-modal:hover{ opacity:1; }
 
-/* Detail table */
-#detail-table{ width:100%; border-collapse:collapse; margin-top:10px }
-#detail-table th,#detail-table td{ padding:10px 8px; text-align:left; border-bottom:1px solid rgba(255,255,255,0.03); font-size:0.95rem }
-#detail-table thead th{ color:var(--accent); font-weight:700; font-size:0.85rem }
+#modal-content {
+  overflow-y: auto;
+  padding: 0 20px;
+  flex-grow: 1;
+}
+
+#modal-footer {
+  padding: 12px 20px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  font-size: 0.85rem;
+  color: var(--muted);
+  text-align: right;
+}
+
+/* Detail table (PROFESIONAL) */
+#detail-table{ width:100%; border-collapse:separate; border-spacing:0 4px; margin-top:8px }
+#detail-table th,#detail-table td{ padding:12px 10px; text-align:left; font-size:0.95rem; }
+#detail-table thead th{
+  color:var(--accent); font-weight:700; font-size:0.8rem;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  background: rgba(0,255,194, 0.05);
+}
+#detail-table tbody tr {
+  background: rgba(255,255,255,0.02);
+  border-radius: 4px;
+  transition: background 150ms;
+}
+#detail-table tbody tr:hover {
+  background: rgba(255,255,255,0.05);
+}
+
 .param-name{ font-weight:600; width:45% }
-.param-value{ color:#e9fbf7 }
-.col-power{ color:#7dd3fc }
-.col-energy{ color:#86efac }
+.param-value{ font-family: 'Consolas', 'Courier New', monospace; font-weight: 700; }
+.col-power{ color:var(--power-color) }
+.col-energy{ color:var(--energy-color) }
 .col-tariff{ color:var(--tariff) }
+.col-status-modal {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.col-status-modal.online { color: var(--online); }
+.col-status-modal.offline { color: var(--offline); }
 
 /* Responsive tweaks */
 @media(min-width:720px){ #main-view{ grid-template-columns:repeat(3,1fr); } }
 @media(min-width:980px){ #main-view{ grid-template-columns:repeat(6,1fr); } }
-@media(max-width:420px){ .machine-card{ height:86px; padding:10px } }
+@media(max-width:420px){ .machine-card{ height:90px; padding:10px } }
 
 /* subtle hover for desktop */
-.machine-card:hover{ transform:translateY(-6px); transition:transform 180ms; }
+.machine-card:hover{
+  transform:translateY(-4px);
+  transition:transform 180ms, box-shadow 180ms;
+  box-shadow:0 10px 25px rgba(0,0,0,0.7);
+}
 
 /* small helper */
 .center-note{ text-align:center; color:var(--muted); font-size:0.9rem; margin-top:8px }
@@ -89,30 +176,35 @@ h2{margin:0; color:var(--accent); font-size:clamp(1rem,4vw,1.4rem);}
 <body>
 
 <div class="header container">
-  <div class="h-left">
-    <h2>Power Meter Dashboard</h2>
-    <div id="conn">Connecting...</div>
-  </div>
-  <div class="h-right">
-    <!-- reserved for top-right controls if needed -->
-  </div>
+  <div class="h-left">
+    <h2><i class="fas fa-bolt" style="color:var(--accent);"></i> Power Meter Dashboard</h2>
+    <div id="conn"><i class="fas fa-sync fa-spin"></i>Connecting...</div>
+  </div>
+  <div class="h-right">
+      </div>
 </div>
 
 <div class="container">
-  <div id="main-view" aria-live="polite"></div>
-  <div class="center-note">Tap kartu untuk lihat detail • SID = sensor id</div>
+  <div id="main-view" aria-live="polite"></div>
+  <div class="center-note">Tap kartu untuk lihat detail • SID = Sensor ID</div>
 </div>
 
-<!-- Modal -->
 <div id="modal-overlay" role="dialog" aria-modal="true">
-  <div id="modal">
-    <button id="close-modal" aria-label="Tutup detail">&times;</button>
-    <h3 id="modal-title">Detail</h3>
-    <table id="detail-table" aria-label="Detail Parameter">
-      <thead><tr><th>Parameter</th><th>Nilai</th></tr></thead>
-      <tbody id="detailBody"></tbody>
-    </table>
-  </div>
+  <div id="modal">
+    <div id="modal-header">
+      <button id="close-modal" aria-label="Tutup detail">&times;</button>
+      <h3 id="modal-title"><i class="fas fa-chart-line"></i> Detail Mesin</h3>
+    </div>
+    <div id="modal-content">
+      <table id="detail-table" aria-label="Detail Parameter">
+        <thead><tr><th>Parameter</th><th>Nilai</th></tr></thead>
+        <tbody id="detailBody"></tbody>
+      </table>
+    </div>
+    <div id="modal-footer">
+      Data diperbarui secara real-time dari server MQTT
+    </div>
+  </div>
 </div>
 
 <script>
@@ -145,27 +237,114 @@ const deviceData = {};
 for(let i=1;i<=TOTAL_DEVICES;i++) deviceData[i] = {};
 
 /* ========== create cards (mobile-friendly compact) ========== */
-function createCards(){ mainView.innerHTML=''; for(let id=1;id<=TOTAL_DEVICES;id++){ const tag=MACHINE_TAGS[id]||'Mesin Tidak Dikenal'; const card=document.createElement('div'); card.className='machine-card'; card.dataset.id=id; card.title = `Mesin ${id} = ${tag}`; card.innerHTML = `\n  <div class="card-top">\n    <div style="display:flex;flex-direction:column">\n      <p class="card-title">${tag}</p>\n      <span class="sid">SID ${id}</span>\n    </div>\n    <div class="small-badge">#${id}</div>\n  </div>\n  `; card.onclick = ()=> showDetailModal(id); mainView.appendChild(card); // create small status indicator
-    const ind = document.createElement('div'); ind.className='status-indicator status-offline'; ind.id = `status-ind-${id}`; card.appendChild(ind);
-    devices[id] = { card, indicator: ind };
-  }}
+function createCards(){
+  mainView.innerHTML='';
+  for(let id=1;id<=TOTAL_DEVICES;id++){
+    const tag=MACHINE_TAGS[id]||'Mesin Tidak Dikenal';
+    const card=document.createElement('div');
+    card.className='machine-card';
+    card.dataset.id=id;
+    card.title = `Mesin ${id} = ${tag}`;
+    card.onclick = ()=> showDetailModal(id);
+
+    card.innerHTML = `
+      <div class="card-top">
+        <div style="display:flex;flex-direction:column">
+          <p class="card-title">${tag}</p>
+          <span class="sid">SID ${id}</span>
+        </div>
+        <div class="small-badge">#${id}</div>
+      </div>
+      <div id="status-badge-${id}" class="status-badge status-offline">
+        <i class="badge-icon fas fa-times-circle"></i> OFFLINE
+      </div>
+    `;
+    mainView.appendChild(card);
+
+    // Store reference to the new status badge
+    devices[id] = { card, indicator: document.getElementById(`status-badge-${id}`) };
+  }
+}
 createCards();
 
 /* ========== modal functions ========== */
-function showDetailModal(id){ const d = deviceData[id]||{}; modalTitle.textContent = `Detail SID ${id} — ${MACHINE_TAGS[id]||'NAMA MESIN'}`; detailBody.innerHTML=''; // status
-  const trStatus = document.createElement('tr'); trStatus.innerHTML = `<td class="param-name">Status</td><td class="param-value ${d.status==='online'?'status-online':'status-offline'}">${d.status?d.status.toUpperCase():'---'}</td>`; detailBody.appendChild(trStatus);
-  dataMap.forEach(key=>{ const tr=document.createElement('tr'); const raw=d[key]; let v; if(key==='OpH'){ v=(raw===0||raw)?formatOpH(raw):'---'; } else { v=(raw===0||raw)?fmt(raw,key):'---'; } tr.innerHTML = `<td class="param-name">${dataLabels[key]}</td><td class="param-value ${getStyleClass(key)}">${v}</td>`; detailBody.appendChild(tr); }); modalOverlay.style.display='flex'; document.body.style.overflow='hidden'; }
+function showDetailModal(id){
+  const d = deviceData[id]||{};
+  const machineTag = MACHINE_TAGS[id]||'NAMA MESIN';
+  const currentStatus = (d.status && d.status.toLowerCase()==='online') ? 'online' : 'offline';
+
+  // Update modal title
+  modalTitle.innerHTML = `<i class="fas fa-chart-line"></i> Detail SID ${id} — ${machineTag}`;
+
+  detailBody.innerHTML='';
+
+  // 1. Status Row (Lebih Profesional)
+  const trStatus = document.createElement('tr');
+  const icon = (currentStatus === 'online') ? '<i class="fas fa-circle-check"></i>' : '<i class="fas fa-circle-xmark"></i>';
+  trStatus.innerHTML = `<td class="param-name">Status Sensor</td><td class="param-value col-status-modal ${currentStatus}">${icon} ${currentStatus.toUpperCase()}</td>`;
+  detailBody.appendChild(trStatus);
+
+  // 2. Data Rows
+  dataMap.forEach(key=>{
+    const tr=document.createElement('tr');
+    const raw=d[key];
+    let v;
+    if(key==='OpH'){
+      v=(raw===0||raw)?formatOpH(raw):'---';
+    } else {
+      v=(raw===0||raw)?fmt(raw,key):'---';
+    }
+    tr.innerHTML = `<td class="param-name">${dataLabels[key]}</td><td class="param-value ${getStyleClass(key)}">${v}</td>`;
+    detailBody.appendChild(tr);
+  });
+
+  modalOverlay.style.display='flex';
+  document.body.style.overflow='hidden';
+}
 function closeDetailModal(){ modalOverlay.style.display='none'; document.body.style.overflow=''; }
 closeModalBtn.addEventListener('click', closeDetailModal); modalOverlay.addEventListener('click', e=>{ if(e.target===modalOverlay) closeDetailModal(); }); window.addEventListener('keydown', e=>{ if(e.key==='Escape' && modalOverlay.style.display==='flex') closeDetailModal(); });
 
-/* ========== MQTT (same logic) ========== */
+/* ========== MQTT (same logic, updated conn indicator) ========== */
 const client = mqtt.connect(MQTT_URL, MQTT_OPTIONS);
-client.on('connect', ()=>{ conn.textContent='✅ MQTT Connected'; client.subscribe(MQTT_TOPIC); });
-client.on('reconnect', ()=>{ conn.textContent='🔄 MQTT Reconnecting...'; });
-client.on('error', err=>{ conn.textContent='❌ MQTT Error'; console.error('MQTT Error:',err); });
-client.on('message', (topic,message)=>{ try{ const d = JSON.parse(message.toString()); const id = Number(d.id); if(!id||id<1||id>TOTAL_DEVICES){ console.warn('Invalid ID',d); return; } deviceData[id] = d; // update status indicator
-    if(devices[id]){ const status = (d.status && d.status.toLowerCase()==='online') ? 'online' : 'offline'; devices[id].indicator.className = `status-indicator status-${status}`; }
-  }catch(e){ console.error('Payload parse error:', e, message.toString()); } });
+
+client.on('connect', ()=>{
+  conn.innerHTML = '✅ <i class="fas fa-cloud-arrow-up"></i> MQTT Connected';
+  client.subscribe(MQTT_TOPIC);
+});
+
+client.on('reconnect', ()=>{
+  conn.innerHTML = '🔄 <i class="fas fa-sync fa-spin"></i> MQTT Reconnecting...';
+});
+
+client.on('error', err=>{
+  conn.innerHTML = '❌ <i class="fas fa-triangle-exclamation"></i> MQTT Error';
+  console.error('MQTT Error:',err);
+});
+
+client.on('message', (topic,message)=>{
+  try{
+    const d = JSON.parse(message.toString());
+    const id = Number(d.id);
+    if(!id||id<1||id>TOTAL_DEVICES){ console.warn('Invalid ID',d); return; }
+    deviceData[id] = d;
+
+    // update status badge
+    if(devices[id] && devices[id].indicator){
+      const status = (d.status && d.status.toLowerCase()==='online') ? 'online' : 'offline';
+      const indicator = devices[id].indicator;
+
+      // Update class for styling
+      indicator.className = `status-badge status-${status}`;
+
+      // Update content (text and icon)
+      if (status === 'online') {
+        indicator.innerHTML = '<i class="badge-icon fas fa-circle-dot"></i> ONLINE';
+      } else {
+        indicator.innerHTML = '<i class="badge-icon fas fa-times-circle"></i> OFFLINE';
+      }
+    }
+  }catch(e){ console.error('Payload parse error:', e, message.toString()); }
+});
 
 </script>
 </body>
