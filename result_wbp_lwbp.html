@@ -1,208 +1,312 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>📊 Analisis Konsumsi Harian (Ringkasan)</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analisis Konsumsi & Biaya Listrik (Rentang Tanggal)</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0e17;
+      --card: #111827;
+      --accent: #00e5bd;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --border: #1f2937;
+      --lwbp: #065f46;
+      --wbp: #7f1d1d;
+      --total: #004d40;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      padding: 2rem;
+      min-height: 100vh;
+    }
+    h1 {
+      text-align: center;
+      font-size: 2.4rem;
+      color: var(--accent);
+      margin-bottom: 1rem;
+      text-shadow: 0 0 20px rgba(0,229,189,0.4);
+    }
+    .subtitle {
+      text-align: center;
+      color: var(--muted);
+      margin-bottom: 2rem;
+      font-size: 1.1rem;
+    }
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script> 
+    /* Panel Filter */
+    .filter-panel {
+      background: var(--card);
+      padding: 1.8rem;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      max-width: 900px;
+      margin: 0 auto 2rem;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+    }
+    .filter-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: 1rem;
+      align-items: end;
+    }
+    label {
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 0.5rem;
+      display: block;
+    }
+    input[type="date"] {
+      padding: 0.8rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #1a1a1a;
+      color: white;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    button {
+      padding: 0.8rem 1.8rem;
+      background: var(--accent);
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(0,229,189,0.4);
+    }
+    .status {
+      text-align: center;
+      margin: 1.5rem 0;
+      font-style: italic;
+      color: var(--muted);
+    }
 
-<style>
-/* Styling Dasar */
-body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: #121212; 
-    color: #E0E0E0; 
-    padding: 20px;
-}
-h2, h3 {
-    color: #00FFC2; 
-    margin-bottom: 5px;
-}
-table {
-    border-collapse: collapse;
-    width: 100%;
-    margin-top: 15px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-    border-radius: 8px;
-    overflow: hidden;
-}
-th, td {
-    border: 1px solid #2A2A2A; 
-    padding: 10px 12px;
-    text-align: center;
-}
-thead th {
-    background: #2A2A2A;
-    color: #00FFC2;
-    font-weight: 600;
-    text-transform: uppercase;
-    font-size: 0.9em;
-}
-
-/* Styling Kolom */
-.wbp-cell { background: #4c0519; font-weight: bold; }
-.lwbp-cell { background: #065f46; font-weight: bold; }
-.total-cell { background: #004d40; color: white; font-weight: bold; }
-</style>
+    /* Tabel */
+    .table-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      overflow-x: auto;
+      border-radius: 16px;
+      box-shadow: 0 15px 40px rgba(0,0,0,0.5);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--card);
+    }
+    th {
+      background: #1a1a1a;
+      color: var(--accent);
+      padding: 1rem;
+      text-transform: uppercase;
+      font-size: 0.85rem;
+      letter-spacing: 1px;
+      font-weight: 600;
+    }
+    td {
+      padding: 1rem;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+    }
+    tbody tr:hover {
+      background: rgba(0,229,189,0.05);
+    }
+    .lwbp { background: var(--lwbp); color: white; font-weight: bold; }
+    .wbp { background: var(--wbp); color: white; font-weight: bold; }
+    .total { background: var(--total); color: white; font-weight: bold; }
+    .footer-total {
+      background: #001f1a !important;
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+    @media (max-width: 768px) {
+      .filter-grid { grid-template-columns: 1fr; }
+      button { width: 100%; }
+      h1 { font-size: 2rem; }
+    }
+  </style>
 </head>
-
 <body>
 
-<h2>📊 Ringkasan Konsumsi Harian Mesin</h2>
+  <h1>Analisis Konsumsi & Biaya Listrik</h1>
+  <p class="subtitle">Pilih rentang tanggal untuk melihat konsumsi LWBP, WBP, dan total biaya</p>
 
-<div style="margin-bottom: 20px; padding: 15px; background: #2A2A2A; border-radius: 8px;">
-    <label for="analysisDate" style="font-weight: bold; margin-right: 15px;">Pilih Tanggal Analisis:</label>
-    <input type="date" id="analysisDate" style="padding: 8px; border-radius: 4px; border: 1px solid #444; background: #121212; color: white;">
-    <button onclick="renderDailyConsumptionData()" style="padding: 8px 15px; margin-left: 10px; background-color: #00FFC2; color: #121212; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
-        Tampilkan Hasil
-    </button>
-</div>
+  <div class="filter-panel">
+    <div class="filter-grid">
+      <div>
+        <label>Tanggal Awal</label>
+        <input type="date" id="startDate">
+      </div>
+      <div>
+        <label>Tanggal Akhir</label>
+        <input type="date" id="endDate">
+      </div>
+      <div>
+        <button onclick="loadData()">Tampilkan Data</button>
+      </div>
+    </div>
+    <div class="status" id="status">Silakan pilih rentang tanggal dan klik "Tampilkan Data"</div>
+  </div>
 
-<p id="analysisStatus" style="font-style: italic;">Tabel siap. Silakan pilih tanggal dan klik Tampilkan Hasil.</p>
-
----
-
-<h3>Tabel Ringkasan Konsumsi (kWh)</h3>
-<table id="summaryTable">
-    <thead>
+  <div class="table-container">
+    <table id="resultTable">
+      <thead>
         <tr>
-            <th style="width: 10%;">ID Mesin</th>
-            <th style="width: 15%;">Tanggal</th>
-            <th class="lwbp-cell">LWBP (Luar Puncak)</th>
-            <th class="wbp-cell">WBP (Puncak)</th>
-            <th class="total-cell">TOTAL Harian</th>
+          <th rowspan="2">ID Mesin</th>
+          <th rowspan="2">Tgl Awal</th>
+          <th rowspan="2">Tgl Akhir</th>
+          <th colspan="2">LWBP</th>
+          <th colspan="2">WBP</th>
+          <th colspan="2">TOTAL (LWBP + WBP)</th>
         </tr>
-    </thead>
-    <tbody>
-        </tbody>
-</table>
+        <tr>
+          <th class="lwbp">kWh</th>
+          <th class="lwbp">Rp</th>
+          <th class="wbp">kWh</th>
+          <th class="wbp">Rp</th>
+          <th class="total">kWh</th>
+          <th class="total">Rp</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody">
+        <!-- Data akan diisi oleh JavaScript -->
+      </tbody>
+      <tfoot>
+        <tr class="footer-total">
+          <td colspan="3"><strong>TOTAL KESELURUHAN</strong></td>
+          <td id="totLwbpKwh">-</td>
+          <td id="totLwbpRp">-</td>
+          <td id="totWbpKwh">-</td>
+          <td id="totWbpRp">-</td>
+          <td id="totAllKwh">-</td>
+          <td id="totAllRp">-</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
 
-<script>
-// =======================================================
-// --- KONFIGURASI SUPABASE ---
-// =======================================================
-const SUPA_URL  = "https://rojhcadtqfynlqzubftx.supabase.co"; 
-const SUPA_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs"; 
+  <script>
+    const SUPABASE_URL = "https://rojhcadtqfynlqzubftx.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs";
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-let supa = supabase.createClient(SUPA_URL, SUPA_ANON);
+    const TABLE_NAME = 'final_calculation_base'; // Ganti jika nama tabel berbeda
 
-// Menggunakan VIEW kalkulasi yang sudah pasti terisi
-const DATA_SOURCE_TABLE = 'final_calculation_base'; 
+    // Tarif PLN (sesuai golongan industri/rumah tangga, sesuaikan)
+    const TARIF_LWBP = 1352;  // Rp/kWh
+    const TARIF_WBP  = 1650;  // Rp/kWh
 
-// --- DOM ELEMENTS BARU ---
-const summaryTableBody = document.querySelector('#summaryTable tbody');
-const analysisStatus = document.getElementById('analysisStatus');
-const analysisDateInput = document.getElementById('analysisDate');
+    async function loadData() {
+      const start = document.getElementById('startDate').value;
+      const end = document.getElementById('endDate').value;
+      const status = document.getElementById('status');
 
-// Data mesin (1-13)
-const ALL_MESIN_IDS = Array.from({length: 13}, (_, i) => i + 1);
-
-
-/**
- * Menampilkan data default 0.00 untuk semua mesin, sebagai kerangka tampilan (standby).
- */
-function renderDefaultTables(targetDate = '---') {
-    summaryTableBody.innerHTML = '';
-    
-    ALL_MESIN_IDS.forEach(id => {
-        const defaultData = {
-            id_mesin: id,
-            tanggal: targetDate,
-            konsumsi_total_harian: 0.00,
-            konsumsi_lwbp_kwh: 0.00,
-            konsumsi_wbp_kwh: 0.00
-        };
-
-        const tr = summaryTableBody.insertRow();
-        tr.insertCell().textContent = defaultData.id_mesin;
-        tr.insertCell().textContent = defaultData.tanggal;
-
-        // LWBP
-        const lwbpCell = tr.insertCell();
-        lwbpCell.textContent = defaultData.konsumsi_lwbp_kwh.toFixed(2);
-        lwbpCell.className = 'lwbp-cell';
-
-        // WBP
-        const wbpCell = tr.insertCell();
-        wbpCell.textContent = defaultData.konsumsi_wbp_kwh.toFixed(2);
-        wbpCell.className = 'wbp-cell';
-
-        // TOTAL
-        const totalCell = tr.insertCell();
-        totalCell.textContent = defaultData.konsumsi_total_harian.toFixed(2);
-        totalCell.className = 'total-cell';
-    });
-}
-
-
-/**
- * Mengambil data harian dari Supabase dan menggantikan nilai default.
- */
-async function renderDailyConsumptionData() {
-    const targetDate = analysisDateInput.value;
-    
-    if (!targetDate) {
-        analysisStatus.textContent = "Silakan pilih tanggal analisis.";
-        renderDefaultTables(); 
+      if (!start || !end) {
+        status.textContent = "Harap isi tanggal awal dan akhir!";
+        status.style.color = "#f87171";
         return;
-    }
-    
-    // Tampilkan tabel default untuk tanggal yang dipilih
-    renderDefaultTables(targetDate);
-    analysisStatus.textContent = `Sedang mengambil data untuk tanggal ${targetDate}...`;
+      }
 
-    try {
-        const { data: finalData, error } = await supa
-            .from(DATA_SOURCE_TABLE) 
-            .select('tanggal, id_mesin, konsumsi_lwbp_kwh, konsumsi_wbp_kwh, konsumsi_total_harian')
-            .eq('tanggal', targetDate) 
-            .order('id_mesin', { ascending: true });
+      if (new Date(start) > new Date(end)) {
+        status.textContent = "Tanggal awal tidak boleh lebih besar dari tanggal akhir!";
+        status.style.color = "#f87171";
+        return;
+      }
+
+      status.textContent = `Mengambil data dari ${start} hingga ${end}...`;
+      status.style.color = "#94a3b8";
+
+      try {
+        const { data, error } = await supabase
+          .from(TABLE_NAME)
+          .select('id_mesin, tanggal, konsumsi_lwbp_kwh, konsumsi_wbp_kwh')
+          .gte('tanggal', start)
+          .lte('tanggal', end)
+          .order('id_mesin', { ascending: true })
+          .order('tanggal', { ascending: true });
 
         if (error) throw error;
-        
-        if (finalData.length === 0) {
-            analysisStatus.textContent = `Data konsumsi untuk tanggal ${targetDate} belum tersedia.`;
-            return;
-        }
 
-        const dataMap = new Map(finalData.map(item => [item.id_mesin, item]));
-
-        ALL_MESIN_IDS.forEach((id, index) => {
-            const row = dataMap.get(id);
-            const tableRow = summaryTableBody.children[index]; 
-
-            if (row) {
-                // Update Kolom LWBP (Index 2)
-                tableRow.cells[2].textContent = row.konsumsi_lwbp_kwh.toFixed(2); 
-                
-                // Update Kolom WBP (Index 3)
-                tableRow.cells[3].textContent = row.konsumsi_wbp_kwh.toFixed(2); 
-                
-                // Update Kolom TOTAL (Index 4)
-                tableRow.cells[4].textContent = row.konsumsi_total_harian.toFixed(2);
-            }
+        const grouped = {};
+        data.forEach(row => {
+          if (!grouped[row.id_mesin]) {
+            grouped[row.id_mesin] = { lwbp: 0, wbp: 0 };
+          }
+          grouped[row.id_mesin].lwbp += parseFloat(row.konsumsi_lwbp_kwh || 0);
+          grouped[row.id_mesin].wbp += parseFloat(row.konsumsi_wbp_kwh || 0);
         });
 
-        analysisStatus.textContent = `Data berhasil diperbarui untuk ${finalData.length} mesin pada tanggal ${targetDate}.`;
-        
-    } catch (e) {
-        analysisStatus.textContent = `Gagal memuat data dari Supabase: ${e.message}`;
-        console.error("Error fetching daily consumption data:", e);
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = '';
+
+        let grandLwbpKwh = 0, grandWbpKwh = 0;
+
+        Object.keys(grouped).sort((a,b) => a-b).forEach(id => {
+          const d = grouped[id];
+          const lwbpKwh = d.lwbp;
+          const wbpKwh = d.wbp;
+          const totalKwh = lwbpKwh + wbpKwh;
+          const lwbpRp = lwbpKwh * TARIF_LWBP;
+          const wbpRp = wbpKwh * TARIF_WBP;
+          const totalRp = lwbpRp + wbpRp;
+
+          grandLwbpKwh += lwbpKwh;
+          grandWbpKwh += wbpKwh;
+
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${id}</td>
+            <td>${start}</td>
+            <td>${end}</td>
+            <td class="lwbp">${lwbpKwh.toFixed(2)}</td>
+            <td class="lwbp">${lwbpRp.toLocaleString('id-ID')}</td>
+            <td class="wbp">${wbpKwh.toFixed(2)}</td>
+            <td class="wbp">${wbpRp.toLocaleString('id-ID')}</td>
+            <td class="total">${totalKwh.toFixed(2)}</td>
+            <td class="total">${totalRp.toLocaleString('id-ID')}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        // Footer Total
+        const totalAllKwh = grandLwbpKwh + grandWbpKwh;
+        const totalAllRp = (grandLwbpKwh * TARIF_LWBP) + (grandWbpKwh * TARIF_WBP);
+
+        document.getElementById('totLwbpKwh').textContent = grandLwbpKwh.toFixed(2);
+        document.getElementById('totLwbpRp').textContent = (grandLwbpKwh * TARIF_LWBP).toLocaleString('id-ID');
+        document.getElementById('totWbpKwh').textContent = grandWbpKwh.toFixed(2);
+        document.getElementById('totWbpRp').textContent = (grandWbpKwh * TARIF_WBP).toLocaleString('id-ID');
+        document.getElementById('totAllKwh').textContent = totalAllKwh.toFixed(2);
+        document.getElementById('totAllRp').textContent = totalAllRp.toLocaleString('id-ID');
+
+        status.textContent = `Berhasil memuat data ${data.length} record dari ${Object.keys(grouped).length} mesin.`;
+        status.style.color = "#86efac";
+
+      } catch (err) {
+        status.textContent = `Error: ${err.message}`;
+        status.style.color = "#f87171";
+        console.error(err);
+      }
     }
-}
 
-
-// Saat halaman dimuat, atur tanggal default dan tampilkan tabel default
-document.addEventListener('DOMContentLoaded', () => {
-    const today = new Date().toISOString().slice(0, 10);
-    analysisDateInput.value = today;
-    
-    renderDefaultTables(today);
-    analysisStatus.textContent = `Tabel siap. Silakan klik "Tampilkan Hasil" untuk mengambil data ${today}.`;
-});
-
-</script>
-
+    // Set default tanggal hari ini & 7 hari lalu
+    window.onload = () => {
+      const today = new Date().toISOString().split('T')[0];
+      const lastWeek = new Date(Date.now() - 7*24*60*60*1000).toISOString().split('T')[0];
+      document.getElementById('startDate').value = lastWeek;
+      document.getElementById('endDate').value = today;
+      loadData();
+    };
+  </script>
 </body>
 </html>
