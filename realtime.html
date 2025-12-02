@@ -17,7 +17,7 @@ body {
     padding: 0;
     margin: 0;
     /* Background Tema Profesional (Energy Grid) */
-    background-image: url('https://images.unsplash.com/photo-1542385108611-667dc9df9c40?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w0NTIyMzZ8MHwxfHNlYXJjaHwxfHxtYXN0ZXIlMjBlbmVyZ3klMjBncmlkJTIwZGFzaGJvYXJkJTIwYmFja2dyb3VuZHxlbnwwfHx8fDE3MDM1MjYzNjV8MA&ixlib=rb-4.0.3&q=80&w=1920');
+    background-image: url('https://images.unsplash.com/photo-1542385108611-667dc9df9c40?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w0NTIyMzZ8MHwxfHxtYXN0ZXIlMjBlbmVyZ3klMjBncmlkJTIwZGFzaGJvYXJkJTIwYmFja2dyb3VuZHxlbnwwfHx8fDE3MDM1MjYzNjV8MA&ixlib=rb-4.0.3&q=80&w=1920');
     background-size: cover;
     background-position: center;
     background-attachment: fixed;
@@ -62,12 +62,17 @@ h2 {
     transform: translateY(-8px);
     box-shadow: 0 12px 30px rgba(0, 0, 0, 0.9);
 }
-.card-name { /* Diubah dari .card-id */
+.card-name { /* Warna default: Biru */
     font-size: 1.5em;
     font-weight: 700;
     color: #38BDF8;
     margin-bottom: 5px;
     letter-spacing: 1px;
+}
+/* CLASS BARU untuk teks UNKNOW */
+.card-name.unknow-red {
+    color: #FF4444; /* Warna merah yang jelas */
+    text-shadow: 0 0 5px rgba(255, 68, 68, 0.4); /* Efek glow tipis */
 }
 .card-id-text {
     font-size: 0.9em;
@@ -235,7 +240,7 @@ let supa = supabase.createClient(SUPA_URL, SUPA_ANON);
 const summaryView = document.getElementById("summaryView");
 const detailView = document.getElementById("detailView");
 const detailTableBody = document.getElementById("detailTableBody");
-const currentMachineNameSpan = document.getElementById("currentMachineName"); // Diubah dari currentMachineIdSpan
+const currentMachineNameSpan = document.getElementById("currentMachineName");
 const conn = document.getElementById("conn");
 
 // --- VARIABEL GLOBAL ---
@@ -302,10 +307,14 @@ function showSummary() {
 function createMachineCard(id) {
     const card = document.createElement('div');
     const machineName = MACHINE_NAMES[id] || `Mesin ID ${id}`; // Ambil nama mesin
+    
+    // Tentukan class CSS tambahan untuk teks 'UNKNOW'
+    const nameClass = machineName === 'UNKNOW' ? 'card-name unknow-red' : 'card-name';
+
     card.className = 'machine-card';
     card.id = `card-${id}`;
     card.innerHTML = `
-        <div class="card-name">${machineName}</div>
+        <div class="${nameClass}">${machineName}</div>
         <div class="card-id-text">ID: ${id}</div>
         <div class="status-wrapper">
             <span id="statusIndicator-${id}" class="status-indicator status-offline"></span>
@@ -437,7 +446,10 @@ client.on("message", (topic, message) => {
             devices[id].text.className = statusClass;
 
             // 3. JIKA SEDANG DI DETAIL VIEW, UPDATE TABEL DETAIL (Real-time update)
-            const currentDetailId = Number(currentMachineNameSpan.textContent.match(/ID: (\d+)/)?.[1]); // Ambil ID dari teks
+            const currentDetailText = currentMachineNameSpan.textContent;
+            const currentDetailIdMatch = currentDetailText.match(/ID: (\d+)/);
+            const currentDetailId = currentDetailIdMatch ? Number(currentDetailIdMatch[1]) : null;
+            
             if (detailView.style.display === 'block' && currentDetailId === id) {
                 renderDetailTable(id);
             }
