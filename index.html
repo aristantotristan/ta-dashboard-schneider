@@ -3,13 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ENERGY WAVE - HARDCORE</title>
+<title>ENGINEER ON DUTY</title>
 <style>
     :root {
-        --main: #00ff41;      /* Hijau listrik ganas */
-        --deep: #00cc33;      /* Hijau tua metal */
-        --accent: #00ffff;    /* Cyan tajam */
-        --bg: #000814;
+        --main: #00ff41;
+        --deep: #00cc33;
+        --glow: #00ffff;
     }
     * { margin:0; padding:0; box-sizing:border-box; }
     body {
@@ -20,6 +19,24 @@
         height: 100vh;
     }
     canvas { position:fixed; top:0; left:0; z-index:1; }
+
+    /* SILUET ENGINEER */
+    .engineer {
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 380px;
+        height: 680px;
+        background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 680" fill="%2300ff4133"><path d="M190 80 Q160 100 160 140 L160 180 Q140 200 140 240 L140 520 Q140 580 160 620 L160 660 Q160 680 190 680 Q220 680 220 660 L220 620 Q240 580 240 520 L240 240 Q240 200 220 180 L220 140 Q220 100 190 80 M190 40 Q220 60 240 100 L260 180 Q280 220 280 280 L280 520 Q280 580 260 620 L260 660 Q260 680 190 680 Q120 680 120 660 L120 620 Q100 580 100 520 L100 280 Q100 220 120 180 L140 100 Q160 60 190 40 Z"/><circle cx="190" cy="100" r="40" opacity="0.6"/><rect x="140" y="280" width="100" height="180" rx="20" opacity="0.4"/></svg>') bottom center / contain no-repeat;
+        z-index: 3;
+        filter: drop-shadow(0 0 60px var(--main));
+        animation: engineerBreath 8s infinite ease-in-out;
+    }
+    @keyframes engineerBreath {
+        0%,100% { transform: translateX(-50%) scale(1); }
+        50% { transform: translateX(-50%) scale(1.02); }
+    }
 
     .ui {
         position: absolute;
@@ -33,81 +50,41 @@
     }
     h1 {
         font-family: 'Orbitron', sans-serif;
-        font-size: clamp(3.5rem, 12vw, 9rem);
+        font-size: clamp(3rem, 11vw, 8rem);
         font-weight: 900;
-        letter-spacing: 12px;
-        background: linear-gradient(90deg, #00ff41, #00ffff, #00ff41);
-        -webkit-background-clip: text;
-        background-clip: text;
-        -webkit-text-fill-color: transparent;
-        text-shadow: 
-            0 0 40px #00ff4180,
-            0 0 80px #00ff414d,
-            0 0 120px #00ff4120;
-        margin-bottom: 1vh;
-        animation: hardcore 3s infinite alternate;
-    }
-    @keyframes hardcore {
-        0%   { text-shadow: 0 0 40px #00ff4180, 0 0 80px #00ff414d; }
-        100% { text-shadow: 0 0 80px #00ff41, 0 0 160px #00ff41, 0 0 240px #00ffff; }
-    }
-
-    .subtitle {
-        font-size: 1.8rem;
         letter-spacing: 10px;
-        color: #00ff41;
-        font-weight: 800;
-        margin-bottom: 10vh;
-        text-shadow: 0 0 30px #00ff4180;
+        color: var(--main);
+        text-shadow: 0 0 80px var(--main), 0 0 160px var(--glow);
+        margin-bottom: 10px;
     }
-
+    .subtitle {
+        font-size: 1.6rem;
+        letter-spacing: 8px;
+        color: var(--glow);
+        margin-bottom: 12vh;
+        text-shadow: 0 0 40px var(--main);
+    }
     .btn {
         pointer-events: all;
-        padding: 26px 100px;
-        margin: 20px;
-        background: rgba(0,255,65,0.08);
+        padding: 24px 90px;
+        margin: 15px;
+        background: rgba(0,255,65,0.1);
         border: 3px solid var(--main);
         border-radius: 12px;
         color: var(--main);
-        font-size: 2rem;
+        font-size: 1.9rem;
         font-weight: 900;
         text-transform: uppercase;
-        letter-spacing: 8px;
-        text-decoration: none;
-        backdrop-filter: blur(10px);
-        box-shadow: 
-            0 0 40px rgba(0,255,65,0.4),
-            inset 0 0 40px rgba(0,255,65,0.1);
-        transition: all 0.4s;
+        letter-spacing: 6px;
+        backdrop-filter: blur(12px);
+        box-shadow: 0 0 60px rgba(0,255,65,0.5);
+        transition: 0.4s;
     }
     .btn:hover {
         background: var(--main);
         color: #000;
-        transform: translateY(-15px) scale(1.12);
-        box-shadow: 
-            0 0 100px var(--main),
-            0 0 200px #00ffff;
-        letter-spacing: 12px;
-    }
-
-    /* Scanline effect biar tambah berat */
-    body::after {
-        content: '';
-        position: fixed;
-        top: 0; left: 0; width: 100%; height: 100%;
-        background: repeating-linear-gradient(
-            0deg,
-            transparent,
-            transparent 2px,
-            rgba(0,255,65,0.03) 2px,
-            rgba(0,255,65,0.03) 4px
-        );
-        pointer-events: none;
-        animation: scan 8s linear infinite;
-    }
-    @keyframes scan {
-        0% { transform: translateY(-100%); }
-        100% { transform: translateY(100%); }
+        transform: translateY(-10px) scale(1.1);
+        box-shadow: 0 0 120px var(--main), 0 0 200px var(--glow);
     }
 </style>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@800;900&family=Rajdhani:wght@700;900&display=swap" rel="stylesheet">
@@ -116,30 +93,34 @@
 
 <canvas id="bg"></canvas>
 
+<!-- SILUET ENGINEER -->
+<div class="engineer"></div>
+
 <div class="ui">
     <h1>ENERGY WAVE</h1>
-    <div class="subtitle">GRID CONTROL</div>
+    <div class="subtitle">ON DUTY 24/7</div>
     <a href="realtime.html" class="btn">REALTIME</a>
     <a href="result_wbp_lwbp.html" class="btn">WBP / LWBP</a>
 </div>
 
 <script>
+// Sama persis kayak versi hardcore tadi, cuma background lebih dalam
 const canvas = document.getElementById('bg');
 const ctx = canvas.getContext('2d');
 canvas.width = innerWidth;
 canvas.height = innerHeight;
 
 let particles = [];
-const colors = ['#00ff41', '#00cc33', '#00ffff'];
+const colors = ['#00ff41', '#00cc33', '#00ffff', '#00ff80'];
 
 class Particle {
     constructor() { this.reset(); }
     reset() {
         this.x = Math.random() * canvas.width;
         this.y = canvas.height + 50;
-        this.size = Math.random() * 5 + 3;
+        this.size = Math.random() * 6 + 4;
         this.speedX = Math.random() * 2 - 1;
-        this.speedY = Math.random() * 4 + 3;
+        this.speedY = Math.random() * 5 + 4;
         this.color = colors[Math.floor(Math.random()*colors.length)];
     }
     update() {
@@ -149,48 +130,34 @@ class Particle {
     }
     draw() {
         ctx.fillStyle = this.color;
-        ctx.shadowBlur = 30;
+        ctx.shadowBlur = 40;
         ctx.shadowColor = this.color;
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.size, 0, Math.PI*2);
         ctx.fill();
     }
 }
-
-for(let i=0; i<150; i++) particles.push(new Particle());
+for(let i=0; i<180; i++) particles.push(new Particle());
 
 function drawWaves() {
-    const t = Date.now() * 0.0012;
-    
-    // Wave tebal & ganas
-    ctx.strokeStyle = '#00ff414d';
-    ctx.lineWidth = 6;
+    const t = Date.now() * 0.001;
+    ctx.strokeStyle = '#00ff4180';
+    ctx.lineWidth = 8;
     ctx.beginPath();
-    for(let x=0; x<canvas.width; x+=6) {
-        const y = canvas.height/2 + Math.sin(x*0.01 + t*3)*120 + Math.sin(x*0.005 + t*2)*60;
-        ctx.lineTo(x, y);
-    }
-    ctx.stroke();
-
-    // Wave kedua lebih dalam
-    ctx.strokeStyle = '#00ffff22';
-    ctx.lineWidth = 10;
-    ctx.beginPath();
-    for(let x=0; x<canvas.width; x+=10) {
-        const y = canvas.height/2 + Math.sin(x*0.008 - t*2.5)*140;
+    for(let x=0; x<canvas.width; x+=5) {
+        const y = canvas.height/2 + Math.sin(x*0.008 + t*3)*140 + Math.sin(x*0.004 + t*2)*80;
         ctx.lineTo(x, y);
     }
     ctx.stroke();
 }
 
 function animate() {
-    ctx.fillStyle = 'rgba(0,8,20,0.08)';
+    ctx.fillStyle = 'rgba(0,8,20,0.06)';
     ctx.fillRect(0,0,canvas.width,canvas.height);
     drawWaves();
     particles.forEach(p => { p.update(); p.draw(); });
     requestAnimationFrame(animate);
 }
-
 animate();
 
 window.addEventListener('resize', () => {
