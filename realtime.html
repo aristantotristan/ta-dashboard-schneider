@@ -382,7 +382,7 @@ createCards();
 
 const client = mqtt.connect(MQTT_URL, MQTT_OPTIONS);
 client.on('connect', () => {
-  conn.textContent = '✅ MQTT Connected';
+  conn.textContent = 'MQTT Connected';
   client.subscribe(MQTT_TOPIC);
 });
 client.on('reconnect', () => {
