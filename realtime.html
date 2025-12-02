@@ -9,19 +9,26 @@
 
 <style>
 /* -------------------------------------
-   Theme & Responsive UI (Mobile-first)
+   Theme & Responsive UI (Light Mode)
    ------------------------------------- */
 :root{
-  --bg:#0f0f11; --card:#1a1a1a; --muted:#9aa7b2; --accent:#00ffc2;
-  --online:#10b981; --offline:#ef4444; --tariff:#facc15;
-  --power-color: #7dd3fc;
-  --energy-color: #86efac;
+  --bg:#f7f7f7; /* Background Cerah */
+  --card:#ffffff; /* Card Putih */
+  --muted:#6c757d; /* Teks Muted Gelap */
+  --accent:#007bff; /* Biru Accent */
+  --online:#10b981; /* Hijau */
+  --offline:#ef4444; /* Merah */
+  --tariff:#ffc107; /* Kuning */
+  --power-color: #007bff; /* Biru */
+  --energy-color: #28a745; /* Hijau Tua */
+  --text:#212529; /* Teks Utama Gelap */
 }
 html,body{height:100%;}
 body{
-  margin:0; padding:16px; background:linear-gradient(180deg,#0b0b0b 0%, #0f0f11 100%);
+  margin:0; padding:16px; background:var(--bg); /* Latar belakang terang */
   font-family:Inter, 'Segoe UI', system-ui, -apple-system, Roboto, 'Helvetica Neue', Arial;
-  color:#e6eef1; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+  color:var(--text); /* Warna teks gelap */
+  -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
 }
 /* Header */
 .header{
@@ -30,7 +37,6 @@ body{
 }
 .h-left{display:flex; flex-direction:column;}
 h2{margin:0; color:var(--accent); font-size:clamp(1rem,4vw,1.4rem);}
-/* Perbaikan visual koneksi */
 #conn{font-size:0.85rem;color:var(--muted); margin-top:6px; display:flex; align-items:center; gap:6px;}
 
 /* Grid container */
@@ -39,32 +45,30 @@ h2{margin:0; color:var(--accent); font-size:clamp(1rem,4vw,1.4rem);}
   display:grid; grid-template-columns:repeat(2, 1fr); gap:10px;
 }
 
-/* Card - ESTETIK */
+/* Card - ESTETIK TEMA TERANG */
 .machine-card{
-  /* Gaya lebih modern */
-  background:rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(2px);
-  border:1px solid rgba(255,255,255,0.06);
-  border-radius:12px; padding:12px 10px; height:100px; /* Sedikit lebih tinggi */
+  background:var(--card);
+  border:1px solid rgba(0,0,0,0.1);
+  border-radius:12px; padding:12px 10px; height:100px;
   display:flex; flex-direction:column; justify-content:space-between; align-items:flex-start;
   position:relative;
-  box-shadow:0 8px 20px rgba(0,0,0,0.6);
+  box-shadow:0 4px 12px rgba(0,0,0,0.1); /* Shadow ringan */
   cursor:pointer;
 }
 .card-top{display:flex; align-items:center; width:100%; justify-content:space-between}
-.card-title{font-weight:700; font-size:1.05rem; color:#bfefff; margin:0}
+.card-title{font-weight:700; font-size:1.05rem; color:var(--text); margin:0}
 .sid{font-size:0.75rem; color:var(--muted)}
 .small-badge{
   font-size:0.72rem; color:var(--muted);
-  background:rgba(255,255,255,0.02);
+  background:rgba(0,0,0,0.05); /* Background gelap samar */
   padding:6px 8px; border-radius:6px;
   font-weight:600;
 }
 
-/* status indicator (small pulse) - Estetik (Badge di sudut) */
+/* status indicator (Badge di sudut) */
 .status-indicator{
-  position:absolute; bottom:10px; right:10px; /* Pindah ke kanan bawah */
-  width:auto; height:auto; border-radius:999px; border:none; /* Dibuat jadi badge */
+  position:absolute; bottom:10px; right:10px;
+  width:auto; height:auto; border-radius:999px; border:none;
   font-size: 0.7rem; padding: 4px 8px; font-weight: 700; text-transform: uppercase;
   display: flex; align-items: center; gap: 4px;
 }
@@ -83,27 +87,27 @@ h2{margin:0; color:var(--accent); font-size:clamp(1rem,4vw,1.4rem);}
 .machine-card:hover{
   transform:translateY(-4px);
   transition:transform 180ms, box-shadow 180ms;
-  box-shadow:0 10px 25px rgba(0,0,0,0.7);
+  box-shadow:0 8px 20px rgba(0,0,0,0.2); /* Shadow lebih jelas saat hover */
 }
 
 /* Modal overlay */
 #modal-overlay{
   position:fixed; inset:0; display:none; align-items:center; justify-content:center;
-  background:rgba(2,6,23,0.85); /* Lebih gelap */
-  backdrop-filter:blur(10px); z-index:1000; padding:18px;
+  background:rgba(0,0,0,0.6); /* Overlay gelap */
+  backdrop-filter:blur(6px); z-index:1000; padding:18px;
 }
 #modal{
-  width:100%; max-width:780px; /* Lebih lebar */
+  width:100%; max-width:780px;
   background:var(--card); border-radius:12px;
-  box-shadow:0 12px 40px rgba(0,0,0,0.8);
-  color:#eaf6f5; max-height:92vh; overflow:hidden;
+  box-shadow:0 12px 40px rgba(0,0,0,0.3);
+  color:var(--text); max-height:92vh; overflow:hidden;
   display: flex; flex-direction: column;
 }
 
 /* Modal Header Profesional */
 #modal-header {
   padding: 16px 20px;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+  border-bottom: 1px solid rgba(0,0,0,0.1); /* Garis pemisah terang */
   position: relative;
 }
 #modal-content {
@@ -113,7 +117,7 @@ h2{margin:0; color:var(--accent); font-size:clamp(1rem,4vw,1.4rem);}
 }
 #modal-footer {
   padding: 12px 20px;
-  border-top: 1px solid rgba(255,255,255,0.05);
+  border-top: 1px solid rgba(0,0,0,0.1);
   font-size: 0.85rem;
   color: var(--muted);
   text-align: right;
@@ -127,26 +131,26 @@ h2{margin:0; color:var(--accent); font-size:clamp(1rem,4vw,1.4rem);}
 #close-modal:hover{ opacity:1; }
 
 
-/* Detail table - PROFESIONAL */
+/* Detail table - PROFESIONAL TEMA TERANG */
 #detail-table{ width:100%; border-collapse:separate; border-spacing:0 4px; margin-top:8px }
 #detail-table th,#detail-table td{ padding:12px 10px; text-align:left; font-size:0.95rem; }
 #detail-table thead th{
   color:var(--accent); font-weight:700; font-size:0.8rem;
   text-transform: uppercase; letter-spacing: 0.5px;
-  background: rgba(0,255,194, 0.05);
+  background: rgba(0,123,255, 0.1); /* Background header tabel terang */
 }
 #detail-table tbody tr {
-  background: rgba(255,255,255,0.02);
+  background: rgba(0,0,0,0.02); /* Baris sedikit abu-abu */
   border-radius: 4px;
   transition: background 150ms;
 }
 #detail-table tbody tr:hover {
-  background: rgba(255,255,255,0.05);
+  background: rgba(0,0,0,0.05);
 }
 
 .param-name{ font-weight:600; width:45% }
 /* Menggunakan font monspace untuk nilai agar lebih teknis/rapi */
-.param-value{ font-family: 'Consolas', 'Courier New', monospace; font-weight: 700; color:#e9fbf7; }
+.param-value{ font-family: 'Consolas', 'Courier New', monospace; font-weight: 700; color:var(--text); }
 .col-power{ color:var(--power-color) }
 .col-energy{ color:var(--energy-color) }
 .col-tariff{ color:var(--tariff) }
@@ -231,7 +235,7 @@ const devices = {}; // store card refs
 const deviceData = {};
 for(let i=1;i<=TOTAL_DEVICES;i++) deviceData[i] = {};
 
-/* ========== create cards (Perbaikan Template Card) ========== */
+/* ========== create cards (Template Card SAMA DENGAN PERBAIKAN SEBELUMNYA) ========== */
 function createCards(){
   mainView.innerHTML='';
   for(let id=1;id<=TOTAL_DEVICES;id++){
@@ -241,7 +245,7 @@ function createCards(){
     card.dataset.id=id;
     card.title = `Mesin ${id} = ${tag}`;
 
-    // Template Kartu (Menghilangkan card-bottom yang tidak perlu)
+    // Template Kartu
     card.innerHTML = `
       <div class="card-top">
         <div style="display:flex;flex-direction:column">
@@ -254,7 +258,7 @@ function createCards(){
     card.onclick = ()=> showDetailModal(id);
     mainView.appendChild(card);
 
-    // create small status indicator (LOGIKA ASLI DARI KODE ANDA)
+    // create small status indicator (LOGIKA ASLI)
     const ind = document.createElement('div');
     ind.className='status-indicator status-offline';
     ind.id = `status-ind-${id}`;
@@ -268,7 +272,7 @@ function createCards(){
 }
 createCards();
 
-/* ========== modal functions (Perbaikan Konten Modal) ========== */
+/* ========== modal functions (SAMA DENGAN PERBAIKAN SEBELUMNYA) ========== */
 function showDetailModal(id){
   const d = deviceData[id]||{};
   const machineTag = MACHINE_TAGS[id]||'NAMA MESIN';
@@ -276,7 +280,6 @@ function showDetailModal(id){
   const statusText = d.status ? d.status.toUpperCase() : '---';
   const statusIcon = (currentStatus === 'online') ? '🟢' : '🔴';
 
-  // Perubahan: Mengganti modalTitle.textContent menjadi innerHTML untuk mendukung ikon
   document.getElementById('modal-header').querySelector('h3').innerHTML = `📊 Detail SID ${id} — ${machineTag}`;
 
   detailBody.innerHTML='';
@@ -310,16 +313,16 @@ closeModalBtn.addEventListener('click', closeDetailModal); modalOverlay.addEvent
 const client = mqtt.connect(MQTT_URL, MQTT_OPTIONS);
 
 client.on('connect', ()=>{
-  conn.innerHTML='✅ MQTT Connected'; // Perubahan: Menggunakan innerHTML
+  conn.innerHTML='✅ MQTT Connected';
   client.subscribe(MQTT_TOPIC);
 });
 
 client.on('reconnect', ()=>{
-  conn.innerHTML='🔄 MQTT Reconnecting...'; // Perubahan: Menggunakan innerHTML
+  conn.innerHTML='🔄 MQTT Reconnecting...';
 });
 
 client.on('error', err=>{
-  conn.innerHTML='❌ MQTT Error'; // Perubahan: Menggunakan innerHTML
+  conn.innerHTML='❌ MQTT Error';
   console.error('MQTT Error:',err);
 });
 
@@ -335,7 +338,7 @@ client.on('message', (topic,message)=>{
       const status = (d.status && d.status.toLowerCase()==='online') ? 'online' : 'offline';
       devices[id].indicator.className = `status-indicator status-${status}`;
 
-      // Perubahan: Update konten innerHTML status badge
+      // Update konten innerHTML status badge
       if (status === 'online') {
         devices[id].indicator.innerHTML = '🟢 ONLINE';
       } else {
