@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ENERGY WAVE - Power Monitoring</title>
+<title>ENERGY WAVE - HARDCORE</title>
 <style>
     :root {
-        --main: #00ffc2;   /* Hijau-cyan elektrik */
-        --deep: #00a8a8;   /* Hijau tua dalam */
-        --glow: #00ffff;   /* Cyan terang */
-        --bg: #0d0d1f;
+        --main: #00ff41;      /* Hijau listrik ganas */
+        --deep: #00cc33;      /* Hijau tua metal */
+        --accent: #00ffff;    /* Cyan tajam */
+        --bg: #000814;
     }
     * { margin:0; padding:0; box-sizing:border-box; }
     body {
@@ -19,7 +19,7 @@
         color: var(--main);
         height: 100vh;
     }
-    canvas { position: fixed; top:0; left:0; z-index:1; }
+    canvas { position:fixed; top:0; left:0; z-index:1; }
 
     .ui {
         position: absolute;
@@ -33,55 +33,84 @@
     }
     h1 {
         font-family: 'Orbitron', sans-serif;
-        font-size: clamp(3rem, 10vw, 7rem);
+        font-size: clamp(3.5rem, 12vw, 9rem);
         font-weight: 900;
-        letter-spacing: 8px;
-        background: linear-gradient(90deg, #00ffc2, #00ffff, #00ffc2);
+        letter-spacing: 12px;
+        background: linear-gradient(90deg, #00ff41, #00ffff, #00ff41);
         -webkit-background-clip: text;
         background-clip: text;
         -webkit-text-fill-color: transparent;
-        text-shadow: 0 0 60px rgba(0,255,194,0.7);
-        margin-bottom: 2vh;
-        animation: pulse 4s infinite alternate;
+        text-shadow: 
+            0 0 40px #00ff4180,
+            0 0 80px #00ff414d,
+            0 0 120px #00ff4120;
+        margin-bottom: 1vh;
+        animation: hardcore 3s infinite alternate;
     }
-    @keyframes pulse {
-        0% { text-shadow: 0 0 40px rgba(0,255,194,0.6); }
-        100% { text-shadow: 0 0 100px rgba(0,255,194,0.9), 0 0 140px #00ffff; }
+    @keyframes hardcore {
+        0%   { text-shadow: 0 0 40px #00ff4180, 0 0 80px #00ff414d; }
+        100% { text-shadow: 0 0 80px #00ff41, 0 0 160px #00ff41, 0 0 240px #00ffff; }
     }
 
     .subtitle {
-        font-size: 1.6rem;
-        letter-spacing: 6px;
-        color: #00ffff;
-        margin-bottom: 8vh;
-        opacity: 0.9;
+        font-size: 1.8rem;
+        letter-spacing: 10px;
+        color: #00ff41;
+        font-weight: 800;
+        margin-bottom: 10vh;
+        text-shadow: 0 0 30px #00ff4180;
     }
 
     .btn {
         pointer-events: all;
-        padding: 22px 80px;
-        margin: 15px;
-        background: rgba(0,255,194,0.1);
-        border: 2px solid var(--main);
-        border-radius: 16px;
+        padding: 26px 100px;
+        margin: 20px;
+        background: rgba(0,255,65,0.08);
+        border: 3px solid var(--main);
+        border-radius: 12px;
         color: var(--main);
-        font-size: 1.7rem;
-        font-weight: 700;
+        font-size: 2rem;
+        font-weight: 900;
         text-transform: uppercase;
-        letter-spacing: 4px;
+        letter-spacing: 8px;
         text-decoration: none;
-        backdrop-filter: blur(12px);
-        box-shadow: 0 0 40px rgba(0,255,194,0.4);
-        transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+        backdrop-filter: blur(10px);
+        box-shadow: 
+            0 0 40px rgba(0,255,65,0.4),
+            inset 0 0 40px rgba(0,255,65,0.1);
+        transition: all 0.4s;
     }
     .btn:hover {
         background: var(--main);
         color: #000;
-        transform: translateY(-12px) scale(1.08);
-        box-shadow: 0 0 80px var(--main), 0 0 120px #00ffff;
+        transform: translateY(-15px) scale(1.12);
+        box-shadow: 
+            0 0 100px var(--main),
+            0 0 200px #00ffff;
+        letter-spacing: 12px;
+    }
+
+    /* Scanline effect biar tambah berat */
+    body::after {
+        content: '';
+        position: fixed;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: repeating-linear-gradient(
+            0deg,
+            transparent,
+            transparent 2px,
+            rgba(0,255,65,0.03) 2px,
+            rgba(0,255,65,0.03) 4px
+        );
+        pointer-events: none;
+        animation: scan 8s linear infinite;
+    }
+    @keyframes scan {
+        0% { transform: translateY(-100%); }
+        100% { transform: translateY(100%); }
     }
 </style>
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@800;900&family=Rajdhani:wght@700;900&display=swap" rel="stylesheet">
 </head>
 <body>
 
@@ -89,91 +118,76 @@
 
 <div class="ui">
     <h1>ENERGY WAVE</h1>
-    <div class="subtitle">National Grid Monitoring</div>
-    <a href="realtime.html" class="btn">Realtime</a>
+    <div class="subtitle">GRID CONTROL</div>
+    <a href="realtime.html" class="btn">REALTIME</a>
     <a href="result_wbp_lwbp.html" class="btn">WBP / LWBP</a>
 </div>
 
 <script>
-// === ENERGY WAVE AESTHETIC EDITION ===
 const canvas = document.getElementById('bg');
 const ctx = canvas.getContext('2d');
 canvas.width = innerWidth;
 canvas.height = innerHeight;
 
 let particles = [];
-const colors = ['#00ffc2', '#00ffff', '#00d4ff', '#00a8a8'];
+const colors = ['#00ff41', '#00cc33', '#00ffff'];
 
 class Particle {
-    constructor() {
-        this.reset();
-    }
+    constructor() { this.reset(); }
     reset() {
         this.x = Math.random() * canvas.width;
-        this.y = canvas.height + 30;
-        this.size = Math.random() * 3.5 + 1.5;
-        this.speedX = Math.random() * 1.4 - 0.7;
-        this.speedY = Math.random() * 3 + 1.5;
-        this.color = colors[Math.floor(Math.random() * colors.length)];
-        this.opacity = 1;
+        this.y = canvas.height + 50;
+        this.size = Math.random() * 5 + 3;
+        this.speedX = Math.random() * 2 - 1;
+        this.speedY = Math.random() * 4 + 3;
+        this.color = colors[Math.floor(Math.random()*colors.length)];
     }
     update() {
         this.x += this.speedX;
         this.y -= this.speedY;
-        if (this.y < -30) this.reset();
+        if (this.y < -50) this.reset();
     }
     draw() {
-        ctx.globalAlpha = this.opacity;
         ctx.fillStyle = this.color;
-        ctx.shadowBlur = 20;
+        ctx.shadowBlur = 30;
         ctx.shadowColor = this.color;
         ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI*2);
         ctx.fill();
     }
 }
 
-// Buat partikel
-for(let i = 0; i < 120; i++) particles.push(new Particle());
+for(let i=0; i<150; i++) particles.push(new Particle());
 
 function drawWaves() {
-    const time = Date.now() * 0.001;
-    ctx.strokeStyle = 'rgba(0,255,194,0.2)';
-    ctx.lineWidth = 3;
-
-    // Wave utama
+    const t = Date.now() * 0.0012;
+    
+    // Wave tebal & ganas
+    ctx.strokeStyle = '#00ff414d';
+    ctx.lineWidth = 6;
     ctx.beginPath();
-    for(let x = 0; x < canvas.width; x += 8) {
-        const y = canvas.height/2 + 
-                  Math.sin((x * 0.01) + time * 2) * 80 +
-                  Math.sin((x * 0.015) + time * 1.5) * 50;
+    for(let x=0; x<canvas.width; x+=6) {
+        const y = canvas.height/2 + Math.sin(x*0.01 + t*3)*120 + Math.sin(x*0.005 + t*2)*60;
         ctx.lineTo(x, y);
     }
     ctx.stroke();
 
-    // Wave sekunder (lebih halus)
-    ctx.strokeStyle = 'rgba(0,255,255,0.12)';
+    // Wave kedua lebih dalam
+    ctx.strokeStyle = '#00ffff22';
+    ctx.lineWidth = 10;
     ctx.beginPath();
-    for(let x = 0; x < canvas.width; x += 12) {
-        const y = canvas.height/2 + 
-                  Math.sin((x * 0.008) + time * 2.5) * 100 +
-                  Math.cos((x * 0.02) - time * 1.8) * 30;
+    for(let x=0; x<canvas.width; x+=10) {
+        const y = canvas.height/2 + Math.sin(x*0.008 - t*2.5)*140;
         ctx.lineTo(x, y);
     }
     ctx.stroke();
 }
 
 function animate() {
-    ctx.fillStyle = 'rgba(0,0,0,0.05)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
+    ctx.fillStyle = 'rgba(0,8,20,0.08)';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
     drawWaves();
-
-    particles.forEach(p => {
-        p.update();
-        p.draw();
-    });
-
+    particles.forEach(p => { p.update(); p.draw(); });
     requestAnimationFrame(animate);
 }
 
