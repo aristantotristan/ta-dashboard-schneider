@@ -5,45 +5,47 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Master Power Meter • 18 Slaves</title>
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
-    :root{--bg:#0d1117;--card:#161b22;--border:#30363d;--accent:#00e5bd;--text:#f0f6fc;--muted:#8b949e;--online:#00d4aa;--offline:#f85149}
+    :root{--bg:#0a0e17;--card:#111827;--border:#1f2937;--accent:#00e5bd;--text:#e0e0e0;--muted:#94a3b8;--online:#00d4aa;--offline:#ef4444}
     *{margin:0;padding:0;box-sizing:border-box}
-    body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;background-image:radial-gradient(circle at 20% 80%,rgba(0,229,189,0.08)0%,transparent 50%),radial-gradient(circle at 80% 20%,rgba(0,229,189,0.05)0%,transparent 50%)}
-    .grid-bg{position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:0.4;background-image:linear-gradient(rgba(0,229,189,0.03)1px,transparent 1px),linear-gradient(90deg,rgba(0,229,189,0.03)1px,transparent 1px);background-size:80px 80px}
+    body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;min-height:100vh}
     header{text-align:center;padding:3rem 1rem 2rem}
-    h1{font-size:2.8rem;font-weight:600;color:var(--accent);letter-spacing:-0.5px;margin-bottom:0.5rem;text-shadow:0 0 20px rgba(0,229,189,0.3)}
-    .subtitle{font-size:0.95rem;color:var(--muted);letter-spacing:3px;text-transform:uppercase;font-weight:500}
-    #conn{text-align:center;padding:.7rem 1.5rem;font-family:'JetBrains Mono',monospace;font-size:0.9rem;color:var(--accent);background:rgba(0,229,189,0.08);border:1px solid rgba(0,229,189,0.2);border-radius:8px;max-width:420px;margin:0 auto 3rem}
+    h1{font-size:2.8rem;font-weight:700;color:var(--accent);text-shadow:0 0 30px rgba(0,229,189,0.5)}
+    .subtitle{font-size:0.95rem;color:var(--muted);letter-spacing:3px;text-transform:uppercase}
+    #conn{text-align:center;padding:.8rem 1.5rem;background:rgba(0,229,189,0.1);border:1px solid rgba(0,229,189,0.3);border-radius:8px;max-width:500px;margin:0 auto 2.5rem;color:var(--accent);font-weight:600}
     #main-view{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1.6rem;padding:0 2rem;max-width:1800px;margin:0 auto}
-    .machine-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.8rem 1.4rem;cursor:pointer;position:relative;overflow:hidden;transition:all .35s}
-    .machine-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--accent),transparent);opacity:0;transition:opacity .4s}
-    .machine-card:hover{transform:translateY(-6px);border-color:rgba(0,229,189,0.4);box-shadow:0 12px 32px rgba(0,0,0,0.3),0 0 20px rgba(0,229,189,0.12)}
+    .machine-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.8rem 1.4rem;cursor:pointer;position:relative;overflow:hidden;transition:all .3s}
+    .machine-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--accent);opacity:0;transition:opacity .3s}
+    .machine-card:hover{transform:translateY(-8px);border-color:var(--accent);box-shadow:0 15px 35px rgba(0,0,0,0.4)}
     .machine-card:hover::before{opacity:1}
-    .card-label{font-size:1.25rem;font-weight:600;color:var(--text);margin-bottom:0.4rem}
-    .sid-label{font-family:'JetBrains Mono',monospace;font-size:0.85rem;color:var(--muted);letter-spacing:1px}
-    .status-indicator{position:absolute;top:16px;right:16px;width:12px;height:12px;border-radius:50%;background:var(--offline);box-shadow:0 0 12px var(--offline);transition:all .4s}
+    .card-label{font-size:1.3rem;font-weight:600;color:var(--text)}
+    .sid-label{font-size:0.9rem;color:var(--muted);margin-top:0.4rem}
+    .status-indicator{position:absolute;top:16px;right:16px;width:14px;height:14px;border-radius:50%;background:var(--offline);box-shadow:0 0 12px var(--offline)}
     .status-online{background:var(--online);box-shadow:0 0 16px var(--online);animation:ping 2s infinite}
-    @keyframes ping{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.4);opacity:0.7}}
-    #modal-overlay{position:fixed;inset:0;background:rgba(13,17,23,0.95);backdrop-filter:blur(12px);display:none;align-items:center;justify-content:center;z-index:9999;padding:1rem}
-    #modal{background:var(--card);border:1px solid var(--border);border-radius:16px;width:100%;max-width:640px;max-height:90vh;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.5)}
-    #modal h3{font-size:1.5rem;font-weight:600;color:var(--accent);padding:1.5rem 2rem;margin:0;border-bottom:1px solid var(--border);background:rgba(0,229,189,0.04)}
-    #close-modal{position:absolute;top:1rem;right:1.5rem;background:none;border:none;font-size:1.8rem;color:var(--muted);cursor:pointer;transition:.3s}
-    #close-modal:hover{color:var(--accent);transform:scale(1.2)}
-    #detail-table{width:100%;border-collapse:collapse;font-size:0.95rem}
-    #detail-table th{background:rgba(0,229,189,0.06);color:var(--accent);padding:1rem;text-align:left;font-weight:500;text-transform:uppercase;font-size:0.8rem;letter-spacing:1px}
-    #detail-table td{padding:0.9rem 1rem;border-bottom:1px solid var(--border)}
-    #detail-table tbody tr:hover{background:rgba(0,229,189,0.04)}
-    .param-name{color:var(--muted);width:52%}
-    .param-value{text-align:right;font-family:'JetBrains Mono',monospace;font-weight:500}
-    .col-energy{color:#a5f3b8}.col-power{color:#7bb3ff}.col-tariff{color:#f5d547}
-    @media(max-width:768px){h1{font-size:2.3rem}#main-view{padding:0 1rem;gap:1.3rem}}
-    @media(max-width:480px){#main-view{grid-template-columns:1fr 1fr}}
+    @keyframes ping{0%,100%{transform:scale(1)}50%{transform:scale(1.4)}}
+
+    #modal-overlay{position:fixed;inset:0;background:rgba(10,14,23,0.97);backdrop-filter:blur(12px);display:none;align-items:center;justify-content:center;z-index:9999;padding:1rem}
+    #modal{background:var(--card);border-radius:16px;width:100%;max-width:620px;max-height:92vh;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.6)}
+    #modal h3{background:var(--accent);color:#000;padding:1.2rem 2rem;font-size:1.4rem;font-weight:700;margin:0}
+    #close-modal{position:absolute;top:0.8rem;right:1.2rem;background:none;border:none;font-size:2rem;color:#000;cursor:pointer}
+    #close-modal:hover{transform:scale(1.2)}
+    #detail-table{width:100%;border-collapse:collapse}
+    #detail-table th{background:#1a1a1a;color:var(--accent);padding:0.9rem 1.2rem;text-transform:uppercase;font-size:0.8rem;letter-spacing:1px}
+    #detail-table td{padding:0.9rem 1.2rem;border-bottom:1px solid #2d2d2d}
+    #detail-table tbody tr:hover{background:rgba(0,229,189,0.03)}
+    .param-name{color:var(--muted);font-weight:500}
+    .param-value{text-align:right;font-weight:600;color:var(--text);font-family:monospace}
+    .status-offline{color:var(--offline);font-weight:700}
+    .status-online{color:var(--online);font-weight:700}
+    .col-energy{color:#86efac}
+    .col-power{color:#60a5fa}
+    .col-tariff{color:#fbbf24}
+    .col-default{color:#94a3b8}
+    @media(max-width:768px){h1{font-size:2.4rem}#main-view{padding:0 1rem}}
   </style>
 </head>
 <body>
 
-<div class="grid-bg"></div>
 <header>
   <h1>Master Power Meter</h1>
   <p class="subtitle">18 Slaves • Real-time Monitoring</p>
@@ -53,10 +55,10 @@
 
 <div id="modal-overlay">
   <div id="modal">
-    <button id="close-modal" aria-label="Close">×</button>
+    <button id="close-modal">×</button>
     <h3 id="modal-title">Detail Parameter • SID --</h3>
     <table id="detail-table">
-      <thead><tr><th>Parameter</th><th>Nilai</th></tr></thead>
+      <thead><tr><th>PARAMETER</th><th>NILAI</th></tr></thead>
       <tbody id="detailBody"></tbody>
     </table>
   </div>
@@ -75,15 +77,14 @@
     'V':'5. Voltage','I1':'6. Current','P':'7. Total Active(P)','Q':'8. Total Reactive (Q)',
     'S':'9. Total Apparent (S)','PF':'10. PF','T1':'11. Tarif T1','T2':'    T2','Hz':'12. Freq','OpH':'13. Op Time'
   };
-  const units={EaT:'kWh',ErT:'kVARh',EaP:'kWh',ErP:'kVARh',V:'V',P:'Watt',Q:'VAR',S:'kVA',PF:'-',T1:'kWh',T2:'kWh',Hz:'Hz'};
 
   function formatOpH(h){
     if(!h||h<0)return'---';
     const totalMin=Math.round(h*60);
     const days=Math.floor(totalMin/1440);
     const hrs=Math.floor((totalMin%1440)/60);
-    if(days===0 && hrs===0) return '0 hrs';
-    return (days>0?days+' days':'')+(days>0&&hrs>0?', ':'')+(hrs>0?hrs+' hrs':'');
+    if(days===0 && hrs===0)return'0 hrs';
+    return (days>0?days+' days':'') + (days>0&&hrs>0?', ':'') + (hrs>0?hrs+' hrs':'');
   }
 
   function fmt(v,k){
@@ -112,16 +113,18 @@
     modalTitle.textContent=`Detail Parameter • SID ${id} — ${MACHINE_TAGS[id]||'UNKNOW'}`;
     detailBody.innerHTML='';
 
+    // Status
     const trS=document.createElement('tr');
-    trS.innerHTML=`<td class="param-name">Status Koneksi</td><td class="param-value ${d.status==='online'?'status-online':''}">${d.status?d.status.toUpperCase():'OFFLINE'}</td>`;
+    trS.innerHTML=`<td class="param-name">Status Koneksi</td><td class="param-value ${d.status==='online'?'status-online':'status-offline'}">${d.status?d.status.toUpperCase():'OFFLINE'}</td>`;
     detailBody.appendChild(trS);
 
+    // Semua parameter sesuai urutan & format foto
     order.forEach(key=>{
       if(key==='I2'||key==='I3')return;
       if(key==='T2'){
         const tr=document.createElement('tr');
         const t2=d.T2!==undefined?(+d.T2).toFixed(2):'---';
-        tr.innerHTML=`<td class="param-name">    T2</td><td class="param-value col-tariff">${t2} <small>kWh</small></td>`;
+        tr.innerHTML=`<td class="param-name">    T2</td><td class="param-value col-tariff">${t2}</td>`;
         detailBody.appendChild(tr);
         return;
       }
@@ -131,21 +134,25 @@
 
       if(d[key]!==undefined&&d[key]!==null){
         if(key==='OpH'){
-          val = formatOpH(d[key]); // ← SEKARANG SUDAH "2 days , 5 hrs"
+          val=formatOpH(d[key]);
         }
         else if(key==='I1'){
           const i1=fmt(d.I1,'I1'),i2=fmt(d.I2,'I2'),i3=fmt(d.I3,'I3');
-          val=`I1 = ${i1}  I2 = ${i2}  I3 = ${i3}`;
+          val=`I1 = ${i1} I2 = ${i2} I3 = ${i3}`;
         }
         else if(key==='T1'){
-          val=`${(+d.T1).toFixed(2)} <small>kWh</small>`;
+          val=(+d.T1).toFixed(2);
         }
         else{
-          val=`${fmt(d[key],key)} <small>${units[key]}</small>`;
+          val=fmt(d[key],key);
         }
       }
 
-      tr.innerHTML=`<td class="param-name">${labels[key]}</td><td class="param-value ${(key==='EaT'||key==='ErT'||key==='EaP'||key==='ErP')?'col-energy':(key==='P'||key==='Q'||key==='S')?'col-power':key==='T1'||key==='T2'?'col-tariff':''}">${val}</td>`;
+      const colorClass = (key==='EaT'||key==='ErT'||key==='EaP'||key==='ErP')?'col-energy':
+                        (key==='P'||key==='Q'||key==='S')?'col-power':
+                        (key==='T1'||key==='T2')?'col-tariff':'col-default';
+
+      tr.innerHTML=`<td class="param-name">${labels[key]}</td><td class="param-value ${colorClass}">${val}</td>`;
       detailBody.appendChild(tr);
     });
 
