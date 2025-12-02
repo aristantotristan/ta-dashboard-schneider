@@ -69,10 +69,9 @@ h2 {
     margin-bottom: 5px;
     letter-spacing: 1px;
 }
-/* CLASS BARU untuk teks UNKNOW */
 .card-name.unknow-red {
-    color: #FF4444; /* Warna merah yang jelas */
-    text-shadow: 0 0 5px rgba(255, 68, 68, 0.4); /* Efek glow tipis */
+    color: #FF4444; 
+    text-shadow: 0 0 5px rgba(255, 68, 68, 0.4); 
 }
 .card-id-text {
     font-size: 0.9em;
@@ -229,11 +228,11 @@ tbody td:nth-child(2) {
 // --- FUNGIONALITAS UTAMA & KONFIGURASI ---
 // =======================================================
 
-// --- KONFIGURASI SUPABASE (GANTI DENGAN KREDENSIAL ASLI ANDA) ---
-const SUPA_URL = "https://rojhcadtqfynlqzubftx.supabase.co"; // GANTI INI
-const SUPA_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJojhcadtqfynlqzubftxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs"; // GANTI INI
+// --- KONFIGURASI SUPABASE (PASTIKAN KREDENSIAL INI BENAR) ---
+const SUPA_URL = "https://rojhcadtqfynlqzubftx.supabase.co"; 
+const SUPA_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJojhcadtqfynlqzubftxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs"; 
 const TABLE_NAME = "ea_18mesin";
-const EA_THRESHOLD = 0.01;
+const EA_THRESHOLD = 0.01; // Batas minimal perubahan EaT untuk trigger log (0.01 kWh)
 
 let supa = supabase.createClient(SUPA_URL, SUPA_ANON);
 
@@ -246,11 +245,11 @@ const conn = document.getElementById("conn");
 
 // --- VARIABEL GLOBAL ---
 const MACHINE_IDS = Array.from({length: 18}, (_, i) => i + 1);
-const dataBuffer = {}; 
-const devices = {}; 
+const dataBuffer = {}; // Buffer untuk menyimpan data real-time lengkap
+const devices = {}; // Menyimpan referensi DOM setiap kartu mesin
 let isSending = false;
 
-// --- MAPPING NAMA MESIN BARU ---
+// --- MAPPING NAMA MESIN ---
 const MACHINE_NAMES = {
     1: 'UNKNOW', 2: 'UNKNOW', 3: 'POMPA MC 12', 4: 'MC 9', 5: 'UNKNOW', 6: 'MC 40', 
     7: 'MC 39', 8: 'MC 6', 9: 'HEATER MC 5', 10: 'POMPA MC 5', 11: 'UNKNOW', 
@@ -269,7 +268,7 @@ const dataMap = [
 
 
 // =======================================================
-// --- FUNGSI NAVIGASI TAMPILAN (Tidak Diubah) ---
+// --- FUNGSI NAVIGASI TAMPILAN ---
 // =======================================================
 
 function showDetail(id) {
@@ -286,7 +285,7 @@ function showSummary() {
 
 
 // =======================================================
-// --- FUNGSI TEMPLATE DAN RENDER (Tidak Diubah) ---
+// --- FUNGSI TEMPLATE DAN RENDER ---
 // =======================================================
 
 function createMachineCard(id) {
@@ -303,6 +302,12 @@ function createMachineCard(id) {
             <span id="statusIndicator-${id}" class="status-indicator status-offline"></span>
             <span id="statusText-${id}" class="status-offline">OFFLINE</span>
         </div>
+        
+        <p style="margin-top: 15px; font-size: 1.1em;">
+            Daya Aktif (Watt): 
+            <strong id="realtimePower-${id}" style="color: #FFC107;">---</strong>
+        </p>
+
         <button class="detail-button" onclick="showDetail(${id})">Lihat Detail Parameter</button>
     `;
     summaryView.appendChild(card);
@@ -310,9 +315,11 @@ function createMachineCard(id) {
         card: card,
         indicator: document.getElementById(`statusIndicator-${id}`),
         text: document.getElementById(`statusText-${id}`),
+        powerValue: document.getElementById(`realtimePower-${id}`), // Referensi untuk update Daya
     };
 }
 
+/** Fungsionalitas: Mengisi tabel detail dengan data terbaru dari dataBuffer */
 function renderDetailTable(id) {
     const data = dataBuffer[id] || {};
     detailTableBody.innerHTML = '';
@@ -379,7 +386,7 @@ const options = {
 };
 
 const client = mqtt.connect(
-    "wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt", // GANTI INI
+    "wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt", // GANTI INI DENGAN URL MQTT ANDA
     options
 );
 
@@ -393,13 +400,11 @@ client.on("error", err => {
     console.error("MQTT Connection Error:", err);
 });
 
-
+/** Handler utama data MQTT masuk */
 client.on("message", (topic, message) => {
     try {
         const d = JSON.parse(message.toString());
         const id = Number(d.id);
-        
-        // PENTING: Gunakan EaT sebagai Ea untuk buffer (sesuai data yang datang)
         const ea = Number(d.EaT);
 
         // 1. SIMPAN DATA LENGKAP KE BUFFER
@@ -407,17 +412,21 @@ client.on("message", (topic, message) => {
             dataBuffer[id] = { ...d, ea: ea };
         }
 
-        // 2. UPDATE SUMMARY CARD VIEW (Logika Visual)
+        // 2. UPDATE SUMMARY CARD VIEW (STATUS & DAYA REAL-TIME)
         if (devices[id]) {
             const status = d.status ? d.status.toLowerCase() : 'offline';
             const statusClass = status === 'online' ? 'status-online' : 'status-offline';
 
+            // Update Status Visual
             devices[id].card.classList.remove('card-online', 'card-offline');
             devices[id].card.classList.add(`card-${status}`);
-
             devices[id].indicator.className = `status-indicator ${statusClass}`;
             devices[id].text.textContent = status.toUpperCase();
             devices[id].text.className = statusClass;
+            
+            // Update nilai Daya Aktif (P) di Summary Card
+            let power = d.P !== undefined && !isNaN(d.P) ? d.P.toFixed(2) : '---';
+            devices[id].powerValue.textContent = power; 
 
             // 3. JIKA SEDANG DI DETAIL VIEW, UPDATE TABEL DETAIL
             const currentDetailText = currentMachineNameSpan.textContent;
@@ -439,7 +448,7 @@ client.on("message", (topic, message) => {
 // --- LOGIKA PENGIRIMAN BERURUTAN & PAKSA LOG KE SUPABASE ---
 // =======================================================
 
-// --- FUNGSI BANTU LOGGING (DIMODIFIKASI untuk Supabase) ---
+// --- FUNGSI BANTU LOGGING (LOCAL STORAGE) ---
 function loadLastEa(id) {
     const s = localStorage.getItem("lastEa_" + id);
     return s ? Number(s) : undefined;
@@ -472,12 +481,12 @@ async function insertEnergyLog(entry) {
         saveLastSupaLogTime(id_mesin, now.getTime());
         
     } catch (e) {
-        console.error("Gagal menyimpan log ke Supabase. Cek RLS/Kredensial atau skema tabel:", e);
+        console.error(`[LOG ID ${entry.id_mesin}] Gagal menyimpan log ke Supabase:`, e.message);
     }
 }
 
 
-/** Fungsionalitas: Iterasi melalui ID mesin (1 s/d 18) dan mengirim data ke Supabase */
+/** Fungsionalitas: Iterasi melalui 18 Mesin dan mengirim data yang sudah di-buffer ke Supabase */
 async function sendBufferedDataSequentially() {
     if (isSending) return;
     isSending = true;
@@ -485,8 +494,7 @@ async function sendBufferedDataSequentially() {
     for (const id of MACHINE_IDS) {
         // Cek apakah data mesin ini ada di buffer
         if (dataBuffer[id] && dataBuffer[id].ea !== undefined) {
-            const entry = dataBuffer[id];
-            const ea = entry.ea; // Nilai EaT Kumulatif
+            const ea = dataBuffer[id].ea; // Nilai EaT Kumulatif
             const now = new Date();
 
             // --- Logika Cek Log Wajib 5 Menit ---
@@ -496,7 +504,7 @@ async function sendBufferedDataSequentially() {
 
             const lastEa = loadLastEa(id); 
 
-            // Log jika: 1) Ada perubahan besar (>= 0.01) ATAU 2) Sudah waktunya untuk paksa log (setiap 5 menit)
+            // Kriteria Log: 1) Ada perubahan besar (>= 0.01) ATAU 2) Sudah waktunya untuk paksa log (setiap 5 menit)
             if (lastEa === undefined || Math.abs(ea - lastEa) >= EA_THRESHOLD || forceLog) {
                 
                 await insertEnergyLog({
@@ -506,6 +514,9 @@ async function sendBufferedDataSequentially() {
                 
                 // Simpan nilai Ea Kumulatif terakhir yang berhasil dikirim
                 saveLastEa(id, ea);
+                
+                // Memberi jeda sebentar antar pengiriman mesin (opsional, untuk mencegah overload database)
+                await new Promise(resolve => setTimeout(resolve, 50)); 
             }
         }
     }
