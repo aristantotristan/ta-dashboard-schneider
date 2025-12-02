@@ -6,7 +6,6 @@
 <title>⚡ Master Power Meter Dashboard (18 SLAVES) - Mobile Friendly</title>
 
 <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
 <style>
 /* -------------------------------------
@@ -41,11 +40,10 @@ h2{margin:0; color:var(--accent); font-size:clamp(1rem,4vw,1.4rem);}
 
 /* Card - DITINGKATKAN */
 .machine-card{
-  /* Efek Glassmorphism halus */
   background:rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(2px); /* Glassmorphism halus */
   border:1px solid rgba(255,255,255,0.06);
-  border-radius:12px; padding:12px 10px; height:100px;
+  border-radius:12px; padding:12px 10px; height:100px; /* Sedikit lebih tinggi */
   display:flex; flex-direction:column; justify-content:space-between; align-items:flex-start;
   position:relative; overflow:hidden;
   box-shadow:0 6px 18px rgba(0,0,0,0.6);
@@ -61,62 +59,66 @@ h2{margin:0; color:var(--accent); font-size:clamp(1rem,4vw,1.4rem);}
   font-weight:600;
 }
 
-/* Status Badge BARU */
-.status-badge {
+/* Status Badge BARU (Menggantikan status-indicator) */
+.status-indicator {
+  position: absolute;
+  bottom: 8px; /* Pindah ke bawah */
+  right: 8px;
   font-size: 0.75rem;
   font-weight: 700;
   padding: 4px 8px;
   border-radius: 999px;
-  align-self: flex-end;
   display: flex;
   align-items: center;
   gap: 4px;
   letter-spacing: 0.5px;
   text-transform: uppercase;
 }
-
-.status-online {
-  background: rgba(16, 185, 129, 0.15);
+/* Menggunakan class lama untuk fungsionalitas JS yang sama, namun styling baru */
+.status-indicator.status-online {
+  background: rgba(16, 185, 129, 0.15); /* Hijau transparan */
   color: var(--online);
+  box-shadow: none; /* Hilangkan box-shadow lama */
 }
 
-.status-offline {
-  background: rgba(239, 68, 68, 0.15);
+.status-indicator.status-offline {
+  background: rgba(239, 68, 68, 0.15); /* Merah transparan */
   color: var(--offline);
+  box-shadow: none;
 }
-.badge-icon { font-size: 0.8em; }
+
+/* subtle hover for desktop */
+.machine-card:hover{
+  transform:translateY(-4px);
+  transition:transform 180ms, box-shadow 180ms;
+  box-shadow:0 10px 25px rgba(0,0,0,0.7);
+}
 
 /* Modal overlay */
 #modal-overlay{
   position:fixed; inset:0; display:none; align-items:center; justify-content:center;
-  background:rgba(2,6,23,0.85);
+  background:rgba(2,6,23,0.85); /* Lebih gelap */
   backdrop-filter:blur(10px); z-index:1000; padding:18px;
 }
 #modal{
-  width:100%; max-width:780px;
+  width:100%; max-width:780px; /* Lebih lebar */
   background:var(--card); border-radius:12px;
   box-shadow:0 12px 40px rgba(0,0,0,0.8);
-  color:#eaf6f5; max-height:92vh; overflow:hidden;
+  color:#eaf6f5; max-height:92vh; overflow:hidden; /* Konten di dalam yang scroll */
   display: flex; flex-direction: column;
 }
+
+/* Modal Header BARU */
 #modal-header {
   padding: 16px 20px;
   border-bottom: 1px solid rgba(255,255,255,0.05);
   position: relative;
 }
-#modal h3{ margin:0; color:var(--accent); font-size:1.4rem; display:flex; align-items:center; gap:10px;}
-#close-modal{
-  position:absolute; right:16px; top:14px; background:transparent; border:0;
-  color:var(--muted); font-size:24px; cursor:pointer; opacity:0.7; transition:opacity 150ms;
-}
-#close-modal:hover{ opacity:1; }
-
 #modal-content {
   overflow-y: auto;
   padding: 0 20px;
   flex-grow: 1;
 }
-
 #modal-footer {
   padding: 12px 20px;
   border-top: 1px solid rgba(255,255,255,0.05);
@@ -124,6 +126,14 @@ h2{margin:0; color:var(--accent); font-size:clamp(1rem,4vw,1.4rem);}
   color: var(--muted);
   text-align: right;
 }
+
+#modal h3{ margin:0; color:var(--accent); font-size:1.4rem; display:flex; align-items:center; gap:10px;}
+#close-modal{
+  position:absolute; right:16px; top:14px; background:transparent; border:0;
+  color:var(--muted); font-size:24px; cursor:pointer; opacity:0.7; transition:opacity 150ms;
+}
+#close-modal:hover{ opacity:1; }
+
 
 /* Detail table (PROFESIONAL) */
 #detail-table{ width:100%; border-collapse:separate; border-spacing:0 4px; margin-top:8px }
@@ -143,7 +153,7 @@ h2{margin:0; color:var(--accent); font-size:clamp(1rem,4vw,1.4rem);}
 }
 
 .param-name{ font-weight:600; width:45% }
-.param-value{ font-family: 'Consolas', 'Courier New', monospace; font-weight: 700; }
+.param-value{ font-family: 'Consolas', 'Courier New', monospace; font-weight: 700; color:#e9fbf7; }
 .col-power{ color:var(--power-color) }
 .col-energy{ color:var(--energy-color) }
 .col-tariff{ color:var(--tariff) }
@@ -160,13 +170,6 @@ h2{margin:0; color:var(--accent); font-size:clamp(1rem,4vw,1.4rem);}
 @media(min-width:980px){ #main-view{ grid-template-columns:repeat(6,1fr); } }
 @media(max-width:420px){ .machine-card{ height:90px; padding:10px } }
 
-/* subtle hover for desktop */
-.machine-card:hover{
-  transform:translateY(-4px);
-  transition:transform 180ms, box-shadow 180ms;
-  box-shadow:0 10px 25px rgba(0,0,0,0.7);
-}
-
 /* small helper */
 .center-note{ text-align:center; color:var(--muted); font-size:0.9rem; margin-top:8px }
 </style>
@@ -175,8 +178,8 @@ h2{margin:0; color:var(--accent); font-size:clamp(1rem,4vw,1.4rem);}
 
 <div class="header container">
   <div class="h-left">
-    <h2><i class="fas fa-bolt" style="color:var(--accent);"></i> Power Meter Dashboard</h2>
-    <div id="conn"><i class="fas fa-sync fa-spin"></i>Connecting...</div>
+    <h2>⚡ Power Meter Dashboard</h2>
+    <div id="conn">🔄 Connecting...</div>
   </div>
   <div class="h-right">
       </div>
@@ -184,14 +187,14 @@ h2{margin:0; color:var(--accent); font-size:clamp(1rem,4vw,1.4rem);}
 
 <div class="container">
   <div id="main-view" aria-live="polite"></div>
-  <div class="center-note">Tap kartu untuk lihat detail • SID = Sensor ID</div>
+  <div class="center-note">Tap kartu untuk lihat detail • SID = sensor id</div>
 </div>
 
 <div id="modal-overlay" role="dialog" aria-modal="true">
   <div id="modal">
     <div id="modal-header">
       <button id="close-modal" aria-label="Tutup detail">&times;</button>
-      <h3 id="modal-title"><i class="fas fa-chart-line"></i> Detail Mesin</h3>
+      <h3 id="modal-title">📊 Detail</h3>
     </div>
     <div id="modal-content">
       <table id="detail-table" aria-label="Detail Parameter">
@@ -200,7 +203,7 @@ h2{margin:0; color:var(--accent); font-size:clamp(1rem,4vw,1.4rem);}
       </table>
     </div>
     <div id="modal-footer">
-      Data diperbarui secara real-time dari server MQTT
+      Data diperbarui secara real-time.
     </div>
   </div>
 </div>
@@ -212,16 +215,16 @@ const MQTT_URL = "wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884
 const MQTT_TOPIC = "politeknik/meter/data";
 const TOTAL_DEVICES = 18;
 
-/* ========== MACHINE TAGS ========== */
+/* ========== MACHINE TAGS (tidak diubah) ========== */
 const MACHINE_TAGS = { 1:'UNKNOW',2:'UNKNOW',3:'POMPA MC 12',4:'MC 9',5:'UNKNOW',6:'MC 40',7:'MC 39',8:'MC 6',9:'HEATER MC 5',10:'POMPA MC 5',11:'UNKNOW',12:'MC 34',13:'MC 35',14:'UNKNOW',15:'UNKNOW',16:'MC 38',17:'MC 36',18:'MC 37' };
 
-/* ========== HELPERS (TIDAK DIUBAH FUNGSINYA) ========== */
+/* ========== HELPERS (tidak diubah fungsionalitasnya) ========== */
 function formatOpH(hours){ if(hours===null||hours===undefined||isNaN(hours)||hours<0) return '---'; const totalMinutes=Math.round(parseFloat(hours)*60); const days=Math.floor(totalMinutes/(24*60)); const rem=totalMinutes%(24*60); const hrs=Math.floor(rem/60); const mins=rem%60; if(days>0) return `${days} Hari ${hrs} Jam`; if(hrs>0) return `${hrs} Jam${mins>0? ' '+mins+' Mnt':''}`; if(mins>0) return `${mins} Mnt`; return '0 Jam'; }
 function fmt(val,key){ if(val===null||val===undefined||isNaN(val)) return '---'; const n=Number(val); if(['V'].includes(key)) return n.toFixed(1); if(['I1','I2','I3'].includes(key)) return n.toFixed(3); if(['P','Q'].includes(key)) return Math.round(n).toString(); if(['S'].includes(key)) return n.toFixed(2); if(['PF'].includes(key)) return n.toFixed(3); if(['Hz'].includes(key)) return n.toFixed(1); if(['EaT','ErT','EaP','ErP','T1','T2'].includes(key)) return n.toFixed(2); return n.toString(); }
 function getStyleClass(key){ if(key==='T1'||key==='T2') return 'col-tariff'; if(['EaT','ErT','EaP','ErP'].includes(key)) return 'col-energy'; if(['P','Q','S'].includes(key)) return 'col-power'; return ''; }
 const dataLabels={ 'V':'Tegangan (V)','I1':'Arus Fasa 1 (A)','I2':'Arus Fasa 2 (A)','I3':'Arus Fasa 3 (A)','P':'Daya Aktif (W)','Q':'Daya Reaktif (VAR)','S':'Daya Semu (kVA)','PF':'Faktor Daya','Hz':'Frekuensi (Hz)','OpH':'Jam Operasi','EaT':'Energi Aktif Total (kWh)','ErT':'Energi Reaktif Total (kVARh)','EaP':'Energi Aktif Parsial (kWh)','ErP':'Energi Reaktif Parsial (kVARh)','T1':'Tarif 1 (kWh)','T2':'Tarif 2 (kWh)'};
 
-/* ========== DOM refs & storage ========== */
+/* ========== DOM refs & storage (tidak diubah) ========== */
 const mainView = document.getElementById('main-view');
 const conn = document.getElementById('conn');
 const modalOverlay = document.getElementById('modal-overlay');
@@ -234,7 +237,7 @@ const devices = {}; // store card refs
 const deviceData = {};
 for(let i=1;i<=TOTAL_DEVICES;i++) deviceData[i] = {};
 
-/* ========== create cards (Perbaikan Template) ========== */
+/* ========== create cards (Perbaikan Template Card) ========== */
 function createCards(){
   mainView.innerHTML='';
   for(let id=1;id<=TOTAL_DEVICES;id++){
@@ -243,9 +246,8 @@ function createCards(){
     card.className='machine-card';
     card.dataset.id=id;
     card.title = `Mesin ${id} = ${tag}`;
-    card.onclick = ()=> showDetailModal(id);
 
-    // Template Kartu Baru (dengan Badge Status)
+    // Menggunakan template baru yang lebih rapi
     card.innerHTML = `
       <div class="card-top">
         <div style="display:flex;flex-direction:column">
@@ -254,36 +256,43 @@ function createCards(){
         </div>
         <div class="small-badge">#${id}</div>
       </div>
-            <div id="status-badge-${id}" class="status-badge status-offline">
-        <i class="badge-icon fas fa-times-circle"></i> OFFLINE
-      </div>
-    `;
+          `;
+    card.onclick = ()=> showDetailModal(id);
     mainView.appendChild(card);
 
-    // Store reference to the new status badge element
-    devices[id] = { card, indicator: document.getElementById(`status-badge-${id}`) };
+    // create small status indicator (Struktur & ID tetap sama agar JS asli tidak rusak)
+    const ind = document.createElement('div');
+    ind.className='status-indicator status-offline';
+    ind.id = `status-ind-${id}`;
+
+    // Menambahkan teks/ikon ke indikator agar lebih estetik
+    ind.innerHTML = '<span class="status-icon">🔴</span> OFFLINE';
+
+    card.appendChild(ind);
+    devices[id] = { card, indicator: ind };
   }
 }
 createCards();
 
-/* ========== modal functions (TIDAK DIUBAH FUNGSINYA) ========== */
+/* ========== modal functions (Perbaikan Konten Modal) ========== */
 function showDetailModal(id){
   const d = deviceData[id]||{};
   const machineTag = MACHINE_TAGS[id]||'NAMA MESIN';
   const currentStatus = (d.status && d.status.toLowerCase()==='online') ? 'online' : 'offline';
+  const statusText = d.status ? d.status.toUpperCase() : '---';
+  const statusIcon = (currentStatus === 'online') ? '🟢' : '🔴';
 
-  // Update modal title dengan ikon
-  modalTitle.innerHTML = `<i class="fas fa-chart-line"></i> Detail SID ${id} — ${machineTag}`;
+  // Menggunakan innerHTML pada modalTitle untuk mendukung ikon
+  modalTitle.innerHTML = `📊 Detail SID ${id} — ${machineTag}`;
 
   detailBody.innerHTML='';
 
-  // 1. Status Row
+  // 1. Status Row (Ditingkatkan)
   const trStatus = document.createElement('tr');
-  const icon = (currentStatus === 'online') ? '<i class="fas fa-circle-check"></i>' : '<i class="fas fa-circle-xmark"></i>';
-  trStatus.innerHTML = `<td class="param-name">Status Sensor</td><td class="param-value col-status-modal ${currentStatus}">${icon} ${currentStatus.toUpperCase()}</td>`;
+  trStatus.innerHTML = `<td class="param-name">Status Sensor</td><td class="param-value col-status-modal ${currentStatus}">${statusIcon} ${statusText}</td>`;
   detailBody.appendChild(trStatus);
 
-  // 2. Data Rows
+  // 2. Data Rows (Looping data)
   dataMap.forEach(key=>{
     const tr=document.createElement('tr');
     const raw=d[key];
@@ -303,20 +312,20 @@ function showDetailModal(id){
 function closeDetailModal(){ modalOverlay.style.display='none'; document.body.style.overflow=''; }
 closeModalBtn.addEventListener('click', closeDetailModal); modalOverlay.addEventListener('click', e=>{ if(e.target===modalOverlay) closeDetailModal(); }); window.addEventListener('keydown', e=>{ if(e.key==='Escape' && modalOverlay.style.display==='flex') closeDetailModal(); });
 
-/* ========== MQTT (Perbaikan Update Indikator) ========== */
+/* ========== MQTT (Logika sama, Perubahan Update DOM koneksi dan Indikator) ========== */
 const client = mqtt.connect(MQTT_URL, MQTT_OPTIONS);
 
 client.on('connect', ()=>{
-  conn.innerHTML = '✅ <i class="fas fa-cloud-arrow-up"></i> MQTT Connected';
+  conn.innerHTML='✅ MQTT Connected';
   client.subscribe(MQTT_TOPIC);
 });
 
 client.on('reconnect', ()=>{
-  conn.innerHTML = '🔄 <i class="fas fa-sync fa-spin"></i> MQTT Reconnecting...';
+  conn.innerHTML='🔄 MQTT Reconnecting...';
 });
 
 client.on('error', err=>{
-  conn.innerHTML = '❌ <i class="fas fa-triangle-exclamation"></i> MQTT Error';
+  conn.innerHTML='❌ MQTT Error';
   console.error('MQTT Error:',err);
 });
 
@@ -327,19 +336,14 @@ client.on('message', (topic,message)=>{
     if(!id||id<1||id>TOTAL_DEVICES){ console.warn('Invalid ID',d); return; }
     deviceData[id] = d;
 
-    // Perbaikan update status badge (indicator adalah elemen badge baru)
-    if(devices[id] && devices[id].indicator){
+    // update status indicator (Mempertahankan logika asli, hanya mengubah konten innerHTML)
+    if(devices[id]){
       const status = (d.status && d.status.toLowerCase()==='online') ? 'online' : 'offline';
-      const indicator = devices[id].indicator;
-
-      // Update class
-      indicator.className = `status-badge status-${status}`;
-
-      // Update content (text and icon)
+      devices[id].indicator.className = `status-indicator status-${status}`;
       if (status === 'online') {
-        indicator.innerHTML = '<i class="badge-icon fas fa-circle-dot"></i> ONLINE';
+        devices[id].indicator.innerHTML = '<span class="status-icon">🟢</span> ONLINE';
       } else {
-        indicator.innerHTML = '<i class="badge-icon fas fa-times-circle"></i> OFFLINE';
+        devices[id].indicator.innerHTML = '<span class="status-icon">🔴</span> OFFLINE';
       }
     }
   }catch(e){ console.error('Payload parse error:', e, message.toString()); }
