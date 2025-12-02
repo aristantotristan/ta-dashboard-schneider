@@ -335,7 +335,7 @@ function createCards() {
 
 function showDetailModal(id) {
   const data = deviceData[id];
-  modalTitle.textContent = `Detail Parameter  ${id} - ${MACHINE_TAGS[id] || 'NAMA MESIN'}`;
+  modalTitle.textContent = `Detail SID  ${id} - ${MACHINE_TAGS[id] || 'NAMA MESIN'}`;
   detailBody.innerHTML = '';
 
   const statusRow = document.createElement('tr');
