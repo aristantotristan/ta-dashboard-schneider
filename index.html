@@ -6,7 +6,6 @@
 <title>Power Meter Dashboard</title>
 
 <style>
-    /* ====== THEME COLORS ====== */
     :root {
         --accent: #00ffc2;
         --bg: #0c0c0c;
@@ -14,18 +13,23 @@
         --glass: rgba(255, 255, 255, 0.08);
     }
 
-    /* ====== GLOBAL ====== */
-    body {
+    /* ====== GLOBAL FIX CENTER ====== */
+    html, body {
+        height: 100%;
         margin: 0;
         padding: 0;
-        height: 100vh;
+    }
+
+    body {
         font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
         background: radial-gradient(circle at 20% 20%, #1a1a1a, #000);
-        background-size: cover;
-        display: flex;
-        justify-content: center;
-        align-items: center;
         color: #e5e5e5;
+
+        /* PERFECT CENTER FIX */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
         overflow: hidden;
         position: relative;
     }
@@ -40,6 +44,7 @@
         opacity: 0.25;
         border-radius: 50%;
         animation: float 12s infinite alternate ease-in-out;
+        z-index: 1;
     }
     .orb:nth-child(1) { top: -80px; left: -60px; animation-duration: 14s; }
     .orb:nth-child(2) { bottom: -100px; right: -80px; animation-duration: 16s; background: #008cff; }
@@ -115,25 +120,21 @@
             padding: 40px;
             width: 90%;
         }
-        h1 {
-            font-size: 2.1rem;
-        }
-        .btn {
-            width: 100%;
-        }
+        h1 { font-size: 2.1rem; }
+        .btn { width: 100%; }
     }
 </style>
 </head>
 
 <body>
 
-<!-- Glow Orbs Background -->
+<!-- Glow Orbs -->
 <div class="orb"></div>
 <div class="orb"></div>
 
-<!-- Main Card -->
+<!-- Main Card (Perfect Center) -->
 <div class="container">
-    <h1> Monitoring Energi</h1>
+    <h1>Monitoring Energi</h1>
 
     <div class="btn-container">
         <a href="realtime.html" class="btn">Monitoring Realtime</a>
