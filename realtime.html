@@ -233,6 +233,7 @@ const SUPA_URL = "https://rojhcadtqfynlqzubftx.supabase.co";
 const SUPA_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJojhcadtqfynlqzubftxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs"; 
 const TABLE_NAME = "ea_18mesin";
 const EA_THRESHOLD = 0.01; // Batas minimal perubahan EaT untuk trigger log (0.01 kWh)
+const OFFLINE_TIMEOUT = 12000; // 12 detik, untuk deteksi OFFLINE
 
 let supa = supabase.createClient(SUPA_URL, SUPA_ANON);
 
@@ -245,8 +246,9 @@ const conn = document.getElementById("conn");
 
 // --- VARIABEL GLOBAL ---
 const MACHINE_IDS = Array.from({length: 18}, (_, i) => i + 1);
-const dataBuffer = {}; // Buffer untuk menyimpan data real-time lengkap
-const devices = {}; // Menyimpan referensi DOM setiap kartu mesin
+const dataBuffer = {}; 
+const devices = {}; 
+const lastSeen = {}; // BARU: untuk mendeteksi status online/offline
 let isSending = false;
 
 // --- MAPPING NAMA MESIN ---
@@ -315,11 +317,11 @@ function createMachineCard(id) {
         card: card,
         indicator: document.getElementById(`statusIndicator-${id}`),
         text: document.getElementById(`statusText-${id}`),
-        powerValue: document.getElementById(`realtimePower-${id}`), // Referensi untuk update Daya
+        powerValue: document.getElementById(`realtimePower-${id}`),
     };
+    lastSeen[id] = 0; // Inisialisasi lastSeen
 }
 
-/** Fungsionalitas: Mengisi tabel detail dengan data terbaru dari dataBuffer */
 function renderDetailTable(id) {
     const data = dataBuffer[id] || {};
     detailTableBody.innerHTML = '';
@@ -367,14 +369,13 @@ function formatOperatingTime(totalHours) {
 // =======================================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Inisialisasi semua kartu mesin di Summary View
     summaryView.innerHTML = ''; 
     MACHINE_IDS.forEach(id => createMachineCard(id));
 });
 
 
 // =======================================================
-// --- LOGIKA UTAMA ON MESSAGE (UPDATE DASHBOARD & BUFFERING) ---
+// --- LOGIKA UTAMA ON MESSAGE (UPDATE DASHBOARD) ---
 // =======================================================
 
 // --- KONFIGURASI MQTT WEB CLIENT ---
@@ -386,7 +387,7 @@ const options = {
 };
 
 const client = mqtt.connect(
-    "wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt", // GANTI INI DENGAN URL MQTT ANDA
+    "wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt", 
     options
 );
 
@@ -400,7 +401,7 @@ client.on("error", err => {
     console.error("MQTT Connection Error:", err);
 });
 
-/** Handler utama data MQTT masuk */
+/** Handler utama data MQTT masuk (BAGIAN INI DIPERBAIKI) */
 client.on("message", (topic, message) => {
     try {
         const d = JSON.parse(message.toString());
@@ -410,19 +411,17 @@ client.on("message", (topic, message) => {
         // 1. SIMPAN DATA LENGKAP KE BUFFER
         if (id && ea !== null && !isNaN(ea)) {
             dataBuffer[id] = { ...d, ea: ea };
+            lastSeen[id] = Date.now(); // Perbarui Waktu Terakhir Dilihat (PENTING)
         }
 
         // 2. UPDATE SUMMARY CARD VIEW (STATUS & DAYA REAL-TIME)
         if (devices[id]) {
-            const status = d.status ? d.status.toLowerCase() : 'offline';
-            const statusClass = status === 'online' ? 'status-online' : 'status-offline';
-
-            // Update Status Visual
-            devices[id].card.classList.remove('card-online', 'card-offline');
-            devices[id].card.classList.add(`card-${status}`);
-            devices[id].indicator.className = `status-indicator ${statusClass}`;
-            devices[id].text.textContent = status.toUpperCase();
-            devices[id].text.className = statusClass;
+            // Status dianggap ONLINE jika pesan baru diterima
+            devices[id].card.classList.remove('card-offline');
+            devices[id].card.classList.add('card-online');
+            devices[id].indicator.className = `status-indicator status-online`;
+            devices[id].text.textContent = 'ONLINE';
+            devices[id].text.className = 'status-online';
             
             // Update nilai Daya Aktif (P) di Summary Card
             let power = d.P !== undefined && !isNaN(d.P) ? d.P.toFixed(2) : '---';
@@ -442,6 +441,27 @@ client.on("message", (topic, message) => {
         console.error(`JSON Parsing Error/Proses Data Gagal:`, e);
     }
 });
+
+/** Fungsi baru: Mengecek dan memperbarui status OFFLINE jika data berhenti */
+function checkOfflineStatus() {
+    const now = Date.now();
+    for (const id of MACHINE_IDS) {
+        // Cek jika ID mesin sudah pernah terdeteksi (lastSeen > 0)
+        if (lastSeen[id] && lastSeen[id] > 0 && (now - lastSeen[id]) > OFFLINE_TIMEOUT) {
+            // Jika sudah melebihi batas waktu (12 detik)
+            if (devices[id] && devices[id].text.textContent !== 'OFFLINE') {
+                devices[id].card.classList.remove('card-online');
+                devices[id].card.classList.add('card-offline');
+                devices[id].indicator.className = `status-indicator status-offline`;
+                devices[id].text.textContent = 'OFFLINE';
+                devices[id].text.className = 'status-offline';
+                devices[id].powerValue.textContent = '---'; // Reset Power
+            }
+        }
+    }
+}
+// Panggil fungsi status check setiap 5 detik
+setInterval(checkOfflineStatus, 5000);
 
 
 // =======================================================
@@ -466,18 +486,15 @@ async function insertEnergyLog(entry) {
         const { id_mesin, ea } = entry;
         const now = new Date();
         
-        // Objek yang dikirim ke Supabase harus match dengan skema: t, id_mesin, EaT
         const supaEntry = {
             t: now.toISOString(), 
             id_mesin: id_mesin,
-            // PENTING: Menggunakan key "EaT" agar sesuai dengan nama kolom di PostgreSQL
             "EaT": ea
         };
 
         const { error } = await supa.from(TABLE_NAME).insert([supaEntry]);
         if (error) throw error;
         
-        // Setelah sukses, simpan waktu log terakhir
         saveLastSupaLogTime(id_mesin, now.getTime());
         
     } catch (e) {
@@ -492,12 +509,10 @@ async function sendBufferedDataSequentially() {
     isSending = true;
 
     for (const id of MACHINE_IDS) {
-        // Cek apakah data mesin ini ada di buffer
         if (dataBuffer[id] && dataBuffer[id].ea !== undefined) {
-            const ea = dataBuffer[id].ea; // Nilai EaT Kumulatif
+            const ea = dataBuffer[id].ea; 
             const now = new Date();
 
-            // --- Logika Cek Log Wajib 5 Menit ---
             const lastLogTime = localStorage.getItem("lastSupaLogTime_" + id);
             const fiveMinutes = 5 * 60 * 1000;
             const forceLog = !lastLogTime || (now.getTime() - Number(lastLogTime)) > fiveMinutes;
@@ -512,10 +527,9 @@ async function sendBufferedDataSequentially() {
                     ea: ea, 
                 });
                 
-                // Simpan nilai Ea Kumulatif terakhir yang berhasil dikirim
                 saveLastEa(id, ea);
                 
-                // Memberi jeda sebentar antar pengiriman mesin (opsional, untuk mencegah overload database)
+                // Memberi jeda 50ms antar pengiriman mesin
                 await new Promise(resolve => setTimeout(resolve, 50)); 
             }
         }
