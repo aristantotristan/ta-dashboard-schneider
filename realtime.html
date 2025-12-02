@@ -3,413 +3,170 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>⚡ Master Power Meter Dashboard (18 SLAVES)</title>
+<title>⚡ Master Power Meter Dashboard (18 SLAVES) - Mobile Friendly</title>
 
 <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 
 <style>
-:root {
-  --bg: #121212;
-  --card: #1E1E1E;
-  --muted: #94A3B8;
-  --accent: #00FFC2;
-  --online: #10B981;
-  --offline: #EF4444;
-  --tariff: #FACC15;
+/* -------------------------------------
+   Theme & Responsive UI (Mobile-first)
+   ------------------------------------- */
+:root{
+  --bg:#0f0f11; --card:#1a1a1a; --muted:#9aa7b2; --accent:#00ffc2;
+  --online:#10b981; --offline:#ef4444; --tariff:#facc15;
 }
-body {
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  background: var(--bg);
-  color: #E0E0E0;
-  padding: 20px;
-  margin: 0;
-  overflow-x: hidden;
+html,body{height:100%;}
+body{
+  margin:0; padding:16px; background:linear-gradient(180deg,#0b0b0b 0%, #0f0f11 100%);
+  font-family:Inter, 'Segoe UI', system-ui, -apple-system, Roboto, 'Helvetica Neue', Arial;
+  color:#e6eef1; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
 }
-h2 { color: var(--accent); margin: 0 0 12px 0; }
-#conn { margin-bottom: 14px; font-weight: 600; color: var(--muted); }
+/* Header */
+.header{
+  display:flex; align-items:center; gap:12px; justify-content:space-between;
+  max-width:1100px; margin:0 auto 12px auto; padding:6px 0;
+}
+.h-left{display:flex; flex-direction:column;}
+h2{margin:0; color:var(--accent); font-size:clamp(1rem,4vw,1.4rem);}
+#conn{font-size:0.85rem;color:var(--muted); margin-top:6px}
 
-#main-view {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 15px;
-  justify-content: center;
-}
-.machine-card {
-  background: var(--card);
-  border-radius: 12px;
-  padding: 20px 15px;
-  width: 180px;
-  height: 110px;
-  cursor: pointer;
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  text-align: center;
-  user-select: none;
-}
-.machine-card:hover {
-  transform: translateY(-7px);
-  box-shadow: 0 12px 24px rgba(0,0,0,0.7);
-}
-.card-label {
-  font-size: 1.3rem;
-  font-weight: 700;
-  color: #38BDF8;
-  margin: 0;
-  line-height: 1.2;
-}
-.sid-label {
-  font-size: 0.9rem;
-  color: var(--muted);
-  margin: 6px 0 0 0;
+/* Grid container */
+.container{max-width:1100px; margin:0 auto;}
+#main-view{
+  display:grid; grid-template-columns:repeat(2, 1fr); gap:10px;
 }
 
-/* --- Estetik indikator status dengan animasi pulsing --- */
-.status-indicator {
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  box-shadow: 0 0 10px rgba(0,0,0,0.4);
-  animation: pulse 2s infinite;
+/* Card */
+.machine-card{
+  background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.12));
+  border:1px solid rgba(255,255,255,0.03); border-radius:12px; padding:12px 10px; height:92px;
+  display:flex; flex-direction:column; justify-content:center; align-items:flex-start; gap:6px; position:relative;
+  box-shadow:0 6px 18px rgba(0,0,0,0.6);
 }
-.status-online {
-  background-color: var(--online);
-  box-shadow:
-    0 0 6px var(--online),
-    0 0 15px var(--online);
-}
-.status-offline {
-  background-color: var(--offline);
-  box-shadow:
-    0 0 6px var(--offline),
-    0 0 15px var(--offline);
-}
-@keyframes pulse {
-  0% {
-    transform: scale(0.9);
-    opacity: 0.7;
-  }
-  50% {
-    transform: scale(1.2);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(0.9);
-    opacity: 0.7;
-  }
-}
+.card-top{display:flex; align-items:center; width:100%; justify-content:space-between}
+.card-title{font-weight:700; font-size:0.98rem; color:#bfefff; margin:0}
+.sid{font-size:0.78rem; color:var(--muted)}
+.card-bottom{display:flex; gap:8px; align-items:center}
+.small-badge{font-size:0.72rem; color:var(--muted); background:rgba(255,255,255,0.02); padding:6px 8px; border-radius:999px}
 
-/* ---------------- Modal Detail ---------------- */
-#modal-overlay {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(18,18,18,0.85);
-  backdrop-filter: blur(10px);
-  display: none;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
+/* status indicator (small pulse) */
+.status-indicator{
+  position:absolute; top:10px; right:10px; width:12px; height:12px; border-radius:50%; border:2px solid var(--bg);
 }
-#modal {
-  background: var(--card);
-  border-radius: 12px;
-  padding: 25px 30px;
-  width: 90%;
-  max-width: 600px;
-  max-height: 80vh;
-  overflow-y: auto;
-  box-shadow: 0 0 25px rgba(0,255,194,0.5);
-  position: relative;
-  color: #eee;
-  font-size: 1rem;
-}
-#modal h3 {
-  margin-top: 0;
-  color: var(--accent);
-  font-weight: 700;
-  user-select: text;
-}
-#close-modal {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  background: transparent;
-  border: none;
-  font-size: 1.5rem;
-  color: var(--muted);
-  cursor: pointer;
-  transition: color 0.3s ease;
-  user-select: none;
-}
-#close-modal:hover {
-  color: var(--accent);
-}
+.status-online{ background:var(--online); box-shadow:0 0 8px rgba(16,185,129,0.24); }
+.status-offline{ background:var(--offline); box-shadow:0 0 8px rgba(239,68,68,0.18); }
 
-#detail-table {
-  width: 100%;
-  border-collapse: collapse;
-  border-radius: 8px;
-  overflow: hidden;
-  margin-top: 15px;
-}
-#detail-table th, #detail-table td {
-  padding: 10px 12px;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
-  text-align: left;
-}
-#detail-table thead th {
-  background: #222;
-  color: var(--accent);
-  text-transform: uppercase;
-  font-weight: 700;
-  user-select: none;
-}
-#detail-table tbody tr {
-  background: var(--bg);
-  transition: background 0.2s ease;
-}
-#detail-table tbody tr:hover {
-  background: #1a1a1a;
-}
-.param-name {
-  font-weight: 600;
-  width: 40%;
-  user-select: text;
-}
-.param-value {
-  font-weight: 400;
-  color: #eee;
-  user-select: text;
-}
+/* Tooltip on long press (mobile) via title attribute not styled here */
 
-.col-power { color: #38BDF8; }
-.col-energy { color: #4ADE80; }
-.col-tariff { color: var(--tariff); }
+/* Modal overlay */
+#modal-overlay{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(2,6,23,0.7); backdrop-filter:blur(8px); z-index:1000; padding:18px; }
+#modal{ width:100%; max-width:680px; background:var(--card); border-radius:12px; padding:18px; box-shadow:0 10px 30px rgba(0,0,0,0.6); color:#eaf6f5; max-height:88vh; overflow:auto }
+#modal h3{ margin:0 0 8px 0; color:var(--accent); font-size:1.1rem }
+#close-modal{ position:absolute; right:14px; top:10px; background:transparent; border:0; color:var(--muted); font-size:20px; cursor:pointer }
 
-@media (max-width: 600px) {
-  .machine-card { width: 45%; }
-  #modal {
-    padding: 20px 15px;
-  }
-}
+/* Detail table */
+#detail-table{ width:100%; border-collapse:collapse; margin-top:10px }
+#detail-table th,#detail-table td{ padding:10px 8px; text-align:left; border-bottom:1px solid rgba(255,255,255,0.03); font-size:0.95rem }
+#detail-table thead th{ color:var(--accent); font-weight:700; font-size:0.85rem }
+.param-name{ font-weight:600; width:45% }
+.param-value{ color:#e9fbf7 }
+.col-power{ color:#7dd3fc }
+.col-energy{ color:#86efac }
+.col-tariff{ color:var(--tariff) }
+
+/* Responsive tweaks */
+@media(min-width:720px){ #main-view{ grid-template-columns:repeat(3,1fr); } }
+@media(min-width:980px){ #main-view{ grid-template-columns:repeat(6,1fr); } }
+@media(max-width:420px){ .machine-card{ height:86px; padding:10px } }
+
+/* subtle hover for desktop */
+.machine-card:hover{ transform:translateY(-6px); transition:transform 180ms; }
+
+/* small helper */
+.center-note{ text-align:center; color:var(--muted); font-size:0.9rem; margin-top:8px }
 </style>
 </head>
 <body>
 
-<h2>Power Meter Dashboard</h2>
-<p id="conn" class="muted">Connecting...</p>
+<div class="header container">
+  <div class="h-left">
+    <h2>Power Meter Dashboard</h2>
+    <div id="conn">Connecting...</div>
+  </div>
+  <div class="h-right">
+    <!-- reserved for top-right controls if needed -->
+  </div>
+</div>
 
-<div id="main-view"></div>
+<div class="container">
+  <div id="main-view" aria-live="polite"></div>
+  <div class="center-note">Tap kartu untuk lihat detail • SID = sensor id</div>
+</div>
 
-<!-- Modal Detail -->
-<div id="modal-overlay">
-  <div id="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-    <button id="close-modal" aria-label="Close detail view">&times;</button>
-    <h3 id="modal-title">Detail Parameter : --</h3>
-    <table id="detail-table" aria-label="Power Meter Detail Table">
-      <thead>
-        <tr><th>Parameter</th><th>Nilai</th></tr>
-      </thead>
+<!-- Modal -->
+<div id="modal-overlay" role="dialog" aria-modal="true">
+  <div id="modal">
+    <button id="close-modal" aria-label="Tutup detail">&times;</button>
+    <h3 id="modal-title">Detail</h3>
+    <table id="detail-table" aria-label="Detail Parameter">
+      <thead><tr><th>Parameter</th><th>Nilai</th></tr></thead>
       <tbody id="detailBody"></tbody>
     </table>
   </div>
 </div>
 
 <script>
-const MQTT_OPTIONS = {
-  username: "web_dashboard",
-  password: "Tristan12",
-  connectTimeout: 4000,
-  reconnectPeriod: 2000
-};
+/* ========== CONFIG (tidak diubah) ========== */
+const MQTT_OPTIONS = { username: "web_dashboard", password: "Tristan12", connectTimeout: 4000, reconnectPeriod: 2000 };
 const MQTT_URL = "wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt";
 const MQTT_TOPIC = "politeknik/meter/data";
 const TOTAL_DEVICES = 18;
 
-const MACHINE_TAGS = {
-  1: 'UNKNOW',
-  2: 'UNKNOW',
-  3: 'POMPA MC 12',
-  4: 'MC 9',
-  5: 'UNKNOW',
-  6: 'MC 40',
-  7: 'MC 39',
-  8: 'MC 6',
-  9: 'HEATER MC 5',
-  10: 'POMPA MC 5',
-  11: 'UNKNOW',
-  12: 'MC 34',
-  13: 'MC 35',
-  14: 'UNKNOW',
-  15: 'UNKNOW',
-  16: 'MC 38',
-  17: 'MC 36',
-  18: 'MC 37'
-};
+/* ========== MACHINE TAGS ========== */
+const MACHINE_TAGS = { 1:'UNKNOW',2:'UNKNOW',3:'POMPA MC 12',4:'MC 9',5:'UNKNOW',6:'MC 40',7:'MC 39',8:'MC 6',9:'HEATER MC 5',10:'POMPA MC 5',11:'UNKNOW',12:'MC 34',13:'MC 35',14:'UNKNOW',15:'UNKNOW',16:'MC 38',17:'MC 36',18:'MC 37' };
 
-function formatOpH(hours) {
-  if (hours === null || hours === undefined || isNaN(hours) || hours < 0) return '---';
-  const totalMinutes = Math.round(parseFloat(hours) * 60);
-  const days = Math.floor(totalMinutes / (24 * 60));
-  const rem = totalMinutes % (24 * 60);
-  const hrs = Math.floor(rem / 60);
-  const mins = rem % 60;
-  if (days > 0) return `${days} Hari ${hrs} Jam`;
-  if (hrs > 0) return `${hrs} Jam${mins>0 ? ' ' + mins + ' Mnt' : ''}`;
-  if (mins > 0) return `${mins} Mnt`;
-  return '0 Jam';
-}
-function fmt(val, key) {
-  if (val === null || val === undefined || isNaN(val)) return '---';
-  const n = Number(val);
-  if (['V'].includes(key)) return n.toFixed(1);
-  if (['I1','I2','I3'].includes(key)) return n.toFixed(3);
-  if (['P','Q'].includes(key)) return Math.round(n).toString();
-  if (['S'].includes(key)) return n.toFixed(2);
-  if (['PF'].includes(key)) return n.toFixed(3);
-  if (['Hz'].includes(key)) return n.toFixed(1);
-  if (['EaT','ErT','EaP','ErP','T1','T2'].includes(key)) return n.toFixed(2);
-  return n.toString();
-}
-function getStyleClass(key) {
-  if (key === 'T1' || key === 'T2') return 'col-tariff';
-  if (['EaT','ErT','EaP','ErP'].includes(key)) return 'col-energy';
-  if (['P','Q','S'].includes(key)) return 'col-power';
-  return '';
-}
-const dataLabels = {
-  'V': 'Tegangan (V)', 'I1': 'Arus Fasa 1 (A)', 'I2': 'Arus Fasa 2 (A)', 'I3': 'Arus Fasa 3 (A)',
-  'P': 'Daya Aktif (W)', 'Q': 'Daya Reaktif (VAR)', 'S': 'Daya Semu (kVA)', 'PF': 'Faktor Daya',
-  'Hz': 'Frekuensi (Hz)', 'OpH': 'Jam Operasi',
-  'EaT': 'Energi Aktif Total (kWh)', 'ErT': 'Energi Reaktif Total (kVARh)',
-  'EaP': 'Energi Aktif Parsial (kWh)', 'ErP': 'Energi Reaktif Parsial (kVARh)',
-  'T1': 'Tarif 1 (kWh)', 'T2': 'Tarif 2 (kWh)'
-};
+/* ========== HELPERS ========== */
+function formatOpH(hours){ if(hours===null||hours===undefined||isNaN(hours)||hours<0) return '---'; const totalMinutes=Math.round(parseFloat(hours)*60); const days=Math.floor(totalMinutes/(24*60)); const rem=totalMinutes%(24*60); const hrs=Math.floor(rem/60); const mins=rem%60; if(days>0) return `${days} Hari ${hrs} Jam`; if(hrs>0) return `${hrs} Jam${mins>0? ' '+mins+' Mnt':''}`; if(mins>0) return `${mins} Mnt`; return '0 Jam'; }
+function fmt(val,key){ if(val===null||val===undefined||isNaN(val)) return '---'; const n=Number(val); if(['V'].includes(key)) return n.toFixed(1); if(['I1','I2','I3'].includes(key)) return n.toFixed(3); if(['P','Q'].includes(key)) return Math.round(n).toString(); if(['S'].includes(key)) return n.toFixed(2); if(['PF'].includes(key)) return n.toFixed(3); if(['Hz'].includes(key)) return n.toFixed(1); if(['EaT','ErT','EaP','ErP','T1','T2'].includes(key)) return n.toFixed(2); return n.toString(); }
+function getStyleClass(key){ if(key==='T1'||key==='T2') return 'col-tariff'; if(['EaT','ErT','EaP','ErP'].includes(key)) return 'col-energy'; if(['P','Q','S'].includes(key)) return 'col-power'; return ''; }
+const dataLabels={ 'V':'Tegangan (V)','I1':'Arus Fasa 1 (A)','I2':'Arus Fasa 2 (A)','I3':'Arus Fasa 3 (A)','P':'Daya Aktif (W)','Q':'Daya Reaktif (VAR)','S':'Daya Semu (kVA)','PF':'Faktor Daya','Hz':'Frekuensi (Hz)','OpH':'Jam Operasi','EaT':'Energi Aktif Total (kWh)','ErT':'Energi Reaktif Total (kVARh)','EaP':'Energi Aktif Parsial (kWh)','ErP':'Energi Reaktif Parsial (kVARh)','T1':'Tarif 1 (kWh)','T2':'Tarif 2 (kWh)'};
 
+/* ========== DOM refs & storage ========== */
 const mainView = document.getElementById('main-view');
-const modalOverlay = document.getElementById('modal-overlay');
-const detailBody = document.getElementById('detailBody');
-const modalTitle = document.getElementById('modal-title');
-const closeModal = document.getElementById('close-modal');
 const conn = document.getElementById('conn');
+const modalOverlay = document.getElementById('modal-overlay');
+const modalTitle = document.getElementById('modal-title');
+const detailBody = document.getElementById('detailBody');
+const closeModalBtn = document.getElementById('close-modal');
 
-const dataMap = [
-  'V','I1','I2','I3','P','Q','S','PF','Hz','OpH',
-  'EaT','ErT','EaP','ErP','T1','T2'
-];
-const devices = {};
+const dataMap = ['V','I1','I2','I3','P','Q','S','PF','Hz','OpH','EaT','ErT','EaP','ErP','T1','T2'];
+const devices = {}; // store card refs
 const deviceData = {};
-for (let id = 1; id <= TOTAL_DEVICES; id++) {
-  deviceData[id] = {};
-}
+for(let i=1;i<=TOTAL_DEVICES;i++) deviceData[i] = {};
 
-function createCards() {
-  mainView.innerHTML = '';
-  for(let id=1; id<=TOTAL_DEVICES; id++) {
-    const card = document.createElement('div');
-    card.className = 'machine-card';
-    card.setAttribute('data-id', id);
-    const tag = MACHINE_TAGS[id] || 'Mesin Tidak Dikenal';
-    card.setAttribute('title', `Mesin ${id} = ${tag}`);
-    card.innerHTML = `
-      <div class="status-indicator status-offline" id="status-ind-${id}"></div>
-      <p class="card-label">${tag}</p>
-      <p class="sid-label">SID ${id}</p>
-    `;
-    card.onclick = () => showDetailModal(id);
-    mainView.appendChild(card);
-    devices[id] = {
-      card,
-      indicator: document.getElementById(`status-ind-${id}`)
-    };
-  }
-}
-
-function showDetailModal(id) {
-  const data = deviceData[id];
-  modalTitle.textContent = `Detail SID  ${id} - ${MACHINE_TAGS[id] || 'NAMA MESIN'}`;
-  detailBody.innerHTML = '';
-
-  const statusRow = document.createElement('tr');
-  statusRow.innerHTML = `<td class="param-name">Status</td><td class="param-value ${data.status === 'online' ? 'status-online' : 'status-offline'}">${data.status ? data.status.toUpperCase() : '---'}</td>`;
-  detailBody.appendChild(statusRow);
-
-  dataMap.forEach(key => {
-    const tr = document.createElement('tr');
-    const raw = data[key];
-    let displayValue;
-    if (key === 'OpH') {
-      displayValue = (raw === 0 || raw) ? formatOpH(raw) : '---';
-    } else {
-      displayValue = (raw === 0 || raw) ? fmt(raw, key) : '---';
-    }
-    tr.innerHTML = `<td class="param-name">${dataLabels[key]}</td><td class="param-value ${getStyleClass(key)}">${displayValue}</td>`;
-    detailBody.appendChild(tr);
-  });
-
-  modalOverlay.style.display = 'flex';
-  document.body.style.overflow = 'hidden'; // Disable background scroll
-}
-
-function closeDetailModal() {
-  modalOverlay.style.display = 'none';
-  document.body.style.overflow = ''; // Enable background scroll
-}
-
-closeModal.onclick = closeDetailModal;
-
-// Close modal on overlay click outside modal box
-modalOverlay.addEventListener('click', (e) => {
-  if(e.target === modalOverlay) closeDetailModal();
-});
-
-// Close modal on pressing Escape key
-window.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && modalOverlay.style.display === 'flex') {
-    closeDetailModal();
-  }
-});
-
+/* ========== create cards (mobile-friendly compact) ========== */
+function createCards(){ mainView.innerHTML=''; for(let id=1;id<=TOTAL_DEVICES;id++){ const tag=MACHINE_TAGS[id]||'Mesin Tidak Dikenal'; const card=document.createElement('div'); card.className='machine-card'; card.dataset.id=id; card.title = `Mesin ${id} = ${tag}`; card.innerHTML = `\n  <div class="card-top">\n    <div style="display:flex;flex-direction:column">\n      <p class="card-title">${tag}</p>\n      <span class="sid">SID ${id}</span>\n    </div>\n    <div class="small-badge">#${id}</div>\n  </div>\n  `; card.onclick = ()=> showDetailModal(id); mainView.appendChild(card); // create small status indicator
+    const ind = document.createElement('div'); ind.className='status-indicator status-offline'; ind.id = `status-ind-${id}`; card.appendChild(ind);
+    devices[id] = { card, indicator: ind };
+  }}
 createCards();
 
-const client = mqtt.connect(MQTT_URL, MQTT_OPTIONS);
-client.on('connect', () => {
-  conn.textContent = 'MQTT Connected';
-  client.subscribe(MQTT_TOPIC);
-});
-client.on('reconnect', () => {
-  conn.textContent = '🔄 MQTT Reconnecting...';
-});
-client.on('error', (err) => {
-  conn.textContent = '❌ MQTT Error';
-  console.error('MQTT Error:', err);
-});
-client.on('message', (topic, message) => {
-  try {
-    const d = JSON.parse(message.toString());
-    const id = Number(d.id);
-    if (!id || id < 1 || id > TOTAL_DEVICES) {
-      console.warn('Invalid ID in payload', d);
-      return;
-    }
-    deviceData[id] = d;
-    if (devices[id]) {
-      const status = (d.status && d.status.toLowerCase() === 'online') ? 'online' : 'offline';
-      devices[id].indicator.className = `status-indicator status-${status}`;
-    }
-  } catch (e) {
-    console.error('Payload parse error:', e, message.toString());
-  }
-});
-</script>
+/* ========== modal functions ========== */
+function showDetailModal(id){ const d = deviceData[id]||{}; modalTitle.textContent = `Detail SID ${id} — ${MACHINE_TAGS[id]||'NAMA MESIN'}`; detailBody.innerHTML=''; // status
+  const trStatus = document.createElement('tr'); trStatus.innerHTML = `<td class="param-name">Status</td><td class="param-value ${d.status==='online'?'status-online':'status-offline'}">${d.status?d.status.toUpperCase():'---'}</td>`; detailBody.appendChild(trStatus);
+  dataMap.forEach(key=>{ const tr=document.createElement('tr'); const raw=d[key]; let v; if(key==='OpH'){ v=(raw===0||raw)?formatOpH(raw):'---'; } else { v=(raw===0||raw)?fmt(raw,key):'---'; } tr.innerHTML = `<td class="param-name">${dataLabels[key]}</td><td class="param-value ${getStyleClass(key)}">${v}</td>`; detailBody.appendChild(tr); }); modalOverlay.style.display='flex'; document.body.style.overflow='hidden'; }
+function closeDetailModal(){ modalOverlay.style.display='none'; document.body.style.overflow=''; }
+closeModalBtn.addEventListener('click', closeDetailModal); modalOverlay.addEventListener('click', e=>{ if(e.target===modalOverlay) closeDetailModal(); }); window.addEventListener('keydown', e=>{ if(e.key==='Escape' && modalOverlay.style.display==='flex') closeDetailModal(); });
 
+/* ========== MQTT (same logic) ========== */
+const client = mqtt.connect(MQTT_URL, MQTT_OPTIONS);
+client.on('connect', ()=>{ conn.textContent='✅ MQTT Connected'; client.subscribe(MQTT_TOPIC); });
+client.on('reconnect', ()=>{ conn.textContent='🔄 MQTT Reconnecting...'; });
+client.on('error', err=>{ conn.textContent='❌ MQTT Error'; console.error('MQTT Error:',err); });
+client.on('message', (topic,message)=>{ try{ const d = JSON.parse(message.toString()); const id = Number(d.id); if(!id||id<1||id>TOTAL_DEVICES){ console.warn('Invalid ID',d); return; } deviceData[id] = d; // update status indicator
+    if(devices[id]){ const status = (d.status && d.status.toLowerCase()==='online') ? 'online' : 'offline'; devices[id].indicator.className = `status-indicator status-${status}`; }
+  }catch(e){ console.error('Payload parse error:', e, message.toString()); } });
+
+</script>
 </body>
 </html>
