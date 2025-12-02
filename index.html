@@ -9,25 +9,110 @@
         :root {
             --primary: #00ffc2;
             --bg: #0f0f0f;
-            --text: #e0e0e0;
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             min-height: 100vh;
             background: var(--bg);
             color: var(--primary);
             font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             padding: 20px;
+        }
+
+        /* ====================== LOADING SCREEN ====================== */
+        #loader {
+            position: fixed;
+            inset: 0;
+            background: var(--bg);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.8s ease, visibility 0.8s ease;
+        }
+
+        .scanner {
+            width: 300px;
+            height: 300px;
+            position: relative;
+        }
+
+        .scanner::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 200%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            animation: scan 3s linear infinite;
+            transform: translate(-50%, -50%) rotate(0deg);
+            box-shadow: 0 0 20px var(--primary);
+        }
+
+        .scanner::after {
+            content: 'SCANNING SYSTEM...';
+            position: absolute;
+            bottom: -60px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-weight: 700;
+            letter-spacing: 4px;
+            color: var(--primary);
+            font-size: 1.1rem;
+            text-shadow: 0 0 10px var(--primary);
+            animation: blink 1.5s infinite;
+        }
+
+        .pulse-ring {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 100px;
+            height: 100px;
+            border: 3px solid var(--primary);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes scan {
+            0%   { transform: translate(-50%, -50%) rotate(0deg); }
+            100% { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        @keyframes pulse {
+            0%   { width: 100px; height: 100px; opacity: 1; }
+            100% { width: 400px; height: 400px; opacity: 0; }
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50%      { opacity: 0.4; }
+        }
+
+        /* Fade out ketika selesai */
+        .loaded #loader {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        /* ====================== MAIN CONTENT ====================== */
+        .main-content {
+            opacity: 0;
+            transition: opacity 1s ease 0.5s;
+        }
+
+        .loaded .main-content {
+            opacity: 1;
         }
 
         h1 {
@@ -48,7 +133,6 @@
         }
 
         .menu-btn {
-            display: block;
             padding: 18px 24px;
             text-align: center;
             text-decoration: none;
@@ -65,35 +149,43 @@
         .menu-btn:hover {
             background: var(--primary);
             color: #000;
-            transform: translateY(-4px) scale(1.02);
+            transform: translateY(-4px);
             box-shadow: 0 10px 30px rgba(0, 255, 194, 0.4);
         }
 
-        /* Responsif */
         @media (max-width: 640px) {
-            h1 {
-                font-size: 2.2rem;
-                margin-bottom: 2.5rem;
-            }
-            .menu-btn {
-                font-size: 1rem;
-                padding: 16px 20px;
-            }
-        }
-
-        @media (max-width: 480px) {
-            h1 { font-size: 1.9rem; }
+            h1 { font-size: 2.2rem; margin-bottom: 2.5rem; }
+            .scanner { width: 220px; height: 220px; }
         }
     </style>
 </head>
 <body>
 
-    <h1>MONITORING ENERGI</h1>
-
-    <div class="menu-container">
-        <a href="realtime.html" class="menu-btn">MONITORING REALTIME</a>
-        <a href="result_wbp_lwbp.html" class="menu-btn">MONITORING RESULT (WBP / LWBP)</a>
+    <!-- LOADING ANIMATION -->
+    <div id="loader">
+        <div class="scanner">
+            <div class="pulse-ring"></div>
+        </div>
     </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="main-content">
+        <h1>MONITORING ENERGI</h1>
+
+        <div class="menu-container">
+            <a href="realtime.html" class="menu-btn">MONITORING REALTIME</a>
+            <a href="result_wbp_lwbp.html" class="menu-btn">MONITORING RESULT (WBP / LWBP)</a>
+        </div>
+    </div>
+
+    <script>
+        // Hilangkan loading setelah 3.5 detik (bisa diubah)
+        window.addEventListener("load", () => {
+            setTimeout(() => {
+                document.body.classList.add("loaded");
+            }, 3500); // ubah angka ini kalau mau lebih cepat/lambat
+        });
+    </script>
 
 </body>
 </html>
