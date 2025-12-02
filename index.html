@@ -3,167 +3,186 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CYBER GRID 3D - POWER METER</title>
-<script src="https://cdn.jsdelivr.net/npm/three@0.168.0/build/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.168.0/examples/js/controls/OrbitControls.js"></script>
+<title>ENERGY WAVE - Power Monitoring</title>
 <style>
-    body { margin:0; overflow:hidden; background:#000; font-family:'Orbitron',sans-serif; }
-    canvas { display:block; }
-    #ui {
+    :root {
+        --main: #00ffc2;   /* Hijau-cyan elektrik */
+        --deep: #00a8a8;   /* Hijau tua dalam */
+        --glow: #00ffff;   /* Cyan terang */
+        --bg: #0d0d1f;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+        background: #000;
+        overflow: hidden;
+        font-family: 'Rajdhani', sans-serif;
+        color: var(--main);
+        height: 100vh;
+    }
+    canvas { position: fixed; top:0; left:0; z-index:1; }
+
+    .ui {
         position: absolute;
         top: 0; left: 0; width: 100%; height: 100%;
-        pointer-events: none;
         z-index: 10;
         display: flex;
         flex-direction: column;
-        justify-content: space-between;
-        padding: 40px;
-        box-sizing: border-box;
+        justify-content: center;
+        align-items: center;
+        pointer-events: none;
     }
     h1 {
-        font-size: clamp(3rem, 10vw, 8rem);
+        font-family: 'Orbitron', sans-serif;
+        font-size: clamp(3rem, 10vw, 7rem);
         font-weight: 900;
-        text-align: center;
-        background: linear-gradient(90deg, #00ff9d, #00ffff, #ff00ff, #00ff9d);
+        letter-spacing: 8px;
+        background: linear-gradient(90deg, #00ffc2, #00ffff, #00ffc2);
         -webkit-background-clip: text;
         background-clip: text;
         -webkit-text-fill-color: transparent;
-        text-shadow: 0 0 60px #00ff9d;
-        letter-spacing: 10px;
-        animation: titleGlow 4s infinite alternate;
+        text-shadow: 0 0 60px rgba(0,255,194,0.7);
+        margin-bottom: 2vh;
+        animation: pulse 4s infinite alternate;
     }
-    @keyframes titleGlow { 
-        0% { text-shadow: 0 0 40px #00ff9d; }
-        100% { text-shadow: 0 0 100px #00ff9d, 0 0 150px #00ffff; }
+    @keyframes pulse {
+        0% { text-shadow: 0 0 40px rgba(0,255,194,0.6); }
+        100% { text-shadow: 0 0 100px rgba(0,255,194,0.9), 0 0 140px #00ffff; }
     }
-    .btn-container {
-        display: flex;
-        flex-direction: column;
-        gap: 25px;
-        align-items: center;
-        pointer-events: all;
-    }
-    .btn {
-        padding: 20px 80px;
-        background: rgba(0,255,157,0.15);
-        border: 2px solid #00ff9d;
-        border-radius: 15px;
-        color: #00ff9d;
-        font-size: 1.8rem;
-        font-weight: bold;
+
+    .subtitle {
+        font-size: 1.6rem;
         letter-spacing: 6px;
+        color: #00ffff;
+        margin-bottom: 8vh;
+        opacity: 0.9;
+    }
+
+    .btn {
+        pointer-events: all;
+        padding: 22px 80px;
+        margin: 15px;
+        background: rgba(0,255,194,0.1);
+        border: 2px solid var(--main);
+        border-radius: 16px;
+        color: var(--main);
+        font-size: 1.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 4px;
         text-decoration: none;
-        backdrop-filter: blur(15px);
-        box-shadow: 0 0 40px rgba(0,255,157,0.5);
-        transition: all 0.4s;
+        backdrop-filter: blur(12px);
+        box-shadow: 0 0 40px rgba(0,255,194,0.4);
+        transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
     }
     .btn:hover {
-        background: #00ff9d;
+        background: var(--main);
         color: #000;
-        transform: translateY(-12px) scale(1.1);
-        box-shadow: 0 0 100px #00ff9d, 0 0 150px #00ffff;
+        transform: translateY(-12px) scale(1.08);
+        box-shadow: 0 0 80px var(--main), 0 0 120px #00ffff;
     }
 </style>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
 </head>
 <body>
 
-<div id="ui">
-    <h1>CYBER GRID</h1>
-    <div class="btn-container">
-        <a href="realtime.html" class="btn">REALTIME</a>
-        <a href="result_wbp_lwbp.html" class="btn">WBP / LWBP</a>
-    </div>
+<canvas id="bg"></canvas>
+
+<div class="ui">
+    <h1>ENERGY WAVE</h1>
+    <div class="subtitle">National Grid Monitoring</div>
+    <a href="realtime.html" class="btn">Realtime</a>
+    <a href="result_wbp_lwbp.html" class="btn">WBP / LWBP</a>
 </div>
 
 <script>
-// === CYBER GRID 3D MURNII ===
-const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0x000000, 0.0008);
+// === ENERGY WAVE AESTHETIC EDITION ===
+const canvas = document.getElementById('bg');
+const ctx = canvas.getContext('2d');
+canvas.width = innerWidth;
+canvas.height = innerHeight;
 
-const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 1000);
-camera.position.set(0, 15, 40);
+let particles = [];
+const colors = ['#00ffc2', '#00ffff', '#00d4ff', '#00a8a8'];
 
-const renderer = new THREE.WebGLRenderer({antialias:true});
-renderer.setSize(innerWidth, innerHeight);
-renderer.setPixelRatio(devicePixelRatio);
-document.body.appendChild(renderer.domElement);
-
-const controls = new THREE.OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-controls.dampingFactor = 0.07;
-controls.autoRotate = true;
-controls.autoRotateSpeed = 0.5;
-
-// GRID TAK TERHINGGA
-const gridSize = 200;
-const gridDiv = 60;
-const grid = new THREE.GridHelper(gridSize, gridDiv, 0x00ff9d, 0x00ff9d);
-grid.material.opacity = 0.4;
-grid.material.transparent = true;
-scene.add(grid);
-
-// GARIS VERTIKAL (kedalaman)
-for(let i = -gridSize/2; i <= gridSize/2; i += gridSize/gridDiv) {
-    const line = new THREE.Line(
-        new THREE.BufferGeometry().setFromPoints([
-            new THREE.Vector3(i, 0, -gridSize/2),
-            new THREE.Vector3(i, 0, gridSize/2)
-        ]),
-        new THREE.LineBasicMaterial({color:0x00ffff, transparent:true, opacity:0.3})
-    );
-    scene.add(line);
+class Particle {
+    constructor() {
+        this.reset();
+    }
+    reset() {
+        this.x = Math.random() * canvas.width;
+        this.y = canvas.height + 30;
+        this.size = Math.random() * 3.5 + 1.5;
+        this.speedX = Math.random() * 1.4 - 0.7;
+        this.speedY = Math.random() * 3 + 1.5;
+        this.color = colors[Math.floor(Math.random() * colors.length)];
+        this.opacity = 1;
+    }
+    update() {
+        this.x += this.speedX;
+        this.y -= this.speedY;
+        if (this.y < -30) this.reset();
+    }
+    draw() {
+        ctx.globalAlpha = this.opacity;
+        ctx.fillStyle = this.color;
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+    }
 }
 
-// PARTIKEL ALIRAN LISTRIK
-const particles = [];
-const particleCount = 800;
-const geometry = new THREE.SphereGeometry(0.15, 8, 8);
-const material = new THREE.MeshBasicMaterial({color:0x00ffff});
+// Buat partikel
+for(let i = 0; i < 120; i++) particles.push(new Particle());
 
-for(let i=0; i<particleCount; i++) {
-    const p = new THREE.Mesh(geometry, material);
-    p.position.set(
-        (Math.random()-0.5)*gridSize,
-        Math.random()*30,
-        (Math.random()-0.5)*gridSize
-    );
-    p.velocity = new THREE.Vector3(
-        (Math.random()-0.5)*0.3,
-        -Math.random()*2 - 1,
-        (Math.random()-0.5)*0.3
-    );
-    scene.add(p);
-    particles.push(p);
+function drawWaves() {
+    const time = Date.now() * 0.001;
+    ctx.strokeStyle = 'rgba(0,255,194,0.2)';
+    ctx.lineWidth = 3;
+
+    // Wave utama
+    ctx.beginPath();
+    for(let x = 0; x < canvas.width; x += 8) {
+        const y = canvas.height/2 + 
+                  Math.sin((x * 0.01) + time * 2) * 80 +
+                  Math.sin((x * 0.015) + time * 1.5) * 50;
+        ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // Wave sekunder (lebih halus)
+    ctx.strokeStyle = 'rgba(0,255,255,0.12)';
+    ctx.beginPath();
+    for(let x = 0; x < canvas.width; x += 12) {
+        const y = canvas.height/2 + 
+                  Math.sin((x * 0.008) + time * 2.5) * 100 +
+                  Math.cos((x * 0.02) - time * 1.8) * 30;
+        ctx.lineTo(x, y);
+    }
+    ctx.stroke();
 }
 
 function animate() {
-    requestAnimationFrame(animate);
-    
-    // Gerakin partikel + respawn kalau jatuh
+    ctx.fillStyle = 'rgba(0,0,0,0.05)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    drawWaves();
+
     particles.forEach(p => {
-        p.position.add(p.velocity);
-        if(p.position.y < -20) {
-            p.position.y = 30;
-            p.position.x = (Math.random()-0.5)*gridSize;
-            p.position.z = (Math.random()-0.5)*gridSize;
-        }
+        p.update();
+        p.draw();
     });
 
-    // Efek glow grid
-    const time = Date.now() * 0.001;
-    grid.material.opacity = 0.4 + 0.3 * Math.sin(time*3);
-
-    controls.update();
-    renderer.render(scene, camera);
+    requestAnimationFrame(animate);
 }
+
 animate();
 
 window.addEventListener('resize', () => {
-    camera.aspect = innerWidth/innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(innerWidth, innerHeight);
+    canvas.width = innerWidth;
+    canvas.height = innerHeight;
 });
 </script>
-
 </body>
 </html>
