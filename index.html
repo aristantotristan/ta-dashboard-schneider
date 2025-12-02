@@ -3,42 +3,40 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ENGINEER ON DUTY</title>
+<title>ENERGY WAVE - ENGINEER ON DUTY</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
 <style>
-    body,html{margin:0;height:100%;overflow:hidden;background:#000;font-family:'Orbitron',sans-serif;}
-    canvas{position:fixed;top:0;left:0;z-index:1;}
-    
-    /* ENGINEER JELAS BANGET */
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body,html{height:100%;overflow:hidden;background:#000;font-family:'Orbitron',sans-serif;color:#00ff41;}
+    canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;}
+
+    /* Engineer SVG (lebih terang & jelas) */
     .engineer{
         position:fixed;
         bottom:0;
         left:50%;
         transform:translateX(-50%);
-        width:420px;
-        height:750px;
+        width:440px;
+        height:780px;
         background:url('data:image/svg+xml;utf8,<svg viewBox="0 0 420 750" xmlns="http://www.w3.org/2000/svg">
-          <!-- Helm safety -->
-          <ellipse cx="210" cy="100" rx="70" ry="80" fill="%23003322" stroke="%2300ff41" stroke-width="6"/>
-          <circle cx="210" cy="100" r="50" fill="%23001111"/>
-          
+          <!-- Helm -->
+          <ellipse cx="210" cy="100" rx="72" ry="82" fill="#003322" stroke="#00ff41" stroke-width="7"/>
+          <circle cx="210" cy="100" r="52" fill="#001111"/>
           <!-- Kepala + kacamata -->
-          <circle cx="210" cy="120" r="45" fill="%23002211"/>
-          <rect x="170" y="110" width="80" height="20" rx="10" fill="%2300ff4188"/>
-          
+          <circle cx="210" cy="120" r="47" fill="#002211"/>
+          <rect x="168" y="108" width="84" height="24" rx="12" fill="#00ff4188"/>
           <!-- Badan + rompi reflektor -->
-          <rect x="140" y="180" width="140" height="300" rx="30" fill="%23002211" stroke="%2300ff41" stroke-width="8"/>
-          <rect x="150" y="200" width="120" height="260" rx="20" fill="%23001100"/>
-          <rect x="165" y="220" width="90" height="220" fill="%2300ff4122"/>
-          
-          <!-- Tangan pegang tablet -->
-          <rect x="280" y="300" width="80" height="120" rx="20" fill="%23002211" stroke="%2300ff41" stroke-width="6"/>
-          <rect x="295" y="315" width="50" height="90" rx="15" fill="%2300ffff22" stroke="%2300ffff" stroke-width="4"/>
-          
+          <rect x="138" y="180" width="144" height="310" rx="35" fill="#002211" stroke="#00ff41" stroke-width="9"/>
+          <rect x="150" y="200" width="120" height="270" rx="25" fill="#001100"/>
+          <rect x="165" y="220" width="90" height="230" fill="#00ff4122"/>
+          <!-- Tangan + tablet -->
+          <rect x="280" y="290" width="90" height="140" rx="25" fill="#002211" stroke="#00ff41" stroke-width="7"/>
+          <rect x="295" y="308" width="60" height="100" rx="18" fill="#00ffff33" stroke="#00ffff" stroke-width="5"/>
           <!-- Kaki -->
-          <rect x="160" y="480" width="50" height="220" rx="25" fill="%23001111" stroke="%2300ff41" stroke-width="6"/>
-          <rect x="210" y="480" width="50" height="220" rx="25" fill="%23001111" stroke="%2300ff41" stroke-width="6"/>
+          <rect x="158" y="480" width="54" height="230" rx="27" fill="#001111" stroke="#00ff41" stroke-width="7"/>
+          <rect x="208" y="480" width="54" height="230" rx="27" fill="#001111" stroke="#00ff41" stroke-width="7"/>
         </svg>') bottom center / contain no-repeat;
-        z-index: 5;
+        z-index:5;
         filter:drop-shadow(0 0 80px #00ff41) drop-shadow(0 0 160px #00ffff);
         pointer-events:none;
     }
@@ -49,95 +47,150 @@
         z-index:10;
         display:flex;
         flex-direction:column;
-        flex-direction:column;
         justify-content:center;
         align-items:center;
-        pointer-events:none;
         text-align:center;
+        pointer-events:none;
     }
     h1{
-        font-size:clamp(4rem,12vw,10rem);
+        font-size:clamp(4rem, 14vw, 12rem);
         font-weight:900;
+        letter-spacing:0.2em;
         color:#00ff41;
-        text-shadow:0 0 60px #00ff41, 0 0 120px #00ffff;
-        letter-spacing:12px;
-        margin-bottom:10px;
+        text-shadow:
+            0 0 40px #00ff41,
+            0 0 80px #00ff41,
+            0 0 160px #00ffff;
+        margin-bottom:0.2em;
+        animation:pulse 4s infinite;
     }
     .subtitle{
-        font-size:2rem;
+        font-size:clamp(1.5rem, 4vw, 3rem);
         color:#00ffff;
-        letter-spacing:8px;
-        margin-bottom:10vh;
+        letter-spacing:0.4em;
         text-shadow:0 0 40px #00ff41;
+        margin-bottom:8vh;
+    }
+    .btn-container{
+        pointer-events:all;
+        display:flex;
+        flex-direction:column;
+        gap:30px;
     }
     .btn{
-        pointer-events:all;
-        padding:25px 100px;
-        margin:15px;
-        background:rgba(0,255,65,0.15);
+        padding:20px 90px;
+        background:rgba(0,255,65,0.1);
         border:4px solid #00ff41;
-        border-radius:15px;
+        border-radius:20px;
         color:#00ff41;
         font-size:2.2rem;
         font-weight:900;
         text-transform:uppercase;
-        letter-spacing:8px;
-        backdrop-filter:blur(15px);
-        box-shadow:0 0 80px #00ff4180;
-        transition:.4s;
+        letter-spacing:0.3em;
+        text-decoration:none;
+        backdrop-filter:blur(12px);
+        box-shadow:0 0 60px rgba(0,255,65,0.5);
+        transition:all 0.4s ease;
     }
     .btn:hover{
         background:#00ff41;
         color:#000;
-        transform:scale(1.15);
-        box-shadow:0 0 150px #00ff41, 0 0 250px #00ffff;
+        transform:scale(1.15) translateY(-10px);
+        box-shadow:
+            0 0 100px #00ff41,
+            0 0 200px #00ffff;
+    }
+    @keyframes pulse{
+        0%,100%{opacity:0.9;}
+        50%{opacity:1;}
     }
 </style>
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@900&display=swap" rel="stylesheet">
 </head>
 <body>
 
 <canvas id="c"></canvas>
 
-<!-- ORANGNYA PASTI KELIATAN SEKARANG -->
+<!-- Engineer yang keren -->
 <div class="engineer"></div>
 
 <div class="ui">
     <h1>ENERGY WAVE</h1>
     <div class="subtitle">ON DUTY 24/7</div>
-    <a href="realtime.html" class="btn">REALTIME</a>
-    <a href="result_wbp_lwbp.html" class="btn">WBP / LWBP</a>
+    
+    <div class="btn-container">
+        <a href="realtime.html" class="btn">Realtime</a>
+        <a href="result_wbp_lwbp.html" class="btn">Tarif WBP / LWBP</a>
+    </div>
 </div>
 
 <script>
-// Wave + particle (sama kayak sebelumnya, tapi lebih ganas)
-const c=document.getElementById('c'),x=c.getContext('2d');
-c.width=innerWidth;c.height=innerHeight;
-let p=[],t=0;
+// Canvas wave + particle (lebih smooth & ganas)
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+canvas.width = innerWidth;
+canvas.height = innerHeight;
 
-class P{constructor(){this.r()}r(){this.x=Math.random()*c.width;this.y=c.height+50;this.s=4+Math.random()*7;this.vx=Math.random()*2-1;this.vy=4+Math.random()*6;this.c=['#00ff41','#00cc33','#00ffff','#00ff80'][~~(Math.random()*4)]}u(){this.x+=this.vx;this.y-=this.vy;if(this.y<-50)this.r()}d(){x.fillStyle=this.c;x.shadowColor=this.c;x.shadowBlur=40;x.beginPath();x.arc(this.x,this.y,this.s,0,6.28);x.fill()}}
-for(let i=0;i<200;i++)p.push(new P());
+let particles = [];
+let time = 0;
 
-function wave(){
-    x.strokeStyle='#00ff4188';x.lineWidth=10;
-    x.beginPath();
-    for(let i=0;i<c.width;i+=6){
-        let y=c.height/2+Math.sin(i*0.01+t)*120+Math.sin(i*0.006+t*0.8)*80;
-        x.lineTo(i,y);
+class Particle {
+    reset() {
+        this.x = Math.random() * canvas.width;
+        this.y = canvas.height + 50;
+        this.size = 4 + Math.random() * 8;
+        this.speedX = Math.random() * 2 - 1;
+        this.speedY = 5 + Math.random() * 8;
+        this.color = ['#00ff41','#00cc33','#00ffff','#00ff80'][~~(Math.random()*4)];
     }
-    x.stroke();
+    constructor() { this.reset(); }
+    update() {
+        this.x += this.speedX;
+        this.y -= this.speedY;
+        if (this.y < -50) this.reset();
+    }
+    draw() {
+        ctx.fillStyle = this.color;
+        ctx.shadowColor = this.color;
+        ctx.shadowBlur = 40;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI*2);
+        ctx.fill();
+    }
 }
 
-function a(){
-    x.fillStyle='rgba(0,10,5,0.08)';x.fillRect(0,0,c.width,c.height);
-    wave();
-    p.forEach(e=>{e.u();e.d()});
-    t+=0.05;
-    requestAnimationFrame(a);
-}
-a();
+for(let i=0; i<220; i++) particles.push(new Particle());
 
-onresize=()=>{c.width=innerWidth;c.height=innerHeight};
+function drawWave() {
+    ctx.strokeStyle = 'rgba(0,255,65,0.5)';
+    ctx.lineWidth = 12;
+    ctx.beginPath();
+    for(let i=0; i<=canvas.width; i+=8){
+        const y = canvas.height/2 
+            + Math.sin(i*0.008 + time) * 140
+            + Math.sin(i*0.005 + time*1.2) * 90
+            + Math.sin(i*0.012 - time*0.7) * 50;
+        ctx.lineTo(i, y);
+    }
+    ctx.stroke();
+}
+
+function animate() {
+    ctx.fillStyle = 'rgba(0,15,5,0.07)';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    
+    drawWave();
+    particles.forEach(p => { p.update(); p.draw(); });
+    
+    time += 0.04;
+    requestAnimationFrame(animate);
+}
+animate();
+
+window.addEventListener('resize', () => {
+    canvas.width = innerWidth;
+    canvas.height = innerHeight;
+});
 </script>
+
 </body>
 </html>
