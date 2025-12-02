@@ -1,68 +1,99 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Monitoring Energi</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitoring Energi</title>
+    <meta name="description" content="Sistem Monitoring Energi - Realtime dan WBP/LWBP">
+    <style>
+        :root {
+            --primary: #00ffc2;
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+        }
 
-<style>
-    body {
-        margin: 0;
-        padding: 0;
-        height: 100vh;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        background: #0f0f0f;
-        font-family: "Segoe UI", sans-serif;
-        color: #00ffc2;
-    }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-    h1 {
-        font-size: 2.5rem;
-        margin-bottom: 40px;
-        letter-spacing: 1px;
-        font-weight: 800;
-        text-shadow: 0 0 12px rgba(0,255,200,.7);
-    }
+        body {
+            min-height: 100vh;
+            background: var(--bg);
+            color: var(--primary);
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
 
-    .menu-btn {
-        width: 320px;
-        padding: 15px 20px;
-        text-align: center;
-        margin-bottom: 18px;
-        border-radius: 10px;
-        border: 2px solid #00ffc2;
-        color: #00ffc2;
-        background: transparent;
-        text-decoration: none;
-        font-weight: 700;
-        letter-spacing: 1px;
-        transition: .25s;
-        display: block;
-    }
+        h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            letter-spacing: 2px;
+            margin-bottom: 3rem;
+            text-align: center;
+            text-shadow: 0 0 20px rgba(0, 255, 194, 0.8);
+        }
 
-    .menu-btn:hover {
-        background: #00ffc2;
-        color: #000;
-        transform: scale(1.05);
-        box-shadow: 0 0 18px rgba(0,255,200,.7);
-    }
+        .menu-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 100%;
+            max-width: 400px;
+        }
 
-    @media (max-width: 480px) {
-        h1 { font-size: 2rem; }
-        .menu-btn { width: 90%; }
-    }
-</style>
+        .menu-btn {
+            display: block;
+            padding: 18px 24px;
+            text-align: center;
+            text-decoration: none;
+            color: var(--primary);
+            background: transparent;
+            border: 2px solid var(--primary);
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            letter-spacing: 1.5px;
+            transition: all 0.3s ease;
+        }
+
+        .menu-btn:hover {
+            background: var(--primary);
+            color: #000;
+            transform: translateY(-4px) scale(1.02);
+            box-shadow: 0 10px 30px rgba(0, 255, 194, 0.4);
+        }
+
+        /* Responsif */
+        @media (max-width: 640px) {
+            h1 {
+                font-size: 2.2rem;
+                margin-bottom: 2.5rem;
+            }
+            .menu-btn {
+                font-size: 1rem;
+                padding: 16px 20px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            h1 { font-size: 1.9rem; }
+        }
+    </style>
 </head>
-
 <body>
 
-<h1>Monitoring Energi</h1>
+    <h1>MONITORING ENERGI</h1>
 
-<a href="realtime.html" class="menu-btn">MONITORING REALTIME</a>
-<a href="result_wbp_lwbp.html" class="menu-btn">MONITORING RESULT (WBP / LWBP)</a>
+    <div class="menu-container">
+        <a href="realtime.html" class="menu-btn">MONITORING REALTIME</a>
+        <a href="result_wbp_lwbp.html" class="menu-btn">MONITORING RESULT (WBP / LWBP)</a>
+    </div>
 
 </body>
 </html>
