@@ -3,341 +3,441 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>⚡ Master Power Meter Dashboard (18 SLAVES)</title>
+<title>⚡ Master Power Meter Dashboard (18 SLAVES) - Elegant</title>
 
 <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 
 <style>
-  /* --- Styling (rapi & minimal) --- */
+  /* Root colors */
   :root {
     --bg: #121212;
-    --card: #1E1E1E;
-    --muted: #94A3B8;
+    --card-bg: #1E1E1E;
+    --text-primary: #E0E0E0;
+    --text-muted: #94A3B8;
     --accent: #00FFC2;
     --online: #10B981;
     --offline: #EF4444;
     --tariff: #FACC15;
+    --shadow: rgba(0, 255, 194, 0.2);
   }
+
+  /* Reset & base */
   body {
-    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0; padding: 20px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: var(--bg);
-    color: #E0E0E0;
-    padding: 20px;
-    margin: 0;
+    color: var(--text-primary);
+    user-select: none;
   }
-  h2 { color: var(--accent); margin: 0 0 12px 0; }
-  #conn { margin-bottom: 14px; font-weight: 600; color: #94A3B8; }
 
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.6);
-    border-radius: 8px;
-    overflow: hidden;
-  }
-  thead th {
-    background: #2A2A2A;
+  h2 {
     color: var(--accent);
-    text-transform: uppercase;
-    font-size: 0.8rem;
-    padding: 10px 8px;
-    border-bottom: 1px solid #151515;
-  }
-  th, td {
-    padding: 8px 10px;
-    border-bottom: 1px solid rgba(255,255,255,0.02);
+    font-weight: 700;
+    margin-bottom: 20px;
     text-align: center;
-    font-size: 0.86rem;
-  }
-  tbody tr { background: var(--card); }
-  tbody tr:hover { background: #2b2b2b; }
-  .cell-id { font-weight:700; background:#111827; }
-  .status-online { color: var(--online); font-weight:700; }
-  .status-offline { color: var(--offline); font-weight:700; }
-  .col-power { background: #0F334A; color: #38BDF8; font-weight:600; }
-  .col-energy { color: #4ADE80; font-weight:600; }
-  .col-tariff { color: var(--tariff); font-weight:700; }
-  .muted { color: var(--muted); }
-  @media (max-width:1000px) {
-    table { font-size: 0.78rem; }
+    letter-spacing: 1.2px;
   }
 
-  /* Modal Styles */
-  #detailModal {
+  #conn {
+    text-align: center;
+    color: var(--text-muted);
+    font-weight: 600;
+    margin-bottom: 30px;
+    font-size: 1rem;
+  }
+
+  /* === CARD GRID === */
+  #main-view {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .machine-card {
+    background: var(--card-bg);
+    border-radius: 12px;
+    box-shadow:
+      0 4px 12px var(--shadow),
+      inset 0 0 6px rgba(0, 255, 194, 0.35);
+    padding: 20px 15px;
+    cursor: pointer;
+    position: relative;
+    transition:
+      transform 0.25s cubic-bezier(0.4,0,0.2,1),
+      box-shadow 0.25s cubic-bezier(0.4,0,0.2,1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .machine-card:hover {
+    transform: translateY(-6px) scale(1.05);
+    box-shadow:
+      0 10px 30px var(--shadow),
+      inset 0 0 12px rgba(0, 255, 194, 0.7);
+  }
+
+  .card-id {
+    font-size: 3.2rem;
+    font-weight: 900;
+    color: #38BDF8;
+    margin: 0;
+    line-height: 1;
+    user-select: text;
+  }
+
+  .card-label {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-top: 6px;
+    text-align: center;
+    user-select: text;
+    min-height: 24px;
+  }
+
+  .status-indicator {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2.5px solid var(--bg);
+    box-shadow: 0 0 6px rgba(0,0,0,0.8);
+    transition: background-color 0.3s ease;
+  }
+  .status-online { background-color: var(--online); }
+  .status-offline { background-color: var(--offline); }
+
+  /* Tooltip */
+  .machine-card[data-tooltip]:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 110%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--accent);
+    color: var(--bg);
+    padding: 6px 10px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 6px;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0.95;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.6);
+    z-index: 50;
+  }
+
+  /* === MODAL OVERLAY === */
+  #modalOverlay {
     display: none;
     position: fixed;
-    z-index: 9999;
-    left: 0; top: 0;
-    width: 100%; height: 100%;
-    overflow: auto;
-    background-color: rgba(0,0,0,0.7);
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(5px);
+    z-index: 10000;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 40px 20px;
+    box-sizing: border-box;
   }
-  #detailModalContent {
-    background-color: #222;
-    margin: 5% auto;
-    padding: 20px;
-    border-radius: 8px;
-    max-width: 600px;
-    color: #eee;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.8);
+  #modalContent {
+    background: var(--card-bg);
+    border-radius: 12px;
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 30px 25px 35px 25px;
+    box-shadow: 0 8px 25px rgba(0,255,194,0.3);
     position: relative;
+    animation: modalFadeIn 0.35s ease forwards;
   }
-  #detailModalContent h3 {
-    margin-top: 0;
+  @keyframes modalFadeIn {
+    from { opacity: 0; transform: translateY(-20px);}
+    to { opacity: 1; transform: translateY(0);}
+  }
+
+  #modalTitle {
     color: var(--accent);
+    margin: 0 0 15px 0;
+    font-weight: 700;
+    font-size: 1.8rem;
+    user-select: text;
   }
-  #detailBody {
-    width: 100%;
-    border-collapse: collapse;
-  }
-  #detailBody td {
-    padding: 8px 10px;
-    border-bottom: 1px solid #444;
-  }
-  #detailBody td:first-child {
-    text-align: left;
-    font-weight: 600;
-    width: 40%;
-  }
-  #detailBody td:last-child {
-    text-align: right;
-  }
+
   #closeModalBtn {
     position: absolute;
-    top: 10px;
+    top: 15px;
     right: 15px;
     background: transparent;
     border: none;
-    color: #eee;
-    font-size: 24px;
+    font-size: 28px;
+    color: var(--text-primary);
     cursor: pointer;
+    font-weight: 900;
+    transition: color 0.25s ease;
   }
   #closeModalBtn:hover {
     color: var(--accent);
   }
+
+  /* Detail table */
+  #modalTable {
+    width: 100%;
+    border-collapse: collapse;
+    color: var(--text-primary);
+  }
+  #modalTable th, #modalTable td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    font-weight: 600;
+    user-select: text;
+  }
+  #modalTable td.value {
+    font-weight: 400;
+  }
+
+  /* Colored values */
+  .col-power { color: #38BDF8; }
+  .col-energy { color: #4ADE80; }
+  .col-tariff { color: var(--tariff); }
+  .status-online { color: var(--online); font-weight: 700; }
+  .status-offline { color: var(--offline); font-weight: 700; }
+
+  /* Responsive modal padding */
+  @media (max-width: 600px) {
+    #modalContent {
+      padding: 20px 15px 25px 15px;
+    }
+  }
+
 </style>
 </head>
 <body>
 
-<h2>⚡ Real-time Power Meter Dashboard (18 Mesin)</h2>
-<p id="conn" class="muted">Connecting...</p>
+<h2>⚡ Master Power Meter Dashboard</h2>
+<p id="conn">Connecting...</p>
 
-<table aria-label="Power Meter Table">
-  <thead>
-    <tr>
-      <th>ID</th>
-      <th>Status</th>
-      <th>V</th>
-      <th>I1</th>
-      <th>I2</th>
-      <th>I3</th>
-      <th>P (W)</th>
-      <th>Q (VAR)</th>
-      <th>S (kVA)</th>
-      <th>PF</th>
-      <th>Hz</th>
-      <th>OpH</th>
-      <th>Ea Tot</th>
-      <th>Er Tot</th>
-      <th>Ea Part</th>
-      <th>Er Part</th>
-      <th class="col-tariff">T1 (kWh)</th>
-      <th class="col-tariff">T2 (kWh)</th>
-    </tr>
-  </thead>
-  <tbody id="tableBody">
-    <!-- Rows will be pre-populated by JS on load -->
-  </tbody>
-</table>
+<div id="main-view"></div>
 
-<!-- Modal for Detail -->
-<div id="detailModal">
-  <div id="detailModalContent" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+<!-- Modal -->
+<div id="modalOverlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div id="modalContent">
     <button id="closeModalBtn" aria-label="Close modal">&times;</button>
-    <h3 id="modalTitle">Detail Mesin <span id="detailId"></span></h3>
-    <table>
-      <tbody id="detailBody"></tbody>
+    <h3 id="modalTitle">Detail Mesin</h3>
+    <table id="modalTable" aria-describedby="modalTitle">
+      <tbody id="modalTableBody"></tbody>
     </table>
   </div>
 </div>
 
 <script>
-/* ================= CONFIG ================= */
-const MQTT_OPTIONS = {
-  username: "web_dashboard",
-  password: "Tristan12",
-  connectTimeout: 4000,
-  reconnectPeriod: 2000
-};
-const MQTT_URL = "wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt";
-const MQTT_TOPIC = "politeknik/meter/data";
-const TOTAL_DEVICES = 18;
+  /* CONFIG */
+  const MQTT_OPTIONS = {
+    username: "web_dashboard",
+    password: "Tristan12",
+    connectTimeout: 4000,
+    reconnectPeriod: 2000
+  };
+  const MQTT_URL = "wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt";
+  const MQTT_TOPIC = "politeknik/meter/data";
+  const TOTAL_DEVICES = 18;
 
-/* ================= HELPERS ================= */
-function formatOpH(hours) {
-  if (hours === null || hours === undefined || isNaN(hours) || hours < 0) return '---';
-  const totalMinutes = Math.round(parseFloat(hours) * 60);
-  const days = Math.floor(totalMinutes / (24 * 60));
-  const rem = totalMinutes % (24 * 60);
-  const hrs = Math.floor(rem / 60);
-  const mins = rem % 60;
-  if (days > 0) return `${days} Hari ${hrs} Jam`;
-  if (hrs > 0) return `${hrs} Jam${mins>0 ? ' ' + mins + ' Mnt' : ''}`;
-  if (mins > 0) return `${mins} Mnt`;
-  return '0 Jam';
-}
-function fmt(val, key) {
-  if (val === null || val === undefined || isNaN(val)) return '---';
-  const n = Number(val);
-  if (['V'].includes(key)) return n.toFixed(1);
-  if (['I1','I2','I3'].includes(key)) return n.toFixed(3);
-  if (['P','Q'].includes(key)) return Math.round(n).toString();
-  if (['S'].includes(key)) return n.toFixed(2);
-  if (['PF'].includes(key)) return n.toFixed(3);
-  if (['Hz'].includes(key)) return n.toFixed(1);
-  if (['EaT','ErT','EaP','ErP','T1','T2'].includes(key)) return n.toFixed(2);
-  return n.toString();
-}
-
-/* ================= TABLE SETUP ================= */
-const tableBody = document.getElementById('tableBody');
-const conn = document.getElementById('conn');
-
-const dataMap = [
-  'V','I1','I2','I3','P','Q','S','PF','Hz','OpH',
-  'EaT','ErT','EaP','ErP','T1','T2'
-];
-
-const devices = {};
-function createInitialRows() {
-  tableBody.innerHTML = '';
-  for (let id=1; id<=TOTAL_DEVICES; id++) {
-    const tr = tableBody.insertRow();
-    const tdId = tr.insertCell(); tdId.className = 'cell-id'; tdId.textContent = id;
-    const tdStatus = tr.insertCell(); tdStatus.textContent = 'OFFLINE'; tdStatus.className = 'status-offline';
-    dataMap.forEach(key => {
-      const td = tr.insertCell();
-      if (key === 'T1' || key === 'T2') td.className = 'col-tariff';
-      else if (['EaT','ErT','EaP','ErP'].includes(key)) td.className = 'col-energy';
-      else if (['P','Q','S'].includes(key)) td.className = 'col-power';
-      td.textContent = '---';
-    });
-    devices[id] = tr;
-  }
-}
-createInitialRows();
-
-/* Modal Elements */
-const modal = document.getElementById('detailModal');
-const modalContent = document.getElementById('detailModalContent');
-const detailIdSpan = document.getElementById('detailId');
-const detailBody = document.getElementById('detailBody');
-const closeModalBtn = document.getElementById('closeModalBtn');
-
-/* Show modal detail */
-function showDetail(id) {
-  const row = devices[id];
-  if (!row) return;
-
-  detailIdSpan.textContent = id;
-
-  const statusText = row.cells[1].textContent;
-
-  const detailData = {
-    'Status': statusText,
+  /* MACHINE TAGS */
+  const MACHINE_TAGS = {
+    1: 'UNKNOW', 2: 'UNKNOW', 3: 'POMPA MC 12', 4: 'MC 9', 5: 'UNKNOW',
+    6: 'MC 40', 7: 'MC 39', 8: 'MC 6', 9: 'HEATER MC 5', 10: 'POMPA MC 5',
+    11: 'UNKNOW', 12: 'MC 34', 13: 'MC 35', 14: 'UNKNOW', 15: 'UNKNOW',
+    16: 'MC 38', 17: 'MC 36', 18: 'MC 37'
   };
 
-  dataMap.forEach((key, idx) => {
-    detailData[key] = row.cells[2 + idx].textContent;
+  /* HELPERS */
+  function formatOpH(hours) {
+    if (hours === null || hours === undefined || isNaN(hours) || hours < 0) return '---';
+    const totalMinutes = Math.round(parseFloat(hours) * 60);
+    const days = Math.floor(totalMinutes / (24 * 60));
+    const rem = totalMinutes % (24 * 60);
+    const hrs = Math.floor(rem / 60);
+    const mins = rem % 60;
+    if (days > 0) return `${days} Hari ${hrs} Jam`;
+    if (hrs > 0) return `${hrs} Jam${mins>0 ? ' ' + mins + ' Mnt' : ''}`;
+    if (mins > 0) return `${mins} Mnt`;
+    return '0 Jam';
+  }
+  function fmt(val, key) {
+    if (val === null || val === undefined || isNaN(val)) return '---';
+    const n = Number(val);
+    if (['V'].includes(key)) return n.toFixed(1);
+    if (['I1','I2','I3'].includes(key)) return n.toFixed(3);
+    if (['P','Q'].includes(key)) return Math.round(n).toString();
+    if (['S'].includes(key)) return n.toFixed(2);
+    if (['PF'].includes(key)) return n.toFixed(3);
+    if (['Hz'].includes(key)) return n.toFixed(1);
+    if (['EaT','ErT','EaP','ErP','T1','T2'].includes(key)) return n.toFixed(2);
+    return n.toString();
+  }
+  function getStyleClass(key) {
+    if (key === 'T1' || key === 'T2') return 'col-tariff';
+    if (['EaT','ErT','EaP','ErP'].includes(key)) return 'col-energy';
+    if (['P','Q','S'].includes(key)) return 'col-power';
+    return '';
+  }
+  const dataLabels = {
+    'V': 'Tegangan (V)', 'I1': 'Arus Fasa 1 (A)', 'I2': 'Arus Fasa 2 (A)', 'I3': 'Arus Fasa 3 (A)',
+    'P': 'Daya Aktif (W)', 'Q': 'Daya Reaktif (VAR)', 'S': 'Daya Semu (kVA)', 'PF': 'Faktor Daya',
+    'Hz': 'Frekuensi (Hz)', 'OpH': 'Jam Operasi',
+    'EaT': 'Energi Aktif Total (kWh)', 'ErT': 'Energi Reaktif Total (kVARh)',
+    'EaP': 'Energi Aktif Parsial (kWh)', 'ErP': 'Energi Reaktif Parsial (kVARh)',
+    'T1': 'Tarif 1 (kWh)', 'T2': 'Tarif 2 (kWh)'
+  };
+
+  /* ELEMENTS */
+  const mainView = document.getElementById('main-view');
+  const conn = document.getElementById('conn');
+  const modalOverlay = document.getElementById('modalOverlay');
+  const modalTableBody = document.getElementById('modalTableBody');
+  const modalTitle = document.getElementById('modalTitle');
+  const closeModalBtn = document.getElementById('closeModalBtn');
+
+  /* DATA */
+  const dataMap = ['V','I1','I2','I3','P','Q','S','PF','Hz','OpH','EaT','ErT','EaP','ErP','T1','T2'];
+  const devices = {};
+  const deviceData = {};
+  for(let i=1; i<=TOTAL_DEVICES; i++) deviceData[i] = {};
+
+  /* FUNCTIONS */
+  // Create cards
+  function createCards() {
+    mainView.innerHTML = '';
+    for(let id=1; id<=TOTAL_DEVICES; id++) {
+      const card = document.createElement('div');
+      card.className = 'machine-card';
+      card.setAttribute('data-id', id);
+      const tag = MACHINE_TAGS[id] || 'Mesin Tidak Dikenal';
+      card.setAttribute('data-tooltip', tag);
+
+      card.innerHTML = `
+        <div class="status-indicator status-offline" id="status-ind-${id}"></div>
+        <p class="card-id">${id}</p>
+        <p class="card-label">${tag}</p>
+      `;
+
+      card.onclick = () => openModal(id);
+
+      mainView.appendChild(card);
+      devices[id] = {
+        card,
+        indicator: document.getElementById(`status-ind-${id}`)
+      };
+    }
+  }
+
+  // Open modal & fill data
+  function openModal(id) {
+    const data = deviceData[id] || {};
+    modalTitle.textContent = `Detail Mesin ID: ${id} — ${MACHINE_TAGS[id] || 'Mesin Tidak Dikenal'}`;
+    modalTableBody.innerHTML = '';
+
+    // Status row
+    const trStatus = document.createElement('tr');
+    const status = data.status && data.status.toLowerCase() === 'online' ? 'online' : 'offline';
+    trStatus.innerHTML = `
+      <th>Status</th>
+      <td class="value status-${status}">${status.toUpperCase()}</td>
+    `;
+    modalTableBody.appendChild(trStatus);
+
+    // Other data rows
+    dataMap.forEach(key => {
+      const tr = document.createElement('tr');
+      let val;
+      if(key === 'OpH') {
+        val = (data[key] === 0 || data[key]) ? formatOpH(data[key]) : '---';
+      } else {
+        val = (data[key] === 0 || data[key]) ? fmt(data[key], key) : '---';
+      }
+      tr.innerHTML = `
+        <th>${dataLabels[key]}</th>
+        <td class="value ${getStyleClass(key)}">${val}</td>
+      `;
+      modalTableBody.appendChild(tr);
+    });
+
+    modalOverlay.style.display = 'block';
+    document.body.style.overflow = 'hidden'; // Disable scroll background
+  }
+
+  // Close modal
+  function closeModal() {
+    modalOverlay.style.display = 'none';
+    document.body.style.overflow = '';
+  }
+
+  /* INIT */
+  createCards();
+
+  /* MQTT Setup */
+  const client = mqtt.connect(MQTT_URL, MQTT_OPTIONS);
+
+  client.on('connect', () => {
+    conn.textContent = '✅ MQTT Connected';
+    client.subscribe(MQTT_TOPIC);
   });
 
-  detailBody.innerHTML = '';
-  for (const [key, val] of Object.entries(detailData)) {
-    const tr = document.createElement('tr');
-    const tdKey = document.createElement('td');
-    tdKey.textContent = key;
-    const tdVal = document.createElement('td');
-    tdVal.textContent = val;
-    tr.appendChild(tdKey);
-    tr.appendChild(tdVal);
-    detailBody.appendChild(tr);
-  }
+  client.on('reconnect', () => {
+    conn.textContent = '🔄 MQTT Reconnecting...';
+  });
 
-  modal.style.display = 'block';
-}
+  client.on('error', err => {
+    conn.textContent = '❌ MQTT Error';
+    console.error('MQTT Error:', err);
+  });
 
-/* Close modal function */
-function closeModal() {
-  modal.style.display = 'none';
-}
-
-/* Attach click to rows */
-function attachRowClicks() {
-  for (let id=1; id<=TOTAL_DEVICES; id++) {
-    const row = devices[id];
-    if (!row) continue;
-    row.style.cursor = 'pointer';
-    row.onclick = () => showDetail(id);
-  }
-}
-attachRowClicks();
-
-/* Close modal events */
-closeModalBtn.onclick = closeModal;
-window.onclick = function(event) {
-  if (event.target === modal) {
-    closeModal();
-  }
-};
-
-/* ================= MQTT ================= */
-const client = mqtt.connect(MQTT_URL, MQTT_OPTIONS);
-
-client.on('connect', () => {
-  conn.textContent = '✅ MQTT Connected';
-  client.subscribe(MQTT_TOPIC);
-});
-
-client.on('reconnect', () => {
-  conn.textContent = '🔄 MQTT Reconnecting...';
-});
-
-client.on('error', (err) => {
-  conn.textContent = '❌ MQTT Error';
-  console.error('MQTT Error:', err);
-});
-
-client.on('message', (topic, message) => {
-  try {
-    const d = JSON.parse(message.toString());
-    const id = Number(d.id);
-    if (!id || id < 1 || id > TOTAL_DEVICES) {
-      console.warn('Invalid ID in payload', d);
-      return;
-    }
-
-    if (!devices[id]) {
-      createInitialRows();
-      attachRowClicks();
-    }
-    const row = devices[id];
-    const status = (d.status && d.status.toLowerCase() === 'online') ? 'online' : 'offline';
-    row.cells[1].textContent = status.toUpperCase();
-    row.cells[1].className = status === 'online' ? 'status-online' : 'status-offline';
-
-    dataMap.forEach((key, idx) => {
-      const cell = row.cells[2 + idx];
-      let raw = d[key];
-      if (key === 'OpH') {
-        cell.textContent = (raw === 0 || raw) ? formatOpH(raw) : '---';
-      } else {
-        cell.textContent = (raw === 0 || raw) ? fmt(raw, key) : '---';
+  client.on('message', (topic, message) => {
+    try {
+      const d = JSON.parse(message.toString());
+      const id = Number(d.id);
+      if (!id || id < 1 || id > TOTAL_DEVICES) {
+        console.warn('Invalid ID in payload', d);
+        return;
       }
-    });
-  } catch(e) {
-    console.error('Payload parse error:', e, message.toString());
-  }
-});
+
+      // Save data
+      deviceData[id] = d;
+
+      // Update status indicator on card
+      if(devices[id]) {
+        const status = (d.status && d.status.toLowerCase() === 'online') ? 'online' : 'offline';
+        devices[id].indicator.className = `status-indicator status-${status}`;
+      }
+
+      // If modal open for this device, refresh modal content live
+      if(modalOverlay.style.display === 'block' && modalTitle.textContent.includes(`ID: ${id}`)) {
+        openModal(id);
+      }
+    } catch(e) {
+      console.error('Payload parse error:', e, message.toString());
+    }
+  });
+
+  // Close modal button
+  closeModalBtn.onclick = closeModal;
+
+  // Close modal clicking outside modalContent
+  modalOverlay.addEventListener('click', e => {
+    if(e.target === modalOverlay) closeModal();
+  });
+
+  // Keyboard accessibility: ESC closes modal
+  window.addEventListener('keydown', e => {
+    if(e.key === 'Escape' && modalOverlay.style.display === 'block') closeModal();
+  });
+
 </script>
+
 </body>
 </html>
