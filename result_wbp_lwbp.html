@@ -3,310 +3,226 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Analisis Konsumsi & Biaya Listrik (Rentang Tanggal)</title>
+  <title>Master Power Meter • Analisis Konsumsi</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
   <style>
-    :root {
-      --bg: #0a0e17;
-      --card: #111827;
-      --accent: #00e5bd;
-      --text: #e2e8f0;
-      --muted: #94a3b8;
-      --border: #1f2937;
-      --lwbp: #065f46;
-      --wbp: #7f1d1d;
-      --total: #004d40;
+    :root{
+      --bg:#0a0e17;--card:#111827;--accent:#00e5bd;--text:#e2e8f0;--muted:#94a3b8;--border:#1f2937;
+      --lwbp:#065f46;--wbp:#7f1d1d;--total:#004d40;--online:#00d4aa;--offline:#ef4444;
     }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Inter', sans-serif;
-      padding: 2rem;
-      min-height: 100vh;
-    }
-    h1 {
-      text-align: center;
-      font-size: 2.4rem;
-      color: var(--accent);
-      margin-bottom: 1rem;
-      text-shadow: 0 0 20px rgba(0,229,189,0.4);
-    }
-    .subtitle {
-      text-align: center;
-      color: var(--muted);
-      margin-bottom: 2rem;
-      font-size: 1.1rem;
-    }
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;overflow-x:hidden}
+    h1{font-size:2.8rem;font-weight:700;color:var(--accent);text-align:center;margin:2rem 0 1rem;text-shadow:0 0 30px rgba(0,229,189,0.4)}
+    .subtitle{text-align:center;color:var(--muted);margin-bottom:2rem;font-size:1.1rem}
 
-    /* Panel Filter */
-    .filter-panel {
-      background: var(--card);
-      padding: 1.8rem;
-      border-radius: 16px;
-      border: 1px solid var(--border);
-      max-width: 900px;
-      margin: 0 auto 2rem;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+    /* MENU UTAMA - 18 KARTU */
+    #mainMenu{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1.8rem;padding:0 2rem;max-width:1800px;margin:0 auto}
+    .machine-card{
+      background:var(--card);border:1px solid var(--border);border-radius:16px;padding:2rem 1.5rem;cursor:pointer;position:relative;overflow:hidden;
+      transition:all .4s;box-shadow:0 10px 30px rgba(0,0,0,0.4)
     }
-    .filter-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr auto;
-      gap: 1rem;
-      align-items: end;
-    }
-    label {
-      font-weight: 600;
-      color: var(--accent);
-      margin-bottom: 0.5rem;
-      display: block;
-    }
-    input[type="date"] {
-      padding: 0.8rem;
-      border-radius: 8px;
-      border: 1px solid var(--border);
-      background: #1a1a1a;
-      color: white;
-      font-family: 'JetBrains Mono', monospace;
-    }
-    button {
-      padding: 0.8rem 1.8rem;
-      background: var(--accent);
-      color: #000;
-      border: none;
-      border-radius: 8px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.3s;
-    }
-    button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 20px rgba(0,229,189,0.4);
-    }
-    .status {
-      text-align: center;
-      margin: 1.5rem 0;
-      font-style: italic;
-      color: var(--muted);
-    }
+    .machine-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent);opacity:0;transition:opacity .4s}
+    .machine-card:hover{transform:translateY(-12px);border-color:var(--accent);box-shadow:0 20px 50px rgba(0,229,189,0.2)}
+    .machine-card:hover::before{opacity:1}
+    .card-title{font-size:1.4rem;font-weight:600;margin-bottom:0.5rem}
+    .card-id{font-family:'JetBrains Mono',monospace;color:var(--accent);font-size:1.1rem}
+    .status-dot{position:absolute;top:16px;right:16px;width:14px;height:14px;border-radius:50%;background:var(--offline);box-shadow:0 0 15px var(--offline)}
 
-    /* Tabel */
-    .table-container {
-      max-width: 1400px;
-      margin: 0 auto;
-      overflow-x: auto;
-      border-radius: 16px;
-      box-shadow: 0 15px 40px rgba(0,0,0,0.5);
+    /* PANEL ANALISIS */
+    #analysisPanel{display:none;background:var(--bg);min-height:100vh;padding:2rem 1rem}
+    .back-btn{
+      position:fixed;top:20px;left:20px;background:var(--accent);color:#000;padding:12px 20px;border:none;border-radius:50px;
+      font-weight:700;cursor:pointer;z-index:999;box-shadow:0 8px 25px rgba(0,229,189,0.4);transition:all .3s
     }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      background: var(--card);
-    }
-    th {
-      background: #1a1a1a;
-      color: var(--accent);
-      padding: 1rem;
-      text-transform: uppercase;
-      font-size: 0.85rem;
-      letter-spacing: 1px;
-      font-weight: 600;
-    }
-    td {
-      padding: 1rem;
-      text-align: center;
-      border-bottom: 1px solid var(--border);
-    }
-    tbody tr:hover {
-      background: rgba(0,229,189,0.05);
-    }
-    .lwbp { background: var(--lwbp); color: white; font-weight: bold; }
-    .wbp { background: var(--wbp); color: white; font-weight: bold; }
-    .total { background: var(--total); color: white; font-weight: bold; }
-    .footer-total {
-      background: #001f1a !important;
-      font-weight: 700;
-      font-size: 1.1rem;
-    }
-    @media (max-width: 768px) {
-      .filter-grid { grid-template-columns: 1fr; }
-      button { width: 100%; }
-      h1 { font-size: 2rem; }
-    }
+    .back-btn:hover{transform:scale(1.05)}
+    .analysis-title{font-size:2.2rem;color:var(--accent);text-align:center;margin:1rem 0 2rem}
+
+    /* Filter & Tabel sama seperti sebelumnya */
+    .filter-panel{background:var(--card);padding:2rem;border-radius:16px;max-width:900px;margin:2rem auto;border:1px solid var(--border)}
+    .filter-grid{display:grid;grid-template-columns:1fr 1fr auto;gap:1.2rem;align-items:end}
+    input[type="date"]{padding:0.9rem;border-radius:8px;border:1px solid var(--border);background:#1a1a1a;color:white;font-family:'JetBrains Mono'}
+    button{padding:0.9rem 2rem;background:var(--accent);color:#000;border:none;border-radius:8px;font-weight:700;cursor:pointer}
+    button:hover{transform:translateY(-3px);box-shadow:0 10px 30px rgba(0,229,189,0.4)}
+
+    .table-container{max-width:1400px;margin:2rem auto;overflow-x:auto;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,0.5)}
+    table{width:100%;border-collapse:collapse;background:var(--card)}
+    th{background:#1a1a1a;color:var(--accent);padding:1rem;text-transform:uppercase;font-size:0.9rem;letter-spacing:1px}
+    td{padding:1rem;text-align:center;border-bottom:1px solid var(--border)}
+    tbody tr:hover{background:rgba(0,229,189,0.06)}
+    .lwbp{background:var(--lwbp);color:white;font-weight:bold}
+    .wbp{background:var(--wbp);color:white;font-weight:bold}
+    .total{background:var(--total);color:white;font-weight:bold}
+    .footer-total{background:#001f1a !important;font-weight:800;font-size:1.2rem}
+    .status{margin:1.5rem auto;text-align:center;max-width:900px;font-style:italic;color:var(--muted)}
   </style>
 </head>
 <body>
 
-  <h1>Analisis Konsumsi & Biaya Listrik</h1>
-  <p class="subtitle">Pilih rentang tanggal untuk melihat konsumsi LWBP, WBP, dan total biaya</p>
-
-  <div class="filter-panel">
-    <div class="filter-grid">
-      <div>
-        <label>Tanggal Awal</label>
-        <input type="date" id="startDate">
-      </div>
-      <div>
-        <label>Tanggal Akhir</label>
-        <input type="date" id="endDate">
-      </div>
-      <div>
-        <button onclick="loadData()">Tampilkan Data</button>
-      </div>
-    </div>
-    <div class="status" id="status">Silakan pilih rentang tanggal dan klik "Tampilkan Data"</div>
+  <!-- MENU UTAMA -->
+  <div id="mainMenu">
+    <h1>Master Power Meter</h1>
+    <p class="subtitle">Pilih mesin untuk melihat analisis konsumsi & biaya listrik</p>
+    <div id="cardsContainer"></div>
   </div>
 
-  <div class="table-container">
-    <table id="resultTable">
-      <thead>
-        <tr>
-          <th rowspan="2">ID Mesin</th>
-          <th rowspan="2">Tgl Awal</th>
-          <th rowspan="2">Tgl Akhir</th>
-          <th colspan="2">LWBP</th>
-          <th colspan="2">WBP</th>
-          <th colspan="2">TOTAL (LWBP + WBP)</th>
-        </tr>
-        <tr>
-          <th class="lwbp">kWh</th>
-          <th class="lwbp">Rp</th>
-          <th class="wbp">kWh</th>
-          <th class="wbp">Rp</th>
-          <th class="total">kWh</th>
-          <th class="total">Rp</th>
-        </tr>
-      </thead>
-      <tbody id="tableBody">
-        <!-- Data akan diisi oleh JavaScript -->
-      </tbody>
-      <tfoot>
-        <tr class="footer-total">
-          <td colspan="3"><strong>TOTAL KESELURUHAN</strong></td>
-          <td id="totLwbpKwh">-</td>
-          <td id="totLwbpRp">-</td>
-          <td id="totWbpKwh">-</td>
-          <td id="totWbpRp">-</td>
-          <td id="totAllKwh">-</td>
-          <td id="totAllRp">-</td>
-        </tr>
-      </tfoot>
-    </table>
+  <!-- PANEL ANALISIS -->
+  <div id="analysisPanel">
+    <button class="back-btn" onclick="backToMenu()">Kembali ke Menu Utama</button>
+    <h2 class="analysis-title" id="selectedMachine">Analisis Konsumsi • Mesin --</h2>
+    
+    <div class="filter-panel">
+      <div class="filter-grid">
+        <div><label>Tanggal Awal</label><input type="date" id="startDate"></div>
+        <div><label>Tanggal Akhir</label><input type="date" id="endDate"></div>
+        <div><button onclick="loadData()">Tampilkan Data</button></div>
+      </div>
+      <div class="status" id="status">Pilih rentang tanggal lalu klik "Tampilkan Data"</div>
+    </div>
+
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Tgl Awal</th>
+            <th>Tgl Akhir</th>
+            <th colspan="2" class="lwbp">LWBP</th>
+            <th colspan="2" class="wbp">WBP</th>
+            <th colspan="2" class="total">TOTAL</th>
+          </tr>
+          <tr>
+            <th>Mesin</th><th></th><th></th>
+            <th>kWh</th><th>Rp</th><th>kWh</th><th>Rp</th><th>kWh</th><th>Rp</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <tr>
+            <td id="mesinId">-</td>
+            <td id="tglAwal">-</td>
+            <td id="tglAkhir">-</td>
+            <td id="lwbpKwh" class="lwbp">-</td>
+            <td id="lwbpRp" class="lwbp">-</td>
+            <td id="wbpKwh" class="wbp">-</td>
+            <td id="wbpRp" class="wbp">-</td>
+            <td id="totalKwh" class="total">-</td>
+            <td id="totalRp" class="total">-</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 
   <script>
+    const MACHINE_TAGS = {
+      1:'UNKNOW',2:'UNKNOW',3:'POMPA MC 12',4:'MC 9',5:'UNKNOW',6:'MC 40',7:'MC 39',8:'MC 6',
+      9:'HEATER MC 5',10:'POMPA MC 5',11:'UNKNOW',12:'MC 34',13:'MC 35',14:'UNKNOW',15:'UNKNOW',
+      16:'MC 38',17:'MC 36',18:'MC 37'
+    };
+
     const SUPABASE_URL = "https://rojhcadtqfynlqzubftx.supabase.co";
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs";
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const TABLE_NAME = 'final_calculation_base';
 
-    const TABLE_NAME = 'final_calculation_base'; // Ganti jika nama tabel berbeda
+    const TARIF_LWBP = 1352;
+    const TARIF_WBP = 1650;
 
-    // Tarif PLN (sesuai golongan industri/rumah tangga, sesuaikan)
-    const TARIF_LWBP = 1352;  // Rp/kWh
-    const TARIF_WBP  = 1650;  // Rp/kWh
+    let selectedMesin = null;
+
+    // Buat 18 kartu
+    function createCards() {
+      const container = document.getElementById('cardsContainer');
+      container.innerHTML = '';
+      for (let i = 1; i <= 18; i++) {
+        const tag = MACHINE_TAGS[i] || 'UNKNOW';
+        const card = document.createElement('div');
+        card.className = 'machine-card';
+        card.onclick = () => selectMachine(i);
+        card.innerHTML = `
+          <div class="status-dot"></div>
+          <div class="card-title">${tag}</div>
+          <div class="card-id">MESIN ${i}</div>
+        `;
+        container.appendChild(card);
+      }
+    }
+
+    function selectMachine(id) {
+      selectedMesin = id;
+      document.getElementById('mainMenu').style.display = 'none';
+      document.getElementById('analysisPanel').style.display = 'block';
+      document.getElementById('selectedMachine').textContent = `Analisis Konsumsi • ${MACHINE_TAGS[id]} (Mesin ${id})`;
+      document.getElementById('mesinId').textContent = id;
+
+      // Set default tanggal 30 hari terakhir
+      const today = new Date().toISOString().split('T')[0];
+      const lastMonth = new Date(Date.now() - 30*24*60*60*1000).toISOString().split('T')[0];
+      document.getElementById('startDate').value = lastMonth;
+      document.getElementById('endDate').value = today;
+
+      loadData();
+    }
+
+    function backToMenu() {
+      document.getElementById('analysisPanel').style.display = 'none';
+      document.getElementById('mainMenu').style.display = 'block';
+      selectedMesin = null;
+    }
 
     async function loadData() {
+      if (!selectedMesin) return;
       const start = document.getElementById('startDate').value;
       const end = document.getElementById('endDate').value;
       const status = document.getElementById('status');
 
       if (!start || !end) {
-        status.textContent = "Harap isi tanggal awal dan akhir!";
+        status.textContent = "Pilih tanggal awal dan akhir!";
         status.style.color = "#f87171";
         return;
       }
 
-      if (new Date(start) > new Date(end)) {
-        status.textContent = "Tanggal awal tidak boleh lebih besar dari tanggal akhir!";
-        status.style.color = "#f87171";
-        return;
-      }
-
-      status.textContent = `Mengambil data dari ${start} hingga ${end}...`;
-      status.style.color = "#94a3b8";
-
+      status.textContent = `Mengambil data ${start} → ${end}...`;
+      
       try {
         const { data, error } = await supabase
           .from(TABLE_NAME)
-          .select('id_mesin, tanggal, konsumsi_lwbp_kwh, konsumsi_wbp_kwh')
+          .select('konsumsi_lwbp_kwh, konsumsi_wbp_kwh')
+          .eq('id_mesin', selectedMesin)
           .gte('tanggal', start)
-          .lte('tanggal', end)
-          .order('id_mesin', { ascending: true })
-          .order('tanggal', { ascending: true });
+          .lte('tanggal', end);
 
         if (error) throw error;
 
-        const grouped = {};
+        let lwbp = 0, wbp = 0;
         data.forEach(row => {
-          if (!grouped[row.id_mesin]) {
-            grouped[row.id_mesin] = { lwbp: 0, wbp: 0 };
-          }
-          grouped[row.id_mesin].lwbp += parseFloat(row.konsumsi_lwbp_kwh || 0);
-          grouped[row.id_mesin].wbp += parseFloat(row.konsumsi_wbp_kwh || 0);
+          lwbp += parseFloat(row.konsumsi_lwbp_kwh || 0);
+          wbp += parseFloat(row.konsumsi_wbp_kwh || 0);
         });
 
-        const tbody = document.getElementById('tableBody');
-        tbody.innerHTML = '';
+        const totalKwh = lwbp + wbp;
+        const totalRp = (lwbp * TARIF_LWBP) + (wbp * TARIF_WBP);
 
-        let grandLwbpKwh = 0, grandWbpKwh = 0;
+        document.getElementById('tglAwal').textContent = start;
+        document.getElementById('tglAkhir').textContent = end;
+        document.getElementById('lwbpKwh').textContent = lwbp.toFixed(2);
+        document.getElementById('lwbpRp').textContent = (lwbp * TARIF_LWBP).toLocaleString('id-ID');
+        document.getElementById('wbpKwh').textContent = wbp.toFixed(2);
+        document.getElementById('wbpRp').textContent = (wbp * TARIF_WBP).toLocaleString('id-ID');
+        document.getElementById('totalKwh').textContent = totalKwh.toFixed(2);
+        document.getElementById('totalRp').textContent = totalRp.toLocaleString('id-ID');
 
-        Object.keys(grouped).sort((a,b) => a-b).forEach(id => {
-          const d = grouped[id];
-          const lwbpKwh = d.lwbp;
-          const wbpKwh = d.wbp;
-          const totalKwh = lwbpKwh + wbpKwh;
-          const lwbpRp = lwbpKwh * TARIF_LWBP;
-          const wbpRp = wbpKwh * TARIF_WBP;
-          const totalRp = lwbpRp + wbpRp;
-
-          grandLwbpKwh += lwbpKwh;
-          grandWbpKwh += wbpKwh;
-
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td>${id}</td>
-            <td>${start}</td>
-            <td>${end}</td>
-            <td class="lwbp">${lwbpKwh.toFixed(2)}</td>
-            <td class="lwbp">${lwbpRp.toLocaleString('id-ID')}</td>
-            <td class="wbp">${wbpKwh.toFixed(2)}</td>
-            <td class="wbp">${wbpRp.toLocaleString('id-ID')}</td>
-            <td class="total">${totalKwh.toFixed(2)}</td>
-            <td class="total">${totalRp.toLocaleString('id-ID')}</td>
-          `;
-          tbody.appendChild(tr);
-        });
-
-        // Footer Total
-        const totalAllKwh = grandLwbpKwh + grandWbpKwh;
-        const totalAllRp = (grandLwbpKwh * TARIF_LWBP) + (grandWbpKwh * TARIF_WBP);
-
-        document.getElementById('totLwbpKwh').textContent = grandLwbpKwh.toFixed(2);
-        document.getElementById('totLwbpRp').textContent = (grandLwbpKwh * TARIF_LWBP).toLocaleString('id-ID');
-        document.getElementById('totWbpKwh').textContent = grandWbpKwh.toFixed(2);
-        document.getElementById('totWbpRp').textContent = (grandWbpKwh * TARIF_WBP).toLocaleString('id-ID');
-        document.getElementById('totAllKwh').textContent = totalAllKwh.toFixed(2);
-        document.getElementById('totAllRp').textContent = totalAllRp.toLocaleString('id-ID');
-
-        status.textContent = `Berhasil memuat data ${data.length} record dari ${Object.keys(grouped).length} mesin.`;
+        status.textContent = `Sukses! ${data.length} hari data berhasil dimuat.`;
         status.style.color = "#86efac";
 
       } catch (err) {
         status.textContent = `Error: ${err.message}`;
         status.style.color = "#f87171";
-        console.error(err);
       }
     }
 
-    // Set default tanggal hari ini & 7 hari lalu
-    window.onload = () => {
-      const today = new Date().toISOString().split('T')[0];
-      const lastWeek = new Date(Date.now() - 7*24*60*60*1000).toISOString().split('T')[0];
-      document.getElementById('startDate').value = lastWeek;
-      document.getElementById('endDate').value = today;
-      loadData();
-    };
+    // Init
+    createCards();
   </script>
 </body>
 </html>
