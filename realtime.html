@@ -8,7 +8,6 @@
 <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 
 <style>
-/* --- Styling (rapi & minimal) --- */
 :root {
   --bg: #121212;
   --card: #1E1E1E;
@@ -28,9 +27,6 @@ body {
 h2 { color: var(--accent); margin: 0 0 12px 0; }
 #conn { margin-bottom: 14px; font-weight: 600; color: var(--muted); }
 
-/* ------------------------------------- */
-/* --- NEW CARD STYLES FOR MAIN VIEW --- */
-/* ------------------------------------- */
 #main-view {
   display: flex;
   flex-wrap: wrap;
@@ -42,7 +38,7 @@ h2 { color: var(--accent); margin: 0 0 12px 0; }
   border-radius: 8px;
   padding: 20px 15px;
   width: 180px;
-  height: 100px;
+  height: 110px;
   cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s;
   box-shadow: 0 4px 12px rgba(0,0,0,0.4);
@@ -79,7 +75,6 @@ h2 { color: var(--accent); margin: 0 0 12px 0; }
 .status-online { background-color: var(--online); }
 .status-offline { background-color: var(--offline); }
 
-/* Tooltip */
 .machine-card[data-tooltip]:hover::after {
   content: attr(data-tooltip);
   position: absolute;
@@ -97,9 +92,6 @@ h2 { color: var(--accent); margin: 0 0 12px 0; }
   z-index: 10;
 }
 
-/* -------------------------------------- */
-/* --- DETAIL VIEW STYLES (MODIFIED TABLE) --- */
-/* -------------------------------------- */
 #detail-view {
   display: none;
   padding-top: 20px;
@@ -169,7 +161,6 @@ h2 { color: var(--accent); margin: 0 0 12px 0; }
 </div>
 
 <script>
-/* ================= CONFIG ================= */
 const MQTT_OPTIONS = {
   username: "web_dashboard",
   password: "Tristan12",
@@ -180,7 +171,6 @@ const MQTT_URL = "wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884
 const MQTT_TOPIC = "politeknik/meter/data";
 const TOTAL_DEVICES = 18;
 
-/* ================= MACHINE TAGS ================= */
 const MACHINE_TAGS = {
   1: 'UNKNOW',
   2: 'UNKNOW',
@@ -202,7 +192,6 @@ const MACHINE_TAGS = {
   18: 'MC 37'
 };
 
-/* ================= HELPERS ================= */
 function formatOpH(hours) {
   if (hours === null || hours === undefined || isNaN(hours) || hours < 0) return '---';
   const totalMinutes = Math.round(parseFloat(hours) * 60);
@@ -242,7 +231,6 @@ const dataLabels = {
   'T1': 'Tarif 1 (kWh)', 'T2': 'Tarif 2 (kWh)'
 };
 
-/* ================= VIEW ELEMENTS ================= */
 const mainView = document.getElementById('main-view');
 const detailView = document.getElementById('detail-view');
 const detailBody = document.getElementById('detailBody');
@@ -250,7 +238,6 @@ const detailTitle = document.getElementById('detail-title');
 const backButton = document.getElementById('back-button');
 const conn = document.getElementById('conn');
 
-/* ================= DATA STORAGE ================= */
 const dataMap = [
   'V','I1','I2','I3','P','Q','S','PF','Hz','OpH',
   'EaT','ErT','EaP','ErP','T1','T2'
@@ -262,7 +249,6 @@ for (let id = 1; id <= TOTAL_DEVICES; id++) {
   deviceData[id] = {};
 }
 
-/* ================= UI FUNCTIONS ================= */
 function showMainView() {
   mainView.style.display = 'flex';
   detailView.style.display = 'none';
@@ -286,6 +272,7 @@ function createCards() {
     card.innerHTML = `
       <div class="status-indicator status-offline" id="status-ind-${id}"></div>
       <p class="card-label">${tag}</p>
+      <p style="font-size: 0.9rem; color: var(--muted); margin: 4px 0 0 0;">SID ${id}</p>
     `;
     card.onclick = () => showDetailView(id);
     mainView.appendChild(card);
@@ -299,10 +286,8 @@ function updateDetailView(id) {
   if (currentViewedId !== id) return;
   detailBody.innerHTML = '';
   const data = deviceData[id];
-  // Status Row
   const statusRow = detailBody.insertRow();
   statusRow.innerHTML = `<td class="param-name">Status</td><td class="param-value ${data.status === 'online' ? 'status-online' : 'status-offline'}">${data.status ? data.status.toUpperCase() : '---'}</td>`;
-  // Other params
   dataMap.forEach(key => {
     const tr = detailBody.insertRow();
     const raw = data[key];
@@ -318,26 +303,20 @@ function updateDetailView(id) {
 showMainView();
 createCards();
 
-/* ================= EVENT LISTENERS ================= */
 backButton.onclick = showMainView;
 
-/* ================= MQTT ================= */
 const client = mqtt.connect(MQTT_URL, MQTT_OPTIONS);
-
 client.on('connect', () => {
   conn.textContent = '✅ MQTT Connected';
   client.subscribe(MQTT_TOPIC);
 });
-
 client.on('reconnect', () => {
   conn.textContent = '🔄 MQTT Reconnecting...';
 });
-
 client.on('error', (err) => {
   conn.textContent = '❌ MQTT Error';
   console.error('MQTT Error:', err);
 });
-
 client.on('message', (topic, message) => {
   try {
     const d = JSON.parse(message.toString());
@@ -347,12 +326,10 @@ client.on('message', (topic, message) => {
       return;
     }
     deviceData[id] = d;
-    // update status indicator on card
     if (devices[id]) {
       const status = (d.status && d.status.toLowerCase() === 'online') ? 'online' : 'offline';
       devices[id].indicator.className = `status-indicator status-${status}`;
     }
-    // update detail if this card is open
     if (currentViewedId === id) {
       updateDetailView(id);
     }
