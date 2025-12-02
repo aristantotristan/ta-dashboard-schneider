@@ -23,6 +23,7 @@ body {
   color: #E0E0E0;
   padding: 20px;
   margin: 0;
+  overflow-x: hidden;
 }
 h2 { color: var(--accent); margin: 0 0 12px 0; }
 #conn { margin-bottom: 14px; font-weight: 600; color: var(--muted); }
@@ -35,13 +36,13 @@ h2 { color: var(--accent); margin: 0 0 12px 0; }
 }
 .machine-card {
   background: var(--card);
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 20px 15px;
   width: 180px;
   height: 110px;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
   position: relative;
   overflow: hidden;
   display: flex;
@@ -52,89 +53,142 @@ h2 { color: var(--accent); margin: 0 0 12px 0; }
   user-select: none;
 }
 .machine-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 12px 20px rgba(0,0,0,0.7);
+  transform: translateY(-7px);
+  box-shadow: 0 12px 24px rgba(0,0,0,0.7);
 }
 .card-label {
-  font-size: 1.25rem;
+  font-size: 1.3rem;
   font-weight: 700;
   color: #38BDF8;
   margin: 0;
   line-height: 1.2;
 }
+.sid-label {
+  font-size: 0.9rem;
+  color: var(--muted);
+  margin: 6px 0 0 0;
+}
+
+/* --- Estetik indikator status dengan animasi pulsing --- */
 .status-indicator {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(0,0,0,0.4);
+  animation: pulse 2s infinite;
+}
+.status-online {
+  background-color: var(--online);
+  box-shadow:
+    0 0 6px var(--online),
+    0 0 15px var(--online);
+}
+.status-offline {
+  background-color: var(--offline);
+  box-shadow:
+    0 0 6px var(--offline),
+    0 0 15px var(--offline);
+}
+@keyframes pulse {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.9);
+    opacity: 0.7;
+  }
+}
+
+/* ---------------- Modal Detail ---------------- */
+#modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(18,18,18,0.85);
+  backdrop-filter: blur(10px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+#modal {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 25px 30px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 0 25px rgba(0,255,194,0.5);
+  position: relative;
+  color: #eee;
+  font-size: 1rem;
+}
+#modal h3 {
+  margin-top: 0;
+  color: var(--accent);
+  font-weight: 700;
+  user-select: text;
+}
+#close-modal {
   position: absolute;
   top: 12px;
   right: 12px;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  border: 2px solid var(--bg);
-  box-shadow: 0 0 6px rgba(0,0,0,0.8);
-}
-.status-online { background-color: var(--online); }
-.status-offline { background-color: var(--offline); }
-
-.machine-card[data-tooltip]:hover::after {
-  content: attr(data-tooltip);
-  position: absolute;
-  bottom: 110%;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #333;
-  color: #fff;
-  padding: 6px 10px;
-  border-radius: 4px;
-  white-space: nowrap;
-  font-size: 0.85rem;
-  pointer-events: none;
-  opacity: 0.9;
-  z-index: 10;
-}
-
-#detail-view {
-  display: none;
-  padding-top: 20px;
-}
-#detail-view h3 {
-  color: var(--accent);
-  margin-top: 0;
-}
-#back-button {
-  background: #333;
-  color: #fff;
+  background: transparent;
   border: none;
-  padding: 8px 15px;
-  border-radius: 5px;
+  font-size: 1.5rem;
+  color: var(--muted);
   cursor: pointer;
-  margin-bottom: 15px;
+  transition: color 0.3s ease;
   user-select: none;
 }
-#back-button:hover {
-  background: #555;
+#close-modal:hover {
+  color: var(--accent);
 }
 
 #detail-table {
   width: 100%;
   border-collapse: collapse;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.6);
   border-radius: 8px;
   overflow: hidden;
+  margin-top: 15px;
 }
 #detail-table th, #detail-table td {
-  padding: 10px;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
   text-align: left;
-  font-size: 0.9rem;
 }
 #detail-table thead th {
-  background: #2A2A2A;
+  background: #222;
   color: var(--accent);
   text-transform: uppercase;
+  font-weight: 700;
+  user-select: none;
 }
-#detail-table tbody tr { background: var(--card); }
-#detail-table .param-name { font-weight: 600; width: 40%; }
-#detail-table .param-value { color: #fff; font-weight: 400; }
+#detail-table tbody tr {
+  background: var(--bg);
+  transition: background 0.2s ease;
+}
+#detail-table tbody tr:hover {
+  background: #1a1a1a;
+}
+.param-name {
+  font-weight: 600;
+  width: 40%;
+  user-select: text;
+}
+.param-value {
+  font-weight: 400;
+  color: #eee;
+  user-select: text;
+}
 
 .col-power { color: #38BDF8; }
 .col-energy { color: #4ADE80; }
@@ -142,6 +196,9 @@ h2 { color: var(--accent); margin: 0 0 12px 0; }
 
 @media (max-width: 600px) {
   .machine-card { width: 45%; }
+  #modal {
+    padding: 20px 15px;
+  }
 }
 </style>
 </head>
@@ -152,12 +209,18 @@ h2 { color: var(--accent); margin: 0 0 12px 0; }
 
 <div id="main-view"></div>
 
-<div id="detail-view">
-  <button id="back-button">← Kembali ke Daftar Mesin</button>
-  <h3 id="detail-title">Detail Parameter Mesin ID: --</h3>
-  <table id="detail-table" aria-label="Power Meter Detail Table">
-    <tbody id="detailBody"></tbody>
-  </table>
+<!-- Modal Detail -->
+<div id="modal-overlay">
+  <div id="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <button id="close-modal" aria-label="Close detail view">&times;</button>
+    <h3 id="modal-title">Detail Parameter Mesin ID: --</h3>
+    <table id="detail-table" aria-label="Power Meter Detail Table">
+      <thead>
+        <tr><th>Parameter</th><th>Nilai</th></tr>
+      </thead>
+      <tbody id="detailBody"></tbody>
+    </table>
+  </div>
 </div>
 
 <script>
@@ -232,10 +295,10 @@ const dataLabels = {
 };
 
 const mainView = document.getElementById('main-view');
-const detailView = document.getElementById('detail-view');
+const modalOverlay = document.getElementById('modal-overlay');
 const detailBody = document.getElementById('detailBody');
-const detailTitle = document.getElementById('detail-title');
-const backButton = document.getElementById('back-button');
+const modalTitle = document.getElementById('modal-title');
+const closeModal = document.getElementById('close-modal');
 const conn = document.getElementById('conn');
 
 const dataMap = [
@@ -243,24 +306,11 @@ const dataMap = [
   'EaT','ErT','EaP','ErP','T1','T2'
 ];
 const devices = {};
-let currentViewedId = null;
 const deviceData = {};
 for (let id = 1; id <= TOTAL_DEVICES; id++) {
   deviceData[id] = {};
 }
 
-function showMainView() {
-  mainView.style.display = 'flex';
-  detailView.style.display = 'none';
-  currentViewedId = null;
-}
-function showDetailView(id) {
-  mainView.style.display = 'none';
-  detailView.style.display = 'block';
-  currentViewedId = id;
-  detailTitle.textContent = `Detail Parameter Mesin ID: ${id} - ${MACHINE_TAGS[id] || 'NAMA MESIN'}`;
-  updateDetailView(id);
-}
 function createCards() {
   mainView.innerHTML = '';
   for(let id=1; id<=TOTAL_DEVICES; id++) {
@@ -268,13 +318,13 @@ function createCards() {
     card.className = 'machine-card';
     card.setAttribute('data-id', id);
     const tag = MACHINE_TAGS[id] || 'Mesin Tidak Dikenal';
-    card.setAttribute('data-tooltip', `Mesin ${id} = ${tag}`);
+    card.setAttribute('title', `Mesin ${id} = ${tag}`);
     card.innerHTML = `
       <div class="status-indicator status-offline" id="status-ind-${id}"></div>
       <p class="card-label">${tag}</p>
-      <p style="font-size: 0.9rem; color: var(--muted); margin: 4px 0 0 0;">SID ${id}</p>
+      <p class="sid-label">SID ${id}</p>
     `;
-    card.onclick = () => showDetailView(id);
+    card.onclick = () => showDetailModal(id);
     mainView.appendChild(card);
     devices[id] = {
       card,
@@ -282,14 +332,18 @@ function createCards() {
     };
   }
 }
-function updateDetailView(id) {
-  if (currentViewedId !== id) return;
-  detailBody.innerHTML = '';
+
+function showDetailModal(id) {
   const data = deviceData[id];
-  const statusRow = detailBody.insertRow();
+  modalTitle.textContent = `Detail Parameter Mesin ID: ${id} - ${MACHINE_TAGS[id] || 'NAMA MESIN'}`;
+  detailBody.innerHTML = '';
+
+  const statusRow = document.createElement('tr');
   statusRow.innerHTML = `<td class="param-name">Status</td><td class="param-value ${data.status === 'online' ? 'status-online' : 'status-offline'}">${data.status ? data.status.toUpperCase() : '---'}</td>`;
+  detailBody.appendChild(statusRow);
+
   dataMap.forEach(key => {
-    const tr = detailBody.insertRow();
+    const tr = document.createElement('tr');
     const raw = data[key];
     let displayValue;
     if (key === 'OpH') {
@@ -298,12 +352,33 @@ function updateDetailView(id) {
       displayValue = (raw === 0 || raw) ? fmt(raw, key) : '---';
     }
     tr.innerHTML = `<td class="param-name">${dataLabels[key]}</td><td class="param-value ${getStyleClass(key)}">${displayValue}</td>`;
+    detailBody.appendChild(tr);
   });
-}
-showMainView();
-createCards();
 
-backButton.onclick = showMainView;
+  modalOverlay.style.display = 'flex';
+  document.body.style.overflow = 'hidden'; // Disable background scroll
+}
+
+function closeDetailModal() {
+  modalOverlay.style.display = 'none';
+  document.body.style.overflow = ''; // Enable background scroll
+}
+
+closeModal.onclick = closeDetailModal;
+
+// Close modal on overlay click outside modal box
+modalOverlay.addEventListener('click', (e) => {
+  if(e.target === modalOverlay) closeDetailModal();
+});
+
+// Close modal on pressing Escape key
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && modalOverlay.style.display === 'flex') {
+    closeDetailModal();
+  }
+});
+
+createCards();
 
 const client = mqtt.connect(MQTT_URL, MQTT_OPTIONS);
 client.on('connect', () => {
@@ -329,9 +404,6 @@ client.on('message', (topic, message) => {
     if (devices[id]) {
       const status = (d.status && d.status.toLowerCase() === 'online') ? 'online' : 'offline';
       devices[id].indicator.className = `status-indicator status-${status}`;
-    }
-    if (currentViewedId === id) {
-      updateDetailView(id);
     }
   } catch (e) {
     console.error('Payload parse error:', e, message.toString());
