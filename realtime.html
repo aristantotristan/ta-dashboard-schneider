@@ -280,11 +280,10 @@ function createInitialCards() {
     const card = document.createElement('div');
     card.className = 'machine-card';
     card.setAttribute('data-id', id);
+    // *** PERUBAHAN DI SINI: Tukar posisi p.card-id (Angka) dan p.card-label (Tulisan) ***
     card.innerHTML = `
       <div class="status-indicator status-offline" id="status-ind-${id}"></div>
-      <p class="card-label">${tagName}</p> 
-      <p class="card-id">${id}</p>
-    `;
+      <p class="card-id">${id}</p>           <p class="card-label">${tagName}</p>   `;
     card.onclick = () => showDetailView(id); // Set click handler
     mainView.appendChild(card);
     devices[id] = {
