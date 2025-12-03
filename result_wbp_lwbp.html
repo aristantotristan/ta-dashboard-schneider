@@ -20,6 +20,8 @@
        background:linear-gradient(135deg,#00e5bd,#00ffea,#00e5bd);-webkit-background-clip:text;background-clip:text;
        -webkit-text-fill-color:transparent;text-shadow:0 0 50px rgba(0,229,189,0.7);letter-spacing:3px;}
     .subtitle{color:var(--muted);font-size:1.2rem;margin-top:1rem;letter-spacing:4px;text-transform:uppercase;opacity:0.9;}
+
+    /* Cards */
     #cardsContainer{display:grid;grid-template-columns:repeat(6,1fr);gap:2.2rem;max-width:1750px;margin:0 auto;padding:2rem 5rem;}
     .machine-card{background:var(--card);border:1px solid var(--border);border-radius:22px;padding:2.4rem 1rem;text-align:center;
       cursor:pointer;position:relative;overflow:hidden;transition:all .6s cubic-bezier(0.23,1,0.32,1);box-shadow:0 12px 40px rgba(0,0,0,0.6);}
@@ -29,10 +31,14 @@
     .machine-card:hover::before{width:120%}
     .card-title{font-size:1.38rem;font-weight:700;color:var(--text);margin-bottom:0.8rem;}
     .sid-label{font-family:'Orbitron',sans-serif;font-size:1.5rem;font-weight:800;color:var(--glow);letter-spacing:2px;text-shadow:0 0 25px var(--glow);}
+
+    /* Responsive */
     @media(max-width:1600px){#cardsContainer{grid-template-columns:repeat(4,1fr);padding:2rem}}
     @media(max-width:1100px){#cardsContainer{grid-template-columns:repeat(3,1fr)}}
     @media(max-width:768px){#cardsContainer{grid-template-columns:repeat(2,1fr);padding:1rem}}
     @media(max-width:480px){#cardsContainer{grid-template-columns:1fr;gap:1.8rem}}
+
+    /* Popup */
     #analysisPanel{display:none;position:fixed;inset:0;background:#000000ee;backdrop-filter:blur(20px);z-index:9999;padding:2rem;overflow-y:auto;}
     .popup-card{background:var(--card);border:1px solid var(--border);border-radius:28px;max-width:1100px;margin:2rem auto;overflow:hidden;
       box-shadow:0 40px 120px rgba(0,0,0,0.8);}
@@ -41,18 +47,22 @@
     .back-btn{position:absolute;top:1.8rem;left:1.8rem;background:#000;color:var(--glow);border:2px solid var(--glow);
       padding:14px 28px;border-radius:50px;font-weight:800;cursor:pointer;transition:all .4s;box-shadow:0 0 40px rgba(0,229,189,0.5);}
     .back-btn:hover{background:var(--glow);color:#000;transform:scale(1.12);}
+
+    /* Filter */
     .filter-panel{padding:3rem;background:#0a0a0a}
     .filter-grid{display:grid;grid-template-columns:1fr 1fr auto;gap:2rem;align-items:end}
     input[type="date"]{padding:1.1rem;border-radius:14px;border:2px solid var(--glow);background:#000;color:white;font-size:1.1rem;}
     .load-btn{padding:1.1rem 3.5rem;background:var(--glow);color:#000;border:none;border-radius:14px;font-weight:900;
       font-size:1.2rem;cursor:pointer;box-shadow:0 0 50px rgba(0,229,189,0.6);transition:all .4s;}
     .load-btn:hover{transform:scale(1.1);box-shadow:0 0 80px rgba(0,229,189,0.8);}
+    .status{text-align:center;padding:2rem;font-size:1.4rem;color:var(--glow);text-shadow:0 0 30px var(--glow);font-weight:600;}
+
+    /* Table */
     .table-container{margin:2rem;border-radius:20px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,0.7)}
     table{width:100%;border-collapse:collapse;background:var(--card)}
     th{background:#111;color:var(--glow);padding:1.6rem;font-weight:800;text-transform:uppercase;letter-spacing:2px;font-size:0.95rem;}
     td{padding:1.6rem;text-align:center;font-size:1.2rem;font-weight:700;}
     .lwbp,.wbp,.total{color:white}
-    .status{text-align:center;padding:2rem;font-size:1.4rem;color:var(--glow);text-shadow:0 0 30px var(--glow);font-weight:600;}
   </style>
 </head>
 <body>
@@ -70,6 +80,7 @@
         <button class="back-btn" onclick="backToMenu()">BACK</button>
         Analisis Konsumsi • SID --
       </div>
+
       <div class="filter-panel">
         <div class="filter-grid">
           <div><label style="color:var(--glow);font-weight:800">Tanggal Awal</label><input type="date" id="startDate"></div>
@@ -78,6 +89,7 @@
         </div>
         <div class="status" id="status">Pilih rentang tanggal lalu klik LOAD DATA</div>
       </div>
+
       <div class="table-container">
         <table>
           <thead>
@@ -108,110 +120,108 @@
     </div>
   </div>
 
-  <script>
-    const MACHINE_TAGS = {
-      1:'UNKNOW',2:'UNKNOW',3:'POMPA MC 12',4:'MC 9',5:'UNKNOW',6:'MC 40',7:'MC 39',8:'MC 6',
-      9:'HEATER MC 5',10:'POMPA MC 5',11:'UNKNOW',12:'MC 34',13:'MC 35',14:'UNKNOW',15:'UNKNOW',
-      16:'MC 38',17:'MC 36',18:'MC 37'
-    };
+<script>
+/* ---------------- MACHINE MAP ---------------- */
+const MACHINE_TAGS = {
+  1:'UNKNOW',2:'UNKNOW',3:'POMPA MC 12',4:'MC 9',5:'UNKNOW',6:'MC 40',7:'MC 39',8:'MC 6',
+  9:'HEATER MC 5',10:'POMPA MC 5',11:'UNKNOW',12:'MC 34',13:'MC 35',14:'UNKNOW',15:'UNKNOW',
+  16:'MC 38',17:'MC 36',18:'MC 37'
+};
 
-    const SUPABASE_URL = "https://rojhcadtqfynlqzubftx.supabase.co";
-    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs";
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+/* ---------------- SUPABASE CONFIG ---------------- */
+const SUPABASE_URL = "https://rojhcadtqfynlqzubftx.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI....";
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const TABLE_NAME = "meter_tariff_delta";
 
-    // TABEL YANG BENAR
-    const TABLE_NAME = 'meter_tariff_delta';
+const TARIF_LWBP = 1352;
+const TARIF_WBP  = 1650;
 
-    const TARIF_LWBP = 1352;
-    const TARIF_WBP  = 1650;
+let selectedMesin = null;
 
-    let selectedMesin = null;
+/* ---------------- CARD GENERATOR ---------------- */
+function createCards() {
+  const container = document.getElementById("cardsContainer");
+  for (let i = 1; i <= 18; i++) {
+    const tag = MACHINE_TAGS[i] || "UNKNOW";
+    const card = document.createElement("div");
+    card.className = "machine-card";
+    card.onclick = () => selectMachine(i);
+    card.innerHTML = `<div class="card-title">${tag}</div><div class="sid-label">SID ${i}</div>`;
+    container.appendChild(card);
+  }
+}
 
-    function createCards() {
-      const container = document.getElementById('cardsContainer');
-      for (let i = 1; i <= 18; i++) {
-        const tag = MACHINE_TAGS[i] || 'UNKNOW';
-        const card = document.createElement('div');
-        card.className = 'machine-card';
-        card.onclick = () => selectMachine(i);
-        card.innerHTML = `<div class="card-title">${tag}</div><div class="sid-label">SID ${i}</div>`;
-        container.appendChild(card);
-      }
-    }
+/* ---------------- SELECT MACHINE ---------------- */
+function selectMachine(id) {
+  selectedMesin = id;
+  document.getElementById("mainMenu").style.display = "none";
+  document.getElementById("analysisPanel").style.display = "block";
+  document.getElementById("selectedMachine").innerHTML =
+    `<button class="back-btn" onclick="backToMenu()">BACK</button> Analisis Konsumsi • ${MACHINE_TAGS[id]} <small>• SID ${id}</small>`;
+  document.getElementById("mesinId").textContent = id;
 
-    function selectMachine(id) {
-      selectedMesin = id;
-      document.getElementById('mainMenu').style.display = 'none';
-      document.getElementById('analysisPanel').style.display = 'block';
-      document.getElementById('selectedMachine').innerHTML = 
-        `<button class="back-btn" onclick="backToMenu()">BACK</button> Analisis Konsumsi • ${MACHINE_TAGS[id] || 'UNKNOW'} <small>• SID ${id}</small>`;
-      document.getElementById('mesinId').textContent = id;
+  const today = new Date().toISOString().split("T")[0];
+  const lastMonth = new Date(Date.now() - 30*24*60*60*1000).toISOString().split("T")[0];
+  document.getElementById("startDate").value = lastMonth;
+  document.getElementById("endDate").value = today;
 
-      const today = new Date().toISOString().split('T')[0];
-      const lastMonth = new Date(Date.now() - 30*24*60*60*1000).toISOString().split('T')[0];
-      document.getElementById('startDate').value = lastMonth;
-      document.getElementById('endDate').value = today;
+  loadData();
+}
 
-      loadData();
-    }
+/* ---------------- LOAD DATA ---------------- */
+async function loadData() {
+  if (!selectedMesin) return;
 
-    function backToMenu() {
-      document.getElementById('analysisPanel').style.display = 'none';
-      document.getElementById('mainMenu').style.display = 'block';
-    }
+  const start = document.getElementById("startDate").value;
+  const end   = document.getElementById("endDate").value;
+  const status = document.getElementById("status");
+  status.textContent = "Mengambil data dari Supabase...";
 
-    // VERSI FINAL: AMBIL DARI meter_tariff_delta
-    async function loadData() {
-      if (!selectedMesin) return;
+  try {
+    const { data, error } = await supabase
+      .from(TABLE_NAME)
+      .select("id_mesin, tanggal, lwbp_delta, wbp_delta")
+      .eq("id_mesin", selectedMesin)
+      .gte("tanggal", start)
+      .lte("tanggal", end)
+      .order("tanggal", { ascending: true });
 
-      const start = document.getElementById('startDate').value;
-      const end   = document.getElementById('endDate').value;
-      const status = document.getElementById('status');
-      status.textContent = "Mengambil data dari meter_tariff_delta...";
+    if (error) throw error;
 
-      try {
-        const { data, error } = await supabase
-          .from(TABLE_NAME)
-          .select('lwbp_delta, wbp_delta')   // <-- INI KOLOM YANG PALING UMUM
-          // Kalau kolomnya beda, ganti di sini aja (misal: delta_lwbp, delta_wbp atau lwbp, wbp)
-          .eq('id_mesin', selectedMesin)
-          .gte('tanggal', start)
-          .lte('tanggal', end)
-          .order('tanggal', { ascending: true });
+    let totalLwbp = 0, totalWbp = 0;
+    data.forEach(row => {
+      totalLwbp += parseFloat(row.lwbp_delta ?? 0);
+      totalWbp  += parseFloat(row.wbp_delta  ?? 0);
+    });
 
-        if (error) throw error;
+    const totalKwh = totalLwbp + totalWbp;
+    const totalRp  = totalLwbp * TARIF_LWBP + totalWbp * TARIF_WBP;
 
-        let totalLwbp = 0;
-        let totalWbp  = 0;
+    document.getElementById("tglAwal").textContent   = start;
+    document.getElementById("tglAkhir").textContent  = end;
+    document.getElementById("lwbpKwh").textContent   = totalLwbp.toFixed(2);
+    document.getElementById("lwbpRp").textContent    = (totalLwbp * TARIF_LWBP).toLocaleString("id-ID");
+    document.getElementById("wbpKwh").textContent    = totalWbp.toFixed(2);
+    document.getElementById("wbpRp").textContent     = (totalWbp * TARIF_WBP).toLocaleString("id-ID");
+    document.getElementById("totalKwh").textContent  = totalKwh.toFixed(2);
+    document.getElementById("totalRp").textContent   = totalRp.toLocaleString("id-ID");
 
-        data.forEach(row => {
-          totalLwbp += parseFloat(row.lwbp_delta || 0);
-          totalWbp  += parseFloat(row.wbp_delta  || 0);
-        });
+    status.innerHTML = `✔ ${data.length} record berhasil di-load`;
+    status.style.color = "#00e5bd";
 
-        const totalKwh = totalLwbp + totalWbp;
-        const totalRp  = totalLwbp * TARIF_LWBP + totalWbp * TARIF_WBP;
+  } catch (err) {
+    status.textContent = "❌ ERROR: " + err.message;
+    status.style.color = "#ff4d4d";
+  }
+}
 
-        document.getElementById('tglAwal').textContent = start;
-        document.getElementById('tglAkhir').textContent = end;
-        document.getElementById('lwbpKwh').textContent = totalLwbp.toFixed(2);
-        document.getElementById('lwbpRp').textContent  = (totalLwbp * TARIF_LWBP).toLocaleString('id-ID');
-        document.getElementById('wbpKwh').textContent  = totalWbp.toFixed(2);
-        document.getElementById('wbpRp').textContent   = (totalWbp * TARIF_WBP).toLocaleString('id-ID');
-        document.getElementById('totalKwh').textContent = totalKwh.toFixed(2);
-        document.getElementById('totalRp').textContent  = totalRp.toLocaleString('id-ID');
+function backToMenu() {
+  document.getElementById("analysisPanel").style.display = "none";
+  document.getElementById("mainMenu").style.display = "block";
+}
 
-        status.innerHTML = `Success! ${data.length} hari dari meter_tariff_delta`;
-        status.style.color = "#00e5bd";
-
-      } catch (err) {
-        console.error(err);
-        status.textContent = `Error: ${err.message}`;
-        status.style.color = "#ef4444";
-      }
-    }
-
-    createCards();
-  </script>
+createCards();
+</script>
 </body>
 </html>
