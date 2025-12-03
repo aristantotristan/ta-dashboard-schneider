@@ -1,79 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Master Power Meter Dashboard (18 SLAVES)</title>
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+<style>
+  :root{--bg:#121212;--card:#1E1E1E;--accent:#00FFC2;--online:#10B981;--offline:#EF4444;--tariff:#FACC15}
+  body{font-family:Segoe UI,sans-serif;background:var(--bg);color:#E0E0E0;padding:20px;margin:0}
+  h2{color:var(--accent);margin:0 0 12px 0}
+  #conn{margin-bottom:14px;font-weight:600;color:#94A3B8}
+  table{width:100%;border-collapse:collapse;box-shadow:0 6px 20px rgba(0,0,0,0.6);border-radius:8px;overflow:hidden}
+  thead th{background:#2A2A2A;color:var(--accent);text-transform:uppercase;font-size:0.8rem;padding:10px 8px}
+  th,td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.02);text-align:center;font-size:0.86rem}
+  tbody tr{background:var(--card)}
+  tbody tr:hover{background:#2b2b2b}
+  .cell-id{font-weight:700;background:#111827}
+  .status-online{color:var(--online);font-weight:700}
+  .status-offline{color:var(--offline);font-weight:700}
+  .col-tariff{color:var(--tariff);font-weight:700}
+</style>
+</head>
+
+<body>
+<h2>Real-time Power Meter Dashboard (18 Mesin)</h2>
+<p id="conn">Loading...</p>
+
+<table>
+<thead>
+<tr>
+<th>ID</th><th>Status</th><th>V</th><th>I1</th><th>I2</th><th>I3</th><th>P (W)</th><th>Q (VAR)</th><th>S (kVA)</th>
+<th>PF</th><th>Hz</th><th>OpH</th><th>Ea Tot</th><th>Er Tot</th><th class="col-tariff">Finish LWBP</th><th class="col-tariff">Finish WBP</th>
+</tr>
+</thead>
+<tbody id="tableBody"></tbody>
+</table>
+
 <script>
-// ==========================================
-// CONFIG SUPABASE
-// ==========================================
-const SUPABASE_URL = "https://rojhcadtqfynlqzubftx.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs";
+// ---------------- CONFIG SUPABASE ----------------
+const supabase = window.supabase.createClient(
+  "https://rojhcadtqfynlqzubftx.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs"
+);
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+// ---------------- SETUP TABEL ----------------
+const dataMap = ['V','I1','I2','I3','P','Q','S','PF','Hz','OpH','EaT','ErT'];
+const tbody = document.getElementById("tableBody");
+const devices = {};
 
-// ==========================================
-// TARIF LISTRIK
-// ==========================================
-const TARIF_LWBP = 996.74;
-const TARIF_WBP  = 1440.00;
-
-let selectedMesin = null;
-
-// ==========================================
-// FUNGSI LOAD DATA
-// ==========================================
-async function loadData() {
-  if (!selectedMesin) return;
-
-  const start = document.getElementById("startDate").value;
-  const end   = document.getElementById("endDate").value;
-  const status = document.getElementById("status");
-
-  status.textContent = "Mengambil data dari daily_meter_summary...";
-
-  try {
-    const { data, error } = await supabase
-      .from("daily_meter_summary")
-      .select("lwbp_total, wbp_total, tanggal")
-      .eq("sid_mesin", selectedMesin)
-      .gte("tanggal", start)
-      .lte("tanggal", end)
-      .order("tanggal", { ascending: true });
-
-    if (error) throw error;
-
-    let totalLwbp = 0;
-    let totalWbp  = 0;
-
-    data.forEach(row => {
-      totalLwbp += parseFloat(row.lwbp_total || 0);
-      totalWbp  += parseFloat(row.wbp_total  || 0);
-    });
-
-    const totalKwh = totalLwbp + totalWbp;
-    const totalRp = (totalLwbp * TARIF_LWBP) + (totalWbp * TARIF_WBP);
-
-    document.getElementById("tglAwal").textContent = start;
-    document.getElementById("tglAkhir").textContent = end;
-    document.getElementById("lwbpKwh").textContent = totalLwbp.toFixed(2);
-    document.getElementById("lwbpRp").textContent = (totalLwbp * TARIF_LWBP).toLocaleString("id-ID");
-    document.getElementById("wbpKwh").textContent = totalWbp.toFixed(2);
-    document.getElementById("wbpRp").textContent = (totalWbp * TARIF_WBP).toLocaleString("id-ID");
-    document.getElementById("totalKwh").textContent = totalKwh.toFixed(2);
-    document.getElementById("totalRp").textContent = totalRp.toLocaleString("id-ID");
-
-    status.innerHTML = `✔ Success — ${data.length} hari`;
-    status.style.color = "#00e5bd";
-
-  } catch (err) {
-    console.error(err);
-    status.textContent = `❌ Error: ${err.message}`;
-    status.style.color = "#ef4444";
-  }
+for(let i=1;i<=18;i++){
+  const tr = tbody.insertRow();
+  tr.insertCell().textContent = i; tr.cells[0].className='cell-id';
+  tr.insertCell().textContent='OFFLINE'; tr.cells[1].className='status-offline';
+  dataMap.forEach(()=>{ tr.insertCell().textContent='---'; });
+  tr.insertCell().textContent='0.00'; tr.cells[14].className='col-tariff';
+  tr.insertCell().textContent='0.00'; tr.cells[15].className='col-tariff';
+  devices[i]=tr;
 }
 
-// ==========================================
-// AUTO LOAD KETIKA MODAL DIBUKA
-// ==========================================
-document.addEventListener("DOMContentLoaded", () => {
-  if (selectedMesin) loadData();
+// -------- LOAD FINISH DATA dari Supabase --------
+async function loadFinish() {
+  const { data: lwbp } = await supabase.from("finish_lwbp").select("*").order("sid_mesin");
+  const { data: wbp  } = await supabase.from("finish_wbp").select("*").order("sid_mesin");
+
+  lwbp?.forEach(r => devices[r.sid_mesin].cells[14].textContent = r.total_lwbp.toFixed(2));
+  wbp?.forEach(r => devices[r.sid_mesin].cells[15].textContent = r.total_wbp.toFixed(2));
+}
+
+loadFinish();
+setInterval(loadFinish, 7000); // auto refresh setiap 7 detik
+
+// ---------------- MQTT ----------------
+const client = mqtt.connect("wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt", {
+  username:"web_dashboard",
+  password:"Tristan12"
+});
+
+client.on("connect", () => {
+  document.getElementById("conn").textContent = "Connected";
+  client.subscribe("politeknik/meter/data");
+});
+
+client.on("message", (_, msg) => {
+  try {
+    const d = JSON.parse(msg);
+    const id = Number(d.id);
+    if(id < 1 || id > 18) return;
+
+    const row = devices[id];
+    row.cells[1].textContent = (d.status==='online')?'ONLINE':'OFFLINE';
+    row.cells[1].className   = (d.status==='online')?'status-online':'status-offline';
+
+    dataMap.forEach((k,i)=>{
+      row.cells[2+i].textContent = (d[k]!==undefined)? Number(d[k]).toFixed(2) : "---";
+    });
+
+  } catch(e){ console.error(e); }
 });
 </script>
+</body>
+</html>
