@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Master Power Meter • Analisis Konsumsi</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet" />
   <style>
     :root{
       --bg:#000000;           /* BACKGROUND HITAM PEKAT */
@@ -29,7 +29,6 @@
         radial-gradient(circle at 10% 20%,rgba(0,229,189,0.08) 0%,transparent 40%),
         radial-gradient(circle at 90% 80%,rgba(0,229,189,0.06) 0%,transparent 40%);
     }
-
     /* HEADER GLOWING */
     header{
       text-align:center;
@@ -55,7 +54,6 @@
       font-weight:500;
       opacity:0.9;
     }
-
     /* GRID KARTU — 6 KOLOM */
     #cardsContainer{
       display:grid;
@@ -92,7 +90,6 @@
       box-shadow:0 40px 100px rgba(0,229,189,0.4);
     }
     .machine-card:hover::before{width:120%}
-
     .card-title{
       font-size:1.38rem;
       font-weight:700;
@@ -107,13 +104,11 @@
       letter-spacing:2px;
       text-shadow:0 0 25px var(--glow);
     }
-
     /* RESPONSIVE */
     @media(max-width:1600px){#cardsContainer{grid-template-columns:repeat(4,1fr);padding:2rem}}
     @media(max-width:1100px){#cardsContainer{grid-template-columns:repeat(3,1fr)}}
     @media(max-width:768px){#cardsContainer{grid-template-columns:repeat(2,1fr);padding:1rem}}
     @media(max-width:480px){#cardsContainer{grid-template-columns:1fr;gap:1.8rem}}
-
     /* POP-UP ANALISIS */
     #analysisPanel{
       display:none;
@@ -143,6 +138,7 @@
       font-size:2.4rem;
       font-weight:900;
       letter-spacing:2px;
+      position:relative;
     }
     .back-btn{
       position:absolute;
@@ -156,13 +152,13 @@
       cursor:pointer;
       transition:all .4s;
       box-shadow:0 0 40px rgba(0,229,189,0.5);
+      z-index: 10;
     }
     .back-btn:hover{
       background:var(--glow);
       color:#000;
       transform:scale(1.12);
     }
-
     .filter-panel{padding:3rem;background:#0a0a0a}
     .filter-grid{display:grid;grid-template-columns:1fr 1fr auto;gap:2rem;align-items:end}
     input[type="date"]{
@@ -189,7 +185,6 @@
       transform:scale(1.1);
       box-shadow:0 0 80px rgba(0,229,189,0.8);
     }
-
     .table-container{margin:2rem;border-radius:20px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,0.7)}
     table{width:100%;border-collapse:collapse;background:var(--card)}
     th{
@@ -219,7 +214,6 @@
   </style>
 </head>
 <body>
-
   <!-- MENU UTAMA -->
   <div id="mainMenu">
     <header>
@@ -239,8 +233,8 @@
 
       <div class="filter-panel">
         <div class="filter-grid">
-          <div><label style="color:var(--glow);font-weight:800">Tanggal Awal</label><input type="date" id="startDate"></div>
-          <div><label style="color:var(--glow);font-weight:800">Tanggal Akhir</label><input type="date" id="endDate"></div>
+          <div><label style="color:var(--glow);font-weight:800">Tanggal Awal</label><input type="date" id="startDate" /></div>
+          <div><label style="color:var(--glow);font-weight:800">Tanggal Akhir</label><input type="date" id="endDate" /></div>
           <div><button class="load-btn" onclick="loadData()">LOAD DATA</button></div>
         </div>
         <div class="status" id="status">Pilih rentang tanggal lalu klik LOAD DATA</div>
@@ -258,8 +252,15 @@
               <th colspan="2" class="total">TOTAL</th>
             </tr>
             <tr>
-              <th>Mesin</th><th></th><th></th>
-              <th>kWh</th><th>Rp</th><th>kWh</th><th>Rp</th><th>kWh</th><th>Rp</th>
+              <th>Mesin</th>
+              <th></th>
+              <th></th>
+              <th>kWh</th>
+              <th>Rp</th>
+              <th>kWh</th>
+              <th>Rp</th>
+              <th>kWh</th>
+              <th>Rp</th>
             </tr>
           </thead>
           <tbody>
@@ -281,11 +282,16 @@
   </div>
 
   <script>
-    const MACHINE_TAGS = {1:'UNKNOW',2:'UNKNOW',3:'POMPA MC 12',4:'MC 9',5:'UNKNOW',6:'MC 40',7:'MC 39',8:'MC 6',9:'HEATER MC 5',10:'POMPA MC 5',11:'UNKNOW',12:'MC 34',13:'MC 35',14:'UNKNOW',15:'UNKNOW',16:'MC 38',17:'MC 36',18:'MC 37'};
+    const MACHINE_TAGS = {
+      1: 'UNKNOW', 2: 'UNKNOW', 3: 'POMPA MC 12', 4: 'MC 9', 5: 'UNKNOW',
+      6: 'MC 40', 7: 'MC 39', 8: 'MC 6', 9: 'HEATER MC 5', 10: 'POMPA MC 5',
+      11: 'UNKNOW', 12: 'MC 34', 13: 'MC 35', 14: 'UNKNOW', 15: 'UNKNOW',
+      16: 'MC 38', 17: 'MC 36', 18: 'MC 37'
+    };
     const SUPABASE_URL = "https://rojhcadtqfynlqzubftx.supabase.co";
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs";
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    const TABLE_NAME = 'final_calculation_base';
+    const TABLE_NAME = 'meter_tariff_delta';
     const TARIF_LWBP = 1352;
     const TARIF_WBP = 1650;
     let selectedMesin = null;
@@ -330,37 +336,50 @@
 
       try {
         const { data, error } = await supabase.from(TABLE_NAME)
-          .select('konsumsi_lwbp_kwh, konsumsi_wbp_kwh')
-          .eq('id_mesin', selectedMesin)
-          .gte('tanggal', start).lte('tanggal', end);
+          .select('lwbp_kwh, wbp_kwh, tanggal')
+          .eq('sid_mesin', selectedMesin)
+          .gte('tanggal', start)
+          .lte('tanggal', end);
 
         if (error) throw error;
 
-        let lwbp = 0, wbp = 0;
-        data.forEach(d => { lwbp += parseFloat(d.konsumsi_lwbp_kwh || 0); wbp += parseFloat(d.konsumsi_wbp_kwh || 0); });
+        if (!data.length) {
+          status.textContent = "Data tidak ditemukan untuk rentang tanggal ini.";
+          status.style.color = "#ef4444";
+          // Reset table
+          resetTable();
+          return;
+        }
 
-        const totalKwh = lwbp + wbp;
-        const totalRp = lwbp * TARIF_LWBP + wbp * TARIF_WBP;
+        // Hitung total lwbp dan wbp dari data yang ada
+        let lwbpTotal = 0;
+        let wbpTotal = 0;
+        let minDate = null;
+        let maxDate = null;
+        data.forEach(row => {
+          lwbpTotal += parseFloat(row.lwbp_kwh || 0);
+          wbpTotal += parseFloat(row.wbp_kwh || 0);
+          // Track earliest and latest date for display
+          const tgl = new Date(row.tanggal);
+          if (!minDate || tgl < minDate) minDate = tgl;
+          if (!maxDate || tgl > maxDate) maxDate = tgl;
+        });
 
-        document.getElementById('tglAwal').textContent = start;
-        document.getElementById('tglAkhir').textContent = end;
-        document.getElementById('lwbpKwh').textContent = lwbp.toFixed(2);
-        document.getElementById('lwbpRp').textContent = (lwbp*TARIF_LWBP).toLocaleString('id-ID');
-        document.getElementById('wbpKwh').textContent = wbp.toFixed(2);
-        document.getElementById('wbpRp').textContent = (wbp*TARIF_WBP).toLocaleString('id-ID');
-        document.getElementById('totalKwh').textContent = totalKwh.toFixed(2);
+        const totalKwh = lwbpTotal + wbpTotal;
+        const totalRp = lwbpTotal * TARIF_LWBP + wbpTotal * TARIF_WBP;
+
+        document.getElementById('tglAwal').textContent = minDate ? minDate.toISOString().split('T')[0] : '-';
+        document.getElementById('tglAkhir').textContent = maxDate ? maxDate.toISOString().split('T')[0] : '-';
+        document.getElementById('lwbpKwh').textContent = lwbpTotal.toFixed(4);
+        document.getElementById('lwbpRp').textContent = (lwbpTotal * TARIF_LWBP).toLocaleString('id-ID');
+        document.getElementById('wbpKwh').textContent = wbpTotal.toFixed(4);
+        document.getElementById('wbpRp').textContent = (wbpTotal * TARIF_WBP).toLocaleString('id-ID');
+        document.getElementById('totalKwh').textContent = totalKwh.toFixed(4);
         document.getElementById('totalRp').textContent = totalRp.toLocaleString('id-ID');
 
-        status.innerHTML = `Success! ${data.length} hari loaded`;
+        status.textContent = `Success! ${data.length} hari loaded`;
         status.style.color = "#00e5bd";
 
       } catch (err) {
         status.textContent = `Error: ${err.message}`;
-        status.style.color = "#ef4444";
-      }
-    }
-
-    createCards();
-  </script>
-</body>
-</html>
+        status.style.color = "#ef
