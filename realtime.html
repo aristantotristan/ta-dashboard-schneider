@@ -1,88 +1,53 @@
 <script>
-console.log("%c SUPABASE & MQTT STARTED — LIAT INI BRO!", "color:cyan;font-size:20px");
-
+// GANTI INI AJA BRO — YANG LAIN TETAP SAMA
 const SUPABASE_URL = "https://rojhcadtqfynlqzubftx.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs";
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const previousTariff = {};
 
 async function saveTariffData(sid, t1, t2) {
   t1 = parseFloat(t1) || 0;
   t2 = parseFloat(t2) || 0;
 
-  console.log(`SID ${sid} → Terima T1=${t1}, T2=${t2}`);
+  console.log(`SID ${sid} → T1=${t1} | T2=${t2}`);
 
-  // SIMPAN SNAPSHOT
-  const { data: snapData, error: snapErr } = await supabase
-    .from('meter_tariff_snapshot')
-    .insert({ sid_mesin: sid, t1_lwbp_kwh: t1, t2_wbp_kwh: t2 });
+  // SNAPSHOT
+  const snap = await supabase.from('meter_tariff_snapshot').insert({
+    sid_mesin: sid,
+    t1_lwbp_kwh: t1,
+    t2_wbp_kwh: t2
+  });
 
-  if (snapErr) {
-    console.error("GAGAL SNAPSHOT:", snapErr.message);
-    return;
+  if (snap.error) {
+    console.error("GAGAL SNAPSHOT:", snap.error.message);
+  } else {
+    console.log("%c SNAPSHOT MASUK! ✓", "color:lime;font-size:16px;font-weight:bold");
   }
-  console.log("%c SNAPSHOT MASUK BRO!", "color:lime;font-weight:bold");
 
-  // HITUNG & SIMPAN DELTA
+  // DELTA
   if (previousTariff[sid]) {
     const deltaLWBP = t1 - previousTariff[sid].t1;
-    const deltaWBP = t2 - previousTariff[sid].t2;
+    const deltaWBP  = t2 - previousTariff[sid].t2;
 
     if (deltaLWBP > 0 || deltaWBP > 0) {
-      const { error: deltaErr } = await supabase
-        .from('meter_tariff_delta')
-        .insert({
-          sid_mesin: sid,
-          lwbp_kwh: Math.max(0, deltaLWBP),
-          wbp_kwh: Math.max(0, deltaWBP)
-        });
+      const delta = await supabase.from('meter_tariff_delta').insert({
+        sid_mesin: sid,
+        lwbp_kwh: Math.max(0, deltaLWBP),
+        wbp_kwh:  Math.max(0, deltaWBP)
+      });
 
-      if (deltaErr) {
-        console.error("GAGAL DELTA:", deltaErr.message);
+      if (delta.error) {
+        console.error("GAGAL DELTA:", delta.error.message);
       } else {
-        console.log("%c DELTA MASUK: LWBP +" + deltaLWBP.toFixed(4) + " | WBP +" + deltaWBP.toFixed(4), "color:yellow;font-weight:bold");
+        console.log("%c DELTA MASUK! LWBP +" + deltaLWBP.toFixed(4) + " | WBP +" + deltaWBP.toFixed(4), "color:yellow;font-size:16px;font-weight:bold");
       }
     }
   }
+
   previousTariff[sid] = { t1, t2 };
 }
 
-// MQTT & TABEL SAMA SEPERTI BIASA
-const client = mqtt.connect("wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt", {
-  username: "web_dashboard",
-  password: "Tristan12"
-});
-
-client.on('connect', () => {
-  console.log("%c MQTT CONNECTED!", "color:cyan");
-  document.getElementById('conn').textContent = "MQTT Connected • Supabase Logging ON";
-  client.subscribe("politeknik/meter/data");
-});
-
-client.on('message', (topic, message) => {
-  try {
-    const d = JSON.parse(message.toString());
-    const id = Number(d.id);
-    if (id < 1 || id > 18) return;
-
-    // Update tabel (sama seperti sebelumnya)
-    const row = devices[id];
-    row.cells[1].textContent = d.status?.toLowerCase() === 'online' ? 'ONLINE' : 'OFFLINE';
-    row.cells[1].className = d.status?.toLowerCase() === 'online' ? 'status-online' : 'status-offline';
-
-    dataMap.forEach((key, i) => {
-      const val = d[key];
-      row.cells[2+i].textContent = key === 'OpH' ? formatOpH(val) : fmt(val, key);
-    });
-
-    // INI YANG PENTING: SIMPAN KE SUPABASE
-    if (d.T1 != null && d.T2 != null) {
-      saveTariffData(id, d.T1, d.T2);
-    }
-
-  } catch (e) { console.error("Parse error:", e); }
-});
-
-// ... (createInitialRows, formatOpH, fmt, dll — sama persis)
+// Sisanya (MQTT, tabel, dll) TETAP SAMA seperti kode lo yang sekarang
+// Cuma ganti fungsi saveTariffData sama bagian client.on('message') panggil saveTariffData
 </script>
