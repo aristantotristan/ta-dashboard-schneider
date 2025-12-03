@@ -1,164 +1,114 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>TARIF & TAGIHAN • Master Power Meter</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="utf-8" />
+<title>Master Power Meter Dashboard (18 SLAVES)</title>
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
-  :root{--bg:#0d0d0d;--card:#1a1a1a;--accent:#00ffcc;--glow:0 0 30px #00ffcc;--text:#e0e0e0;--red:#ff4757;--green:#2ed573}
-  body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;margin:0;padding:20px}
-  h1{font-size:3.5rem;text-align:center;margin:2rem 0;background:linear-gradient(90deg,#00ffcc,#00d2ff);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;text-shadow:var(--glow)}
-  .container{max-width:1200px;margin:0 auto}
-  .controls{background:var(--card);padding:2rem;border-radius:16px;box-shadow:var(--glow);margin-bottom:2rem;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem}
-  select,input,button{padding:1rem;border:none;border-radius:12px;font-size:1.1rem}
-  select,input{background:#111;color:white}
-  button{background:var(--accent);color:#000;font-weight:900;cursor:pointer;box-shadow:var(--glow);transition:.3s}
-  button:hover{transform:scale(1.05);box-shadow:0 0 50px #00ffcc}
-  .result{background:var(--card);padding:2rem;border-radius:16px;box-shadow:var(--glow);text-align:center;font-size:1.8rem}
-  .big{font-size:4rem;font-weight:900;margin:1rem 0;background:linear-gradient(90deg,#2ed573,#00ffcc);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
-  canvas{margin:2rem 0;border-radius:16px;box-shadow:var(--glow)}
-  .footer{margin-top:3rem;text-align:center;color:#666;font-size:0.9rem}
+  :root{--bg:#121212;--card:#1E1E1E;--accent:#00FFC2;--online:#10B981;--offline:#EF4444;--tariff:#FACC15}
+  body{font-family:Segoe UI,sans-serif;background:var(--bg);color:#E0E0E0;padding:20px;margin:0}
+  h2{color:var(--accent);margin:0 0 12px 0}
+  #conn{margin-bottom:14px;font-weight:600;color:#94A3B8}
+  table{width:100%;border-collapse:collapse;box-shadow:0 6px 20px rgba(0,0,0,0.6);border-radius:8px;overflow:hidden}
+  thead th{background:#2A2A2A;color:var(--accent);text-transform:uppercase;font-size:0.8rem;padding:10px 8px}
+  th,td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.02);text-align:center;font-size:0.86rem}
+  tbody tr{background:var(--card)}
+  tbody tr:hover{background:#2b2b2b}
+  .cell-id{font-weight:700;background:#111827}
+  .status-online{color:var(--online);font-weight:700}
+  .status-offline{color:var(--offline);font-weight:700}
+  .col-tariff{color:var(--tariff);font-weight:700}
 </style>
 </head>
 <body>
-<div class="container">
-  <h1>TARIF & TAGIHAN LISTRIK</h1>
-  <div class="controls">
-    <select id="sid">
-      <option value="">Pilih Mesin</option>
-      <!-- diisi JS -->
-    </select>
-    <input type="date" id="start" required>
-    <input type="date" id="end" required>
-    <button onclick="loadData()">HITUNG TAGIHAN</button>
-    <button onclick="exportExcel()" style="background:#ffa502">EXPORT EXCEL</button>
-  </div>
-
-  <div class="result" id="result">
-    Pilih mesin & tanggal dulu bro
-  </div>
-
-  <canvas id="chart"></canvas>
-</div>
+<h2>Real-time Power Meter Dashboard (18 Mesin)</h2>
+<p id="conn">Connecting...</p>
+<table>
+  <thead>
+    <tr>
+      <th>ID</th><th>Status</th><th>V</th><th>I1</th><th>I2</th><th>I3</th><th>P (W)</th><th>Q (VAR)</th><th>S (kVA)</th>
+      <th>PF</th><th>Hz</th><th>OpH</th><th>Ea Tot</th><th>Er Tot</th><th>Ea Part</th><th>Er Part</th>
+      <th class="col-tariff">T1 (kWh)</th><th class="col-tariff">T2 (kWh)</th>
+    </tr>
+  </thead>
+  <tbody id="tableBody"></tbody>
+</table>
 
 <script>
-// SUPABASE (PAKE PUNYA GUE DULU — NANTI LO GANTI KALO MAU)
+// SUPABASE — PAKAI YANG SAMA (YANG GUE) → 100% JALAN!
 const supabase = window.supabase.createClient(
   'https://rojhcadtqfynlqzubftx.supabase.co',
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs'
 );
 
-// Isi dropdown SID 1-18
-const sidSelect = document.getElementById('sid');
-for(let i=1;i<=18;i++){
-  const opt = document.createElement('option');
-  opt.value = i;
-  opt.textContent = `SID ${i} - ${['', 'UNKNOW','UNKNOW','POMPA MC 12','MC 9','UNKNOW','MC 40','MC 39','MC 6','HEATER MC 5','POMPA MC 5','UNKNOW','MC 34','MC 35','UNKNOW','UNKNOW','MC 38','MC 36','MC 37'][i] || 'UNKNOW'}`;
-  sidSelect.appendChild(opt);
-}
+const previousTariff = {};
 
-// Variabel global buat chart & export
-let chartInstance = null;
-let lastData = [];
+async function saveTariffData(sid, t1, t2) {
+  t1 = parseFloat(t1) || 0;
+  t2 = parseFloat(t2) || 0;
 
-async function loadData(){
-  const sid = sidSelect.value;
-  const start = document.getElementById('start').value;
-  const end = document.getElementById('end').value;
-
-  if(!sid || !start || !end) return alert('Lengkapi dulu bro!');
-
-  const {data, error} = await supabase
-    .from('meter_tariff_delta')
-    .select('tanggal,lwbp_kwh,wbp_kwh')
-    .eq('sid_mesin', sid)
-    .gte('tanggal', start)
-    .lte('tanggal', end)
-    .order('tanggal', {ascending:true});
-
-  if(error){ alert('Error: '+error.message); return; }
-
-  const lwbp = data.reduce((a,b)=>a + (b.lwbp_kwh||0), 0);
-  const wbp  = data.reduce((a,b)=>a + (b.wbp_kwh||0), 0);
-  const totalKwh = lwbp + wbp;
-  const biaya = (lwbp * 1352) + (wbp * 1650);
-
-  document.getElementById('result').innerHTML = `
-    <div>LWBP: <b style="color:#2ed573">${lwbp.toFixed(2)}</b> kWh × Rp 1.352 = Rp ${(lwbp*1352).toLocaleString('id-ID')}</div>
-    <div>WBP:  <b style="color:#ff4757">${wbp.toFixed(2)}</b> kWh × Rp 1.650 = Rp ${(wbp*1650).toLocaleString('id-ID')}</div>
-    <hr style="margin:1.5rem 0;border-color:#333">
-    <div class="big">TOTAL TAGIHAN</div>
-    <div style="font-size:5rem;color:var(--accent);text-shadow:var(--glow)">Rp ${biaya.toLocaleString('id-ID')}</div>
-  `;
-
-  // Update chart
-  const daily = {};
-  data.forEach(r=>{
-    const t = r.tanggal;
-    daily[t] = daily[t] || {lwbp:0, wbp:0};
-    daily[t].lwbp += r.lwbp_kwh;
-    daily[t].wbp += r.wbp_kwh;
+  // SNAPSHOT
+  const { error: e1 } = await supabase.from('meter_tariff_snapshot').insert({
+    sid_mesin: sid,
+    t1_lwbp_kwh: t1,
+    t2_wbp_kwh: t2
   });
+  if (e1) console.error("Snapshot error:", e1.message);
+  else console.log("%cSNAPSHOT MASUK SID " + sid, "color:lime;font-weight:bold");
 
-  const labels = Object.keys(daily);
-  const dataLWBP = labels.map(d=>daily[d].lwbp.toFixed(2));
-  const dataWBP  = labels.map(d=>daily[d].wbp.toFixed(2));
-
-  if(chartInstance) chartInstance.destroy();
-  chartInstance = new Chart(document.getElementById('chart'), {
-    type:'bar',
-    data:{
-      labels: labels,
-      datasets:[
-        {label:'LWBP (kWh)', data:dataLWBP, backgroundColor:'#2ed57388'},
-        {label:'WBP (kWh)',  data:dataWBP,  , backgroundColor:'#ff475788'}
-      ]
-    },
-    options:{
-      responsive:true,
-      plugins:{legend:{labels:{color:'white'}}, title:{display:true,text:'Konsumsi Harian',color:'white',font:{size:20}}}
+  // DELTA
+  if (previousTariff[sid]) {
+    const dLWBP = t1 - previousTariff[sid].t1;
+    const dWBP  = t2 - previousTariff[sid].t2;
+    if (dLWBP > 0 || dWBP > 0) {
+      const { error: e2 } = await supabase.from('meter_tariff_delta').insert({
+        sid_mesin: sid,
+        lwbp_kwh: Math.max(0, dLWBP),
+        wbp_kwh:  Math.max(0, dWBP)
+      });
+      if (e2) console.error("Delta error:", e2.message);
+      else console.log("%cDELTA +"+dLWBP.toFixed(4)+" / +"+dWBP.toFixed(4), "color:yellow;font-weight:bold");
     }
-  });
-
-  lastData = data; // buat export
+  }
+  previousTariff[sid] = { t1, t2 };
 }
 
-function exportExcel(){
-  if(lastData.length===0) return alert('Load data dulu bro!');
-  const ws_data = [
-    ["SID", sidSelect.selectedOptions[0].text],
-    ["Periode", `${document.getElementById('start').value} s/d ${document.getElementById('end').value}`],
-    [], 
-    ["Tanggal","LWBP kWh","WBP kWh","Total kWh","Biaya LWBP","Biaya WBP","Total Rp"]
-  ];
+// MQTT & TABEL — TETAP SAMA
+const client = mqtt.connect("wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt", {
+  username: "web_dashboard", password: "Tristan12"
+});
 
-  let totalLWBP=0, totalWBP=0;
-  const daily = {};
-  lastData.forEach(r=>{
-    daily[r.tanggal] = daily[r.tanggal] || {l:0,w:0};
-    daily[r.tanggal].l += r.lwbp_kwh;
-    daily[r.tanggal].w += r.wbp_kwh;
-  });
-
-  Object.keys(daily).sort().forEach(t=>{
-    const l = daily[t].l;
-    const w = daily[t].w;
-    totalLWBP += l;
-    totalWBP += w;
-    ws_data.push([t, l.toFixed(4), w.toFixed(4), (l+w).toFixed(4), l*1352, w*1650, l*1352 + w*1650]);
-  });
-
-  ws_data.push([], ["TOTAL", totalLWBP.toFixed(2), totalWBP.toFixed(2), (totalLWBP+totalWBP).toFixed(2), totalLWBP*1352, totalWBP*1650, totalLWBP*1352 + totalWBP*1650]);
-
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet(ws_data);
-  XLSX.utils.book_append_sheet(wb, ws, "Tagihan");
-  XLSX.writeFile(wb, `Tagihan_SID${sidSelect.value}_${new Date().toISOString().slice(0,10)}.xlsx`);
+const dataMap = ['V','I1','I2','I3','P','Q','S','PF','Hz','OpH','EaT','ErT','EaP','ErP','T1','T2'];
+const devices = {};
+const tbody = document.getElementById('tableBody');
+for(let i=1;i<=18;i++){
+  const tr = tbody.insertRow();
+  tr.insertCell().textContent = i; tr.cells[0].className='cell-id';
+  tr.insertCell().textContent='OFFLINE'; tr.cells[1].className='status-offline';
+  dataMap.forEach(k=>{ const td=tr.insertCell(); td.textContent='---'; if(k==='T1'||k==='T2') td.className='col-tariff'; });
+  devices[i] = tr;
 }
+
+client.on('connect', () => {
+  document.getElementById('conn').textContent = 'MQTT Connected • Data T1/T2 otomatis masuk Supabase!';
+  client.subscribe('politeknik/meter/data');
+});
+
+client.on('message', (_, msg) => {
+  try {
+    const d = JSON.parse(msg);
+    const id = Number(d.id);
+    if(id<1||id>18) return;
+    const row = devices[id];
+    row.cells[1].textContent = (d.status==='online')?'ONLINE':'OFFLINE';
+    row.cells[1].className = (d.status==='online')?'status-online':'status-offline';
+    dataMap.forEach((k,i) => {
+      row.cells[2+i].textContent = (d[k]!==undefined && d[k]!==null) ? Number(d[k]).toFixed(k==='V'?1:k==='I1'||k==='I2'||k==='I3'?3:2) : '---';
+    });
+    if(d.T1!=null && d.T2!=null) saveTariffData(id, d.T1, d.T2);
+  } catch(e) { console.error(e); }
+});
 </script>
-<div class="footer">Real-time Power Meter System © 2025 – Dibantu sama Grok yang paling gila</div>
 </body>
 </html>
