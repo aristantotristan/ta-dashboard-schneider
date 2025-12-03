@@ -1,385 +1,372 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Master Power Meter • Analisis Konsumsi</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet" />
-  <style>
-    :root{
-      --bg:#000000;           /* BACKGROUND HITAM PEKAT */
-      --card:#0f0f0f;         /* CARD HITAM SEDIKIT ABU */
-      --glow:#00e5bd;
-      --accent:#00e5bd;
-      --text:#e0f2fe;
-      --muted:#8b949e;
-      --border:#1a1a1a;
-      --lwbp:#0f766e;
-      --wbp:#991b1b;
-      --total:#0f4c3a;
-    }
-    *{margin:0;padding:0;box-sizing:border-box}
-    body{
-      background:var(--bg);
-      color:var(--text);
-      font-family:'JetBrains Mono',monospace;
-      min-height:100vh;
-      background-image:
-        radial-gradient(circle at 10% 20%,rgba(0,229,189,0.08) 0%,transparent 40%),
-        radial-gradient(circle at 90% 80%,rgba(0,229,189,0.06) 0%,transparent 40%);
-    }
-    /* HEADER GLOWING */
-    header{
-      text-align:center;
-      padding:4rem 1rem 3rem;
-    }
-    h1{
-      font-family:'Orbitron',sans-serif;
-      font-size:4.5rem;
-      font-weight:900;
-      background:linear-gradient(135deg,#00e5bd,#00ffea,#00e5bd);
-      -webkit-background-clip:text;
-      background-clip:text;
-      -webkit-text-fill-color:transparent;
-      text-shadow:0 0 50px rgba(0,229,189,0.7);
-      letter-spacing:3px;
-    }
-    .subtitle{
-      color:var(--muted);
-      font-size:1.2rem;
-      margin-top:1rem;
-      letter-spacing:4px;
-      text-transform:uppercase;
-      font-weight:500;
-      opacity:0.9;
-    }
-    /* GRID KARTU — 6 KOLOM */
-    #cardsContainer{
-      display:grid;
-      grid-template-columns:repeat(6,1fr);
-      gap:2.2rem;
-      max-width:1750px;
-      margin:0 auto;
-      padding:2rem 5rem;
-    }
-    .machine-card{
-      background:var(--card);
-      border:1px solid var(--border);
-      border-radius:22px;
-      padding:2.4rem 1rem;
-      text-align:center;
-      cursor:pointer;
-      position:relative;
-      overflow:hidden;
-      transition:all .6s cubic-bezier(0.23,1,0.32,1);
-      box-shadow:0 12px 40px rgba(0,0,0,0.6);
-    }
-    .machine-card::before{
-      content:'';
-      position:absolute;
-      top:0;left:50%;transform:translateX(-50%);
-      width:0;height:5px;
-      background:var(--glow);
-      box-shadow:0 0 30px var(--glow);
-      transition:all .6s;
-    }
-    .machine-card:hover{
-      transform:translateY(-24px) scale(1.08);
-      border-color:var(--glow);
-      box-shadow:0 40px 100px rgba(0,229,189,0.4);
-    }
-    .machine-card:hover::before{width:120%}
-    .card-title{
-      font-size:1.38rem;
-      font-weight:700;
-      color:var(--text);
-      margin-bottom:0.8rem;
-    }
-    .sid-label{
-      font-family:'Orbitron',sans-serif;
-      font-size:1.5rem;
-      font-weight:800;
-      color:var(--glow);
-      letter-spacing:2px;
-      text-shadow:0 0 25px var(--glow);
-    }
-    /* RESPONSIVE */
-    @media(max-width:1600px){#cardsContainer{grid-template-columns:repeat(4,1fr);padding:2rem}}
-    @media(max-width:1100px){#cardsContainer{grid-template-columns:repeat(3,1fr)}}
-    @media(max-width:768px){#cardsContainer{grid-template-columns:repeat(2,1fr);padding:1rem}}
-    @media(max-width:480px){#cardsContainer{grid-template-columns:1fr;gap:1.8rem}}
-    /* POP-UP ANALISIS */
-    #analysisPanel{
-      display:none;
-      position:fixed;
-      inset:0;
-      background:#000000ee;
-      backdrop-filter:blur(20px);
-      z-index:9999;
-      padding:2rem;
-      overflow-y:auto;
-    }
-    .popup-card{
-      background:var(--card);
-      border:1px solid var(--border);
-      border-radius:28px;
-      max-width:1100px;
-      margin:2rem auto;
-      overflow:hidden;
-      box-shadow:0 40px 120px rgba(0,0,0,0.8);
-    }
-    .popup-header{
-      background:linear-gradient(135deg,#00e5bd,#00ffcc);
-      padding:2.5rem;
-      text-align:center;
-      color:#000;
-      font-family:'Orbitron',sans-serif;
-      font-size:2.4rem;
-      font-weight:900;
-      letter-spacing:2px;
-      position:relative;
-    }
-    .back-btn{
-      position:absolute;
-      top:1.8rem;left:1.8rem;
-      background:#000;
-      color:var(--glow);
-      border:2px solid var(--glow);
-      padding:14px 28px;
-      border-radius:50px;
-      font-weight:800;
-      cursor:pointer;
-      transition:all .4s;
-      box-shadow:0 0 40px rgba(0,229,189,0.5);
-      z-index: 10;
-    }
-    .back-btn:hover{
-      background:var(--glow);
-      color:#000;
-      transform:scale(1.12);
-    }
-    .filter-panel{padding:3rem;background:#0a0a0a}
-    .filter-grid{display:grid;grid-template-columns:1fr 1fr auto;gap:2rem;align-items:end}
-    input[type="date"]{
-      padding:1.1rem;
-      border-radius:14px;
-      border:2px solid var(--glow);
-      background:#000;
-      color:white;
-      font-size:1.1rem;
-    }
-    .load-btn{
-      padding:1.1rem 3.5rem;
-      background:var(--glow);
-      color:#000;
-      border:none;
-      border-radius:14px;
-      font-weight:900;
-      font-size:1.2rem;
-      cursor:pointer;
-      box-shadow:0 0 50px rgba(0,229,189,0.6);
-      transition:all .4s;
-    }
-    .load-btn:hover{
-      transform:scale(1.1);
-      box-shadow:0 0 80px rgba(0,229,189,0.8);
-    }
-    .table-container{margin:2rem;border-radius:20px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,0.7)}
-    table{width:100%;border-collapse:collapse;background:var(--card)}
-    th{
-      background:#111;
-      color:var(--glow);
-      padding:1.6rem;
-      font-weight:800;
-      text-transform:uppercase;
-      letter-spacing:2px;
-      font-size:0.95rem;
-    }
-    td{
-      padding:1.6rem;
-      text-align:center;
-      font-size:1.2rem;
-      font-weight:700;
-    }
-    .lwbp,.wbp,.total{color:white}
-    .status{
-      text-align:center;
-      padding:2rem;
-      font-size:1.4rem;
-      color:var(--glow);
-      text-shadow:0 0 30px var(--glow);
-      font-weight:600;
-    }
-  </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Master Power Meter • Analisis Konsumsi</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#000000;           /* BACKGROUND HITAM PEKAT */
+      --card:#0f0f0f;         /* CARD HITAM SEDIKIT ABU */
+      --glow:#00e5bd;
+      --accent:#00e5bd;
+      --text:#e0f2fe;
+      --muted:#8b949e;
+      --border:#1a1a1a;
+      --lwbp:#0f766e;
+      --wbp:#991b1b;
+      --total:#0f4c3a;
+    }
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{
+      background:var(--bg);
+      color:var(--text);
+      font-family:'JetBrains Mono',monospace;
+      min-height:100vh;
+      background-image:
+        radial-gradient(circle at 10% 20%,rgba(0,229,189,0.08) 0%,transparent 40%),
+        radial-gradient(circle at 90% 80%,rgba(0,229,189,0.06) 0%,transparent 40%);
+    }
+
+    /* HEADER GLOWING */
+    header{
+      text-align:center;
+      padding:4rem 1rem 3rem;
+    }
+    h1{
+      font-family:'Orbitron',sans-serif;
+      font-size:4.5rem;
+      font-weight:900;
+      background:linear-gradient(135deg,#00e5bd,#00ffea,#00e5bd);
+      -webkit-background-clip:text;
+      background-clip:text;
+      -webkit-text-fill-color:transparent;
+      text-shadow:0 0 50px rgba(0,229,189,0.7);
+      letter-spacing:3px;
+    }
+    .subtitle{
+      color:var(--muted);
+      font-size:1.2rem;
+      margin-top:1rem;
+      letter-spacing:4px;
+      text-transform:uppercase;
+      font-weight:500;
+      opacity:0.9;
+    }
+
+    /* GRID KARTU — 6 KOLOM */
+    #cardsContainer{
+      display:grid;
+      grid-template-columns:repeat(6,1fr);
+      gap:2.2rem;
+      max-width:1750px;
+      margin:0 auto;
+      padding:2rem 5rem;
+    }
+    .machine-card{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:22px;
+      padding:2.4rem 1rem;
+      text-align:center;
+      cursor:pointer;
+      position:relative;
+      overflow:hidden;
+      transition:all .6s cubic-bezier(0.23,1,0.32,1);
+      box-shadow:0 12px 40px rgba(0,0,0,0.6);
+    }
+    .machine-card::before{
+      content:'';
+      position:absolute;
+      top:0;left:50%;transform:translateX(-50%);
+      width:0;height:5px;
+      background:var(--glow);
+      box-shadow:0 0 30px var(--glow);
+      transition:all .6s;
+    }
+    .machine-card:hover{
+      transform:translateY(-24px) scale(1.08);
+      border-color:var(--glow);
+      box-shadow:0 40px 100px rgba(0,229,189,0.4);
+    }
+    .machine-card:hover::before{width:120%}
+
+    .card-title{
+      font-size:1.38rem;
+      font-weight:700;
+      color:var(--text);
+      margin-bottom:0.8rem;
+    }
+    .sid-label{
+      font-family:'Orbitron',sans-serif;
+      font-size:1.5rem;
+      font-weight:800;
+      color:var(--glow);
+      letter-spacing:2px;
+      text-shadow:0 0 25px var(--glow);
+    }
+
+    /* RESPONSIVE */
+    @media(max-width:1600px){#cardsContainer{grid-template-columns:repeat(4,1fr);padding:2rem}}
+    @media(max-width:1100px){#cardsContainer{grid-template-columns:repeat(3,1fr)}}
+    @media(max-width:768px){#cardsContainer{grid-template-columns:repeat(2,1fr);padding:1rem}}
+    @media(max-width:480px){#cardsContainer{grid-template-columns:1fr;gap:1.8rem}}
+
+    /* POP-UP ANALISIS */
+    #analysisPanel{
+      display:none;
+      position:fixed;
+      inset:0;
+      background:#000000ee;
+      backdrop-filter:blur(20px);
+      z-index:9999;
+      padding:2rem;
+      overflow-y:auto;
+    }
+    .popup-card{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:28px;
+      max-width:1100px;
+      margin:2rem auto;
+      overflow:hidden;
+      box-shadow:0 40px 120px rgba(0,0,0,0.8);
+    }
+    .popup-header{
+      background:linear-gradient(135deg,#00e5bd,#00ffcc);
+      padding:2.5rem;
+      text-align:center;
+      color:#000;
+      font-family:'Orbitron',sans-serif;
+      font-size:2.4rem;
+      font-weight:900;
+      letter-spacing:2px;
+    }
+    .back-btn{
+      position:absolute;
+      top:1.8rem;left:1.8rem;
+      background:#000;
+      color:var(--glow);
+      border:2px solid var(--glow);
+      padding:14px 28px;
+      border-radius:50px;
+      font-weight:800;
+      cursor:pointer;
+      transition:all .4s;
+      box-shadow:0 0 40px rgba(0,229,189,0.5);
+    }
+    .back-btn:hover{
+      background:var(--glow);
+      color:#000;
+      transform:scale(1.12);
+    }
+
+    .filter-panel{padding:3rem;background:#0a0a0a}
+    .filter-grid{display:grid;grid-template-columns:1fr 1fr auto;gap:2rem;align-items:end}
+    input[type="date"]{
+      padding:1.1rem;
+      border-radius:14px;
+      border:2px solid var(--glow);
+      background:#000;
+      color:white;
+      font-size:1.1rem;
+    }
+    .load-btn{
+      padding:1.1rem 3.5rem;
+      background:var(--glow);
+      color:#000;
+      border:none;
+      border-radius:14px;
+      font-weight:900;
+      font-size:1.2rem;
+      cursor:pointer;
+      box-shadow:0 0 50px rgba(0,229,189,0.6);
+      transition:all .4s;
+    }
+    .load-btn:hover{
+      transform:scale(1.1);
+      box-shadow:0 0 80px rgba(0,229,189,0.8);
+    }
+
+    .table-container{margin:2rem;border-radius:20px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,0.7)}
+    table{width:100%;border-collapse:collapse;background:var(--card)}
+    th{
+      background:#111;
+      color:var(--glow);
+      padding:1.6rem;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:2px;
+      font-size:0.95rem;
+    }
+    td{
+      padding:1.6rem;
+      text-align:center;
+      font-size:1.2rem;
+      font-weight:700;
+    }
+    .lwbp,.wbp,.total{color:white}
+    .status{
+      text-align:center;
+      padding:2rem;
+      font-size:1.4rem;
+      color:var(--glow);
+      text-shadow:0 0 30px var(--glow);
+      font-weight:600;
+    }
+  </style>
 </head>
 <body>
-  <!-- MENU UTAMA -->
-  <div id="mainMenu">
-    <header>
-      <h1>MASTER POWER METER</h1>
-      <p class="subtitle">Pilih Mesin • Analisis Konsumsi & Biaya</p>
-    </header>
-    <div id="cardsContainer"></div>
-  </div>
 
-  <!-- POP-UP ANALISIS -->
-  <div id="analysisPanel">
-    <div class="popup-card">
-      <div class="popup-header" id="selectedMachine">
-        <button class="back-btn" onclick="backToMenu()">BACK</button>
-        Analisis Konsumsi • SID --
-      </div>
+    <div id="mainMenu">
+    <header>
+      <h1>MASTER POWER METER</h1>
+      <p class="subtitle">Pilih Mesin • Analisis Konsumsi & Biaya</p>
+    </header>
+    <div id="cardsContainer"></div>
+  </div>
 
-      <div class="filter-panel">
-        <div class="filter-grid">
-          <div><label style="color:var(--glow);font-weight:800">Tanggal Awal</label><input type="date" id="startDate" /></div>
-          <div><label style="color:var(--glow);font-weight:800">Tanggal Akhir</label><input type="date" id="endDate" /></div>
-          <div><button class="load-btn" onclick="loadData()">LOAD DATA</button></div>
-        </div>
-        <div class="status" id="status">Pilih rentang tanggal lalu klik LOAD DATA</div>
-      </div>
+    <div id="analysisPanel">
+    <div class="popup-card">
+      <div class="popup-header" id="selectedMachine">
+        <button class="back-btn" onclick="backToMenu()">BACK</button>
+        Analisis Konsumsi • SID --
+      </div>
 
-      <div class="table-container">
-        <table>
-          <thead>
-            <tr>
-              <th>SID</th>
-              <th>Awal</th>
-              <th>Akhir</th>
-              <th colspan="2" class="lwbp">LWBP</th>
-              <th colspan="2" class="wbp">WBP</th>
-              <th colspan="2" class="total">TOTAL</th>
-            </tr>
-            <tr>
-              <th>Mesin</th>
-              <th></th>
-              <th></th>
-              <th>kWh</th>
-              <th>Rp</th>
-              <th>kWh</th>
-              <th>Rp</th>
-              <th>kWh</th>
-              <th>Rp</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td id="mesinId">-</td>
-              <td id="tglAwal">-</td>
-              <td id="tglAkhir">-</td>
-              <td id="lwbpKwh" class="lwbp">-</td>
-              <td id="lwbpRp" class="lwbp">-</td>
-              <td id="wbpKwh" class="wbp">-</td>
-              <td id="wbpRp" class="wbp">-</td>
-              <td id="totalKwh" class="total">-</td>
-              <td id="totalRp" class="total">-</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
+      <div class="filter-panel">
+        <div class="filter-grid">
+          <div><label style="color:var(--glow);font-weight:800">Tanggal Awal</label><input type="date" id="startDate"></div>
+          <div><label style="color:var(--glow);font-weight:800">Tanggal Akhir</label><input type="date" id="endDate"></div>
+          <div><button class="load-btn" onclick="loadData()">LOAD DATA</button></div>
+        </div>
+        <div class="status" id="status">Pilih rentang tanggal lalu klik LOAD DATA</div>
+      </div>
 
-  <script>
-    const MACHINE_TAGS = {
-      1: 'UNKNOW', 2: 'UNKNOW', 3: 'POMPA MC 12', 4: 'MC 9', 5: 'UNKNOW',
-      6: 'MC 40', 7: 'MC 39', 8: 'MC 6', 9: 'HEATER MC 5', 10: 'POMPA MC 5',
-      11: 'UNKNOW', 12: 'MC 34', 13: 'MC 35', 14: 'UNKNOW', 15: 'UNKNOW',
-      16: 'MC 38', 17: 'MC 36', 18: 'MC 37'
-    };
-    const SUPABASE_URL = "https://rojhcadtqfynlqzubftx.supabase.co";
-    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs";
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    const TABLE_NAME = 'meter_tariff_delta';
-    const TARIF_LWBP = 1352;
-    const TARIF_WBP = 1650;
-    let selectedMesin = null;
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>SID</th>
+              <th>Awal</th>
+              <th>Akhir</th>
+              <th colspan="2" class="lwbp">LWBP</th>
+              <th colspan="2" class="wbp">WBP</th>
+              <th colspan="2" class="total">TOTAL</th>
+            </tr>
+            <tr>
+              <th>Mesin</th><th></th><th></th>
+              <th>kWh</th><th>Rp</th><th>kWh</th><th>Rp</th><th>kWh</th><th>Rp</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td id="mesinId">-</td>
+              <td id="tglAwal">-</td>
+              <td id="tglAkhir">-</td>
+              <td id="lwbpKwh" class="lwbp">-</td>
+              <td id="lwbpRp" class="lwbp">-</td>
+              <td id="wbpKwh" class="wbp">-</td>
+              <td id="wbpRp" class="wbp">-</td>
+              <td id="totalKwh" class="total">-</td>
+              <td id="totalRp" class="total">-</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 
-    function createCards() {
-      const container = document.getElementById('cardsContainer');
-      for (let i = 1; i <= 18; i++) {
-        const tag = MACHINE_TAGS[i] || 'UNKNOW';
-        const card = document.createElement('div');
-        card.className = 'machine-card';
-        card.onclick = () => selectMachine(i);
-        card.innerHTML = `<div class="card-title">${tag}</div><div class="sid-label">SID ${i}</div>`;
-        container.appendChild(card);
-      }
-    }
+  <script>
+    const MACHINE_TAGS = {1:'UNKNOW',2:'UNKNOW',3:'POMPA MC 12',4:'MC 9',5:'UNKNOW',6:'MC 40',7:'MC 39',8:'MC 6',9:'HEATER MC 5',10:'POMPA MC 5',11:'UNKNOW',12:'MC 34',13:'MC 35',14:'UNKNOW',15:'UNKNOW',16:'MC 38',17:'MC 36',18:'MC 37'};
+    const SUPABASE_URL = "https://rojhcadtqfynlqzubftx.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs";
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    // --- PERUBAHAN UTAMA: Nama tabel diganti ke yang baru ---
+    const TABLE_NAME = 'meter_tariff_delta';
+    // --------------------------------------------------------
+    const TARIF_LWBP = 1352;
+    const TARIF_WBP = 1650;
+    let selectedMesin = null;
 
-    function selectMachine(id) {
-      selectedMesin = id;
-      document.getElementById('mainMenu').style.display = 'none';
-      document.getElementById('analysisPanel').style.display = 'block';
-      document.getElementById('selectedMachine').innerHTML = `<button class="back-btn" onclick="backToMenu()">BACK</button> Analisis Konsumsi • ${MACHINE_TAGS[id]} <small>• SID ${id}</small>`;
-      document.getElementById('mesinId').textContent = id;
+    function createCards() {
+      const container = document.getElementById('cardsContainer');
+      for (let i = 1; i <= 18; i++) {
+        const tag = MACHINE_TAGS[i] || 'UNKNOW';
+        const card = document.createElement('div');
+        card.className = 'machine-card';
+        card.onclick = () => selectMachine(i);
+        card.innerHTML = `<div class="card-title">${tag}</div><div class="sid-label">SID ${i}</div>`;
+        container.appendChild(card);
+      }
+    }
 
-      const today = new Date().toISOString().split('T')[0];
-      const lastMonth = new Date(Date.now() - 30*24*60*60*1000).toISOString().split('T')[0];
-      document.getElementById('startDate').value = lastMonth;
-      document.getElementById('endDate').value = today;
-      loadData();
-    }
+    function selectMachine(id) {
+      selectedMesin = id;
+      document.getElementById('mainMenu').style.display = 'none';
+      document.getElementById('analysisPanel').style.display = 'block';
+      document.getElementById('selectedMachine').innerHTML = `<button class="back-btn" onclick="backToMenu()">BACK</button> Analisis Konsumsi • ${MACHINE_TAGS[id]} <small>• SID ${id}</small>`;
+      document.getElementById('mesinId').textContent = id;
 
-    function backToMenu() {
-      document.getElementById('analysisPanel').style.display = 'none';
-      document.getElementById('mainMenu').style.display = 'block';
-    }
+      const today = new Date().toISOString().split('T')[0];
+      const lastMonth = new Date(Date.now() - 30*24*60*60*1000).toISOString().split('T')[0];
+      document.getElementById('startDate').value = lastMonth;
+      document.getElementById('endDate').value = today;
+      loadData();
+    }
 
-    async function loadData() {
-      if (!selectedMesin) return;
-      const start = document.getElementById('startDate').value;
-      const end = document.getElementById('endDate').value;
-      const status = document.getElementById('status');
-      status.textContent = "Loading...";
+    function backToMenu() {
+      document.getElementById('analysisPanel').style.display = 'none';
+      document.getElementById('mainMenu').style.display = 'block';
+    }
 
-      try {
-        const { data, error } = await supabase.from(TABLE_NAME)
-          .select('lwbp_kwh, wbp_kwh, tanggal')
-          .eq('sid_mesin', selectedMesin)
-          .gte('tanggal', start)
-          .lte('tanggal', end);
+    async function loadData() {
+      if (!selectedMesin) return;
+      const start = document.getElementById('startDate').value;
+      const end = document.getElementById('endDate').value;
+      const status = document.getElementById('status');
+      status.textContent = "Loading...";
 
-        if (error) throw error;
+      try {
+        // --- PERUBAHAN UTAMA: Memilih kolom yang sesuai dengan tabel 'meter_tariff_delta' ---
+        const { data, error } = await supabase.from(TABLE_NAME)
+          .select('lwbp_kwh, wbp_kwh')
+          .eq('sid_mesin', selectedMesin) // Nama kolom ID mesin diganti
+          .gte('tanggal', start).lte('tanggal', end);
 
-        if (!data.length) {
-          status.textContent = "Data tidak ditemukan untuk rentang tanggal ini.";
-          status.style.color = "#ef4444";
-          // Reset table
-          resetTable();
-          return;
-        }
+        if (error) throw error;
 
-        // Hitung total lwbp dan wbp dari data yang ada
-        let lwbpTotal = 0;
-        let wbpTotal = 0;
-        let minDate = null;
-        let maxDate = null;
-        data.forEach(row => {
-          lwbpTotal += parseFloat(row.lwbp_kwh || 0);
-          wbpTotal += parseFloat(row.wbp_kwh || 0);
-          // Track earliest and latest date for display
-          const tgl = new Date(row.tanggal);
-          if (!minDate || tgl < minDate) minDate = tgl;
-          if (!maxDate || tgl > maxDate) maxDate = tgl;
-        });
+        let lwbp = 0, wbp = 0;
+        data.forEach(d => { 
+          // --- PERUBAHAN UTAMA: Mengakses properti 'lwbp_kwh' dan 'wbp_kwh' ---
+          lwbp += parseFloat(d.lwbp_kwh || 0); 
+          wbp += parseFloat(d.wbp_kwh || 0); 
+        });
+        // --------------------------------------------------------
 
-        const totalKwh = lwbpTotal + wbpTotal;
-        const totalRp = lwbpTotal * TARIF_LWBP + wbpTotal * TARIF_WBP;
+        const totalKwh = lwbp + wbp;
+        const totalRp = lwbp * TARIF_LWBP + wbp * TARIF_WBP;
 
-        document.getElementById('tglAwal').textContent = minDate ? minDate.toISOString().split('T')[0] : '-';
-        document.getElementById('tglAkhir').textContent = maxDate ? maxDate.toISOString().split('T')[0] : '-';
-        document.getElementById('lwbpKwh').textContent = lwbpTotal.toFixed(4);
-        document.getElementById('lwbpRp').textContent = (lwbpTotal * TARIF_LWBP).toLocaleString('id-ID');
-        document.getElementById('wbpKwh').textContent = wbpTotal.toFixed(4);
-        document.getElementById('wbpRp').textContent = (wbpTotal * TARIF_WBP).toLocaleString('id-ID');
-        document.getElementById('totalKwh').textContent = totalKwh.toFixed(4);
-        document.getElementById('totalRp').textContent = totalRp.toLocaleString('id-ID');
+        document.getElementById('tglAwal').textContent = start;
+        document.getElementById('tglAkhir').textContent = end;
+        document.getElementById('lwbpKwh').textContent = lwbp.toFixed(2);
+        document.getElementById('lwbpRp').textContent = (lwbp*TARIF_LWBP).toLocaleString('id-ID');
+        document.getElementById('wbpKwh').textContent = wbp.toFixed(2);
+        document.getElementById('wbpRp').textContent = (wbp*TARIF_WBP).toLocaleString('id-ID');
+        document.getElementById('totalKwh').textContent = totalKwh.toFixed(2);
+        document.getElementById('totalRp').textContent = totalRp.toLocaleString('id-ID');
 
-        status.textContent = `Success! ${data.length} hari loaded`;
-        status.style.color = "#00e5bd";
+        status.innerHTML = `Success! ${data.length} hari loaded`;
+        status.style.color = "#00e5bd";
 
-      } catch (err) {
-        status.textContent = `Error: ${err.message}`;
-        status.style.color = "#ef
+      } catch (err) {
+        status.textContent = `Error: ${err.message}`;
+        status.style.color = "#ef4444";
+      }
+    }
+
+    createCards();
+  </script>
+</body>
+</html>
