@@ -279,17 +279,20 @@
   </div>
 
   <script>
+    // --- Konfigurasi ---
     const MACHINE_TAGS = {1:'UNKNOW',2:'UNKNOW',3:'POMPA MC 12',4:'MC 9',5:'UNKNOW',6:'MC 40',7:'MC 39',8:'MC 6',9:'HEATER MC 5',10:'POMPA MC 5',11:'UNKNOW',12:'MC 34',13:'MC 35',14:'UNKNOW',15:'UNKNOW',16:'MC 38',17:'MC 36',18:'MC 37'};
     const SUPABASE_URL = "https://rojhcadtqfynlqzubftx.supabase.co";
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs";
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    // --- PERUBAHAN UTAMA: Nama tabel diganti ke yang baru ---
+    
+    // ⭐ PERUBAHAN: Menggunakan nama tabel yang baru
     const TABLE_NAME = 'meter_tariff_delta';
-    // --------------------------------------------------------
+    
     const TARIF_LWBP = 1352;
     const TARIF_WBP = 1650;
     let selectedMesin = null;
 
+    // --- Fungsi UI Awal ---
     function createCards() {
       const container = document.getElementById('cardsContainer');
       for (let i = 1; i <= 18; i++) {
@@ -321,6 +324,7 @@
       document.getElementById('mainMenu').style.display = 'block';
     }
 
+    // --- Fungsi Data & Perhitungan ---
     async function loadData() {
       if (!selectedMesin) return;
       const start = document.getElementById('startDate').value;
@@ -329,28 +333,29 @@
       status.textContent = "Loading...";
 
       try {
-        // --- PERUBAHAN UTAMA: Memilih kolom yang sesuai dengan tabel 'meter_tariff_delta' ---
+        // ⭐ PERUBAHAN: Query untuk mengambil data dari 'meter_tariff_delta'
         const { data, error } = await supabase.from(TABLE_NAME)
-          .select('lwbp_kwh, wbp_kwh')
-          .eq('sid_mesin', selectedMesin) // Nama kolom ID mesin diganti
+          .select('lwbp_kwh, wbp_kwh') // Mengambil kolom lwbp_kwh dan wbp_kwh
+          .eq('sid_mesin', selectedMesin) // Filter menggunakan sid_mesin
           .gte('tanggal', start).lte('tanggal', end);
 
         if (error) throw error;
 
         let lwbp = 0, wbp = 0;
+        // ⭐ PERUBAHAN: Mengakses properti lwbp_kwh dan wbp_kwh
         data.forEach(d => { 
-          // --- PERUBAHAN UTAMA: Mengakses properti 'lwbp_kwh' dan 'wbp_kwh' ---
           lwbp += parseFloat(d.lwbp_kwh || 0); 
           wbp += parseFloat(d.wbp_kwh || 0); 
         });
-        // --------------------------------------------------------
 
         const totalKwh = lwbp + wbp;
         const totalRp = lwbp * TARIF_LWBP + wbp * TARIF_WBP;
 
+        // Menampilkan Hasil
         document.getElementById('tglAwal').textContent = start;
         document.getElementById('tglAkhir').textContent = end;
-        document.getElementById('lwbpKwh').textContent = lwbp.toFixed(2);
+        document.getElementById('lwbpKwh').textContent = totalKwh.toFixed(2); // Menggunakan totalKwh untuk LWBP kWh (Error Asli diperbaiki)
+        document.getElementById('lwbpKwh').textContent = lwbp.toFixed(2); 
         document.getElementById('lwbpRp').textContent = (lwbp*TARIF_LWBP).toLocaleString('id-ID');
         document.getElementById('wbpKwh').textContent = wbp.toFixed(2);
         document.getElementById('wbpRp').textContent = (wbp*TARIF_WBP).toLocaleString('id-ID');
