@@ -1,17 +1,12 @@
-
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>⚡ Master Power Meter Dashboard (18 SLAVES)</title>
-
+<title>Master Power Meter Dashboard (18 SLAVES)</title>
 <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script> <!-- TAMBAHAN SUPABASE -->
 <style>
-  /* --- Styling (rapi & minimal) --- */
   :root {
     --bg: #121212;
     --card: #1E1E1E;
@@ -30,7 +25,6 @@
   }
   h2 { color: var(--accent); margin: 0 0 12px 0; }
   #conn { margin-bottom: 14px; font-weight: 600; color: #94A3B8; }
-
   table {
     width: 100%;
     border-collapse: collapse;
@@ -67,10 +61,8 @@
 </style>
 </head>
 <body>
-
-<h2>⚡ Real-time Power Meter Dashboard (18 Mesin)</h2>
+<h2>Real-time Power Meter Dashboard (18 Mesin)</h2>
 <p id="conn" class="muted">Connecting...</p>
-
 <table aria-label="Power Meter Table">
   <thead>
     <tr>
@@ -94,24 +86,58 @@
       <th class="col-tariff">T2 (kWh)</th>
     </tr>
   </thead>
-  <tbody id="tableBody">
-    <!-- Rows will be pre-populated by JS on load -->
-  </tbody>
+  <tbody id="tableBody"></tbody>
 </table>
 
 <script>
-/* ================= CONFIG ================= */
-const MQTT_OPTIONS = {
-  username: "web_dashboard",
-  password: "Tristan12",
-  connectTimeout: 4000,
-  reconnectPeriod: 2000
-};
+/* ================= SUPABASE SETUP ================= */
+const SUPABASE_URL = "https://rojhcadtqfynlqzubftx.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs";
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// Simpan nilai T1 & T2 sebelumnya per mesin
+const previousTariff = {};
+
+/* ================= FUNGSI SIMPAN T1 T2 + HITUNG DELTA ================= */
+async function saveTariffData(sid, t1, t2) {
+  const now = new Date().toISOString();
+  t1 = parseFloat(t1) || 0;
+  t2 = parseFloat(t2) || 0;
+
+  // 1. Simpan data mentah ke meter_tariff_snapshot
+  await supabase.from('meter_tariff_snapshot').insert({
+    sid_mesin: sid,
+    t1_lwbp_kwh: t1,
+    t2_wbp_kwh: t2
+  }).catch(err => console.error('Snapshot error:', err));
+
+  // 2. Hitung delta kalau ada data sebelumnya
+  const key = sid;
+  if (previousTariff[key]) {
+    const prev = previousTariff[key];
+    const deltaLWBP = t1 - prev.t1;
+    const deltaWBP  = t2 - prev.t2;
+
+    // Hanya simpan kalau ada kenaikan (hindari bug reset meter)
+    if (deltaLWBP > 0 || deltaWBP > 0) {
+      await supabase.from('meter_tariff_delta').insert({
+        sid_mesin: sid,
+        lwbp_kwh: Math.max(0, deltaLWBP),
+        wbp_kwh:  Math.max(0, deltaWBP)
+      }).catch(err => console.error('Delta error:', err));
+    }
+  }
+
+  // Simpan nilai terbaru
+  previousTariff[key] = { t1, t2 };
+}
+
+/* ================= CONFIG MQTT & TABEL ================= */
+const MQTT_OPTIONS = { username: "web_dashboard", password: "Tristan12", connectTimeout: 4000, reconnectPeriod: 2000 };
 const MQTT_URL = "wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt";
 const MQTT_TOPIC = "politeknik/meter/data";
 const TOTAL_DEVICES = 18;
 
-/* ================= HELPERS ================= */
 function formatOpH(hours) {
   if (hours === null || hours === undefined || isNaN(hours) || hours < 0) return '---';
   const totalMinutes = Math.round(parseFloat(hours) * 60);
@@ -124,6 +150,7 @@ function formatOpH(hours) {
   if (mins > 0) return `${mins} Mnt`;
   return '0 Jam';
 }
+
 function fmt(val, key) {
   if (val === null || val === undefined || isNaN(val)) return '---';
   const n = Number(val);
@@ -137,30 +164,19 @@ function fmt(val, key) {
   return n.toString();
 }
 
-/* ================= TABLE SETUP ================= */
 const tableBody = document.getElementById('tableBody');
 const conn = document.getElementById('conn');
+const dataMap = ['V','I1','I2','I3','P','Q','S','PF','Hz','OpH','EaT','ErT','EaP','ErP','T1','T2'];
+const devices = {};
 
-// dataMap order must match table columns after ID & Status
-const dataMap = [
-  'V','I1','I2','I3','P','Q','S','PF','Hz','OpH',
-  'EaT','ErT','EaP','ErP','T1','T2'
-];
-
-// Pre-create 18 rows (ID 1..18) with default OFFLINE status and placeholders
-const devices = {}; // store row references
 function createInitialRows() {
-  tableBody.innerHTML = ''; // clear
+  tableBody.innerHTML = '';
   for (let id=1; id<=TOTAL_DEVICES; id++) {
     const tr = tableBody.insertRow();
-    // ID cell
     const tdId = tr.insertCell(); tdId.className = 'cell-id'; tdId.textContent = id;
-    // Status cell
     const tdStatus = tr.insertCell(); tdStatus.textContent = 'OFFLINE'; tdStatus.className = 'status-offline';
-    // Data cells
     dataMap.forEach(key => {
       const td = tr.insertCell();
-      // style tariff cells
       if (key === 'T1' || key === 'T2') td.className = 'col-tariff';
       else if (['EaT','ErT','EaP','ErP'].includes(key)) td.className = 'col-energy';
       else if (['P','Q','S'].includes(key)) td.className = 'col-power';
@@ -171,49 +187,28 @@ function createInitialRows() {
 }
 createInitialRows();
 
-/* ================= MQTT ================= */
 const client = mqtt.connect(MQTT_URL, MQTT_OPTIONS);
-
 client.on('connect', () => {
-  conn.textContent = '✅ MQTT Connected';
+  conn.textContent = 'MQTT Connected • Data T1/T2 otomatis disimpan ke Supabase';
   client.subscribe(MQTT_TOPIC);
-  // When connecting/reconnecting, it's ok — rows already present
 });
-
-client.on('reconnect', () => {
-  conn.textContent = '🔄 MQTT Reconnecting...';
-});
-
-client.on('error', (err) => {
-  conn.textContent = '❌ MQTT Error';
-  console.error('MQTT Error:', err);
-});
+client.on('reconnect', () => conn.textContent = 'MQTT Reconnecting...');
+client.on('error', () => conn.textContent = 'MQTT Error');
 
 client.on('message', (topic, message) => {
   try {
     const d = JSON.parse(message.toString());
     const id = Number(d.id);
-    if (!id || id < 1 || id > TOTAL_DEVICES) {
-      console.warn('Invalid ID in payload', d);
-      return;
-    }
+    if (!id || id < 1 || id > TOTAL_DEVICES) return;
 
-    // ensure row exists (should already)
-    if (!devices[id]) {
-      // fallback: create a row if somehow missing
-      createInitialRows();
-    }
     const row = devices[id];
-    // status
     const status = (d.status && d.status.toLowerCase() === 'online') ? 'online' : 'offline';
     row.cells[1].textContent = status.toUpperCase();
     row.cells[1].className = status === 'online' ? 'status-online' : 'status-offline';
 
-    // update data cells according to dataMap order
     dataMap.forEach((key, idx) => {
       const cell = row.cells[2 + idx];
       let raw = d[key];
-
       if (key === 'OpH') {
         cell.textContent = (raw === 0 || raw) ? formatOpH(raw) : '---';
       } else {
@@ -221,16 +216,15 @@ client.on('message', (topic, message) => {
       }
     });
 
+    // === INI FITUR BARU: SIMPAN T1 & T2 + HITUNG DELTA ===
+    if (d.T1 != null && d.T2 != null) {
+      saveTariffData(id, d.T1, d.T2);
+    }
+
   } catch (e) {
-    console.error('Payload parse error:', e, message.toString());
+    console.error('Payload error:', e);
   }
 });
-
-/* Optional: demo fallback to mark as offline if no message received for a long time.
-   This requires the ESP32 to send periodic heartbeats or publish offline explicitly.
-   We keep it passive here (ESP must send offline status).
-*/
-
 </script>
 </body>
 </html>
