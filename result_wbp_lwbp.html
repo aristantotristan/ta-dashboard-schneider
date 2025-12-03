@@ -6,7 +6,6 @@
   <title>Master Power Meter • Analisis Konsumsi</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
-
   <style>
     :root{
       --bg:#000000; --card:#0f0f0f; --glow:#00e5bd; --accent:#00e5bd; --text:#e0f2fe; --muted:#8b949e; --border:#1a1a1a;
@@ -21,7 +20,6 @@
        background:linear-gradient(135deg,#00e5bd,#00ffea,#00e5bd);-webkit-background-clip:text;background-clip:text;
        -webkit-text-fill-color:transparent;text-shadow:0 0 50px rgba(0,229,189,0.7);letter-spacing:3px;}
     .subtitle{color:var(--muted);font-size:1.2rem;margin-top:1rem;letter-spacing:4px;text-transform:uppercase;opacity:0.9;}
-    
     #cardsContainer{display:grid;grid-template-columns:repeat(6,1fr);gap:2.2rem;max-width:1750px;margin:0 auto;padding:2rem 5rem;}
     .machine-card{background:var(--card);border:1px solid var(--border);border-radius:22px;padding:2.4rem 1rem;text-align:center;
       cursor:pointer;position:relative;overflow:hidden;transition:all .6s cubic-bezier(0.23,1,0.32,1);box-shadow:0 12px 40px rgba(0,0,0,0.6);}
@@ -37,20 +35,13 @@
       box-shadow:0 40px 120px rgba(0,0,0,0.8);}
     .popup-header{background:linear-gradient(135deg,#00e5bd,#00ffcc);padding:2.5rem;text-align:center;color:#000;
       font-family:'Orbitron',sans-serif;font-size:2.4rem;font-weight:900;letter-spacing:2px;}
-
     .back-btn{position:absolute;top:1.8rem;left:1.8rem;background:#000;color:var(--glow);border:2px solid var(--glow);
       padding:14px 28px;border-radius:50px;font-weight:800;cursor:pointer;transition:all .4s;box-shadow:0 0 40px rgba(0,229,189,0.5);}
-    .back-btn:hover{background:var(--glow);color:#000;transform:scale(1.12);}
-
-    .table-container{margin:2rem;border-radius:20px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,0.7)}
-    table{width:100%;border-collapse:collapse;background:var(--card)}
-    th{background:#111;color:var(--glow);padding:1.6rem;font-weight:800;text-transform:uppercase;letter-spacing:2px;font-size:0.95rem;}
-    td{padding:1.6rem;text-align:center;font-size:1.2rem;font-weight:700;}
     .status{text-align:center;padding:2rem;font-size:1.4rem;color:var(--glow);text-shadow:0 0 30px var(--glow);font-weight:600;}
   </style>
 </head>
-<body>
 
+<body>
   <div id="mainMenu">
     <header>
       <h1>MASTER POWER METER</h1>
@@ -63,83 +54,131 @@
     <div class="popup-card">
       <div class="popup-header" id="selectedMachine">
         <button class="back-btn" onclick="backToMenu()">BACK</button>
+        Analisis Konsumsi • SID --
       </div>
 
-      <div class="status" id="status">Memuat data...</div>
-
-      <div class="table-container">
-        <table>
-          <thead>
-            <tr><th>LWBP (kWh)</th><th>WBP (kWh)</th><th>Total (kWh)</th></tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td id="lwbpVal">-</td>
-              <td id="wbpVal">-</td>
-              <td id="totalVal">-</td>
-            </tr>
-          </tbody>
-        </table>
+      <div class="filter-panel">
+        <div class="filter-grid">
+          <div><label>Tanggal Awal</label><input type="date" id="startDate"></div>
+          <div><label>Tanggal Akhir</label><input type="date" id="endDate"></div>
+          <div><button class="load-btn" onclick="loadData()">LOAD DATA</button></div>
+        </div>
+        <div class="status" id="status">Pilih rentang tanggal lalu klik LOAD DATA</div>
       </div>
 
+      <table>
+        <tbody>
+          <tr>
+            <td id="mesinId">-</td>
+            <td id="tglAwal">-</td>
+            <td id="tglAkhir">-</td>
+            <td id="lwbpKwh">-</td>
+            <td id="lwbpRp">-</td>
+            <td id="wbpKwh">-</td>
+            <td id="wbpRp">-</td>
+            <td id="totalKwh">-</td>
+            <td id="totalRp">-</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </div>
 
 <script>
-const TAGS = {
-  1:'UNKNOW',2:'UNKNOW',3:'POMPA MC 12',4:'MC 9',5:'UNKNOW',6:'MC 40',7:'MC 39',8:'MC 6',
-  9:'HEATER MC 5',10:'POMPA MC 5',11:'UNKNOW',12:'MC 34',13:'MC 35',14:'UNKNOW',15:'UNKNOW',
-  16:'MC 38',17:'MC 36',18:'MC 37'
-};
+  const TABLE_NAME = "daily_meter_summary";
 
-const supabase = window.supabase.createClient(
-  "https://rojhcadtqfynlqzubftx.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs"
-);
+  const MACHINE_TAGS = {
+    1:'UNKNOW',2:'UNKNOW',3:'POMPA MC 12',4:'MC 9',5:'UNKNOW',6:'MC 40',7:'MC 39',
+    8:'MC 6',9:'HEATER MC 5',10:'POMPA MC 5',11:'UNKNOW',12:'MC 34',13:'MC 35',
+    14:'UNKNOW',15:'UNKNOW',16:'MC 38',17:'MC 36',18:'MC 37'
+  };
 
-function createCards(){
-  const container=document.getElementById("cardsContainer");
-  for(let i=1;i<=18;i++){
-    const div=document.createElement("div");
-    div.className="machine-card";
-    div.onclick=()=>openMachine(i);
-    div.innerHTML=`<div class="card-title">${TAGS[i]}</div><div class="sid-label">SID ${i}</div>`;
-    container.appendChild(div);
+  const supabase = window.supabase.createClient(
+    "https://rojhcadtqfynlqzubftx.supabase.co",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs"
+  );
+
+  const TARIF_LWBP = 1352;
+  const TARIF_WBP  = 1650;
+
+  let selectedMesin = null;
+
+  function createCards() {
+    const container = document.getElementById('cardsContainer');
+    for (let i = 1; i <= 18; i++) {
+      const card = document.createElement('div');
+      card.className = 'machine-card';
+      card.onclick = () => selectMachine(i);
+      card.innerHTML = `<div class="card-title">${MACHINE_TAGS[i]}</div><div class="sid-label">SID ${i}</div>`;
+      container.appendChild(card);
+    }
   }
-}
 
-async function openMachine(id){
-  selected=id;
-  document.getElementById("mainMenu").style.display="none";
-  document.getElementById("analysisPanel").style.display="block";
-  document.getElementById("selectedMachine").innerHTML=
-    `<button class="back-btn" onclick="backToMenu()">BACK</button> Analisis Konsumsi • ${TAGS[id]} <small>• SID ${id}</small>`;
+  function selectMachine(id) {
+    selectedMesin = id;
+    document.getElementById('mainMenu').style.display = 'none';
+    document.getElementById('analysisPanel').style.display = 'block';
+    document.getElementById('selectedMachine').innerHTML =
+      `<button class="back-btn" onclick="backToMenu()">BACK</button> Analisis Konsumsi • ${MACHINE_TAGS[id]} <small>• SID ${id}</small>`;
+    
+    const today = new Date().toISOString().split('T')[0];
+    const lastMonth = new Date(Date.now() - 30*24*60*60*1000).toISOString().split('T')[0];
 
-  loadFinishData(id);
-}
+    document.getElementById('startDate').value = lastMonth;
+    document.getElementById('endDate').value = today;
 
-function backToMenu(){
-  document.getElementById("analysisPanel").style.display="none";
-  document.getElementById("mainMenu").style.display="block";
-}
+    loadData();
+  }
 
-async function loadFinishData(id){
-  document.getElementById("status").textContent="Mengambil data finish_lwbp / finish_wbp...";
+  function backToMenu() {
+    document.getElementById('analysisPanel').style.display = 'none';
+    document.getElementById('mainMenu').style.display = 'block';
+  }
 
-  const { data:lwbp } = await supabase.from("finish_lwbp").select("*").eq("sid_mesin", id).single();
-  const { data:wbp  } = await supabase.from("finish_wbp").select("*").eq("sid_mesin", id).single();
+  async function loadData() {
+    const status = document.getElementById('status');
+    status.textContent = "Mengambil data...";
 
-  const l = lwbp?.total_lwbp ?? 0;
-  const w = wbp?.total_wbp ?? 0;
+    try {
+      const { data, error } = await supabase
+        .from(TABLE_NAME)
+        .select("lwbp_total, wbp_total, tanggal")
+        .eq("sid_mesin", selectedMesin)
+        .gte("tanggal", document.getElementById('startDate').value)
+        .lte("tanggal", document.getElementById('endDate').value)
+        .order("tanggal", { ascending: true });
 
-  document.getElementById("lwbpVal").textContent = l.toFixed(2);
-  document.getElementById("wbpVal").textContent  = w.toFixed(2);
-  document.getElementById("totalVal").textContent= (l+w).toFixed(2);
+      if (error) throw error;
 
-  document.getElementById("status").textContent = "Success!";
-}
+      let totalLwbp = 0, totalWbp = 0;
+      data.forEach(r => {
+        totalLwbp += parseFloat(r.lwbp_total || 0);
+        totalWbp  += parseFloat(r.wbp_total  || 0);
+      });
 
-createCards();
+      const totalKwh = totalLwbp + totalWbp;
+      const totalRp  = totalLwbp*TARIF_LWBP + totalWbp*TARIF_WBP;
+
+      document.getElementById('mesinId').textContent   = selectedMesin;
+      document.getElementById('lwbpKwh').textContent   = totalLwbp.toFixed(2);
+      document.getElementById('lwbpRp').textContent    = (totalLwbp*TARIF_LWBP).toLocaleString('id-ID');
+      document.getElementById('wbpKwh').textContent    = totalWbp.toFixed(2);
+      document.getElementById('wbpRp').textContent     = (totalWbp*TARIF_WBP).toLocaleString('id-ID');
+      document.getElementById('totalKwh').textContent  = totalKwh.toFixed(2);
+      document.getElementById('totalRp').textContent   = totalRp.toLocaleString('id-ID');
+      
+      document.getElementById('tglAwal').textContent   = document.getElementById('startDate').value;
+      document.getElementById('tglAkhir').textContent  = document.getElementById('endDate').value;
+
+      status.textContent = `Sukses! ${data.length} hari ditemukan`;
+    } 
+    catch (err) {
+      status.textContent = "❌ ERROR: " + err.message;
+    }
+  }
+
+  createCards();
 </script>
+
 </body>
 </html>
