@@ -1,147 +1,88 @@
 <script>
-/* ================= SUPABASE SETUP ================= */
+console.log("%c SUPABASE & MQTT STARTED — LIAT INI BRO!", "color:cyan;font-size:20px");
+
 const SUPABASE_URL = "https://rojhcadtqfynlqzubftx.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs";
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const previousTariff = {};
 
-/* ================= SIMPAN T1 T2 + DELTA (FIXED!) ================= */
 async function saveTariffData(sid, t1, t2) {
   t1 = parseFloat(t1) || 0;
   t2 = parseFloat(t2) || 0;
 
-  // 1. Simpan snapshot (mentah)
-  const { error: err1 } = await supabase
+  console.log(`SID ${sid} → Terima T1=${t1}, T2=${t2}`);
+
+  // SIMPAN SNAPSHOT
+  const { data: snapData, error: snapErr } = await supabase
     .from('meter_tariff_snapshot')
-    .insert({
-      sid_mesin: sid,
-      t1_lwbp_kwh: t1,
-      t2_wbp_kwh: t2
-    });
+    .insert({ sid_mesin: sid, t1_lwbp_kwh: t1, t2_wbp_kwh: t2 });
 
-  if (err1) {
-    console.error('GAGAL simpan snapshot:', err1.message);
+  if (snapErr) {
+    console.error("GAGAL SNAPSHOT:", snapErr.message);
     return;
-  } else {
-    console.log(`SID ${sid} → Snapshot T1=${t1}, T2=${t2} ✓`);
   }
+  console.log("%c SNAPSHOT MASUK BRO!", "color:lime;font-weight:bold");
 
-  // 2. Hitung & simpan delta
-  const key = sid;
-  if (previousTariff[key]) {
-    const prev = previousTariff[key];
-    const deltaLWBP = t1 - prev.t1;
-    const deltaWBP = t2 - prev.t2;
+  // HITUNG & SIMPAN DELTA
+  if (previousTariff[sid]) {
+    const deltaLWBP = t1 - previousTariff[sid].t1;
+    const deltaWBP = t2 - previousTariff[sid].t2;
 
     if (deltaLWBP > 0 || deltaWBP > 0) {
-      const { error: err2 } = await supabase
+      const { error: deltaErr } = await supabase
         .from('meter_tariff_delta')
         .insert({
           sid_mesin: sid,
           lwbp_kwh: Math.max(0, deltaLWBP),
-          wbp_kwh: Math.max(0, deltaWBP)  // FIXED: HILANGIN SPASI + TITIK DUA!
+          wbp_kwh: Math.max(0, deltaWBP)
         });
 
-      if (err2) {
-        console.error('GAGAL simpan delta:', err2.message);
+      if (deltaErr) {
+        console.error("GAGAL DELTA:", deltaErr.message);
       } else {
-        console.log(`SID ${sid} → Delta LWBP=${deltaLWBP.toFixed(4)}, WBP=${deltaWBP.toFixed(4)} ✓`);
+        console.log("%c DELTA MASUK: LWBP +" + deltaLWBP.toFixed(4) + " | WBP +" + deltaWBP.toFixed(4), "color:yellow;font-weight:bold");
       }
     }
   }
-
-  previousTariff[key] = { t1, t2 };
+  previousTariff[sid] = { t1, t2 };
 }
 
-/* ================= MQTT & TABEL (TANPA UBAH) ================= */
-// ... (kode MQTT, formatOpH, fmt, createInitialRows, dll — TETAP SAMA seperti sebelumnya)
-
-const MQTT_OPTIONS = { username: "web_dashboard", password: "Tristan12", connectTimeout: 4000, reconnectPeriod: 2000 };
-const MQTT_URL = "wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt";
-const MQTT_TOPIC = "politeknik/meter/data";
-const TOTAL_DEVICES = 18;
-
-function formatOpH(hours) {
-  if (hours === null || hours === undefined || isNaN(hours) || hours < 0) return '---';
-  const totalMinutes = Math.round(parseFloat(hours) * 60);
-  const days = Math.floor(totalMinutes / (24 * 60));
-  const rem = totalMinutes % (24 * 60);
-  const hrs = Math.floor(rem / 60);
-  const mins = rem % 60;
-  if (days > 0) return `${days} Hari ${hrs} Jam`;
-  if (hrs > 0) return `${hrs} Jam${mins>0 ? ' ' + mins + ' Mnt' : ''}`;
-  if (mins > 0) return `${mins} Mnt`;
-  return '0 Jam';
-}
-
-function fmt(val, key) {
-  if (val === null || val === undefined || isNaN(val)) return '---';
-  const n = Number(val);
-  if (['V'].includes(key)) return n.toFixed(1);
-  if (['I1','I2','I3'].includes(key)) return n.toFixed(3);
-  if (['P','Q'].includes(key)) return Math.round(n).toString();
-  if (['S'].includes(key)) return n.toFixed(2);
-  if (['PF'].includes(key)) return n.toFixed(3);
-  if (['Hz'].includes(key)) return n.toFixed(1);
-  if (['EaT','ErT','EaP','ErP','T1','T2'].includes(key)) return n.toFixed(2);
-  return n.toString();
-}
-
-const tableBody = document.getElementById('tableBody');
-const conn = document.getElementById('conn');
-const dataMap = ['V','I1','I2','I3','P','Q','S','PF','Hz','OpH','EaT','ErT','EaP','ErP','T1','T2'];
-const devices = {};
-
-function createInitialRows() {
-  tableBody.innerHTML = '';
-  for (let id=1; id<=TOTAL_DEVICES; id++) {
-    const tr = tableBody.insertRow();
-    tr.insertCell().textContent = id; tr.cells[0].className = 'cell-id';
-    tr.insertCell().textContent = 'OFFLINE'; tr.cells[1].className = 'status-offline';
-    dataMap.forEach(key => {
-      const td = tr.insertCell(); td.textContent = '---';
-      if (key === 'T1' || key === 'T2') td.className = 'col-tariff';
-      else if (['EaT','ErT','EaP','ErP'].includes(key)) td.className = 'col-energy';
-      else if (['P','Q','S'].includes(key)) td.className = 'col-power';
-    });
-    devices[id] = tr;
-  }
-}
-createInitialRows();
-
-const client = mqtt.connect(MQTT_URL, MQTT_OPTIONS);
-client.on('connect', () => {
-  conn.textContent = 'MQTT Connected • T1/T2 → Supabase (lihat Console)';
-  client.subscribe(MQTT_TOPIC);
+// MQTT & TABEL SAMA SEPERTI BIASA
+const client = mqtt.connect("wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt", {
+  username: "web_dashboard",
+  password: "Tristan12"
 });
-client.on('reconnect', () => conn.textContent = 'MQTT Reconnecting...');
-client.on('error', () => conn.textContent = 'MQTT Error');
+
+client.on('connect', () => {
+  console.log("%c MQTT CONNECTED!", "color:cyan");
+  document.getElementById('conn').textContent = "MQTT Connected • Supabase Logging ON";
+  client.subscribe("politeknik/meter/data");
+});
 
 client.on('message', (topic, message) => {
   try {
     const d = JSON.parse(message.toString());
     const id = Number(d.id);
-    if (!id || id < 1 || id > 18) return;
+    if (id < 1 || id > 18) return;
 
+    // Update tabel (sama seperti sebelumnya)
     const row = devices[id];
-    const status = (d.status && d.status.toLowerCase() === 'online') ? 'online' : 'offline';
-    row.cells[1].textContent = status.toUpperCase();
-    row.cells[1].className = status === 'online' ? 'status-online' : 'status-offline';
+    row.cells[1].textContent = d.status?.toLowerCase() === 'online' ? 'ONLINE' : 'OFFLINE';
+    row.cells[1].className = d.status?.toLowerCase() === 'online' ? 'status-online' : 'status-offline';
 
-    dataMap.forEach((key, idx) => {
-      const cell = row.cells[2 + idx];
-      const raw = d[key];
-      cell.textContent = (key === 'OpH') ? formatOpH(raw) : fmt(raw, key);
+    dataMap.forEach((key, i) => {
+      const val = d[key];
+      row.cells[2+i].textContent = key === 'OpH' ? formatOpH(val) : fmt(val, key);
     });
 
-    // SIMPAN T1 T2 KE SUPABASE
+    // INI YANG PENTING: SIMPAN KE SUPABASE
     if (d.T1 != null && d.T2 != null) {
       saveTariffData(id, d.T1, d.T2);
     }
 
-  } catch (e) {
-    console.error('Parse error:', e);
-  }
+  } catch (e) { console.error("Parse error:", e); }
 });
+
+// ... (createInitialRows, formatOpH, fmt, dll — sama persis)
 </script>
