@@ -1,131 +1,130 @@
-import { useState } from "react";
-import { createClient } from "@supabase/supabase-js";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rekap Pemakaian Energi</title>
 
-const supabase = createClient(
-  "https://rojhcadtqfynlqzubftx.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs"
-);
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
 
-export default function DailyReport() {
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [rows, setRows] = useState([]);
-  const [message, setMessage] = useState("");
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  const loadData = async () => {
-    const { data, error } = await supabase
-      .from("daily_meter_summary")
-      .select("tgl, sid_mesin, lwbp_total, wbp_total")
-      .gte("tgl", startDate)
-      .lte("tgl", endDate)
-      .order("tgl", { ascending: true })
-      .order("sid_mesin", { ascending: true });
+</head>
+<body class="bg-gray-100">
 
-    if (error) {
-      setMessage(`❌ Error: ${error.message}`);
+<div class="min-h-screen p-6">
+  <h1 class="text-2xl font-bold mb-6">🔌 Rekap Energi per Mesin</h1>
+
+  <!-- Card -->
+  <div class="bg-white p-6 rounded-xl shadow-md mb-6">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      
+      <!-- Mesin select -->
+      <select id="mesinSelect" class="p-2 border rounded-lg">
+        <option value="">Pilih Mesin</option>
+        <option value="MESIN-001">MESIN-001</option>
+        <option value="MESIN-002">MESIN-002</option>
+        <option value="MESIN-003">MESIN-003</option>
+      </select>
+
+      <!-- date -->
+      <input id="startDate" type="date" class="p-2 border rounded-lg" />
+      <input id="endDate" type="date" class="p-2 border rounded-lg" />
+
+      <button onclick="loadData()" class="bg-blue-600 text-white font-semibold rounded-lg px-4 py-2 hover:bg-blue-700">
+        Tampilkan Data
+      </button>
+
+    </div>
+  </div>
+
+  <!-- Table Result -->
+  <div class="bg-white p-6 rounded-xl shadow-md">
+    <table class="w-full border-collapse text-sm">
+      <thead>
+        <tr class="bg-gray-200 text-left">
+          <th class="p-2">Tanggal</th>
+          <th class="p-2">LWBP (kWh)</th>
+          <th class="p-2">WBP (kWh)</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+
+    <div class="mt-4 p-4 bg-gray-50 rounded-xl flex justify-between font-semibold text-lg">
+      <span>Total LWBP:</span>
+      <span id="totalLwbp">0 kWh</span>
+    </div>
+
+    <div class="mt-2 p-4 bg-gray-50 rounded-xl flex justify-between font-semibold text-lg">
+      <span>Total WBP:</span>
+      <span id="totalWbp">0 kWh</span>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+  const supabaseUrl = "https://gizuvbtwgfvixstuncrc.supabase.co"; 
+  const supabaseKey = "public-anon-key";
+  const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+  const TABLE_NAME = "daily_meter_summary";
+
+  async function loadData() {
+    const selectedMesin = document.getElementById("mesinSelect").value;
+    const start = document.getElementById("startDate").value;
+    const end = document.getElementById("endDate").value;
+
+    if (!selectedMesin || !start || !end) {
+      alert("Lengkapi pilihan mesin & tanggal!");
       return;
     }
 
-    setRows(data);
-    setMessage(`Sukses! ${data.length} baris ditemukan`);
-  };
+    const { data, error } = await supabase
+      .from(TABLE_NAME)
+      .select("lwbp_total, wbp_total, tgl, sid_mesin")
+      .eq("sid_mesin", selectedMesin)
+      .gte("tgl", start)
+      .lte("tgl", end)
+      .order("tgl", { ascending: true });
 
-  return (
-    <div style={styles.container}>
-      <button style={styles.backButton}>BACK</button>
+    if (error) {
+      console.error(error);
+      alert("Gagal mengambil data!");
+      return;
+    }
 
-      <h1 style={styles.title}>Analisis Konsumsi • MC 37</h1>
+    renderTable(data);
+  }
 
-      <div style={styles.inputSection}>
-        <label>Tanggal Awal</label>
-        <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+  function renderTable(data) {
+    const tbody = document.getElementById("tableBody");
+    tbody.innerHTML = "";
 
-        <label>Tanggal Akhir</label>
-        <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+    let totalLwbp = 0;
+    let totalWbp = 0;
 
-        <button style={styles.loadButton} onClick={loadData}>
-          LOAD DATA
-        </button>
-      </div>
+    data.forEach(row => {
+      totalLwbp += parseFloat(row.lwbp_total || 0);
+      totalWbp  += parseFloat(row.wbp_total || 0);
 
-      <p style={styles.status}>{message}</p>
+      tbody.innerHTML += `
+        <tr class="border-b">
+          <td class="p-2">${row.tgl}</td>
+          <td class="p-2">${row.lwbp_total}</td>
+          <td class="p-2">${row.wbp_total}</td>
+        </tr>
+      `;
+    });
 
-      <table style={styles.table}>
-        <thead>
-          <tr>
-            <th>Tanggal</th>
-            <th>SID</th>
-            <th>LWBP (kWh)</th>
-            <th>WBP (kWh)</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r, index) => (
-            <tr key={index}>
-              <td>{r.tgl}</td>
-              <td>{r.sid_mesin}</td>
-              <td>{Number(r.lwbp_total).toFixed(2)}</td>
-              <td>{Number(r.wbp_total).toFixed(2)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
+    document.getElementById("totalLwbp").textContent = `${totalLwbp.toFixed(2)} kWh`;
+    document.getElementById("totalWbp").textContent = `${totalWbp.toFixed(2)} kWh`;
+  }
+</script>
 
-const styles = {
-  container: {
-    padding: "40px",
-    minHeight: "100vh",
-    background: "#000000",
-    color: "#00FFC2",
-    fontFamily: "monospace",
-  },
-  backButton: {
-    padding: "10px 18px",
-    borderRadius: "40px",
-    background: "#00FFC2",
-    color: "#000",
-    fontWeight: "bold",
-    cursor: "pointer",
-    marginBottom: "10px",
-  },
-  title: {
-    textAlign: "center",
-    background: "#07FFD6",
-    color: "#000",
-    padding: "15px",
-    borderRadius: "15px",
-    fontSize: "36px",
-    marginBottom: "25px",
-  },
-  inputSection: {
-    display: "flex",
-    gap: "12px",
-    marginBottom: "25px",
-    alignItems: "center",
-  },
-  loadButton: {
-    padding: "10px 15px",
-    background: "#00FFC2",
-    color: "#000",
-    fontWeight: "bold",
-    cursor: "pointer",
-    borderRadius: "8px",
-  },
-  status: {
-    fontSize: "18px",
-    textAlign: "center",
-    marginBottom: "15px",
-  },
-  table: {
-    width: "100%",
-    borderCollapse: "collapse",
-    textAlign: "center",
-    fontSize: "20px",
-  },
-  row: {
-    borderBottom: "1px solid #333",
-  },
-};
+</body>
+</html>
