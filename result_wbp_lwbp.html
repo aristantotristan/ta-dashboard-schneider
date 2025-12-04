@@ -17,16 +17,19 @@
     *{margin:0;padding:0;box-sizing:border-box}
     body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;min-height:100vh;padding-bottom:4rem}
     header{text-align:center;padding:2.2rem 1rem 1rem;}
-    h1{font-family:'Orbitron',sans-serif;font-size:3.2rem;font-weight:900;
-       background:linear-gradient(135deg,#00e5bd,#00ffea);-webkit-background-clip:text;background-clip:text;
-       -webkit-text-fill-color:transparent;text-shadow:0 0 30px rgba(0,229,189,0.5);}
+    h1{
+      font-family:'Orbitron',sans-serif;font-size:3.2rem;font-weight:900;
+      background:linear-gradient(135deg,#00e5bd,#00ffea);
+      -webkit-background-clip:text;background-clip:text;
+      -webkit-text-fill-color:transparent;text-shadow:0 0 30px rgba(0,229,189,0.5);
+    }
     .subtitle{color:var(--muted);font-size:1rem;margin-top:0.6rem;letter-spacing:4px;text-transform:uppercase;}
 
-    /* GLOBAL FILTER PANEL */
+    /* GLOBAL PANEL */
     .global-panel{
-      max-width:1300px;margin:1.6rem auto;padding:1.2rem;border-radius:14px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      max-width:1300px;margin:1.6rem auto;padding:1.6rem;border-radius:14px;
+      background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
       border:1px solid rgba(255,255,255,0.03);display:flex;gap:16px;align-items:center;justify-content:space-between;
-      padding:1.6rem;
     }
     .global-left{display:flex;gap:14px;align-items:center;}
     .global-left label{color:var(--glow);font-weight:800;margin-right:6px}
@@ -36,15 +39,10 @@
     .btn-primary{background:var(--glow);color:#000}
     .btn-outline{background:transparent;border:2px solid var(--glow);color:var(--glow)}
 
-    /* BLOCK DASHBOARD MESIN */
+    /* BLOCK */
     .dashboard-block{
-      background:#0f0f0f;
-      border:1px solid var(--border);
-      border-radius:14px;
-      padding:1.2rem 1.4rem;
-      margin:1rem auto;
-      max-width:1300px;
-      box-shadow:0 0 18px #000;
+      background:#0f0f0f;border:1px solid var(--border);border-radius:14px;
+      padding:1.2rem 1.4rem;margin:1rem auto;max-width:1300px;box-shadow:0 0 18px #000;
     }
     .machine-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
     .machine-title h2{font-family:'Orbitron';color:var(--glow);font-size:1.05rem;margin:0}
@@ -55,7 +53,6 @@
     th{background:#00e5bd;color:#000;font-family:'Orbitron';font-weight:900}
     td{border-bottom:1px solid #1a1a1a;color:#e0f2fe;font-weight:700}
 
-    /* responsive */
     @media (max-width:900px){
       .global-panel{flex-direction:column;gap:10px;align-items:stretch}
       .global-actions{justify-content:flex-end}
@@ -91,31 +88,32 @@
     </div>
   </div>
 
-  <!-- CONTAINER FOR 18 SID BLOCKS -->
+  <!-- BLOCK -->
   <div id="dashboardContainer"></div>
 
 <script>
 /* ===================== NAMA MESIN ===================== */
 const MACHINE_TAGS = {
-    1:'UNKNOW',2:'UNKNOW',3:'POMPA MC 12',4:'MC 9',5:'UNKNOW',6:'MC 40',7:'MC 39',8:'MC 6',
-    9:'HEATER MC 5',10:'POMPA MC 5',11:'UNKNOW',12:'MC 34',13:'MC 35',14:'UNKNOW',15:'UNKNOW',
-    16:'MC 38',17:'MC 36',18:'MC 37'
+    1:'UNKNOW',2:'UNKNOW',3:'POMPA MC 12',4:'MC 9',5:'UNKNOW',6:'MC 40',
+    7:'MC 39',8:'MC 6',9:'HEATER MC 5',10:'POMPA MC 5',11:'UNKNOW',
+    12:'MC 34',13:'MC 35',14:'UNKNOW',15:'UNKNOW',16:'MC 38',17:'MC 36',18:'MC 37'
 };
 
 /* ===================== SUPABASE ===================== */
-const SUPABASE_URL = "https://rojhcadtqfynlqzubftx.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs";
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const supabase = window.supabase.createClient(
+  "https://rojhcadtqfynlqzubftx.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs"
+);
 const TABLE_NAME = "daily_meter_summary";
 
 /* ===================== TARIF ===================== */
 const TARIF_LWBP = 1135;
 const TARIF_WBP  = 996.74;
 
-/* cache hasil per SID */
-let cachedData = {}; // { sid: [rows...] }
+/* cache hasil */
+let cachedData = {};
 
-/* buat 18 blok mesin (kosong) */
+/* BUILD SKELETON */
 function createDashboardSkeleton(){
   const container = document.getElementById('dashboardContainer');
   for (let i=1;i<=18;i++){
@@ -130,8 +128,10 @@ function createDashboardSkeleton(){
       <table>
         <thead>
           <tr>
-            <th>MESIN</th><th>TGL AWAL</th><th>TGL AKHIR</th><th>LWBP kWh</th><th>LWBP Rp</th>
-            <th>WBP kWh</th><th>WBP Rp</th><th>Total kWh</th><th>Total Rp</th>
+            <th>MESIN</th><th>TGL AWAL</th><th>TGL AKHIR</th>
+            <th>LWBP kWh</th><th>LWBP Rp</th>
+            <th>WBP kWh</th><th>WBP Rp</th>
+            <th>Total kWh</th><th>Total Rp</th>
           </tr>
         </thead>
         <tbody id="tbody_${i}">
@@ -144,61 +144,54 @@ function createDashboardSkeleton(){
 }
 createDashboardSkeleton();
 
-/* helper: format number (id) */
-function formatID(num){
-  if (typeof num !== 'number') num = Number(num) || 0;
-  return num.toLocaleString('id-ID');
+function formatID(n){
+  return Number(n||0).toLocaleString('id-ID');
 }
 
-/* ambil data untuk satu SID dalam rentang */
 async function fetchForSid(sid, start, end){
-  // Supabase request - sama seperti sebelumnya
   const { data, error } = await supabase
     .from(TABLE_NAME)
-    .select('tanggal, sid_mesin, lwbp_total, wbp_total')
+    .select('tanggal,sid_mesin,lwbp_total,wbp_total')
     .eq('sid_mesin', sid)
     .gte('tanggal', start)
     .lte('tanggal', end)
-    .order('tanggal', { ascending: true });
+    .order('tanggal', { ascending:true });
 
-  if (error) {
-    // return objek error agar caller bisa tangani
-    return { error: error.message };
-  }
+  if (error) return { error: error.message };
   return { data };
 }
 
-/* render hasil untuk satu SID */
 function renderSidResult(sid, start, end, rows){
   const tbody = document.getElementById(`tbody_${sid}`);
   const statusEl = document.getElementById(`status_${sid}`);
 
   if (!rows || rows.length === 0){
-    tbody.innerHTML = `<tr><td colspan="9" style="color:var(--muted)">Tidak ada data untuk rentang ini</td></tr>`;
-    statusEl.textContent = '0 hari ditemukan';
+    tbody.innerHTML = `<tr><td colspan="9" style="color:var(--muted)">Tidak ada data</td></tr>`;
+    statusEl.textContent = '0 hari';
     cachedData[sid] = [];
     return;
   }
 
-  let totalLwbp = 0, totalWbp = 0;
+  let totalL = 0, totalW = 0;
   rows.forEach(r=>{
-    totalLwbp += parseFloat(r.lwbp_total || 0);
-    totalWbp  += parseFloat(r.wbp_total || 0);
+    totalL += parseFloat(r.lwbp_total||0);
+    totalW += parseFloat(r.wbp_total||0);
   });
-  const totalKwh = totalLwbp + totalWbp;
-  const totalRp  = totalLwbp*TARIF_LWBP + totalWbp*TARIF_WBP;
+
+  const totKwh = totalL + totalW;
+  const totRp  = totalL*TARIF_LWBP + totalW*TARIF_WBP;
 
   tbody.innerHTML = `
     <tr>
       <td>${sid}</td>
       <td>${start}</td>
       <td>${end}</td>
-      <td>${totalLwbp.toFixed(2)}</td>
-      <td>${formatID(totalLwbp*TARIF_LWBP)}</td>
-      <td>${totalWbp.toFixed(2)}</td>
-      <td>${formatID(totalWbp*TARIF_WBP)}</td>
-      <td>${totalKwh.toFixed(2)}</td>
-      <td>${formatID(totalRp)}</td>
+      <td>${totalL.toFixed(2)}</td>
+      <td>${formatID(totalL*TARIF_LWBP)}</td>
+      <td>${totalW.toFixed(2)}</td>
+      <td>${formatID(totalW*TARIF_WBP)}</td>
+      <td>${totKwh.toFixed(2)}</td>
+      <td>${formatID(totRp)}</td>
     </tr>
   `;
 
@@ -206,90 +199,93 @@ function renderSidResult(sid, start, end, rows){
   cachedData[sid] = rows;
 }
 
-/* HANDLE: tampilkan semua SID sekaligus */
+/* ===================== SHOW ALL ===================== */
 async function showAll(){
-  const start = document.getElementById('globalStart').value;
-  const end   = document.getElementById('globalEnd').value;
+  const start = globalStart.value;
+  const end   = globalEnd.value;
+
   if (!start || !end){
-    alert('Isi tanggal awal & akhir dulu boss');
+    alert('Isi tanggal dulu!');
     return;
   }
 
-  // tampilkan status loading di semua blok
   for (let s=1;s<=18;s++){
-    document.getElementById(`status_${s}`).textContent = 'Memuat...';
-    const tbody = document.getElementById(`tbody_${s}`);
-    tbody.innerHTML = `<tr><td colspan="9" style="color:var(--muted)">Memuat...</td></tr>`;
+    document.getElementById(`status_${s}`).textContent = "Memuat...";
+    document.getElementById(`tbody_${s}`).innerHTML =
+      `<tr><td colspan="9" style="color:var(--muted)">Memuat...</td></tr>`;
   }
 
-  // jalankan fetch paralel untuk semua SID
-  const promises = [];
-  for (let s=1;s<=18;s++){
-    promises.push(fetchForSid(s, start, end));
-  }
+  const jobs = [];
+  for (let s=1;s<=18;s++) jobs.push(fetchForSid(s,start,end));
 
-  // tunggu semua selesai
-  const results = await Promise.all(promises);
+  const results = await Promise.all(jobs);
 
-  // render semua hasil; results korrespon ke sid 1..18
   for (let s=1;s<=18;s++){
-    const res = results[s-1];
-    if (res.error){
-      document.getElementById(`tbody_${s}`).innerHTML = `<tr><td colspan="9" style="color:#ff8b8b">ERROR: ${res.error}</td></tr>`;
-      document.getElementById(`status_${s}`).textContent = 'Error';
+    const r = results[s-1];
+    if (r.error){
+      document.getElementById(`tbody_${s}`).innerHTML =
+        `<tr><td colspan="9" style="color:#ff8b8b">ERROR: ${r.error}</td></tr>`;
+      document.getElementById(`status_${s}`).textContent = "Error";
       cachedData[s] = [];
     } else {
-      renderSidResult(s, start, end, res.data);
+      renderSidResult(s,start,end,r.data);
     }
   }
 }
 
-/* EXPORT ALL: gabungkan setiap SID menjadi sheet terpisah */
+/* ===================== EXPORT ALL ===================== */
 function exportAll(){
-  // cek data di cache; jika kosong, minta user klik TAMPILKAN SEMUA dulu
-  let any = false;
+  let ready = false;
   for (let s=1;s<=18;s++){
-    if (cachedData[s] && cachedData[s].length>0) { any = true; break; }
+    if (cachedData[s] && cachedData[s].length>=0){
+      ready = true; break;
+    }
   }
-  if (!any){
-    alert('Belum ada data. Klik "TAMPILKAN SEMUA" terlebih dulu untuk memuat data semua mesin.');
+  if (!ready){
+    alert("Klik TAMPILKAN SEMUA dulu!");
     return;
   }
 
   const wb = XLSX.utils.book_new();
+
   for (let s=1;s<=18;s++){
     const rows = cachedData[s] || [];
-    // jika tidak ada rows, tambahkan satu baris info kosong supaya sheet tetap ada
-    const sheetRows = rows.length ? rows.map(r => ({
-      Tanggal: r.tanggal,
-      SID_Mesin: r.sid_mesin,
-      LWBP_kWh: r.lwbp_total,
-      LWBP_Rp: (parseFloat(r.lwbp_total||0) * TARIF_LWBP),
-      WBP_kWh: r.wbp_total,
-      WBP_Rp: (parseFloat(r.wbp_total||0) * TARIF_WBP)
-    })) : [{Info: `Tidak ada data untuk SID ${s} pada range ini`}];
+
+    const sheetRows = rows.length
+      ? rows.map(r => ({
+          Tanggal: r.tanggal,
+          SID: r.sid_mesin,
+          LWBP_kWh: r.lwbp_total,
+          LWBP_Rp: r.lwbp_total*TARIF_LWBP,
+          WBP_kWh: r.wbp_total,
+          WBP_Rp: r.wbp_total*TARIF_WBP,
+          Total_kWh: (r.lwbp_total+r.wbp_total),
+          Total_Rp: (r.lwbp_total*TARIF_LWBP + r.wbp_total*TARIF_WBP)
+        }))
+      : [{Info:`Tidak ada data untuk SID ${s}`}];
 
     const ws = XLSX.utils.json_to_sheet(sheetRows);
     XLSX.utils.book_append_sheet(wb, ws, `SID_${s}`);
   }
 
-  const start = document.getElementById('globalStart').value || 'start';
-  const end   = document.getElementById('globalEnd').value || 'end';
+  const start = globalStart.value || "start";
+  const end   = globalEnd.value   || "end";
+
   XLSX.writeFile(wb, `MASTER_18SID_${start}_to_${end}.xlsx`);
 }
 
-/* event listeners */
-document.getElementById('btnShowAll').addEventListener('click', showAll);
-document.getElementById('btnExportAll').addEventListener('click', exportAll);
+/* EVENTS */
+btnShowAll.onclick = showAll;
+btnExportAll.onclick = exportAll;
 
-/* OPTIONAL: set default date range (last 30 hari) */
-(function setDefaultDates(){
+/* DEFAULT RANGE */
+(function(){
   const today = new Date();
-  const toISO = d => d.toISOString().split('T')[0];
-  const last30 = new Date(Date.now() - 30*24*60*60*1000);
-  document.getElementById('globalEnd').value = toISO(today);
-  document.getElementById('globalStart').value = toISO(last30);
+  const last30 = new Date(Date.now()-2592000000);
+  globalEnd.value = today.toISOString().split("T")[0];
+  globalStart.value = last30.toISOString().split("T")[0];
 })();
 </script>
+
 </body>
 </html>
