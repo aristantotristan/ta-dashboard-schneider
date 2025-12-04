@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Master Power Meter • Analisis Konsumsi</title>
+  <title>Master Power Meter • Monitoring 18 Mesin</title>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
@@ -15,207 +16,274 @@
     }
     *{margin:0;padding:0;box-sizing:border-box}
     body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;min-height:100vh;}
-    header{text-align:center;padding:4rem 1rem 3rem;}
-    h1{font-family:'Orbitron',sans-serif;font-size:4.5rem;font-weight:900;
-       background:linear-gradient(135deg,#00e5bd,#00ffea,#00e5bd);-webkit-background-clip:text;background-clip:text;
-       -webkit-text-fill-color:transparent;text-shadow:0 0 50px rgba(0,229,189,0.7);}
-    .subtitle{color:var(--muted);font-size:1.2rem;margin-top:1rem;letter-spacing:4px;text-transform:uppercase;}
+    
+    header{text-align:center;padding:3rem 1rem 2rem;}
+    h1{
+      font-family:'Orbitron',sans-serif;
+      font-size:4rem;
+      font-weight:900;
+      background:linear-gradient(135deg,#00e5bd,#00ffee);
+      -webkit-background-clip:text;
+      -webkit-text-fill-color:transparent;
+      text-shadow:0 0 50px rgba(0,229,189,0.45);
+    }
+    .subtitle{
+      color:var(--muted);
+      font-size:1.2rem;
+      margin-top:1rem;
+      letter-spacing:4px;
+      text-transform:uppercase;
+    }
 
-    #cardsContainer{display:grid;grid-template-columns:repeat(6,1fr);gap:2.2rem;max-width:1750px;margin:0 auto;padding:2rem 5rem;}
-    .machine-card{background:var(--card);border:1px solid var(--border);border-radius:22px;padding:2.4rem 1rem;text-align:center;
-      cursor:pointer;transition:.4s;box-shadow:0 12px 40px rgba(0,0,0,0.6);}
-    .machine-card:hover{transform:translateY(-18px);border-color:var(--glow);box-shadow:0 20px 80px rgba(0,229,189,0.4);}
-    .sid-label{font-family:'Orbitron',sans-serif;font-size:1.5rem;font-weight:800;color:var(--glow);}
+    /* BLOCK DASHBOARD MESIN */
+    .dashboard-block{
+      background:#0f0f0f;
+      border:1px solid var(--border);
+      border-radius:20px;
+      padding:2rem;
+      margin:2rem auto;
+      max-width:1300px;
+      box-shadow:0 0 25px #000;
+    }
 
-    #analysisPanel{display:none;position:fixed;inset:0;background:#000000f2;backdrop-filter:blur(18px);z-index:9999;padding:2rem;overflow-y:auto;}
+    .machine-title h2{
+      font-family:'Orbitron';
+      color:var(--glow);
+      font-size:1.8rem;
+      margin-bottom:1.5rem;
+    }
 
-    .popup-card{background:var(--card);border-radius:28px;max-width:1100px;margin:2rem auto;overflow:hidden;}
-    .popup-header{background:linear-gradient(135deg,#00e5bd,#00ffcc);padding:2rem;text-align:center;color:#000;
-      font-family:'Orbitron',sans-serif;font-size:2.4rem;font-weight:900;}
-    .back-btn{position:absolute;top:1.8rem;left:1.8rem;background:#000;color:var(--glow);border:2px solid var(--glow);
-      padding:12px 26px;border-radius:50px;font-weight:800;cursor:pointer;}
+    .filter-row{
+      display:grid;
+      grid-template-columns:1fr 1fr auto auto;
+      gap:20px;
+      margin-bottom:1.5rem;
+    }
 
-    .filter-panel{padding:3rem;background:#0a0a0a}
-    .filter-grid{display:grid;grid-template-columns:1fr 1fr auto auto;gap:2rem;align-items:end}
-    input[type="date"]{padding:1.1rem;border-radius:14px;border:2px solid var(--glow);background:#000;color:white;font-size:1rem;}
-    .load-btn,.excel-btn{padding:1.1rem 3rem;background:var(--glow);color:#000;border:none;border-radius:14px;font-weight:900;cursor:pointer;}
+    input[type="date"]{
+      padding:1rem;
+      border-radius:14px;
+      border:2px solid var(--glow);
+      background:#000;
+      color:white;
+      font-size:1rem;
+      width:100%;
+    }
 
-    table{width:95%;margin:0 auto 2rem auto;border-collapse:collapse;font-size:1.2rem;background:#0d0d0d;
-      border-radius:18px;overflow:hidden;}
-    th,td{padding:14px 12px;text-align:center;}
-    th{background:#00e5bd;color:black;font-weight:900;font-family:'Orbitron',sans-serif;}
-    td{border-bottom:1px solid #1a1a1a;color:#e0f2fe;font-weight:bold;}
+    .load-btn,.excel-btn{
+      padding:1rem 2rem;
+      background:var(--glow);
+      color:#000;
+      border:none;
+      border-radius:12px;
+      font-weight:900;
+      cursor:pointer;
+    }
 
-    .status{text-align:center;padding:2rem;font-size:1.3rem;color:var(--glow);font-weight:600;}
+    .status{
+      color:var(--glow);
+      margin-bottom:1rem;
+      font-size:1.1rem;
+      font-weight:700;
+    }
+
+    table{
+      width:100%;
+      border-collapse:collapse;
+      font-size:1.1rem;
+      background:#0d0d0d;
+      border-radius:18px;
+      overflow:hidden;
+    }
+    th,td{
+      padding:14px 12px;
+      text-align:center;
+    }
+    th{
+      background:#00e5bd;
+      color:#000;
+      font-family:'Orbitron';
+      font-weight:900;
+    }
+    td{
+      border-bottom:1px solid #1a1a1a;
+      color:#e0f2fe;
+      font-weight:bold;
+    }
+
   </style>
 </head>
 
 <body>
-  <div id="mainMenu">
-    <header>
-      <h1>MASTER POWER METER</h1>
-      <p class="subtitle">Pilih Mesin • Analisis Konsumsi & Biaya</p>
-    </header>
-    <div id="cardsContainer"></div>
-  </div>
 
-  <div id="analysisPanel">
-    <div class="popup-card">
-      <div class="popup-header" id="selectedMachine">
-        <button class="back-btn" onclick="backToMenu()">BACK</button>
-        Analisis Konsumsi • SID --
-      </div>
+<header>
+  <h1>MASTER POWER METER</h1>
+  <p class="subtitle">Monitoring Konsumsi Daya LWBP & WBP — 18 Mesin</p>
+</header>
 
-      <div class="filter-panel">
-        <div class="filter-grid">
-          <div><label style="color:#00e5bd;font-weight:800">Tanggal Awal</label><input type="date" id="startDate"></div>
-          <div><label style="color:#00e5bd;font-weight:800">Tanggal Akhir</label><input type="date" id="endDate"></div>
-          <div><button class="load-btn" onclick="loadData()">LOAD DATA</button></div>
-          <div><button class="excel-btn" onclick="exportExcel()">EXPORT EXCEL</button></div>
-        </div>
-        <div class="status" id="status">Pilih rentang tanggal lalu klik LOAD DATA</div>
-      </div>
-
-      <table>
-        <thead>
-          <tr>
-            <th>MESIN</th><th>TGL AWAL</th><th>TGL AKHIR</th>
-            <th>LWBP kWh</th><th>LWBP Rp</th><th>WBP kWh</th><th>WBP Rp</th>
-            <th>TOTAL kWh</th><th>TOTAL Rp</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td id="mesinId">-</td><td id="tglAwal">-</td><td id="tglAkhir">-</td>
-            <td id="lwbpKwh">-</td><td id="lwbpRp">-</td><td id="wbpKwh">-</td><td id="wbpRp">-</td>
-            <td id="totalKwh">-</td><td id="totalRp">-</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
+<div id="dashboardContainer"></div>
 
 <script>
+/* ===================== NAMA MESIN ===================== */
 const MACHINE_TAGS = {
     1:'UNKNOW',2:'UNKNOW',3:'POMPA MC 12',4:'MC 9',5:'UNKNOW',6:'MC 40',7:'MC 39',8:'MC 6',
     9:'HEATER MC 5',10:'POMPA MC 5',11:'UNKNOW',12:'MC 34',13:'MC 35',14:'UNKNOW',15:'UNKNOW',
     16:'MC 38',17:'MC 36',18:'MC 37'
 };
 
+/* ===================== SUPABASE ===================== */
 const SUPABASE_URL = "https://rojhcadtqfynlqzubftx.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs";
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const TABLE_NAME = "daily_meter_summary";
 
-// TARIF BARU SESUAI PERMINTAAN
+/* ===================== TARIF ===================== */
 const TARIF_LWBP = 1135;
 const TARIF_WBP  = 996.74;
 
-let selectedMesin = null;
-let cachedData = [];
+/* Cache per mesin */
+let cachedData = {};
 
-function createCards() {
-  const container = document.getElementById('cardsContainer');
-  for (let i = 1; i <= 18; i++) {
-    const card = document.createElement('div');
-    card.className = 'machine-card';
-    card.onclick = () => selectMachine(i);
-    card.innerHTML = `<div>${MACHINE_TAGS[i]}</div><div class="sid-label">SID ${i}</div>`;
-    container.appendChild(card);
+/* ===================== BUAT 18 MESIN ===================== */
+function createDashboard() {
+    const container = document.getElementById('dashboardContainer');
+
+    for (let i = 1; i <= 18; i++) {
+        const block = document.createElement('div');
+        block.className = "dashboard-block";
+
+        block.innerHTML = `
+            <div class="machine-title">
+                <h2>${MACHINE_TAGS[i]} • SID ${i}</h2>
+            </div>
+
+            <div class="filter-row">
+                <div>
+                    <label>Tanggal Awal</label>
+                    <input type="date" id="start_${i}">
+                </div>
+                <div>
+                    <label>Tanggal Akhir</label>
+                    <input type="date" id="end_${i}">
+                </div>
+                <div>
+                    <button class="load-btn" onclick="loadData(${i})">LOAD</button>
+                </div>
+                <div>
+                    <button class="excel-btn" onclick="exportExcel(${i})">EXPORT</button>
+                </div>
+            </div>
+
+            <div class="status" id="status_${i}">Masukkan tanggal lalu klik LOAD</div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>MESIN</th>
+                        <th>TGL AWAL</th>
+                        <th>TGL AKHIR</th>
+                        <th>LWBP kWh</th>
+                        <th>LWBP Rp</th>
+                        <th>WBP kWh</th>
+                        <th>WBP Rp</th>
+                        <th>Total kWh</th>
+                        <th>Total Rp</th>
+                    </tr>
+                </thead>
+                <tbody id="table_${i}">
+                    <tr><td colspan="9">Belum ada data</td></tr>
+                </tbody>
+            </table>
+        `;
+
+        container.appendChild(block);
+    }
+}
+createDashboard();
+
+/* ===================== LOAD DATA PER MESIN ===================== */
+async function loadData(id) {
+  const start = document.getElementById(`start_${id}`).value;
+  const end   = document.getElementById(`end_${id}`).value;
+  const status = document.getElementById(`status_${id}`);
+
+  if (!start || !end) {
+      status.textContent = "Tanggal belum lengkap";
+      return;
   }
-}
-
-function selectMachine(id) {
-  selectedMesin = id;
-  document.getElementById('mainMenu').style.display = 'none';
-  document.getElementById('analysisPanel').style.display = 'block';
-
-  document.getElementById('selectedMachine').innerHTML =
-    `<button class="back-btn" onclick="backToMenu()">BACK</button> Analisis Konsumsi • ${MACHINE_TAGS[id]} • SID ${id}`;
-  document.getElementById('mesinId').textContent = id;
-
-  const today = new Date().toISOString().split('T')[0];
-  const lastMonth = new Date(Date.now() - 30*24*60*60*1000).toISOString().split('T')[0];
-  document.getElementById('startDate').value = lastMonth;
-  document.getElementById('endDate').value = today;
-
-  loadData();
-}
-
-function backToMenu() {
-  document.getElementById('analysisPanel').style.display = 'none';
-  document.getElementById('mainMenu').style.display = 'block';
-}
-
-async function loadData() {
-  const start = document.getElementById('startDate').value;
-  const end   = document.getElementById('endDate').value;
-  const status = document.getElementById('status');
 
   status.textContent = "Mengambil data...";
-  
+
   const { data, error } = await supabase
     .from(TABLE_NAME)
     .select('tanggal, sid_mesin, lwbp_total, wbp_total')
-    .eq('sid_mesin', selectedMesin)
+    .eq('sid_mesin', id)
     .gte('tanggal', start)
     .lte('tanggal', end)
     .order('tanggal', { ascending: true });
 
   if (error) {
-    status.textContent = "Error: " + error.message;
+    status.textContent = "ERROR: " + error.message;
     return;
   }
 
-  cachedData = data;
-  let totalLwbp = 0, totalWbp = 0;
+  cachedData[id] = data;
+
+  let totalLwbp = 0;
+  let totalWbp = 0;
 
   data.forEach(row => {
-    totalLwbp += parseFloat(row.lwbp_total || 0);
-    totalWbp  += parseFloat(row.wbp_total || 0);
+      totalLwbp += parseFloat(row.lwbp_total || 0);
+      totalWbp  += parseFloat(row.wbp_total || 0);
   });
 
   const totalKwh = totalLwbp + totalWbp;
-  const totalRp  = totalLwbp * TARIF_LWBP + totalWbp * TARIF_WBP;
+  const totalRp = totalLwbp*TARIF_LWBP + totalWbp*TARIF_WBP;
 
-  document.getElementById('tglAwal').textContent = start;
-  document.getElementById('tglAkhir').textContent = end;
-  document.getElementById('lwbpKwh').textContent = totalLwbp.toFixed(2);
-  document.getElementById('lwbpRp').textContent  = (totalLwbp*TARIF_LWBP).toLocaleString('id-ID');
-  document.getElementById('wbpKwh').textContent  = totalWbp.toFixed(2);
-  document.getElementById('wbpRp').textContent   = (totalWbp*TARIF_WBP).toLocaleString('id-ID');
-  document.getElementById('totalKwh').textContent = totalKwh.toFixed(2);
-  document.getElementById('totalRp').textContent  = totalRp.toLocaleString('id-ID');
+  const tbody = document.getElementById(`table_${id}`);
 
-  status.textContent = `Sukses 🔥 ${data.length} hari ditemukan`;
+  tbody.innerHTML = `
+    <tr>
+      <td>${id}</td>
+      <td>${start}</td>
+      <td>${end}</td>
+      <td>${totalLwbp.toFixed(2)}</td>
+      <td>${(totalLwbp*TARIF_LWBP).toLocaleString('id-ID')}</td>
+      <td>${totalWbp.toFixed(2)}</td>
+      <td>${(totalWbp*TARIF_WBP).toLocaleString('id-ID')}</td>
+      <td>${totalKwh.toFixed(2)}</td>
+      <td>${totalRp.toLocaleString('id-ID')}</td>
+    </tr>
+  `;
+
+  status.textContent = `Sukses ✓ (${data.length} hari ditemukan)`;
 }
 
-// ======================== EXPORT EXCEL ========================= //
-function exportExcel() {
-  if (cachedData.length === 0) {
-    alert("Tidak ada data untuk diekspor");
-    return;
+/* ===================== EXPORT EXCEL ===================== */
+function exportExcel(id) {
+  if (!cachedData[id] || cachedData[id].length === 0) {
+      alert("Belum ada data untuk diekspor");
+      return;
   }
 
-  const rows = cachedData.map(r => ({
-    Tanggal: r.tanggal,
-    SID_Mesin: r.sid_mesin,
-    LWBP_kWh: r.lwbp_total,
-    LWBP_Rp: r.lwbp_total * TARIF_LWBP,
-    WBP_kWh: r.wbp_total,
-    WBP_Rp: r.wbp_total * TARIF_WBP,
-    Total_Rp: r.lwbp_total*TARIF_LWBP + r.wbp_total*TARIF_WBP
+  const rows = cachedData[id].map(r => ({
+      Tanggal: r.tanggal,
+      SID_Mesin: r.sid_mesin,
+      LWBP_kWh: r.lwbp_total,
+      LWBP_Rp: r.lwbp_total * TARIF_LWBP,
+      WBP_kWh: r.wbp_total,
+      WBP_Rp: r.wbp_total * TARIF_WBP,
+      Total_Rp: r.lwbp_total*TARIF_LWBP + r.wbp_total*TARIF_WBP
   }));
 
   const worksheet = XLSX.utils.json_to_sheet(rows);
   const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, `SID_${selectedMesin}`);
+  XLSX.utils.book_append_sheet(workbook, worksheet, `SID_${id}`);
 
-  XLSX.writeFile(workbook, `MESIN_SID_${selectedMesin}.xlsx`);
+  XLSX.writeFile(workbook, `MESIN_SID_${id}.xlsx`);
 }
 
-createCards();
 </script>
 </body>
 </html>
