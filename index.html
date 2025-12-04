@@ -14,11 +14,7 @@
       --card: rgba(17, 24, 39, 0.75);
     }
     * { margin:0; padding:0; box-sizing:border-box; }
-    html, body {
-      height: 100%;
-      overscroll-behavior: none;
-      -webkit-tap-highlight-color: transparent;
-    }
+    html, body { height:100%; overscroll-behavior:none; -webkit-tap-highlight-color:transparent; }
     body {
       background: var(--bg);
       color: var(--primary);
@@ -28,207 +24,174 @@
       touch-action: manipulation;
     }
 
-    /* BACKGROUND LISTRIK HIDUP */
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background:
-        radial-gradient(circle at 30% 70%, rgba(0,255,157,0.1) 0%, transparent 60%),
-        radial-gradient(circle at 70% 30%, rgba(0,208,255,0.1) 0%, transparent 60%),
-        linear-gradient(90deg, transparent 48%, rgba(0,255,157,0.03) 50%, transparent 52%);
-      animation: flow 20s linear infinite;
-      pointer-events: none;
-      z-index: 1;
+    /* BACKGROUND LISTRIK */
+    body::before { content:''; position:fixed; inset:0;
+      background: radial-gradient(circle at 30% 70%, rgba(0,255,157,0.1), transparent 60%),
+                  radial-gradient(circle at 70% 30%, rgba(0,208,255,0.1), transparent 60%),
+                  linear-gradient(90deg, transparent 48%, rgba(0,255,157,0.03) 50%, transparent 52%);
+      animation: flow 20s linear infinite; pointer-events:none; z-index:1;
     }
-    body::after {
-      content: '';
-      position: fixed;
-      top: -50%; left: -50%;
-      width: 200%; height: 200%;
+    body::after { content:''; position:fixed; top:-50%; left:-50%; width:200%; height:200%;
       background: repeating-linear-gradient(45deg, transparent, transparent 20px, rgba(0,255,157,0.02) 20px, rgba(0,255,157,0.02) 40px);
-      animation: grid 50s linear infinite;
-      z-index: 0;
+      animation: grid 50s linear infinite; z-index:0;
     }
     @keyframes flow { 0%{transform:translate(0,0)} 100%{transform:translate(100px,100px)} }
     @keyframes grid { 0%{transform:translate(0,0)} 100%{transform:translate(80px,80px)} }
 
-    /* LOADING SCREEN */
+    /* LOADING SCREEN — AUTO SCALE SESUAI HP */
     #loader {
-      position: fixed; inset: 0; background: var(--bg);
-      display: flex; flex-direction: column; justify-content: center; align-items: center;
-      z-index: 9999; transition: opacity 1s ease 0.5s, visibility 1s ease 0.5s;
+      position: fixed; inset:0; background:var(--bg);
+      display: flex; justify-content: center; align-items: center;
+      z-index: 9999; transition: opacity 1.2s ease 0.8s, visibility 1.2s ease 0.8s;
     }
-    .logo-scan {
-      width: 260px; height: 260px; position: relative;
-    }
-    .logo-scan::before {
-      content: ''; position: absolute; top: 50%; left: 50%;
-      width: 300px; height: 4px;
-      background: linear-gradient(90deg, transparent, var(--primary), transparent);
-      transform: translate(-50%, -50%) rotate(0deg);
-      animation: scan 4s linear infinite;
-      box-shadow: 0 0 40px var(--primary);
-    }
-    .logo-scan::after {
-      content: 'WELCOME THE DASHBOARD';
-      position: absolute; bottom: -70px; left: 50%;
-      transform: translateX(-50%);
-      font-family: 'Orbitron', sans-serif;
-      font-size: 1.4rem; font-weight: 900;
-      letter-spacing: 5px;
-      background: linear-gradient(90deg, var(--primary), var(--secondary));
-      -webkit-background-clip: text; background-clip: text;
-      -webkit-text-fill-color: transparent;
-      animation: glowText 2s infinite;
-    }
-    .pulse-ring {
-      position: absolute; top: 50%; left: 50%;
-      width: 100px; height: 100px;
-      border: 4px solid var(--primary);
-      border-radius: 50%;
-      transform: translate(-50%, -50%);
-      animation: pulse 2.5s infinite;
-    }
-    @keyframes scan { 0%{transform:translate(-50%,-50%) rotate(0deg)} 100%{transform:translate(-50%,-50%) rotate(360deg)} }
-    @keyframes pulse { 0%{width:100px;height:100px;opacity:1} 100%{width:450px;height:450px;opacity:0} }
-    @keyframes glowText { 0%,100%{text-shadow:0 0 20px var(--primary)} 50%{text-shadow:0 0 60px var(--primary), 0 0 90px var(--secondary)} }
 
-    .loaded #loader { opacity: 0; visibility: hidden; pointer-events: none; }
+    .loader-wrapper {
+      /* Ukuran dasar di HP kecil = 220px, besar = 300px */
+      width: clamp(220px, 70vw, 300px);
+      height: clamp(220px, 70vw, 300px);
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .outer-ring {
+      position: absolute;
+      width: 100%; height: 100%;
+      border: 2px solid transparent;
+      border-top-color: var(--primary);
+      border-bottom-color: var(--secondary);
+      border-radius: 50%;
+      animation: spin 10s linear infinite;
+      box-shadow: 0 0 40px rgba(0,255,157,0.3);
+    }
+
+    .scan-line {
+      position: absolute;
+      width: 110%;
+      height: 2.5px;
+      background: linear-gradient(90deg, transparent, var(--primary), transparent);
+      box-shadow: 0 0 35px var(--primary);
+      animation: scan 3.8s linear infinite;
+    }
+
+    .pulse-center {
+      position: absolute;
+      width: 35%;
+      height: 35%;
+      border: 3px solid var(--primary);
+      border-radius: 50%;
+      animation: pulse 2.4s ease-out infinite;
+      box-shadow: 0 0 50px var(--primary);
+    }
+
+    .welcome-text {
+      position: absolute;
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(0.95rem, 3.2vw, 1.4rem);
+      font-weight: 900;
+      letter-spacing: clamp(3px, 1.5vw, 6px);
+      text-transform: uppercase;
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 30px rgba(0,255,157,0.8);
+      animation: glowText 2.2s ease-in-out infinite alternate;
+      white-space: nowrap;
+      text-align: center;
+      line-height: 1.2;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes scan { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
+    @keyframes pulse { 0%{transform:scale(1);opacity:0.9} 100%{transform:scale(2.8);opacity:0} }
+    @keyframes glowText {
+      from { text-shadow: 0 0 20px var(--primary); }
+      to   { text-shadow: 0 0 60px var(--primary), 0 0 90px var(--secondary); }
+    }
+
+    .loaded #loader { opacity:0; visibility:hidden; pointer-events:none; }
 
     /* MAIN CONTENT */
     .main-content {
-      position: relative;
-      z-index: 10;
-      opacity: 0;
-      transition: opacity 1.5s ease 1s;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      padding: 20px 16px;
-      text-align: center;
+      position:relative; z-index:10; opacity:0;
+      transition:opacity 1.5s ease 1s;
+      min-height:100vh; display:flex; flex-direction:column;
+      justify-content:center; align-items:center;
+      padding:20px 16px; text-align:center;
     }
-    .loaded .main-content { opacity: 1; }
+    .loaded .main-content { opacity:1; }
 
     .title-main {
-      font-family: 'Orbitron', sans-serif;
-      font-size: clamp(2.4rem, 8.5vw, 5.5rem);
-      font-weight: 900;
-      letter-spacing: 10px;
-      background: linear-gradient(90deg, var(--primary), var(--secondary));
-      -webkit-background-clip: text; background-clip: text;
-      -webkit-text-fill-color: transparent;
-      text-shadow: 0 0 50px rgba(0,255,157,0.7);
-      margin-bottom: 4px;
-      line-height: 1.1;
+      font-family:'Orbitron',sans-serif;
+      font-size:clamp(2.4rem,8.5vw,5.5rem);
+      font-weight:900; letter-spacing:clamp(6px,2vw,12px);
+      background:linear-gradient(90deg,var(--primary),var(--secondary));
+      -webkit-background-clip:text; background-clip:text;
+      -webkit-text-fill-color:transparent;
+      text-shadow:0 0 50px rgba(0,255,157,0.7);
+      margin-bottom:4px;
     }
-
     .title-company {
-      font-family: 'Orbitron', sans-serif;
-      font-size: clamp(1rem, 3.8vw, 1.8rem);
-      font-weight: 700;
-      letter-spacing: 5px;
-      color: rgba(0,255,157,0.85);
-      text-shadow: 0 0 20px rgba(0,255,157,0.5);
-      margin-bottom: 3.5rem;
-      opacity: 0.9;
+      font-family:'Orbitron',sans-serif;
+      font-size:clamp(1rem,3.8vw,1.8rem);
+      font-weight:700; letter-spacing:clamp(3px,1.2vw,6px);
+      color:rgba(0,255,157,0.85);
+      text-shadow:0 0 20px rgba(0,255,157,0.5);
+      margin-bottom:3.5rem; opacity:0.9;
     }
 
-    .menu-container {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 24px;
-      width: 100%;
-      max-width: 480px;
-      padding: 0 10px;
-    }
-
+    .menu-container { display:grid; grid-template-columns:1fr; gap:24px; width:100%; max-width:480px; }
     .menu-card {
-      background: var(--card);
-      backdrop-filter: blur(14px);
-      border: 2px solid transparent;
-      border-radius: 20px;
-      padding: 28px 20px;
-      text-align: center;
-      text-decoration: none;
-      color: var(--primary);
-      font-weight: 700;
-      font-size: 1.25rem;
-      letter-spacing: 2px;
-      position: relative;
-      overflow: hidden;
-      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-      box-shadow: 0 12px 32px rgba(0,0,0,0.5);
-      background-clip: padding-box;
+      background:var(--card); backdrop-filter:blur(14px);
+      border:2px solid transparent; border-radius:20px;
+      padding:28px 20px; text-align:center; text-decoration:none;
+      color:var(--primary); font-weight:700; font-size:1.25rem;
+      letter-spacing:2px; position:relative; overflow:hidden;
+      transition:all 0.4s cubic-bezier(0.175,0.885,0.32,1.275);
+      box-shadow:0 12px 32px rgba(0,0,0,0.5);
     }
-
     .menu-card::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      padding: 2px;
-      background: linear-gradient(45deg, var(--primary), var(--secondary));
-      border-radius: 20px;
-      mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
-      mask-composite: exclude;
-      -webkit-mask-composite: destination-out;
-      opacity: 0;
-      transition: opacity 0.4s;
+      content:''; position:absolute; inset:0; padding:2px;
+      background:linear-gradient(45deg,var(--primary),var(--secondary));
+      border-radius:20px;
+      mask:linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+      mask-composite:exclude; -webkit-mask-composite:destination-out;
+      opacity:0; transition:opacity 0.4s;
     }
+    .menu-card:hover::before { opacity:1; }
+    .menu-card:active { transform:scale(0.96); }
+    .menu-card span { position:relative; z-index:2; }
 
-    .menu-card:hover::before { opacity: 1; }
-    .menu-card:active { transform: scale(0.96); }
+    .ripple { position:absolute; border-radius:50%; background:rgba(0,255,157,0.5); transform:scale(0); animation:rippleAnim 0.6s linear; pointer-events:none; }
+    @keyframes rippleAnim { to { transform:scale(4); opacity:0; } }
 
-    .menu-card span { position: relative; z-index: 2; }
-
-    .ripple {
-      position: absolute;
-      border-radius: 50%;
-      background: rgba(0,255,157,0.5);
-      transform: scale(0);
-      animation: rippleAnim 0.6s linear;
-      pointer-events: none;
-    }
-    @keyframes rippleAnim { to { transform: scale(4); opacity: 0; } }
-
-    /* TABLET & DESKTOP */
-    @media (min-width: 768px) {
-      .menu-container { grid-template-columns: 1fr 1fr; max-width: 900px; gap: 32px; }
-      .title-main { letter-spacing: 14px; }
-      .title-company { letter-spacing: 7px; }
-    }
-
-    /* KHUSUS HP ANDROID/iOS — SUPER MULUS */
-    @media (max-width: 480px) {
-      .title-main { letter-spacing: 6px; }
-      .title-company { letter-spacing: 3px; margin-bottom: 2.5rem; }
-      .menu-card { font-size: 1.15rem; padding: 26px 16px; }
-      .logo-scan { width: 220px; height: 220px; }
-      .logo-scan::after { font-size: 1.2rem; bottom: -60px; }
+    @media (min-width:768px) {
+      .menu-container { grid-template-columns:1fr 1fr; max-width:900px; gap:32px; }
     }
   </style>
 </head>
 <body>
 
+  <!-- LOADING SCREEN — SEKARANG PAS BANGET DI SEMUA HP! -->
   <div id="loader">
-    <div class="logo-scan">
-      <div class="pulse-ring"></div>
+    <div class="loader-wrapper">
+      <div class="outer-ring"></div>
+      <div class="scan-line"></div>
+      <div class="pulse-center"></div>
+      <div class="welcome-text">WELCOME THE DASHBOARD</div>
     </div>
   </div>
 
+  <!-- MAIN CONTENT -->
   <div class="main-content">
     <h1 class="title-main">DASHBOARD CONTROL CENTER</h1>
     <div class="title-company">PT. AMARILYS KARISMA GEMILANG</div>
 
     <div class="menu-container">
-      <a href="realtime.html" class="menu-card">
-        <span>MONITORING REALTIME</span>
-      </a>
-      <a href="result_wbp_lwbp.html" class="menu-card">
-        <span>RESULT WBP / LWBP</span>
-      </a>
+      <a href="realtime.html" class="menu-card"><span>MONITORING REALTIME</span></a>
+      <a href="result_wbp_lwbp.html" class="menu-card"><span>RESULT WBP / LWBP</span></a>
     </div>
   </div>
 
@@ -236,24 +199,21 @@
     window.addEventListener("load", () => {
       setTimeout(() => {
         document.body.classList.add("loaded");
-      }, 3800);
+      }, 4200);
     });
 
-    // Ripple effect anti-lag di HP
     document.querySelectorAll('.menu-card').forEach(card => {
       card.addEventListener('click', function(e) {
         const ripple = document.createElement('span');
         const rect = this.getBoundingClientRect();
         const size = Math.max(rect.width, rect.height);
-        const x = e.clientX - rect.left - size / 2;
-        const y = e.clientY - rect.top - size / 2;
-
+        const x = e.clientX - rect.left - size/2;
+        const y = e.clientY - rect.top - size/2;
         ripple.classList.add('ripple');
         ripple.style.width = ripple.style.height = size + 'px';
         ripple.style.left = x + 'px';
         ripple.style.top = y + 'px';
         this.appendChild(ripple);
-
         setTimeout(() => ripple.remove(), 600);
       });
     });
