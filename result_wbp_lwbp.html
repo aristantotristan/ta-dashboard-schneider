@@ -1,154 +1,258 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
-<meta charset="UTF-8">
-<title>Monitoring 18 Mesin</title>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>MASTER DASHBOARD TARIF • 18 Mesin</title>
 
-<style>
-body {
-    font-family: Arial;
-    background: #111;
-    color: white;
-}
-.container {
-    padding: 20px;
-}
-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 20px 0;
-}
-table, th, td {
-    border: 1px solid white;
-}
-th {
-    background: #222;
-}
-</style>
+  <!-- Supabase client & XLSX -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg:#ffffff; --text:#111827; --muted:#6b7280; --accent:#0ea5a4;
+      --table-bg:#f8fafc; --th-bg:#d1fae5;
+    }
+    *{box-sizing:border-box}
+    body{font-family:'JetBrains Mono',monospace;background:var(--bg);color:var(--text);margin:0;padding:24px;}
+    header{text-align:center;margin-bottom:18px}
+    h1{font-weight:700;letter-spacing:4px;margin:6px 0;}
+    .subtitle{color:var(--muted);font-size:0.95rem;margin-bottom:18px}
+
+    .controls{display:flex;gap:12px;align-items:center;justify-content:center;margin-bottom:18px;flex-wrap:wrap}
+    .controls label{font-size:0.85rem;color:var(--muted);display:block;margin-bottom:6px}
+    .controls .group{display:flex;flex-direction:column;align-items:flex-start}
+    input[type="date"]{padding:10px 12px;border-radius:8px;border:1px solid #e6e9ee;background:white}
+    .btn{padding:10px 14px;border-radius:10px;border:none;cursor:pointer;font-weight:700}
+    .btn-primary{background:var(--accent);color:white}
+    .btn-outline{background:transparent;border:2px solid var(--accent);color:var(--accent)}
+
+    /* Table */
+    .table-wrap{max-width:1400px;margin:0 auto;overflow-x:auto}
+    table{width:100%;border-collapse:collapse;background:var(--table-bg);border-radius:8px;overflow:hidden}
+    thead th{background:var(--th-bg);padding:12px 10px;text-align:center;font-weight:800}
+    tbody td{padding:12px 10px;text-align:center;border-top:1px solid #e6eef1}
+    .muted{color:var(--muted);font-weight:600}
+
+    /* responsive */
+    @media(max-width:720px){
+      .controls{flex-direction:column;align-items:stretch}
+    }
+  </style>
 </head>
-
 <body>
-<div class="container">
+  <header>
+    <h1>MASTER DASHBOARD TARIF</h1>
+    <div class="subtitle">Pilih rentang tanggal → semua mesin 1..18 muncul di satu tabel</div>
+  </header>
 
-<h2>Monitoring 18 Mesin</h2>
+  <div class="controls">
+    <div class="group">
+      <label for="globalStart">TANGGAL AWAL</label>
+      <input id="globalStart" type="date">
+    </div>
 
-<label>Dari tanggal:</label>
-<input type="date" id="startDate">
+    <div class="group">
+      <label for="globalEnd">TANGGAL AKHIR</label>
+      <input id="globalEnd" type="date">
+    </div>
 
-<label>Sampai tanggal:</label>
-<input type="date" id="endDate">
+    <div style="display:flex;gap:10px;align-items:end">
+      <button id="btnShowAll" class="btn btn-outline">TAMPILKAN SEMUA</button>
+      <button id="btnExport" class="btn btn-primary">EXPORT EXCEL</button>
+    </div>
+  </div>
 
-<button onclick="loadAllMachines()">TAMPILKAN SEMUA</button>
-<button onclick="exportExcel()">EXPORT EXCEL</button>
-
-<div id="dashboard"></div>
-
-</div>
+  <div class="table-wrap">
+    <table id="masterTable" aria-label="Master Dashboard Tarif">
+      <thead>
+        <tr>
+          <th>TGL AWAL</th>
+          <th>TGL AKHIR</th>
+          <th>MESIN</th>
+          <th>LWBP (kWh)</th>
+          <th>LWBP (Rp)</th>
+          <th>WBP (kWh)</th>
+          <th>WBP (Rp)</th>
+          <th>Total (kWh)</th>
+          <th>Total (Rp)</th>
+        </tr>
+      </thead>
+      <tbody id="masterTbody">
+        <!-- Rows akan di-generate JS: SID 1..18 -->
+      </tbody>
+    </table>
+  </div>
 
 <script>
-/* ---------------- FIREBASE CONFIG ---------------- */
-const firebaseConfig = {
-    apiKey: "ISI PUNYA MU",
-    authDomain: "ISI PUNYA MU",
-    databaseURL: "ISI PUNYA MU",
-    projectId: "ISI PUNYA MU",
-    storageBucket: "ISI PUNYA MU",
-    messagingSenderId: "ISI PUNYA MU",
-    appId: "ISI PUNYA MU"
+/* ================= CONFIG ================= */
+const SUPABASE_URL = "https://rojhcadtqfynlqzubftx.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs";
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const TABLE_NAME = "daily_meter_summary";
+
+/* Tarif */
+const TARIF_LWBP = 1135;
+const TARIF_WBP  = 996.74;
+
+/* Mesin names (opsional, bisa dikustom) */
+const MACHINE_TAGS = {
+  1:'SID 1',2:'SID 2',3:'SID 3',4:'SID 4',5:'SID 5',6:'SID 6',7:'SID 7',8:'SID 8',
+  9:'SID 9',10:'SID 10',11:'SID 11',12:'SID 12',13:'SID 13',14:'SID 14',15:'SID 15',16:'SID 16',17:'SID 17',18:'SID 18'
 };
-firebase.initializeApp(firebaseConfig);
 
+/* cache hasil per SID (dipakai bila perlu) */
+let cachedData = {}; // { sid: [rows...] }
 
-/* ---------------- LOAD SEMUA MESIN ---------------- */
-function loadAllMachines() {
-    const start = document.getElementById("startDate").value;
-    const end = document.getElementById("endDate").value;
-
-    if (!start || !end) {
-        alert("Isi tanggal dulu bro!");
-        return;
-    }
-
-    const dashboard = document.getElementById("dashboard");
-    dashboard.innerHTML = ""; // hapus tampilan lama
-
-    for (let i = 1; i <= 18; i++) {
-        let sid = i.toString().padStart(2, "0");
-
-        const div = document.createElement("div");
-        div.innerHTML = `
-            <h3>SID ${sid}</h3>
-            <table class="machine-table" id="table-SID${sid}" data-sid="SID_${sid}">
-                <thead>
-                    <tr>
-                        <th>Tanggal</th>
-                        <th>SID</th>
-                        <th>LWBP_kWh</th>
-                        <th>LWBP_Rp</th>
-                        <th>WBP_kWh</th>
-                        <th>WBP_Rp</th>
-                        <th>Total_kWh</th>
-                        <th>Total_Rp</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-        `;
-        dashboard.appendChild(div);
-
-        loadMachineData(sid, start, end);
-    }
+/* Inisialisasi tabel: buat 18 baris (default zeros) */
+function buildTableSkeleton() {
+  const tbody = document.getElementById('masterTbody');
+  tbody.innerHTML = '';
+  for (let s = 1; s <= 18; s++) {
+    const tr = document.createElement('tr');
+    tr.id = `row_${s}`;
+    tr.innerHTML = `
+      <td id="row_${s}_start" class="muted">-</td>
+      <td id="row_${s}_end" class="muted">-</td>
+      <td id="row_${s}_mesin">${MACHINE_TAGS[s] || s}</td>
+      <td id="row_${s}_lwbp">0.00</td>
+      <td id="row_${s}_lwbp_rp">0</td>
+      <td id="row_${s}_wbp">0.00</td>
+      <td id="row_${s}_wbp_rp">0</td>
+      <td id="row_${s}_total_kwh">0.00</td>
+      <td id="row_${s}_total_rp">0</td>
+    `;
+    tbody.appendChild(tr);
+  }
 }
 
-
-/* ---------------- LOAD DATA PER MESIN ---------------- */
-function loadMachineData(sid, start, end) {
-    const ref = firebase.database().ref("MeterHistory/SID" + sid);
-
-    ref.orderByKey().startAt(start).endAt(end).once("value", snapshot => {
-        const tbody = document.querySelector(`#table-SID${sid} tbody`);
-        tbody.innerHTML = "";
-
-        snapshot.forEach(child => {
-            let d = child.val();
-
-            let row = `
-                <tr>
-                    <td>${child.key}</td>
-                    <td>${sid}</td>
-                    <td>${d.LWBP_kWh || 0}</td>
-                    <td>${d.LWBP_Rp || 0}</td>
-                    <td>${d.WBP_kWh || 0}</td>
-                    <td>${d.WBP_Rp || 0}</td>
-                    <td>${d.Total_kWh || 0}</td>
-                    <td>${d.Total_Rp || 0}</td>
-                </tr>
-            `;
-
-            tbody.innerHTML += row;
-        });
-    });
+/* Format ID locale */
+function fmtNumber(n, decimals=2) {
+  const num = Number(n || 0);
+  return num.toLocaleString('id-ID', {minimumFractionDigits: decimals, maximumFractionDigits: decimals});
+}
+function fmtCurrency(n) {
+  const num = Number(n || 0);
+  return num.toLocaleString('id-ID');
 }
 
+/* Ambil data dari Supabase untuk satu SID dalam rentang (start..end) */
+async function fetchForSid(sid, start, end) {
+  // Query supabase: kolom tanggal, sid_mesin, lwbp_total, wbp_total
+  const { data, error } = await supabase
+    .from(TABLE_NAME)
+    .select('tanggal, sid_mesin, lwbp_total, wbp_total')
+    .eq('sid_mesin', sid)
+    .gte('tanggal', start)
+    .lte('tanggal', end)
+    .order('tanggal', { ascending: true });
 
-/* ---------------- EXPORT EXCEL 18 SHEET OTOMATIS ---------------- */
+  if (error) return { error: error.message };
+  return { data };
+}
+
+/* Render hasil ringkasan (sum) ke baris tabel untuk satu SID */
+function renderSidSummary(sid, start, end, rows) {
+  const lwbpSum = rows.reduce((acc, r) => acc + (parseFloat(r.lwbp_total || 0)), 0);
+  const wbpSum  = rows.reduce((acc, r) => acc + (parseFloat(r.wbp_total  || 0)), 0);
+  const totalKwh = lwbpSum + wbpSum;
+  const totalRp = lwbpSum * TARIF_LWBP + wbpSum * TARIF_WBP;
+
+  document.getElementById(`row_${sid}_start`).textContent = start;
+  document.getElementById(`row_${sid}_end`).textContent   = end;
+  document.getElementById(`row_${sid}_lwbp`).textContent  = fmtNumber(lwbpSum, 2);
+  document.getElementById(`row_${sid}_lwbp_rp`).textContent = fmtCurrency(Math.round(lwbpSum * TARIF_LWBP));
+  document.getElementById(`row_${sid}_wbp`).textContent   = fmtNumber(wbpSum, 2);
+  document.getElementById(`row_${sid}_wbp_rp`).textContent  = fmtCurrency(Math.round(wbpSum * TARIF_WBP));
+  document.getElementById(`row_${sid}_total_kwh`).textContent = fmtNumber(totalKwh, 2);
+  document.getElementById(`row_${sid}_total_rp`).textContent  = fmtCurrency(Math.round(totalRp));
+
+  cachedData[sid] = rows; // simpan data raw jika butuh export detail nanti
+}
+
+/* Tampilkan semua SID: ambil data paralel lalu render ringkasan tiap SID */
+async function showAll() {
+  const start = document.getElementById('globalStart').value;
+  const end   = document.getElementById('globalEnd').value;
+  if (!start || !end) {
+    alert('Isi tanggal awal & akhir dulu boss');
+    return;
+  }
+
+  // reset skeleton dan beri status 'memuat' di tiap baris
+  buildTableSkeleton();
+  for (let s=1; s<=18; s++){
+    document.getElementById(`row_${s}_start`).textContent = start;
+    document.getElementById(`row_${s}_end`).textContent = end;
+    document.getElementById(`row_${s}_lwbp`).textContent = 'Memuat...';
+    document.getElementById(`row_${s}_wbp`).textContent = 'Memuat...';
+    document.getElementById(`row_${s}_total_kwh`).textContent = 'Memuat...';
+    document.getElementById(`row_${s}_lwbp_rp`).textContent = '';
+    document.getElementById(`row_${s}_wbp_rp`).textContent = '';
+    document.getElementById(`row_${s}_total_rp`).textContent = '';
+  }
+
+  const jobs = [];
+  for (let s=1; s<=18; s++){
+    jobs.push(fetchForSid(s, start, end));
+  }
+
+  const results = await Promise.all(jobs);
+
+  for (let s=1; s<=18; s++){
+    const res = results[s-1];
+    if (res.error) {
+      // jika error fetch, tampilkan 0 dan pesan kecil
+      document.getElementById(`row_${s}_lwbp`).textContent = '0.00';
+      document.getElementById(`row_${s}_wbp`).textContent = '0.00';
+      document.getElementById(`row_${s}_total_kwh`).textContent = '0.00';
+      document.getElementById(`row_${s}_lwbp_rp`).textContent = '0';
+      document.getElementById(`row_${s}_wbp_rp`).textContent = '0';
+      document.getElementById(`row_${s}_total_rp`).textContent = '0';
+      cachedData[s] = [];
+      console.error(`Error SID ${s}:`, res.error);
+    } else {
+      const rows = res.data || [];
+      renderSidSummary(s, start, end, rows);
+    }
+  }
+}
+
+/* EXPORT: ambil tabel masterTable dan jadikan 1 sheet Excel */
 function exportExcel() {
-    const wb = XLSX.utils.book_new();
+  const table = document.getElementById('masterTable');
+  if (!table) {
+    alert('Tabel master tidak ditemukan');
+    return;
+  }
 
-    const tables = document.querySelectorAll(".machine-table");
+  const wb = XLSX.utils.book_new();
+  // konversi ke worksheet langsung dari tabel HTML (header + body)
+  const ws = XLSX.utils.table_to_sheet(table);
+  // sheet name aman: Master
+  XLSX.utils.book_append_sheet(wb, ws, 'MASTER');
 
-    tables.forEach((table, index) => {
-        let sidName = table.getAttribute("data-sid") || `SID_${index+1}`;
-        const ws = XLSX.utils.table_to_sheet(table);
-        XLSX.utils.book_append_sheet(wb, ws, sidName);
-    });
-
-    XLSX.writeFile(wb, "MASTER_18SID.xlsx");
+  const start = document.getElementById('globalStart').value || 'start';
+  const end   = document.getElementById('globalEnd').value || 'end';
+  XLSX.writeFile(wb, `MASTER_DASHBOARD_${start}_to_${end}.xlsx`);
 }
-</script>
 
+/* Event listeners */
+document.getElementById('btnShowAll').addEventListener('click', showAll);
+document.getElementById('btnExport').addEventListener('click', exportExcel);
+
+/* Default range = last 30 days */
+(function setDefaultDates() {
+  const today = new Date();
+  const toISO = d => d.toISOString().split('T')[0];
+  const last30 = new Date(Date.now() - 30*24*60*60*1000);
+  document.getElementById('globalEnd').value = toISO(today);
+  document.getElementById('globalStart').value = toISO(last30);
+  buildTableSkeleton();
+})();
+</script>
 </body>
 </html>
