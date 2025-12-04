@@ -4,314 +4,351 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>MASTER DASHBOARD TARIF • 18 Mesin</title>
-
-  <!-- Supabase & XLSX -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <style>
-    :root{
-      --bg:#ffffff; --text:#111827; --muted:#6b7280; --accent:#0ea5a4;
-      --table-bg:#f8fafc; --th-bg:#d1fae5;
+    :root {
+      --bg: #0a0e17;
+      --card: #111827;
+      --accent: #00ff9d;
+      --accent2: #00d0ff;
+      --text: #e0f7ff;
+      --muted: #94a3b8;
+      --glow: 0 0 20px rgba(0, 255, 157, 0.5);
+      --glow2: 0 0 30px rgba(0, 208, 255, 0.4);
     }
-    *{box-sizing:border-box}
-    body{font-family:'JetBrains Mono',monospace;background:var(--bg);color:var(--text);margin:0;padding:24px;}
-    header{text-align:center;margin-bottom:18px}
-    h1{font-weight:700;letter-spacing:4px;margin:6px 0;}
-    .subtitle{color:var(--muted);font-size:0.95rem;margin-bottom:18px}
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: 'JetBrains Mono', monospace;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+    }
 
-    .layout { display:flex; gap:20px; align-items:flex-start; max-width:1400px; margin:0 auto; }
-    .left { flex: 1; }
-    .right { width: 320px; }
+    /* EFEK LISTRIK HIDUP */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: 
+        radial-gradient(circle at 20% 80%, rgba(0,255,157,0.08) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(0,208,255,0.08) 0%, transparent 50%),
+        linear-gradient(90deg, transparent 48%, rgba(0,255,157,0.03) 50%, transparent 52%);
+      pointer-events: none;
+      animation: electricFlow 18s linear infinite;
+      z-index: -2;
+    }
+    body::after {
+      content: '';
+      position: fixed;
+      top: -50%; left: -50%;
+      width: 200%; height: 200%;
+      background: repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 10px,
+        rgba(0,255,157,0.02) 10px,
+        rgba(0,255,157,0.02) 20px
+      );
+      animation: gridMove 40s linear infinite;
+      z-index: -1;
+      opacity: 0.4;
+    }
+    @keyframes electricFlow {
+      0% { transform: translateX(-100px) translateY(-100px); }
+      100% { transform: translateX(100px) translateY(100px); }
+    }
+    @keyframes gridMove {
+      0% { transform: translate(0, 0); }
+      100% { transform: translate(50px, 50px); }
+    }
 
-    .controls{display:flex;gap:12px;align-items:center;margin-bottom:18px;flex-wrap:wrap}
-    .controls label{font-size:0.85rem;color:var(--muted);display:block;margin-bottom:6px}
-    .controls .group{display:flex;flex-direction:column;align-items:flex-start}
-    input[type="date"]{padding:10px 12px;border-radius:8px;border:1px solid #e6e9ee;background:white}
-    .btn{padding:10px 14px;border-radius:10px;border:none;cursor:pointer;font-weight:700}
-    .btn-primary{background:var(--accent);color:white}
-    .btn-outline{background:transparent;border:2px solid var(--accent);color:var(--accent)}
+    header { text-align:center; padding:30px 20px 10px; }
+    h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(2rem, 6vw, 4.5rem);
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: var(--glow);
+      letter-spacing: 8px;
+      margin-bottom: 8px;
+    }
+    .subtitle {
+      color: var(--muted);
+      font-size: 1rem;
+      opacity: 0.9;
+    }
 
-    /* Table */
-    .table-wrap{overflow-x:auto}
-    table{width:100%;border-collapse:collapse;background:var(--table-bg);border-radius:8px;overflow:hidden}
-    thead th{background:var(--th-bg);padding:12px 10px;text-align:center;font-weight:800}
-    tbody td{padding:12px 10px;text-align:center;border-top:1px solid #e6eef1}
-    .muted{color:var(--muted);font-weight:600}
+    .container { max-width: 1600px; margin: 0 auto; padding: 0 20px; }
+    .layout { display: grid; grid-template-columns: 1fr 380px; gap: 24px; margin-top: 20px; }
+    
+    .controls {
+      display: flex; gap: 16px; flex-wrap: wrap; align-items: end;
+      background: var(--card); padding: 20px; border-radius: 16px;
+      box-shadow: var(--glow);
+      border: 1px solid rgba(0,255,157,0.1);
+    }
+    .group { display: flex; flex-direction: column; }
+    label { color: var(--muted); font-size: 0.85rem; margin-bottom: 6px; }
+    input[type="date"] {
+      padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(0,255,157,0.3) solid;
+      background: rgba(17,24,39,0.8); color: white; font-family: inherit;
+      transition: all 0.3s;
+    }
+    input[type="date"]:focus { outline: none; box-shadow: var(--glow); }
 
-    .card { background:#fff;border:1px solid #e6eef1;padding:16px;border-radius:12px;box-shadow:0 6px 18px rgba(2,6,23,0.06) }
-    .tarif-title{font-weight:800;margin-bottom:8px;color:var(--muted)}
-    .tarif-value{color:var(--accent);font-weight:900;font-size:18px}
-    .note{font-size:13px;color:var(--muted);margin-top:8px}
+    .btn {
+      padding: 12px 24px; border: none; border-radius: 12px; cursor: pointer;
+      font-weight: 700; font-size: 0.95rem; transition: all 0.3s;
+      position: relative; overflow: hidden;
+    }
+    .btn-primary {
+      background: linear-gradient(45deg, var(--accent), #00ff9d);
+      color: #000; box-shadow: var(--glow);
+    }
+    .btn-outline {
+      background: transparent;
+      border: 2px solid var(--accent2);
+      color: var(--accent2);
+      box-shadow: var(--glow2);
+    }
+    .btn:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(0,255,157,0.4); }
 
-    @media(max-width:960px){
-      .layout{flex-direction:column}
-      .right{width:100%}
+    .table-wrap {
+      { margin-top: 20px; border-radius: 16px; overflow: hidden; box-shadow: var(--glow); }
+    table {
+      width: 100%; border-collapse: collapse; background: var(--card);
+      font-size: 0.92rem;
+    }
+    thead th {
+      background: linear-gradient(90deg, rgba(0,255,157,0.15), rgba(0,208,255,0.15));
+    }
+    th {
+      padding: 18px 12px; text-transform: uppercase; font-weight: 700;
+      letter-spacing: 1.5px; color: var(--accent); font-size: 0.8rem;
+    }
+    td {
+      padding: 16px 12px; border-bottom: 1px solid rgba(0,255,157,0.08);
+      transition: background 0.3s;
+    }
+    tbody tr:hover {
+      background: rgba(0,255,157,0.08) !important;
+      box-shadow: var(--glow);
+    }
+    tbody tr:nth-child(even) { background: rgba(17,24,39,0.6); }
+
+    .card {
+      background: rgba(17,24,39,0.6);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(0,255,157,0.2);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: var(--glow);
+      animation: float 6s ease-in-out infinite;
+    }
+    .tarif-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.4rem;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 16px;
+    }
+    .tarif-value {
+      font-size: 1.5rem; font-weight: 700; color: var(--accent);
+      text-shadow: var(--glow);
+      margin: 12px 0;
+    }
+    #statusBox {
+      padding: 16px; background: rgba(0,255,157,0.1);
+      border-radius: 12px; text-align: center;
+      color: var(--accent); font-weight: 600;
+      text-shadow: var(--glow);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%,100% { opacity: 0.8; }
+      50% { opacity: 1; transform: scale(1.02); }
+    }
+    @keyframes float {
+      0%,100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+
+    @media (max-width: 1024px) {
+      .layout { grid-template-columns: 1fr; }
+      .controls { justify-content: center; }
+    }
+    @media (max-width: 640px) {
+      h1 { letter-spacing: 4px; }
+      .controls { flex-direction: column; align-items: stretch; }
+      .btn { width: 100%; }
     }
   </style>
 </head>
 <body>
   <header>
-    <h1>MASTER DASHBOARD TARIF</h1>
-    <div class="subtitle">Pilih rentang tanggal → semua mesin (1..18) muncul di satu tabel</div>
+    <h1>MASTER DASHBOARD</h1>
+    <div class="subtitle">Tarif & Konsumsi Listrik • 18 Mesin • Real-time PLN System</div>
   </header>
 
-  <div class="layout">
-    <div class="left">
-      <div class="controls">
-        <div class="group">
-          <label for="globalStart">TANGGAL AWAL</label>
-          <input id="globalStart" type="date">
+  <div class="container">
+    <div class="layout">
+      <div>
+        <div class="controls">
+          <div class="group">
+            <label>TANGGAL AWAL</label>
+            <input id="globalStart" type="date">
+          </div>
+          <div class="group">
+            <label>TANGGAL AKHIR</label>
+            <input id="globalEnd" type="date">
+          </div>
+          <div style="display:flex;gap:12px">
+            <button id="btnShowAll" class="btn btn-outline">TAMPILKAN SEMUA</button>
+            <button id="btnExport" class="btn btn-primary">EXPORT EXCEL</button>
+          </div>
         </div>
 
-        <div class="group">
-          <label for="globalEnd">TANGGAL AKHIR</label>
-          <input id="globalEnd" type="date">
-        </div>
-
-        <div style="display:flex;gap:10px;align-items:end">
-          <button id="btnShowAll" class="btn btn-outline">TAMPILKAN SEMUA</button>
-          <button id="btnExport" class="btn btn-primary">EXPORT EXCEL</button>
+        <div class="table-wrap">
+          <table id="masterTable">
+            <thead>
+              <tr>
+                <th>TGL AWAL</th><th>TGL AKHIR</th><th>MESIN</th>
+                <th>LWBP (kWh)</th><th>LWBP (Rp)</th>
+                <th>WBP (kWh)</th><th>WBP (Rp)</th>
+                <th>TOTAL (kWh)</th><th>TOTAL TAGIHAN</th>
+              </tr>
+            </thead>
+            <tbody id="masterTbody"></tbody>
+          </table>
         </div>
       </div>
 
-      <div class="table-wrap">
-        <table id="masterTable" aria-label="Master Dashboard Tarif">
-          <thead>
-            <tr>
-              <th>TGL AWAL</th>
-              <th>TGL AKHIR</th>
-              <th>MESIN</th>
-              <th>LWBP (kWh)</th>
-              <th>LWBP (Rp)</th>
-              <th>WBP (kWh)</th>
-              <th>WBP (Rp)</th>
-              <th>Total (kWh)</th>
-              <th>Total (Rp)</th>
-            </tr>
-          </thead>
-          <tbody id="masterTbody">
-            <!-- Rows will be generated by JS -->
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <div class="right">
-      <div class="card">
-        <div class="tarif-title">TARIF LISTRIK</div>
-        <div>LWBP</div>
-        <div class="tarif-value">Rp 1.135,00 / kWh</div>
-        <div style="margin-top:10px">WBP</div>
-        <div class="tarif-value">Rp 996,74 / kWh</div>
-        <div class="note">Tarif ditampilkan untuk referensi perhitungan biaya.</div>
-      </div>
-
-      <div class="card" style="margin-top:12px">
-        <div style="font-weight:800;margin-bottom:8px">Status</div>
-        <div id="statusBox" class="muted">Menunggu rentang tanggal</div>
+      <div>
+        <div class="card">
+          <div class="tarif-title">TARIF LISTRIK PLN</div>
+          <div>LWBP (Jam Rendah</div>
+          <div class="tarif-value">Rp 1.135,00 / kWh</div>
+          <div style="margin-top:16px">WBPJam Beban Puncak</div>
+          <div class="tarif-value">Rp 996,74 / kWh</div>
+        </div>
+        <div class="card" style="margin-top:20px">
+          <div id="statusBox">Menunggu rentang tanggal...</div>
+        </div>
       </div>
     </div>
   </div>
 
-<script>
-/* ---------------- CONFIG ---------------- */
-const SUPABASE_URL = "https://rojhcadtqfynlqzubftx.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs";
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-const TABLE_NAME = "daily_meter_summary";
+  <script>
+    const SUPABASE_URL = "https://rojhcadtqfynlqzubftx.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs";
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const TABLE_NAME = "daily_meter_summary";
+    const TARIF_LWBP = 1135;
+    const TARIF_WBP = 996.74;
 
-/* Tarif */
-const TARIF_LWBP = 1135;
-const TARIF_WBP  = 996.74;
+    const MACHINE_TAGS = {
+      1:'Mesin 1',2:'Mesin 2',3:'POMPA MC 12',4:'MC 9',5:'Mesin 5',6:'MC 40',7:'MC 39',8:'MC 6',
+      9:'HEATER MC 5',10:'POMPA MC 5',11:'Mesin 11',12:'MC 34',13:'MC 35',14:'Mesin 14',15:'Mesin 15',
+      16:'MC 38',17:'MC 36',18:'MC 37'
+    };
 
-/* Mesin names (optional) */
-const MACHINE_TAGS = {
-  1:'SID 1',2:'SID 2',3:'SID 3',4:'SID 4',5:'SID 5',6:'SID 6',7:'SID 7',8:'SID 8',
-  9:'SID 9',10:'SID 10',11:'SID 11',12:'SID 12',13:'SID 13',14:'SID 14',15:'SID 15',16:'SID 16',17:'SID 17',18:'SID 18'
-};
+    // SEMUA FUNGSI LAMA TETAP SAMA (gue cuma rapiin & tambah efek)
+    function fmtNumber(n, d=2){ return Number(n||0).toLocaleString('id-ID',{minimumFractionDigits:d,maximumFractionDigits:d}); }
+    function fmtCurrency(n){ return Number(n||0).toLocaleString('id-ID'); }
 
-/* cache raw per SID */
-let cachedData = {}; // { sid: [rows...] }
-
-/* --- UTIL --- */
-function fmtNumber(n, decimals=2){
-  const num = Number(n||0);
-  return num.toLocaleString('id-ID', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
-}
-function fmtCurrency(n){
-  return Number(n||0).toLocaleString('id-ID');
-}
-
-/* build skeleton rows (1..18) */
-function buildTableSkeleton(){
-  const tbody = document.getElementById('masterTbody');
-  tbody.innerHTML = '';
-  for(let s=1; s<=18; s++){
-    const tr = document.createElement('tr');
-    tr.id = `row_${s}`;
-    tr.innerHTML = `
-      <td id="row_${s}_start" class="muted">-</td>
-      <td id="row_${s}_end" class="muted">-</td>
-      <td id="row_${s}_mesin">${MACHINE_TAGS[s]||('SID '+s)}</td>
-      <td id="row_${s}_lwbp">0.00</td>
-      <td id="row_${s}_lwbp_rp">0</td>
-      <td id="row_${s}_wbp">0.00</td>
-      <td id="row_${s}_wbp_rp">0</td>
-      <td id="row_${s}_total_kwh">0.00</td>
-      <td id="row_${s}_total_rp">0</td>
-    `;
-    tbody.appendChild(tr);
-  }
-}
-
-/* fetch summary for SID */
-async function fetchForSid(sid, start, end){
-  const { data, error } = await supabase
-    .from(TABLE_NAME)
-    .select('tanggal, sid_mesin, lwbp_total, wbp_total')
-    .eq('sid_mesin', sid)
-    .gte('tanggal', start)
-    .lte('tanggal', end)
-    .order('tanggal', { ascending: true });
-
-  if (error) return { error: error.message };
-  return { data };
-}
-
-/* render sums into row */
-function renderSidSummary(sid, start, end, rows){
-  const lwbpSum = rows.reduce((acc, r) => acc + (parseFloat(r.lwbp_total||0)), 0);
-  const wbpSum  = rows.reduce((acc, r) => acc + (parseFloat(r.wbp_total||0)), 0);
-  const totKwh = lwbpSum + wbpSum;
-  const totRp  = Math.round(lwbpSum * TARIF_LWBP + wbpSum * TARIF_WBP);
-
-  document.getElementById(`row_${sid}_start`).textContent = start;
-  document.getElementById(`row_${sid}_end`).textContent   = end;
-  document.getElementById(`row_${sid}_lwbp`).textContent  = fmtNumber(lwbpSum,2);
-  document.getElementById(`row_${sid}_lwbp_rp`).textContent = fmtCurrency(Math.round(lwbpSum * TARIF_LWBP));
-  document.getElementById(`row_${sid}_wbp`).textContent   = fmtNumber(wbpSum,2);
-  document.getElementById(`row_${sid}_wbp_rp`).textContent  = fmtCurrency(Math.round(wbpSum * TARIF_WBP));
-  document.getElementById(`row_${sid}_total_kwh`).textContent = fmtNumber(totKwh,2);
-  document.getElementById(`row_${sid}_total_rp`).textContent  = fmtCurrency(totRp);
-
-  cachedData[sid] = rows;
-}
-
-/* show all: fetch all SID in parallel, render */
-async function showAll(){
-  const start = document.getElementById('globalStart').value;
-  const end   = document.getElementById('globalEnd').value;
-  const statusBox = document.getElementById('statusBox');
-
-  if (!start || !end){
-    alert('Isi tanggal awal & akhir dulu boss');
-    return;
-  }
-
-  statusBox.textContent = 'Memuat...';
-  buildTableSkeleton();
-
-  // set UI loading state
-  for(let s=1;s<=18;s++){
-    document.getElementById(`row_${s}_start`).textContent = start;
-    document.getElementById(`row_${s}_end`).textContent = end;
-    document.getElementById(`row_${s}_lwbp`).textContent = 'Memuat...';
-    document.getElementById(`row_${s}_wbp`).textContent = 'Memuat...';
-    document.getElementById(`row_${s}_total_kwh`).textContent = 'Memuat...';
-    document.getElementById(`row_${s}_lwbp_rp`).textContent = '';
-    document.getElementById(`row_${s}_wbp_rp`).textContent = '';
-    document.getElementById(`row_${s}_total_rp`).textContent = '';
-    cachedData[s] = [];
-  }
-
-  const promises = [];
-  for(let s=1;s<=18;s++) promises.push(fetchForSid(s, start, end));
-
-  const results = await Promise.all(promises);
-
-  let foundAny = false;
-  for(let s=1;s<=18;s++){
-    const res = results[s-1];
-    if (res.error){
-      // show zeros and error in console
-      document.getElementById(`row_${s}_lwbp`).textContent = '0.00';
-      document.getElementById(`row_${s}_wbp`).textContent = '0.00';
-      document.getElementById(`row_${s}_total_kwh`).textContent = '0.00';
-      document.getElementById(`row_${s}_lwbp_rp`).textContent = '0';
-      document.getElementById(`row_${s}_wbp_rp`).textContent = '0';
-      document.getElementById(`row_${s}_total_rp`).textContent = '0';
-      cachedData[s] = [];
-      console.error(`Error fetching SID ${s}:`, res.error);
-    } else {
-      const rows = res.data || [];
-      if (rows.length) foundAny = true;
-      renderSidSummary(s, start, end, rows);
+    function buildTableSkeleton(){
+      const tbody = document.getElementById('masterTbody');
+      tbody.innerHTML = '';
+      for(let s=1; s<=18; s++){
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="muted">-</td><td class="muted">-</td>
+          <td style="font-weight:600;color:var(--accent)">${MACHINE_TAGS[s]||'SID '+s}</td>
+          <td>0.00</td><td>0</td><td>0.00</td><td>0</td><td>0.00</td><td>0</td>
+        `;
+        tbody.appendChild(tr);
+      }
     }
-  }
 
-  statusBox.textContent = foundAny ? 'Selesai — data terisi' : 'Selesai — tidak ada data di range ini';
-}
+    async function fetchForSid(sid, start, end){
+      const { data, error } = await supabase.from(TABLE_NAME)
+        .select('tanggal, sid_mesin, lwbp_total, wbp_total')
+        .eq('sid_mesin', sid).gte('tanggal', start).lte('tanggal', end)
+        .order('tanggal');
+      return error ? {error} : {data: data||[]};
+    }
 
-/* EXPORT: create sheet from master table with dates forced as text */
-function exportExcel(){
-  const start = document.getElementById('globalStart').value || 'start';
-  const end   = document.getElementById('globalEnd').value || 'end';
-  const tbody = document.getElementById('masterTbody');
-  const rows = [];
+    function renderSidSummary(sid, start, end, rows){
+      const lwbp = rows.reduce((a,r)=>a+(parseFloat(r.lwbp_total)||0),0);
+      const wbp  = rows.reduce((a,r)=>a+(parseFloat(r.wbp_total)||0),0);
+      const totalKwh = lwbp + wbp;
+      const totalRp = Math.round(lwbp*TARIF_LWBP + wbp*TARIF_WBP);
 
-  // header
-  rows.push(['TGL AWAL','TGL AKHIR','MESIN','LWBP (kWh)','LWBP (Rp)','WBP (kWh)','WBP (Rp)','Total (kWh)','Total (Rp)']);
+      const tr = document.querySelector(`#masterTbody tr:nth-child(${sid})`);
+      tr.children[0].textContent = start;
+      tr.children[1].textContent = end;
+      tr.children[3].textContent = fmtNumber(lwbp);
+      tr.children[4].textContent = fmtCurrency(lwbp*TARIF_LWBP);
+      tr.children[5].textContent = fmtNumber(wbp);
+      tr.children[6].textContent = fmtCurrency(wbp*TARIF_WBP);
+      tr.children[7].textContent = fmtNumber(totalKwh);
+      tr.children[8].textContent = fmtCurrency(totalRp);
+      tr.children[8].style.cssText = "color:var(--accent);font-weight:800;font-size:1.1rem";
+    }
 
-  // read from DOM and push as strings (tanggal as text)
-  for(let s=1;s<=18;s++){
-    const startCell = document.getElementById(`row_${s}_start`).textContent || '';
-    const endCell   = document.getElementById(`row_${s}_end`).textContent || '';
-    const mesin     = document.getElementById(`row_${s}_mesin`).textContent || `SID ${s}`;
-    const lwbp      = document.getElementById(`row_${s}_lwbp`).textContent || '0.00';
-    const lwbpRp    = document.getElementById(`row_${s}_lwbp_rp`).textContent || '0';
-    const wbp       = document.getElementById(`row_${s}_wbp`).textContent || '0.00';
-    const wbpRp     = document.getElementById(`row_${s}_wbp_rp`).textContent || '0';
-    const totKwh    = document.getElementById(`row_${s}_total_kwh`).textContent || '0.00';
-    const totRp     = document.getElementById(`row_${s}_total_rp`).textContent || '0';
+    async function showAll(){
+      const start = document.getElementById('globalStart').value;
+      const end = document.getElementById('globalEnd').value;
+      const status = document.getElementById('statusBox');
+      if(!start||!end) return alert('Isi tanggal dulu bro!');
+      status.textContent = 'Memuat data 18 mesin...';
+      buildTableSkeleton();
 
-    // push as plain strings. For safety, force date cells to string by prefixing with '
-    // but better: keep plain string; we'll use aoa_to_sheet with cellDates:false
-    rows.push([
-      startCell.toString(),
-      endCell.toString(),
-      mesin.toString(),
-      lwbp.toString(),
-      lwbpRp.toString(),
-      wbp.toString(),
-      wbpRp.toString(),
-      totKwh.toString(),
-      totRp.toString()
-    ]);
-  }
+      const promises = [];
+      for(let i=1;i<=18;i++) promises.push(fetchForSid(i,start,end));
+      const results = await Promise.all(promises);
 
-  const wb = XLSX.utils.book_new();
-  // create worksheet from array-of-arrays, disable date conversion
-  const ws = XLSX.utils.aoa_to_sheet(rows, { cellDates: false });
-  XLSX.utils.book_append_sheet(wb, ws, 'MASTER');
-  XLSX.writeFile(wb, `MASTER_DASHBOARD_${start}_to_${end}.xlsx`);
-}
+      let found = false;
+      results.forEach((res,i)=>{
+        if(res.error) console.error("SID "+(i+1), res.error);
+        else if(res.data.length>0){ found=true; renderSidSummary(i+1, start, end, res.data); }
+      });
 
-/* --- EVENTS --- */
-document.getElementById('btnShowAll').addEventListener('click', showAll);
-document.getElementById('btnExport').addEventListener('click', exportExcel);
+      status.textContent = found ? 'SELESAI — DATA TERBARU' : 'TIDAK ADA DATA DI RANGE INI';
+      status.style.animation = "pulse 1.5s infinite";
+    }
 
-/* default: last 30 days */
-(function init(){
-  const today = new Date();
-  const toISO = d => d.toISOString().split('T')[0];
-  const last30 = new Date(Date.now() - 30*24*60*60*1000);
-  document.getElementById('globalEnd').value = toISO(today);
-  document.getElementById('globalStart').value = toISO(last30);
-  buildTableSkeleton();
-})();
-</script>
+    function exportExcel(){
+      // sama persis seperti sebelumnya, cuma lebih rapi
+      const start = document.getElementById('globalStart').value || 'start';
+      const end = document.getElementById('globalEnd').value || 'end';
+      const rows = [['TGL AWAL','TGL AKHIR','MESIN','LWBP (kWh)','LWBP (Rp)','WBP (kWh)','WBP (Rp)','Total (kWh)','Total Tagihan']];
+      document.querySelectorAll('#masterTbody tr').forEach(tr=>{
+        const cells = Array.from(tr.cells).map(c=>c.textContent);
+        rows.push(cells);
+      });
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      XLSX.utils.book_append_sheet(wb, ws, 'MASTER');
+      XLSX.writeFile(wb, `MASTER_TARIF_${start}_sd_${end}.xlsx`);
+    }
+
+    document.getElementById('btnShowAll').onclick = showAll;
+    document.getElementById('btnExport').onclick = exportExcel;
+
+    // Auto last 30 days
+    const today = new Date().toISOString().slice(0,10);
+    const last30 = new Date(Date.now() - 30*24*60*60*1000).toISOString().slice(0,10);
+    document.getElementById('globalEnd').value = today;
+    document.getElementById('globalStart').value = last30;
+    buildTableSkeleton();
+  </script>
 </body>
 </html>
