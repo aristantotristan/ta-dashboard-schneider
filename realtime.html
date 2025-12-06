@@ -1,115 +1,230 @@
-
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
-<meta charset="utf-8" />
-<title>Master Power Meter Dashboard (18 SLAVES)</title>
-<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<style>
-  :root{--bg:#121212;--card:#1E1E1E;--accent:#00FFC2;--online:#10B981;--offline:#EF4444;--tariff:#FACC15}
-  body{font-family:Segoe UI,sans-serif;background:var(--bg);color:#E0E0E0;padding:20px;margin:0}
-  h2{color:var(--accent);margin:0 0 12px 0}
-  #conn{margin-bottom:14px;font-weight:600;color:#94A3B8}
-  table{width:100%;border-collapse:collapse;box-shadow:0 6px 20px rgba(0,0,0,0.6);border-radius:8px;overflow:hidden}
-  thead th{background:#2A2A2A;color:var(--accent);text-transform:uppercase;font-size:0.8rem;padding:10px 8px}
-  th,td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.02);text-align:center;font-size:0.86rem}
-  tbody tr{background:var(--card)}
-  tbody tr:hover{background:#2b2b2b}
-  .cell-id{font-weight:700;background:#111827}
-  .status-online{color:var(--online);font-weight:700}
-  .status-offline{color:var(--offline);font-weight:700}
-  .col-tariff{color:var(--tariff);font-weight:700}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MASTER POWER METER • 18 MESIN</title>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#0a0e17;--card:#111827;--accent:#00ff9d;--secondary:#00d0ff;
+      --online:#00ff9d;--offline:#ff4757;--glow:0 0 30px rgba(0,255,157,0.5);
+    }
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{
+      background:var(--bg);color:#e0f7ff;font-family:'JetBrains Mono',monospace;
+      min-height:100vh;padding:20px 16px;overflow-x:hidden;
+    }
+    header{text-align:center;margin-bottom:30px}
+    h1{
+      font-family:'Orbitron',sans-serif;font-size:clamp(2.5rem,8vw,4.5rem);
+      font-weight:900;letter-spacing:8px;
+      background:linear-gradient(90deg,var(--accent),var(--secondary));
+      -webkit-background-clip:text;background-clip:text;
+      -webkit-text-fill-color:transparent;text-shadow:var(--glow);
+    }
+    .subtitle{color:#94a3b8;font-size:1rem;letter-spacing:3px;margin-top:8px}
+
+    #conn{
+      text-align:center;padding:12px;background:rgba(0,255,157,0.1);
+      border:1px solid rgba(0,255,157,0.3);border-radius:12px;max-width:600px;
+      margin:0 auto 30px;color:var(--accent);font-weight:700;
+    }
+
+    .grid{
+      display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+      gap:24px;max-width:1600px;margin:0 auto;
+    }
+    .card{
+      background:var(--card);border-radius:20px;padding:24px;
+      text-align:center;position:relative;overflow:hidden;
+      border:1px solid rgba(0,255,157,0.2);box-shadow:0 10px 30px rgba(0,0,0,0.6);
+      transition:all 0.4s cubic-bezier(0.175,0.885,0.32,1.275);cursor:pointer;
+    }
+    .card:hover{
+      transform:translateY(-12px) scale(1.03);
+      box-shadow:0 20px 60px rgba(0,255,157,0.4);border-color:var(--accent);
+    }
+    .card::before{
+      content:'';position:absolute;top:0;left:50%;width:0;height:4px;
+      background:var(--accent);box-shadow:var(--glow);transition:0.6s;
+      transform:translateX(-50%);
+    }
+    .card:hover::before{width:100%}
+
+    .status{
+      position:absolute;top:16px;right:16px;width:16px;height:16px;
+      border-radius:50%;background:var(--offline);box-shadow:0 0 20px var(--offline);
+      transition:all 0.4s;
+    }
+    .status.online{
+      background:var(--online);box-shadow:0 0 30px var(--online);
+      animation:pulse 2s infinite;
+    }
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.6}}
+
+    .machine-name{
+      font-size:1.4rem;font-weight:700;color:var(--accent);margin:12px 0;
+      text-shadow:0 0 20px rgba(0,255,157,0.6);
+    }
+    .sid{
+      font-size:2rem;font-weight:900;color:var(--primary);
+      font-family:'Orbitron',sans-serif;text-shadow:var(--glow);
+    }
+
+    /* MODAL DETAIL */
+    #modal{
+      position:fixed;inset:0;background:rgba(0,0,0,0.95);backdrop-filter:blur(16px);
+      display:none;justify-content:center;align-items:center;z-index:9999;padding:20px;
+    }
+    .modal-content{
+      background:rgba(17,24,39,0.95);border:2px solid var(--accent);
+      border-radius:24px;max-width:500px;width:100%;max-height:90vh;
+      overflow-y:auto;box-shadow:0 20px 80px rgba(0,255,157,0.6);
+      animation:modalIn 0.6s ease;
+    }
+    @keyframes modalIn{from{transform:scale(0.8);opacity:0}to{transform:scale(1);opacity:1}}
+    .modal-header{
+      background:linear-gradient(135deg,var(--accent),var(--secondary));
+      padding:20px;text-align:center;color:#000;font-family:'Orbitron',sans-serif;
+      font-size:1.8rem;font-weight:900;border-radius:22px 22px 0 0;
+    }
+    .close{
+      position:absolute;top:12px;right:16px;background:none;border:none;
+      font-size:2.5rem;color:#000;cursor:pointer;
+    }
+    .params{
+      padding:24px;
+    }
+    .param{
+      display:flex;justify-content:space-between;padding:14px 0;
+      border-bottom:1px solid rgba(0,255,157,0.2);
+    }
+    .param:last-child{border:none}
+    .param-name{color:#94a3b8;font-weight:600}
+    .param-value{font-weight:700;color:var(--accent);font-size:1.1rem}
+
+    @media(max-width:640px){
+      .grid{grid-template-columns:1fr 1fr;gap:16px}
+      .card{padding:20px}
+      .sid{font-size:1.6rem}
+      .machine-name{font-size:1.2rem}
+    }
+  </style>
 </head>
 <body>
-<h2>Real-time Power Meter Dashboard (18 Mesin)</h2>
-<p id="conn">Connecting...</p>
-<table>
-  <thead>
-    <tr>
-      <th>ID</th><th>Status</th><th>V</th><th>I1</th><th>I2</th><th>I3</th><th>P (W)</th><th>Q (VAR)</th><th>S (kVA)</th>
-      <th>PF</th><th>Hz</th><th>OpH</th><th>Ea Tot</th><th>Er Tot</th><th>Ea Part</th><th>Er Part</th>
-      <th class="col-tariff">T1 (kWh)</th><th class="col-tariff">T2 (kWh)</th>
-    </tr>
-  </thead>
-  <tbody id="tableBody"></tbody>
-</table>
+  <header>
+    <h1>MASTER POWER METER</h1>
+    <div class="subtitle">Real-time Monitoring • 18 Mesin</div>
+  </header>
+  <div id="conn">Menghubungkan ke server...</div>
 
-<script>
-// SUPABASE — PAKAI YANG SAMA (YANG GUE) → 100% JALAN!
-const supabase = window.supabase.createClient(
-  'https://rojhcadtqfynlqzubftx.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs'
-);
+  <div class="grid" id="grid"></div>
 
-const previousTariff = {};
+  <!-- MODAL DETAIL -->
+  <div id="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        DETAIL PARAMETER
+        <button class="close" onclick="closeModal()">×</button>
+      </div>
+      <div class="params" id="params"></div>
+    </div>
+  </div>
 
-async function saveTariffData(sid, t1, t2) {
-  t1 = parseFloat(t1) || 0;
-  t2 = parseFloat(t2) || 0;
+  <script>
+    const supabase = window.supabase.createClient(
+      'https://rojhcadtqfynlqzubftx.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs'
+    );
+    const previousTariff = {};
 
-  // SNAPSHOT
-  const { error: e1 } = await supabase.from('meter_tariff_snapshot').insert({
-    sid_mesin: sid,
-    t1_lwbp_kwh: t1,
-    t2_wbp_kwh: t2
-  });
-  if (e1) console.error("Snapshot error:", e1.message);
-  else console.log("%cSNAPSHOT MASUK SID " + sid, "color:lime;font-weight:bold");
+    // TAG MESIN (sesuai permintaan lo)
+    const MACHINE_NAMES = {
+      1:"UNKNOW",2:"UNKNOW",3:"UNKNOW",4:"UNKNOW",5:"MESIN 41",6:"MC 40",
+      7:"MC 39",8:"UNKNOW",9:"MC 5",10:"HEATER MC 5",11:"UNKNOW",12:"MC 34",
+      13:"MC 35",14:"UNKNOW",15:"UNKNOW",16:"MC 38",17:"MC 36",18:"MC 37"
+    };
 
-  // DELTA
-  if (previousTariff[sid]) {
-    const dLWBP = t1 - previousTariff[sid].t1;
-    const dWBP  = t2 - previousTariff[sid].t2;
-    if (dLWBP > 0 || dWBP > 0) {
-      const { error: e2 } = await supabase.from('meter_tariff_delta').insert({
-        sid_mesin: sid,
-        lwbp_kwh: Math.max(0, dLWBP),
-        wbp_kwh:  Math.max(0, dWBP)
-      });
-      if (e2) console.error("Delta error:", e2.message);
-      else console.log("%cDELTA +"+dLWBP.toFixed(4)+" / +"+dWBP.toFixed(4), "color:yellow;font-weight:bold");
-    }
-  }
-  previousTariff[sid] = { t1, t2 };
-}
-
-// MQTT & TABEL — TETAP SAMA
-const client = mqtt.connect("wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt", {
-  username: "web_dashboard", password: "Tristan12"
-});
-
-const dataMap = ['V','I1','I2','I3','P','Q','S','PF','Hz','OpH','EaT','ErT','EaP','ErP','T1','T2'];
-const devices = {};
-const tbody = document.getElementById('tableBody');
-for(let i=1;i<=18;i++){
-  const tr = tbody.insertRow();
-  tr.insertCell().textContent = i; tr.cells[0].className='cell-id';
-  tr.insertCell().textContent='OFFLINE'; tr.cells[1].className='status-offline';
-  dataMap.forEach(k=>{ const td=tr.insertCell(); td.textContent='---'; if(k==='T1'||k==='T2') td.className='col-tariff'; });
-  devices[i] = tr;
-}
-
-client.on('connect', () => {
-  document.getElementById('conn').textContent = 'MQTT Connected • Data T1/T2 otomatis masuk Supabase!';
-  client.subscribe('politeknik/meter/data');
-});
-
-client.on('message', (_, msg) => {
-  try {
-    const d = JSON.parse(msg);
-    const id = Number(d.id);
-    if(id<1||id>18) return;
-    const row = devices[id];
-    row.cells[1].textContent = (d.status==='online')?'ONLINE':'OFFLINE';
-    row.cells[1].className = (d.status==='online')?'status-online':'status-offline';
-    dataMap.forEach((k,i) => {
-      row.cells[2+i].textContent = (d[k]!==undefined && d[k]!==null) ? Number(d[k]).toFixed(k==='V'?1:k==='I1'||k==='I2'||k==='I3'?3:2) : '---';
+    const client = mqtt.connect("wss://3367c11cb6104f8ea02e99014f2015ba.s1.eu.hivemq.cloud:8884/mqtt",{
+      username:"web_dashboard",password:"Tristan12"
     });
-    if(d.T1!=null && d.T2!=null) saveTariffData(id, d.T1, d.T2);
-  } catch(e) { console.error(e); }
-});
-</script>
+
+    const dataMap = ['V','I1','I2','I3','P','Q','S','PF','Hz','OpH','EaT','ErT','EaP','ErP','T1','T2'];
+    const latestData = {};
+
+    // Buat 18 kartu
+    const grid = document.getElementById('grid');
+    for(let i=1;i<=18;i++){
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <div class="status offline" id="status-${i}"></div>
+        <div class="machine-name">${MACHINE_NAMES[i]}</div>
+        <div class="sid">SID ${i}</div>
+      `;
+      card.onclick = () => showDetail(i);
+      grid.appendChild(card);
+      latestData[i] = {};
+    }
+
+    function showDetail(id){
+      const d = latestData[id];
+      const params = document.getElementById('params');
+      params.innerHTML = `
+        <div class="param"><span class="param-name">1. Total Ea</span><span class="param-value">${d.EaT?.toFixed(2)||'---'} kWh</span></div>
+        <div class="param"><span class="param-name">2. Total Er</span><span class="param-value">${d.ErT?.toFixed(2)||'---'} kVARh</span></div>
+        <div class="param"><span class="param-name">3. Partial Ea</span><span class="param-value">${d.EaP?.toFixed(2)||'---'} kWh</span></div>
+        <div class="param"><span class="param-name">4. Partial Er</span><span class="param-value">${d.ErP?.toFixed(2)||'---'} kVARh</span></div>
+        <div class="param"><span class="param-name">5. Voltage</span><span class="param-value">${d.V?.toFixed(1)||'---'} V</span></div>
+        <div class="param"><span class="param-name">6. Current I1</span><span class="param-value">${d.I1?.toFixed(3)||'---'} A</span></div>
+        <div class="param"><span class="param-name">7. Current I2</span><span class="param-value">${d.I2?.toFixed(3)||'---'} A</span></div>
+        <div class="param"><span class="param-name">8. Current I3</span><span class="param-value">${d.I3?.toFixed(3)||'---'} A</span></div>
+        <div class="param"><span class="param-name">9. Total Active (P)</span><span class="param-value">${Math.round(d.P||0).toLocaleString()} Watt</span></div>
+        <div class="param"><span class="param-name">10. Total Reactive (Q)</span><span class="param-value">${Math.round(d.Q||0).toLocaleString()} VAR</span></div>
+        <div class="param"><span class="param-name">11. Total Apparent (S)</span><span class="param-value">${d.S?.toFixed(2)||'---'} kVA</span></div>
+        <div class="param"><span class="param-name">12. Power Factor (PF)</span><span class="param-value">${d.PF?.toFixed(3)||'---'}</span></div>
+        <div class="param"><span class="param-name">13. Tarif T1 (LWBP)</span><span class="param-value">${d.T1?.toFixed(2)||'---'} kWh</span></div>
+        <div class="param"><span class="param-name">14. Tarif T2 (WBP)</span><span class="param-value">${d.T2?.toFixed(2)||'---'} kWh</span></div>
+        <div class="param"><span class="param-name">15. Frequency</span><span class="param-value">${d.Hz?.toFixed(1)||'---'} Hz</span></div>
+        <div class="param"><span class="param-name">16. Operating Time</span><span class="param-value">${formatOpH(d.OpH)||'---'}</span></div>
+      `;
+      document.getElementById('modal').style.display = 'flex';
+    }
+
+    function closeModal(){document.getElementById('modal').style.display='none'}
+
+    function formatOpH(h){
+      if(!h) return '---';
+      const t = Math.round(h*1440);
+      const d = Math.floor(t/1440), hr = Math.floor((t%1440)/60);
+      return d?`${d}d ${hr}h`:`${hr}h`;
+    }
+
+    // SIMPAN T1 T2 KE SUPABASE (FUNGSI LAMA TETAP JALAN)
+    async function saveTariffData(sid,t1,t2){
+      t1=parseFloat(t1)||0;t2=parseFloat(t2)||0;
+      await supabase.from('meter_tariff_snapshot').insert({sid_mesin:sid,t1_lwbp_kwh:t1,t2_wbp_kwh:t2});
+      if(previousTariff[sid]){
+        const dl=t1-previousTariff[sid].t1,dw=t2-previousTariff[sid].t2;
+        if(dl>0||dw>0) await supabase.from('meter_tariff_delta').insert({sid_mesin:sid,lwbp_kwh:Math.max(0,dl),wbp_kwh:Math.max(0,dw)});
+      }
+      previousTariff[sid]={t1,t2};
+    }
+
+    client.on('connect',()=>{document.getElementById('conn').textContent='TERHUBUNG • Data T1/T2 otomatis tersimpan';client.subscribe('politeknik/meter/data')});
+    client.on('message',(_,m)=>{
+      try{
+        const d=JSON.parse(m);
+        const id=Number(d.id);
+        if(id<1||id>18) return;
+        latestData[id]=d;
+        document.getElementById(`status-${id}`).className = d.status==='online'?'status online':'status offline';
+        if(d.T1!=null&&d.T2!=null) saveTariffData(id,d.T1,d.T2);
+      }catch(e){console.error(e)}
+    });
+  </script>
 </body>
 </html>
