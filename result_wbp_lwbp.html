@@ -8,7 +8,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <style>
-    /* (styling sama persis seperti versi kamu, tidak diubah) */
     :root {
       --bg: #0a0e17;
       --card: #111827;
@@ -41,7 +40,25 @@
     @keyframes electricFlow{0%{transform:translateX(-100px)translateY(-100px)}100%{transform:translateX(100px)translateY(100px)}}
     @keyframes gridMove{0%{transform:translate(0,0)}100%{transform:translate(50px,50px)}}
 
-    header{text-align:center;padding:30px 20px 10px}
+    /* TOMBOL HOME KIRI ATAS — KECIL & KEREN */
+    .home-btn{
+      position:fixed;top:16px;left:16px;z-index:999;
+      background:rgba(17,24,39,0.9);backdrop-filter:blur(10px);
+      border:2px solid var(--accent);border-radius:50px;
+      padding:10px 20px;color:var(--accent);font-weight:700;
+      font-size:0.9rem;letter-spacing:2px;text-decoration:none;
+      box-shadow:0 8px 30px rgba(0,0,0,0.6);transition:all 0.4s;
+      display:flex;align-items:center;gap:8px;
+    }
+    .home-btn:hover{
+      transform:translateY(-4px);box-shadow:0 15px 40px rgba(0,255,157,0.5);
+      background:var(--accent);color:black;
+    }
+    .home-btn::before{
+      content:"←";font-size:1.4rem;
+    }
+
+    header{text-align:center;padding:70px 20px 10px}
     h1{
       font-family:'Orbitron',sans-serif;
       font-size:clamp(2rem,6vw,4.5rem);
@@ -51,10 +68,8 @@
       text-shadow:var(--glow);letter-spacing:8px;margin-bottom:8px;
     }
     .subtitle{color:var(--muted);font-size:1rem;opacity:0.9}
-
     .container{max-width:1600px;margin:0 auto;padding:0 20px}
     .layout{display:grid;grid-template-columns:1fr 380px;gap:24px;margin-top:20px}
-
     .controls{
       display:flex;gap:16px;flex-wrap:wrap;align-items:end;
       background:var(--card);padding:20px;border-radius:16px;
@@ -67,7 +82,6 @@
       background:rgba(17,24,39,0.8);color:white;font-family:inherit;transition:all .3s;
     }
     input[type="date"]:focus, input[type="time"]:focus{outline:none;box-shadow:var(--glow)}
-
     .btn{
       padding:12px 24px;border:none;border-radius:12px;cursor:pointer;
       font-weight:700;font-size:0.95rem;transition:all .3s;position:relative;overflow:hidden;
@@ -75,7 +89,6 @@
     .btn-primary{background:linear-gradient(45deg,var(--accent),#00ff9d);color:#000;box-shadow:var(--glow)}
     .btn-outline{background:transparent;border:2px solid var(--accent2);color:var(--accent2);box-shadow:var(--glow2)}
     .btn:hover{transform:translateY(-3px);box-shadow:0 10px 30px rgba(0,255,157,0.4)}
-
     .table-wrap{margin-top:20px;border-radius:16px;overflow:hidden;box-shadow:var(--glow)}
     table{width:100%;border-collapse:collapse;background:var(--card);font-size:0.92rem}
     thead th{
@@ -86,7 +99,6 @@
     td{padding:16px 12px;border-bottom:1px solid rgba(0,255,157,0.08);transition:background .3s}
     tbody tr:hover{background:rgba(0,255,157,0.08)!important;box-shadow:var(--glow)}
     tbody tr:nth-child(even){background:rgba(17,24,39,0.6)}
-
     .card{
       background:rgba(17,24,39,0.6);backdrop-filter:blur(10px);
       border:1px solid rgba(0,255,157,0.2);border-radius:16px;
@@ -106,20 +118,24 @@
     }
     @keyframes pulse{0%,100%{opacity:0.8}50%{opacity:1;transform:scale(1.02)}}
     @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
-
     @media(max-width:1024px){.layout{grid-template-columns:1fr}}
     @media(max-width:640px){
       h1{letter-spacing:4px}
       .controls{flex-direction:column;align-items:stretch}
       .btn{width:100%}
+      .home-btn{top:12px;left:12px;padding:8px 14px;font-size:0.8rem}
     }
   </style>
 </head>
 <body>
+
+  <!-- TOMBOL HOME KIRI ATAS -->
+  <a href="index.html" class="home-btn">HOME</a>
+
   <header>
     <h1>MASTER DASHBOARD</h1>
-    <div class="subtitle">Tarif & Konsumsi Listrik • Mesin  </div>
-     <div class="subtitle"> PT.Amarilys Karisma Gemilang </div>
+    <div class="subtitle">Tarif & Konsumsi Listrik • Mesin </div>
+    <div class="subtitle"> PT.Amarilys Karisma Gemilang </div>
   </header>
 
   <div class="container">
@@ -147,7 +163,6 @@
             <button id="btnExport" class="btn btn-primary">EXPORT EXCEL</button>
           </div>
         </div>
-
         <div class="table-wrap">
           <table id="masterTable">
             <thead>
@@ -162,7 +177,6 @@
           </table>
         </div>
       </div>
-
       <div>
         <div class="card">
           <div class="tarif-title">TARIF LISTRIK PLN</div>
@@ -183,41 +197,19 @@
 const SUPABASE_URL = "https://rojhcadtqfynlqzubftx.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvamhjYWR0cWZ5bmxxenViZnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxMzYzNTksImV4cCI6MjA3NzcxMjM1OX0.XZElBWD-QdS8XVKex92VKUAlifC6BXqe3kGYPmZ1Mcs";
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-/* kita pakai snapshot tabel sebagai sumber */
 const TABLE_SNAPSHOT = "meter_tariff_snapshot";
-
-/* tarif */
 const TARIF_LWBP = 1135;
 const TARIF_WBP = 996.74;
-
-/* mesin tags (tetap) */
 const MACHINE_TAGS = {
-  1: "UNKNOW",
-  2: "UNKNOW",
-  3: "UNKNOW",
-  4: "UNKNOW",
-  5: "MESIN 41",
-  6: "MC 40",
-  7: "MC 39",
-  8: "UNKNOW",
-  9: "MC 5",
- 10: "HEATER MC 5",
- 11: "UNKNOW",
- 12: "MC 34",
- 13: "MC 35",
- 14: "UNKNOW",
- 15: "UNKNOW",
- 16: "MC 38",
- 17: "MC 36",
- 18: "MC 37"
+  1: "UNKNOW", 2: "UNKNOW", 3: "UNKNOW", 4: "UNKNOW", 5: "MESIN 41", 6: "MC 40",
+  7: "MC 39", 8: "UNKNOW", 9: "MC 5", 10: "HEATER MC 5", 11: "UNKNOW", 12: "MC 34",
+  13: "MC 35", 14: "UNKNOW", 15: "UNKNOW", 16: "MC 38", 17: "MC 36", 18: "MC 37"
 };
 
-/* ===== HELPERS ===== */
+/* ===== SEMUA FUNGSI LAMA TETAP 100% SAMA ===== */
 function fmtNumber(n,d=2){return Number(n||0).toLocaleString('id-ID',{minimumFractionDigits:d,maximumFractionDigits:d})}
 function fmtCurrency(n){return Number(n||0).toLocaleString('id-ID')}
 
-/* build empty table skeleton (18 mesin) */
 function buildTableSkeleton(){
   const tbody=document.getElementById('masterTbody');
   tbody.innerHTML='';
@@ -234,20 +226,12 @@ function buildTableSkeleton(){
   }
 }
 
-/* ======= CORE: fetch snapshot rows untuk 1 mesin dalam rentang (dengan lookback 1 hari sebelum start)
-   kita akan ambil semua snapshot dari (start -1 day) sampai end, supaya kita bisa interpolasi opening */
 async function fetchSnapshotsForSid(sid, startDate, startTime, endDate, endTime){
-  // build JS Date objects in local timezone (assumes browser in Asia/Jakarta)
   const startDtLocal = new Date(`${startDate}T${startTime}:00`);
   const endDtLocal = new Date(`${endDate}T${endTime}:00`);
-
-  // lookback 1 day to be able to find previous reading for interpolation
   const lookback = new Date(startDtLocal.getTime() - 24*60*60*1000);
-
-  // convert to ISO for querying (Supabase/Postgres handles timestamptz)
   const fromIso = lookback.toISOString();
   const toIso = endDtLocal.toISOString();
-
   const { data, error } = await supabase
     .from(TABLE_SNAPSHOT)
     .select('id, sid_mesin, "timestamp", tanggal, total_kwh, t1_lwbp_kwh, t2_wbp_kwh')
@@ -255,35 +239,22 @@ async function fetchSnapshotsForSid(sid, startDate, startTime, endDate, endTime)
     .gte('timestamp', fromIso)
     .lte('timestamp', toIso)
     .order('timestamp', { ascending: true });
-
-  if(error){
-    console.error("fetchSnapshots error sid", sid, error);
-    return { error };
-  }
+  if(error){ console.error("fetchSnapshots error sid", sid, error); return { error }; }
   return { data: data || [] , startDtLocal, endDtLocal };
 }
 
-/* helper: convert row.timestamp (string) to JS Date object */
 function rowDate(row){ return new Date(row.timestamp); }
-
-/* helper: get reading at specific datetime by interpolation */
-function getReadingAt(dt, rows){ // dt is JS Date, rows sorted ascending
+function getReadingAt(dt, rows){
   if(!rows || rows.length === 0) return null;
-  // exact match
   for(const r of rows) {
     const t = rowDate(r).getTime();
     if(t === dt.getTime()) return parseFloat(r.total_kwh || 0);
   }
-  // find prev and next
-  let prev = null;
-  let next = null;
+  let prev = null; let next = null;
   for(const r of rows){
     const t = rowDate(r).getTime();
     if(t < dt.getTime()) prev = r;
-    if(t > dt.getTime()){
-      next = r;
-      break;
-    }
+    if(t > dt.getTime()){ next = r; break; }
   }
   if(prev && next){
     const t0 = rowDate(prev).getTime();
@@ -296,129 +267,72 @@ function getReadingAt(dt, rows){ // dt is JS Date, rows sorted ascending
   }
   if(prev) return parseFloat(prev.total_kwh || 0);
   if(next) return parseFloat(next.total_kwh || 0);
-  // fallback first row
   return parseFloat(rows[0].total_kwh || 0);
 }
 
-/* helper: get jakarta date string 'YYYY-MM-DD' from JS Date (assumes local tz is Jakarta) */
-function toLocalDateStr(dt){
-  // format like 2025-12-05
-  const y = dt.getFullYear();
-  const m = String(dt.getMonth()+1).padStart(2,'0');
-  const d = String(dt.getDate()).padStart(2,'0');
-  return `${y}-${m}-${d}`;
-}
+function isWbp(dt){ const h = dt.getHours(); return (h >= 17 && h < 22); }
 
-/* tariff boundaries (local time)
-   LWBP = 22:00 - 17:00 (next day)  -> i.e. outside 17..22
-   WBP  = 17:00 - 22:00              -> hours 17..21:59
-   We'll treat WBP when hour >=17 and <22, else LWBP.
-*/
-
-/* helper: determine if a given local Date is WBP */
-function isWbp(dt){
-  const h = dt.getHours();
-  return (h >= 17 && h < 22);
-}
-
-/* helper: find next tariff boundary after a given local date
-   boundaries at hh:00 (17:00 and 22:00)
-*/
 function nextTariffBoundaryAfter(dt){
-  // create a local Date copy
   const d = new Date(dt.getTime());
   const h = d.getHours();
-  const m = d.getMinutes();
-  const s = d.getSeconds();
-  // if currently before today's 17:00 -> next is today 17:00
   const today17 = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 17, 0, 0);
   const today22 = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 22, 0, 0);
   if(d.getTime() < today17.getTime()) return today17;
   if(d.getTime() < today22.getTime()) return today22;
-  // otherwise next boundary is tomorrow 17:00
-  const tomorrow17 = new Date(d.getFullYear(), d.getMonth(), d.getDate()+1, 17, 0, 0);
-  return tomorrow17;
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate()+1, 17, 0, 0);
 }
 
-/* allocate diff energy over interval [t0,t1) into lwbp & wbp based on tariff windows.
-   We assume energy increases linearly over time; allocation proportional to duration in each tariff.
-*/
 function allocateIntervalEnergy(t0, t1, diff){
   if(diff <= 0) return { lwbp: 0, wbp: 0 };
   const totalMs = t1.getTime() - t0.getTime();
   if(totalMs <= 0) return { lwbp: 0, wbp: 0 };
   let cursor = new Date(t0.getTime());
-  let rem = 0;
-  let lwbp = 0;
-  let wbp = 0;
+  let lwbp = 0; let wbp = 0;
   while(cursor.getTime() < t1.getTime()){
     const nb = nextTariffBoundaryAfter(cursor);
     const segEnd = (nb.getTime() < t1.getTime()) ? nb : t1;
     const segMs = segEnd.getTime() - cursor.getTime();
     const portion = segMs / totalMs;
     const energyPortion = diff * portion;
-    if(isWbp(cursor)){
-      wbp += energyPortion;
-    } else {
-      lwbp += energyPortion;
-    }
+    if(isWbp(cursor)){ wbp += energyPortion; } else { lwbp += energyPortion; }
     cursor = new Date(segEnd.getTime());
   }
   return { lwbp, wbp };
 }
 
-/* Given rows between start and end, produce timeline including start and end (interpolated)
-   and compute total lwbp & wbp by summing allocations for each sub-interval.
-*/
 function computeEnergyFromTimeline(rows, startDt, endDt){
-  // ensure rows sorted ascending by timestamp
   const sorted = rows.slice().sort((a,b)=> new Date(a.timestamp) - new Date(b.timestamp));
-  // create timeline points: startDt (value), then any rows strictly between, then endDt (value)
   const timeline = [];
-  const startVal = getReadingAt(startDt, sorted);
-  timeline.push({ ts: new Date(startDt.getTime()), val: startVal });
+  timeline.push({ ts: new Date(startDt.getTime()), val: getReadingAt(startDt, sorted) });
   for(const r of sorted){
     const t = new Date(r.timestamp);
-    if(t.getTime() <= startDt.getTime() || t.getTime() >= endDt.getTime()) continue;
-    timeline.push({ ts: t, val: parseFloat(r.total_kwh || 0) });
+    if(t.getTime() > startDt.getTime() && t.getTime() < endDt.getTime()){
+      timeline.push({ ts: t, val: parseFloat(r.total_kwh || 0) });
+    }
   }
-  const endVal = getReadingAt(endDt, sorted);
-  timeline.push({ ts: new Date(endDt.getTime()), val: endVal });
-
-  // compute diffs across timeline
-  let totalLwbp = 0;
-  let totalWbp = 0;
+  timeline.push({ ts: new Date(endDt.getTime()), val: getReadingAt(endDt, sorted) });
+  let totalLwbp = 0; let totalWbp = 0;
   for(let i=0;i<timeline.length-1;i++){
-    const p0 = timeline[i];
-    const p1 = timeline[i+1];
+    const p0 = timeline[i]; const p1 = timeline[i+1];
     const diff = p1.val - p0.val;
     if(diff <= 0) continue;
     const alloc = allocateIntervalEnergy(p0.ts, p1.ts, diff);
-    totalLwbp += alloc.lwbp;
-    totalWbp += alloc.wbp;
+    totalLwbp += alloc.lwbp; totalWbp += alloc.wbp;
   }
   return { lwbp: totalLwbp, wbp: totalWbp, total: totalLwbp + totalWbp };
 }
 
-/* fetch + compute per machine for the whole range (startDate + startTime) .. (endDate + endTime) */
 async function computeForSidRange(sid, startDate, startTime, endDate, endTime){
   const res = await fetchSnapshotsForSid(sid, startDate, startTime, endDate, endTime);
   if(res.error) return { error: res.error };
   const rows = res.data;
   const startDtLocal = res.startDtLocal;
   const endDtLocal = res.endDtLocal;
-
-  if(rows.length === 0){
-    // no data at all - return zeros
-    return { lwbp:0, wbp:0, total:0 };
-  }
-
-  // compute energy
+  if(rows.length === 0) return { lwbp:0, wbp:0, total:0 };
   const energy = computeEnergyFromTimeline(rows, startDtLocal, endDtLocal);
   return energy;
 }
 
-/* render one row */
 function renderSidResult(sid, start, end, lwbp, wbp, totalKwh){
   const tr=document.querySelector(`#masterTbody tr:nth-child(${sid})`);
   tr.children[0].textContent=start;
@@ -432,45 +346,34 @@ function renderSidResult(sid, start, end, lwbp, wbp, totalKwh){
   tr.children[8].style.cssText="color:var(--accent);font-weight:800;font-size:1.1rem";
 }
 
-/* ===== showAll() main flow ===== */
 async function showAll(){
   const start=document.getElementById('globalStart').value;
   const end=document.getElementById('globalEnd').value;
   const startTime=document.getElementById('globalStartTime').value || '00:00';
   const endTime=document.getElementById('globalEndTime').value || '23:59';
   const status=document.getElementById('statusBox');
-
   if(!start || !end){ alert('Isi tanggal dulu bro!'); return; }
   const startDt = new Date(`${start}T${startTime}:00`);
   const endDt = new Date(`${end}T${endTime}:00`);
   if(startDt.getTime() > endDt.getTime()){ alert('Range waktu tidak valid (start > end)'); return; }
-
   status.textContent='Memuat data 18 mesin...';
   buildTableSkeleton();
-
-  // parallel compute for all sid
   const promises = [];
   for(let sid=1; sid<=18; sid++){
     promises.push(computeForSidRange(sid, start, startTime, end, endTime));
   }
-
   const results = await Promise.all(promises);
   let found=false;
   for(let i=0;i<results.length;i++){
     const r = results[i];
-    if(r.error) {
-      console.error("SID", i+1, r.error);
-      continue;
-    }
+    if(r.error) { console.error("SID", i+1, r.error); continue; }
     if(r.total && r.total > 0) found = true;
     renderSidResult(i+1, `${start} ${startTime}`, `${end} ${endTime}`, r.lwbp || 0, r.wbp || 0, r.total || 0);
   }
-
   status.textContent = found ? 'SELESAI — DATA TERBARU' : 'TIDAK ADA DATA DI RANGE INI';
   status.style.animation="pulse 1.5s infinite";
 }
 
-/* export menggunakan data yang ada di tabel (DOM) */
 function exportExcel(){
   const start=document.getElementById('globalStart').value||'start';
   const end=document.getElementById('globalEnd').value||'end';
@@ -485,11 +388,9 @@ function exportExcel(){
   XLSX.writeFile(wb,`MASTER_TARIF_${start}_sd_${end}.xlsx`);
 }
 
-/* wire handlers */
 document.getElementById('btnShowAll').onclick = showAll;
 document.getElementById('btnExport').onclick = exportExcel;
 
-/* init defaults */
 const today=new Date().toISOString().slice(0,10);
 const last30=new Date(Date.now()-30*24*60*60*1000).toISOString().slice(0,10);
 document.getElementById('globalEnd').value=today;
